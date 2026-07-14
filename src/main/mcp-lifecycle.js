@@ -7,18 +7,26 @@ const fs = require('fs');
 const { createSecureWebPreferences } = require('./security-utils');
 const net = require('net');
 const UnifiedMCPServer = require('../mcp-server');
+const { getMcpAuthConfig } = require('./mcp-auth-config');
 
 // External references (set by main module via setMCPDependencies)
 let mainWindow;
 let unifiedMCPServer;
 let unifiedServerStatus;
+let getUnifiedMCPServer = () => unifiedMCPServer;
+let setUnifiedMCPServer = value => {
+  unifiedMCPServer = value;
+};
+let getUnifiedServerStatus = () => unifiedServerStatus;
+let setUnifiedServerStatus = value => {
+  unifiedServerStatus = value;
+};
 let windowRegistry;
 let updateMCPServerMenu;
 
 // Window registry external functions
 let startWindowCleanupInterval;
 let stopWindowCleanupInterval;
-let syncWindowsWithMCPServer;
 let switchToWindowTab;
 
 // External MCP Servers Functions
@@ -38,17 +46,17 @@ async function startUnifiedMCPServer() {
   // when reporting EADDRINUSE conflicts.
   let settings = null;
   try {
-    if (unifiedServerStatus === 'running') {
+    if (getUnifiedServerStatus() === 'running') {
       console.log('Unified Claude MCP Server is already running');
       return { success: true, status: 'running' };
     }
 
-    if (unifiedServerStatus === 'starting') {
+    if (getUnifiedServerStatus() === 'starting') {
       console.log('Unified Claude MCP Server is already starting');
       return { success: false, status: 'starting' };
     }
 
-    unifiedServerStatus = 'starting';
+    setUnifiedServerStatus('starting');
 
     // Load settings and check for port conflicts
     settings = loadMCPServerSettings();
@@ -58,7 +66,7 @@ async function startUnifiedMCPServer() {
     const wsCheck = await checkPortAvailable(settings.wsPort);
 
     if (!httpCheck.available) {
-      unifiedServerStatus = 'stopped';
+      setUnifiedServerStatus('stopped');
       return {
         success: false,
         message: `HTTP port ${settings.httpPort} is already in use. Please change the port in Settings or free the port.`,
@@ -68,7 +76,7 @@ async function startUnifiedMCPServer() {
       };
     }
     if (!wsCheck.available) {
-      unifiedServerStatus = 'stopped';
+      setUnifiedServerStatus('stopped');
       return {
         success: false,
         message: `WebSocket port ${settings.wsPort} is already in use. Please change the port in Settings or free the port.`,
@@ -78,38 +86,40 @@ async function startUnifiedMCPServer() {
       };
     }
 
-    // Create Unified Claude MCP server with configurable ports
-    unifiedMCPServer = new UnifiedMCPServer(settings.httpPort, settings.wsPort, getMainGenomeTarget());
+    // Local bypass is opt-in. External agents must use a configured bearer key
+    // so their principal can later be scoped to read/propose/commit actions.
+    const server = new UnifiedMCPServer(settings.httpPort, settings.wsPort, getMainGenomeTarget(), getMcpAuthConfig());
+    setUnifiedMCPServer(server);
 
     // Forward server log events to the Manager window
-    unifiedMCPServer.on('log', logEntry => {
+    server.on('log', logEntry => {
       if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
         mcpServerManagerWindow.webContents.send('mcp-server-log', logEntry);
       }
     });
 
     // Forward client connection events to the Manager window
-    unifiedMCPServer.on('client-connected', data => {
+    server.on('client-connected', data => {
       if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
         mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
       }
     });
-    unifiedMCPServer.on('client-disconnected', data => {
+    server.on('client-disconnected', data => {
       if (mcpServerManagerWindow && !mcpServerManagerWindow.isDestroyed()) {
         mcpServerManagerWindow.webContents.send('mcp-server-client-update', data);
       }
     });
 
     // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
-    unifiedMCPServer.setMainWindowRegistry(windowRegistry);
+    server.setMainWindowRegistry(windowRegistry);
     if (typeof switchToWindowTab === 'function') {
-      unifiedMCPServer.switchWindowTab = switchToWindowTab;
+      server.switchWindowTab = switchToWindowTab;
     }
 
     // Start the server
-    await unifiedMCPServer.start();
+    await server.start();
 
-    unifiedServerStatus = 'running';
+    setUnifiedServerStatus('running');
     console.log(
       `Unified Claude MCP Server started successfully on ports ${settings.httpPort} (HTTP) and ${settings.wsPort} (WebSocket)`
     );
@@ -117,9 +127,17 @@ async function startUnifiedMCPServer() {
     // Start periodic window cleanup to handle any windows that weren't properly unregistered
     startWindowCleanupInterval();
 
-    // Multi-window support: Also populate the server's local IPC registry for routing with enhanced sync
-    const syncResult = syncWindowsWithMCPServer();
-    console.log(`📋 [MCP Server] Window sync result: ${syncResult.synced} synced, ${syncResult.failed} failed`);
+    // Populate the local routing cache as well as retaining the live,
+    // authoritative registry reference above.
+    let syncedWindows = 0;
+    for (const [windowId, info] of windowRegistry.entries()) {
+      const window = info?.window || info;
+      if (window && !window.isDestroyed()) {
+        server.registerWindow(windowId, window);
+        syncedWindows += 1;
+      }
+    }
+    console.log(`📋 [MCP Server] Window sync result: ${syncedWindows} synced, 0 failed`);
 
     // Notify renderer process
     const targetWindow = getMainGenomeTarget();
@@ -133,16 +151,17 @@ async function startUnifiedMCPServer() {
 
     return { success: true, status: 'running' };
   } catch (error) {
-    unifiedServerStatus = 'stopped';
+    setUnifiedServerStatus('stopped');
     // Clean up the server instance
-    if (unifiedMCPServer) {
+    const server = getUnifiedMCPServer();
+    if (server) {
       try {
-        await unifiedMCPServer.stop();
+        await server.stop();
       } catch (e) {
         /* ignore stop errors */
       }
     }
-    unifiedMCPServer = null;
+    setUnifiedMCPServer(null);
     console.error('Failed to start Unified Claude MCP Server:', error);
 
     // Parse EADDRINUSE errors to provide conflict info
@@ -168,27 +187,28 @@ async function startUnifiedMCPServer() {
 
 async function stopUnifiedMCPServer() {
   try {
-    if (unifiedServerStatus === 'stopped') {
+    if (getUnifiedServerStatus() === 'stopped') {
       console.log('Unified Claude MCP Server is already stopped');
       return { success: true, status: 'stopped' };
     }
 
-    if (unifiedServerStatus === 'stopping') {
+    if (getUnifiedServerStatus() === 'stopping') {
       console.log('Unified Claude MCP Server is already stopping');
       return { success: false, status: 'stopping' };
     }
 
-    unifiedServerStatus = 'stopping';
+    setUnifiedServerStatus('stopping');
 
     // Stop the periodic cleanup interval
     stopWindowCleanupInterval();
 
-    if (unifiedMCPServer) {
-      await unifiedMCPServer.stop();
-      unifiedMCPServer = null;
+    const server = getUnifiedMCPServer();
+    if (server) {
+      await server.stop();
+      setUnifiedMCPServer(null);
     }
 
-    unifiedServerStatus = 'stopped';
+    setUnifiedServerStatus('stopped');
     console.log('Unified Claude MCP Server stopped successfully');
 
     // Notify renderer process
@@ -201,8 +221,8 @@ async function stopUnifiedMCPServer() {
 
     return { success: true, status: 'stopped' };
   } catch (error) {
-    unifiedServerStatus = 'stopped';
-    unifiedMCPServer = null;
+    setUnifiedServerStatus('stopped');
+    setUnifiedMCPServer(null);
     console.error('Failed to stop Unified Claude MCP Server:', error);
     return { success: false, status: 'stopped', error: error.message };
   }
@@ -297,11 +317,11 @@ function createMCPServerManagerWindow() {
   mcpServerManagerWindow.webContents.on('did-finish-load', () => {
     const settings = loadMCPServerSettings();
     mcpServerManagerWindow.webContents.send('mcp-server-status-update', {
-      status: unifiedServerStatus,
-      isRunning: unifiedServerStatus === 'running',
-      httpPort: unifiedServerStatus === 'running' ? settings.httpPort : null,
-      wsPort: unifiedServerStatus === 'running' ? settings.wsPort : null,
-      connectedClients: unifiedMCPServer ? unifiedMCPServer.getConnectedClientsCount() : 0,
+      status: getUnifiedServerStatus(),
+      isRunning: getUnifiedServerStatus() === 'running',
+      httpPort: getUnifiedServerStatus() === 'running' ? settings.httpPort : null,
+      wsPort: getUnifiedServerStatus() === 'running' ? settings.wsPort : null,
+      connectedClients: getUnifiedMCPServer() ? getUnifiedMCPServer().getConnectedClientsCount() : 0,
     });
 
     // Request current theme from main renderer
@@ -317,11 +337,14 @@ function setMCPDependencies(deps) {
   if (deps.mainWindow !== undefined) mainWindow = deps.mainWindow;
   if (deps.unifiedMCPServer !== undefined) unifiedMCPServer = deps.unifiedMCPServer;
   if (deps.unifiedServerStatus !== undefined) unifiedServerStatus = deps.unifiedServerStatus;
+  if (typeof deps.getUnifiedMCPServer === 'function') getUnifiedMCPServer = deps.getUnifiedMCPServer;
+  if (typeof deps.setUnifiedMCPServer === 'function') setUnifiedMCPServer = deps.setUnifiedMCPServer;
+  if (typeof deps.getUnifiedServerStatus === 'function') getUnifiedServerStatus = deps.getUnifiedServerStatus;
+  if (typeof deps.setUnifiedServerStatus === 'function') setUnifiedServerStatus = deps.setUnifiedServerStatus;
   if (deps.windowRegistry !== undefined) windowRegistry = deps.windowRegistry;
   if (deps.updateMCPServerMenu !== undefined) updateMCPServerMenu = deps.updateMCPServerMenu;
   if (deps.startWindowCleanupInterval !== undefined) startWindowCleanupInterval = deps.startWindowCleanupInterval;
   if (deps.stopWindowCleanupInterval !== undefined) stopWindowCleanupInterval = deps.stopWindowCleanupInterval;
-  if (deps.syncWindowsWithMCPServer !== undefined) syncWindowsWithMCPServer = deps.syncWindowsWithMCPServer;
   if (deps.switchToWindowTab !== undefined) switchToWindowTab = deps.switchToWindowTab;
   if (deps.createMCPServerManagerMenu !== undefined) createMCPServerManagerMenu = deps.createMCPServerManagerMenu;
   if (deps.createMenu !== undefined) createMenu = deps.createMenu;

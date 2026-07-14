@@ -225,6 +225,7 @@ function buildModuleDeps() {
     getUnifiedMCPServer: () => unifiedMCPServer,
     setUnifiedMCPServer: v => {
       unifiedMCPServer = v;
+      wr.setDependencies({ unifiedMCPServer: v });
     },
     getUnifiedServerStatus: () => unifiedServerStatus,
     setUnifiedServerStatus: v => {
@@ -392,6 +393,22 @@ app.whenReady().then(async () => {
   // Create initial menu
   mb.createMenu();
 
+  // The combined launcher uses the in-process MCP server so authenticated
+  // external calls route to genome windows over Electron IPC. No privileged
+  // localhost WebSocket bridge credential is exposed to the renderer.
+  if (args.includes('--start-mcp')) {
+    const result = await mcp.startUnifiedMCPServer();
+    if (!result.success) {
+      const message = result.message || 'The MCP server could not be started.';
+      console.error(`[Main] MCP auto-start failed: ${message}`);
+      dialog.showErrorBox('CodeXomics MCP startup failed', message);
+      app.exit(1);
+      return;
+    } else {
+      wr.setDependencies({ mainWindow, unifiedMCPServer });
+    }
+  }
+
   // Process queued files from file associations
   processFileQueue();
 
@@ -465,9 +482,7 @@ app.on('before-quit', async () => {
   if (unifiedMCPServer) {
     console.log('[Main] Shutting down Unified Claude MCP Server...');
     try {
-      await unifiedMCPServer.stop();
-      unifiedMCPServer = null;
-      unifiedServerStatus = 'stopped';
+      await mcp.stopUnifiedMCPServer();
     } catch (error) {
       console.error('[Main] Error stopping Unified Claude MCP Server:', error);
     }

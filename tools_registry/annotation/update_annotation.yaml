@@ -1,6 +1,6 @@
 name: update_annotation
 version: 1.0.0
-description: Update fields of an existing genome annotation with change tracking
+description: Legacy compatibility tool that creates a reviewable annotation ChangeSet; it does not mutate an annotation directly.
 category: annotation
 subcategory: annotation_crud
 

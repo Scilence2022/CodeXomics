@@ -25,10 +25,10 @@ class InternalMCPServer {
   // Setup IPC handlers for communication with main process MCP server
   setupIPCHandlers() {
     mcpServerIpc.on('mcp-tool-call', async (event, request) => {
-      const { requestId, method, parameters } = request;
+      const { requestId, method, parameters, executionContext } = request;
 
       try {
-        const result = await this.executeMethod(method, parameters);
+        const result = await this.executeMethod(method, parameters, executionContext, requestId);
 
         // Send success response back to main process
         mcpServerIpc.send('mcp-tool-response', {
@@ -51,7 +51,7 @@ class InternalMCPServer {
 
   // Execute the requested method
   // Uses dynamic routing to support all 40+ tools via ChatManager delegation
-  async executeMethod(method, parameters) {
+  async executeMethod(method, parameters, executionContext = null, requestId = null) {
     if (!this.genomeStudio) {
       throw new Error('Genome Studio instance not available');
     }
@@ -79,7 +79,7 @@ class InternalMCPServer {
     // codexomics_chat is an MCP runtime wrapper, not a ChatManager tool.
     // Handle it before generic tool delegation so agent-mode chat reaches processAgentPrompt.
     if (method === 'codexomicsChat') {
-      return await this.handleCodexomicsChat(parameters);
+      return await this.handleCodexomicsChat(parameters, executionContext, requestId);
     }
 
     // Convert camelCase method name back to snake_case tool name for ChatManager
@@ -91,7 +91,10 @@ class InternalMCPServer {
     if (chatManager) {
       try {
         console.log(`📡 [InternalMCPServer] Delegating '${toolName}' to ChatManager`);
-        const result = await chatManager.executeToolByName(toolName, parameters);
+        const result = await chatManager.executeToolByName(toolName, parameters, {
+          bypassAgent: true,
+          executionContext,
+        });
         if (result !== undefined) {
           console.log(`✅ [InternalMCPServer] Tool '${toolName}' executed via ChatManager`);
           return {
@@ -287,7 +290,7 @@ class InternalMCPServer {
   }
 
   // Agent mode implementation - codexomics_chat
-  async handleCodexomicsChat(parameters) {
+  async handleCodexomicsChat(parameters, executionContext = null, requestId = null) {
     const chatManager = this.genomeStudio.chatManager || window.chatManager;
     if (!chatManager) {
       throw new Error('ChatManager not available for agent mode');
@@ -305,6 +308,9 @@ class InternalMCPServer {
           type: progress.type,
           message: progress.message,
           data: progress.data || null,
+          sessionId: executionContext?.sessionId || null,
+          transportSessionId: executionContext?.transportSessionId || null,
+          requestId,
           timestamp: Date.now(),
         });
       } catch (e) {

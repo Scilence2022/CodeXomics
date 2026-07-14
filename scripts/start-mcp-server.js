@@ -17,6 +17,7 @@
  */
 
 const StandardMCPServer = require('../src/mcp-server.js');
+const { getMcpAuthConfig } = require('../src/main/mcp-auth-config.js');
 
 // Parse --mode argument
 const modeArg = process.argv.find(arg => arg.startsWith('--mode='));
@@ -39,7 +40,13 @@ process.stderr.write(
 process.stderr.write('📋 Using official Claude MCP TypeScript SDK\n');
 process.stderr.write('\n');
 
-const server = new StandardMCPServer();
+let server;
+try {
+  server = new StandardMCPServer(3002, 3003, null, getMcpAuthConfig());
+} catch (error) {
+  process.stderr.write(`❌ Failed to configure CodeXomics MCP Server: ${error.message}\n`);
+  process.exit(1);
+}
 
 // Start the server
 server.start().catch(error => {
@@ -47,36 +54,36 @@ server.start().catch(error => {
   process.exit(1);
 });
 
-// Graceful shutdown handlers
-process.on('SIGINT', async () => {
-  process.stderr.write('\n🛑 Shutting down CodeXomics MCP Server...\n');
-  await server.stop();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  process.stderr.write('\n🛑 Shutting down CodeXomics MCP Server...\n');
-  await server.stop();
-  process.exit(0);
-});
+let shutdownPromise = null;
+const shutdown = signal => {
+  if (shutdownPromise) return shutdownPromise;
+  process.stderr.write(`\n🛑 Received ${signal}; shutting down CodeXomics MCP Server...\n`);
+  shutdownPromise = server
+    .stop()
+    .then(() => {
+      process.exitCode = 0;
+    })
+    .catch(error => {
+      process.stderr.write(`❌ Failed to stop CodeXomics MCP Server: ${error.message}\n`);
+      process.exitCode = 1;
+    });
+  return shutdownPromise;
+};
+process.once('SIGINT', () => void shutdown('SIGINT'));
+process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
 process.stderr.write('💡 CodeXomics MCP Server Usage Instructions:\n');
 process.stderr.write('1. Keep this server running\n');
-process.stderr.write('2. Configure your MCP client to connect to this server\n');
-process.stderr.write('3. Use stdio transport for MCP Client integration\n');
-process.stderr.write('4. Launch the CodeXomics application\n');
-process.stderr.write('5. The server will handle communication between the AI and the browser\n');
+process.stderr.write('2. Configure an admin or scoped API key in the server environment\n');
+process.stderr.write('3. Connect your MCP client to http://127.0.0.1:3002/mcp\n');
+process.stderr.write('4. Send the key as Authorization: Bearer <key>\n');
+process.stderr.write('5. Launch CodeXomics for tools that require the renderer\n');
 process.stderr.write('\n');
 process.stderr.write('🔧 MCP Client Configuration:\n');
-process.stderr.write('Add this to your MCP Client MCP settings:\n');
+process.stderr.write('Use the equivalent URL/header settings supported by your MCP client:\n');
 process.stderr.write('{\n');
-process.stderr.write('  "mcpServers": {\n');
-process.stderr.write('    "CodeXomics": {\n');
-process.stderr.write('      "command": "node",\n');
-process.stderr.write('      "args": ["' + __filename + '"],\n');
-process.stderr.write('      "env": {}\n');
-process.stderr.write('    }\n');
-process.stderr.write('  }\n');
+process.stderr.write('  "url": "http://127.0.0.1:3002/mcp",\n');
+process.stderr.write('  "headers": { "Authorization": "Bearer <configured-key>" }\n');
 process.stderr.write('}\n');
 process.stderr.write('\n');
 // Output tool information to stderr to avoid interfering with JSON-RPC
@@ -138,9 +145,9 @@ const toolInfo = `📚 Available Tools (Full List):
 
 🔗 Connection Info:
 - Protocol: JSON-RPC 2.0 (Claude MCP Standard)
-- Transport: stdio (for MCP Client)
-- WebSocket: ws://localhost:3003 (Browser connection)
-- HTTP/SSE: http://localhost:3002
+- Transport: authenticated HTTP POST http://127.0.0.1:3002/mcp
+- Legacy SSE (authenticated): http://127.0.0.1:3002/sse
+- WebSocket compatibility endpoint: ws://127.0.0.1:3003
 - Total Tools: 40+ comprehensive genomics tools
 
 `;

@@ -20,4 +20,12 @@ describe('MCP Bridge startup', () => {
     expect(source).toContain('wsPort = settings?.wsPort || 3003');
     expect(source).toMatch(/this\.mcpBridge\.wsUrl = `ws:\/\/localhost:\$\{wsPort\}`/);
   });
+
+  it('does not start a legacy renderer bridge when the in-process server is running', () => {
+    const source = fs.readFileSync(RENDERER_PATH, 'utf-8');
+
+    expect(source).toContain("await ipcRenderer.invoke('mcp-server-status')");
+    expect(source).toContain("serverStatus.serverType === 'unified-claude-mcp'");
+    expect(source).toContain('this.mcpBridge.stop();');
+  });
 });

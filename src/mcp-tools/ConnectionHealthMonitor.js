@@ -256,6 +256,7 @@ class ConnectionHealthMonitor extends EventEmitter {
       const connection = this.connections.get(connectionId);
       if (connection && now - connection.lastActivity > extendedTimeout) {
         console.log(`🧹 Auto-removing stale connection: ${connectionId}`);
+        this.emit('connectionExpired', connection);
         this.unregisterConnection(connectionId);
       }
     }

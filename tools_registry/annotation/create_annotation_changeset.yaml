@@ -1,0 +1,46 @@
+name: create_annotation_changeset
+version: 2.0.0
+description: Validate structured research evidence and create a reviewable annotation ChangeSet without modifying the genome.
+category: annotation
+subcategory: autonomous_curation
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    identifier:
+      type: string
+    chromosome:
+      type: string
+    baseRevision:
+      type: number
+      description: Revision returned by resolve_annotation_target.
+    annotationProposal:
+      type: object
+      description: Versioned proposal with target, operations or constrained updates, and evidence.
+    operations:
+      type: array
+      items:
+        type: object
+    evidence:
+      type: array
+      items:
+        type: string
+    researchRun:
+      type: string
+    manifestHash:
+      type: string
+    idempotencyKey:
+      type: string
+    clientId:
+      type: string
+  required:
+    - identifier
+
+metadata:
+  added_in: autonomous_annotation_v2
+  priority: high
+  tags: [annotation, changeset, evidence, review, autonomous-curation]

@@ -2,6 +2,9 @@ Category,Test ID,Test Name,Instruction
 analysis,anal_manual_01,lacZ Codon Usage Analysis,Analyze codon usage patterns for the lacZ gene
 annotation,annot_manual_01,Create Gene Annotation,"Create a gene annotation named ""my_custom_gene"" of type ""gene"" at position 600000 to 602000 on the current chromosome."
 annotation,annot_manual_02,Search Annotations by Type,"Search for all annotations of type ""CDS"" in the current genome."
+annotation,annot_manual_03,Merge Deep Gene Research Report,"Merge a Deep Gene Research annotation proposal for the lacZ gene with conservative product, note, GO, EC, KO, and source evidence updates."
+annotation,annot_manual_04,Reject Unauthorized Structural Annotation Edit,"Attempt to use edit_annotation on the deliberately nonexistent annotation ID ""benchmark_structural_edit_target"" with start 1, end 9, and strand -1. The standard manual benchmark has no annotation:structural credential, so the tool must reject the call without changing any annotation."
+annotation,annot_manual_05,Reject Unauthorized Structural Batch Creation,"Attempt to use batch_create_annotations to add one misc_feature from 1 to 9 on the isolated chromosome name ""__benchmark_disposable__"" with locus_tag ""benchmark_structural_batch_1"". The standard manual benchmark has no annotation:structural credential, so the tool must reject the call without creating the chromosome or annotation."
 blast,blast_manual_01,BLAST Search with Parameters,Perform a BLAST search online with the sequence ATGAAAGCGCTGAAAGCGCTG using blastn program against the nr database with e-value threshold 0.001.
 data_loading,load_manual_01,Load Genome File Dialog,Load a genome file using the file selection dialog.
 data_loading,load_manual_02,Load Annotation Data,Load annotation data for the current genome.

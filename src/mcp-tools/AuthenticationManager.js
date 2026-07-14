@@ -18,7 +18,7 @@ class AuthenticationManager {
       requireAuth: config.requireAuth !== false, // Default: true
       sessionTimeout: config.sessionTimeout || 3600000, // 1 hour
       maxSessionsPerKey: config.maxSessionsPerKey || 10,
-      enableLocalBypass: config.enableLocalBypass !== false, // Allow local connections without auth
+      enableLocalBypass: config.enableLocalBypass === true, // Local bypass is explicit and development-only
       ...config,
     };
 
@@ -28,6 +28,20 @@ class AuthenticationManager {
         name: 'Master Key',
         permissions: ['*'],
         isAdmin: true,
+      });
+    }
+
+    const configuredKeys = Array.isArray(config.apiKeys)
+      ? config.apiKeys
+      : Object.entries(config.apiKeys || {}).map(([keyId, value]) => ({ keyId, ...(value || {}) }));
+    for (const entry of configuredKeys) {
+      const keyId = String(entry.keyId || entry.id || '').trim();
+      const apiKey = entry.apiKey || entry.key || entry.token;
+      if (!keyId || !apiKey) continue;
+      this.addApiKey(keyId, apiKey, {
+        name: entry.name || keyId,
+        permissions: Array.isArray(entry.permissions) ? entry.permissions : [],
+        isAdmin: entry.isAdmin === true,
       });
     }
 
@@ -60,6 +74,9 @@ class AuthenticationManager {
    */
   addApiKey(keyId, apiKey, metadata = {}) {
     const keyHash = this.hashApiKey(apiKey);
+    if (this.apiKeys.has(keyHash)) {
+      throw new Error(`Duplicate API key secret configured for ${keyId}`);
+    }
 
     this.apiKeys.set(keyHash, {
       keyId,
@@ -109,7 +126,7 @@ class AuthenticationManager {
   /**
    * Validate API key and create session
    */
-  validateApiKey(apiKey, clientInfo = {}) {
+  validateApiKey(apiKey, clientInfo = {}, options = {}) {
     if (!this.config.requireAuth) {
       return this.createBypassSession(clientInfo);
     }
@@ -122,6 +139,24 @@ class AuthenticationManager {
         valid: false,
         error: 'Invalid API key',
       };
+    }
+
+    if (options.reuseSession) {
+      for (const existingSessionId of Array.from(keyData.sessions)) {
+        const validation = this.validateSession(existingSessionId);
+        if (validation.valid) {
+          return {
+            valid: true,
+            sessionId: existingSessionId,
+            keyId: keyData.keyId,
+            principal: keyData.keyId,
+            permissions: keyData.metadata.permissions,
+            isAdmin: keyData.metadata.isAdmin,
+            expiresAt: validation.session.expiresAt,
+          };
+        }
+        keyData.sessions.delete(existingSessionId);
+      }
     }
 
     // Check session limit
@@ -138,7 +173,10 @@ class AuthenticationManager {
     return {
       valid: true,
       sessionId: session.sessionId,
+      keyId: keyData.keyId,
+      principal: keyData.keyId,
       permissions: keyData.metadata.permissions,
+      isAdmin: keyData.metadata.isAdmin,
       expiresAt: session.expiresAt,
     };
   }
@@ -171,6 +209,21 @@ class AuthenticationManager {
    * Create bypass session for local connections
    */
   createBypassSession(clientInfo) {
+    for (const [existingSessionId, existingSession] of this.sessions) {
+      if (existingSession.keyId !== 'local-bypass') continue;
+      const validation = this.validateSession(existingSessionId);
+      if (validation.valid) {
+        return {
+          valid: true,
+          sessionId: existingSessionId,
+          keyId: existingSession.keyId,
+          principal: existingSession.keyId,
+          permissions: existingSession.permissions,
+          isAdmin: existingSession.isAdmin,
+          expiresAt: existingSession.expiresAt,
+        };
+      }
+    }
     const sessionId = this.generateSessionId();
 
     const session = {
@@ -190,7 +243,10 @@ class AuthenticationManager {
     return {
       valid: true,
       sessionId: session.sessionId,
+      keyId: session.keyId,
+      principal: session.keyId,
       permissions: session.permissions,
+      isAdmin: session.isAdmin,
       expiresAt: session.expiresAt,
     };
   }
@@ -345,11 +401,15 @@ class AuthenticationManager {
     const match = authHeader.match(/^Bearer\s+(.+)$/i);
     const apiKey = match ? match[1] : authHeader;
 
-    return this.validateApiKey(apiKey, {
-      type: 'http',
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-    });
+    return this.validateApiKey(
+      apiKey,
+      {
+        type: 'http',
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+      },
+      { reuseSession: true }
+    );
   }
 
   /**

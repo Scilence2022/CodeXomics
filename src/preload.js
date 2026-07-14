@@ -7,6 +7,7 @@ const allowedInvokeChannels = [
   'mcp-server-get-settings',
   'mcp-server-save-settings',
   'mcp-server-check-port',
+  'dgr-mcp-request',
   'broadcast-theme-to-pm',
   'request-current-theme',
   'screenshot:capture',
@@ -600,6 +601,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAttachmentsStoragePath: () => ipcRenderer.invoke('get-attachments-storage-path'),
 
   // MCP Server APIs
+  dgrMcpRequest: request => ipcRenderer.invoke('dgr-mcp-request', request),
   invoke: (channel, ...args) => {
     if (allowedInvokeChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);

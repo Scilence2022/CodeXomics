@@ -269,7 +269,7 @@ class DynamicToolsSnapshotAdapter {
         inputSchema: {
           type: 'object',
           properties: {
-            gene_name: {
+            geneSymbol: {
               type: 'string',
               description: 'Gene symbol, locus tag, or identifier to research.',
             },
@@ -277,13 +277,13 @@ class DynamicToolsSnapshotAdapter {
               type: 'string',
               description: 'Organism name, for example Escherichia coli.',
             },
-            include_annotation_proposal: {
+            includeCodeXomicsAnnotationProposal: {
               type: 'boolean',
               description: 'Whether to request a conservative CodeXomics annotationProposal.',
               default: true,
             },
           },
-          required: ['gene_name'],
+          required: ['geneSymbol', 'organism'],
         },
       },
     };

@@ -71,6 +71,28 @@ class ToolCapabilityPolicy {
         policy: 'once_per_round',
       },
 
+      annotation_structural_operations: {
+        tools: ['edit_annotation', 'batch_create_annotations'],
+        policy: 'parameter_based',
+      },
+
+      annotation_changeset_workflow: {
+        tools: [
+          'resolve_annotation_target',
+          'create_annotation_changeset',
+          'get_annotation_changeset',
+          'request_annotation_approval',
+          'reject_annotation_changeset',
+          'apply_annotation_changeset',
+          'rollback_annotation_changeset',
+          'get_annotation_audit',
+          'start_annotation_research',
+          'get_annotation_research_workflow',
+          'cancel_annotation_research',
+        ],
+        policy: 'parameter_based',
+      },
+
       repeatable_ui_operations: {
         tools: ['open_new_tab'],
         policy: 'bounded_repeat',

@@ -1,0 +1,22 @@
+name: rollback_annotation_changeset
+version: 2.0.0
+description: Create a reviewed inverse ChangeSet for a previous annotation commit; rollback is never applied directly.
+category: annotation
+subcategory: autonomous_curation
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    changeSetId:
+      type: string
+    principal:
+      type: string
+    clientId:
+      type: string
+  required: [changeSetId]
+metadata:
+  added_in: autonomous_annotation_v2
+  priority: high
+  tags: [annotation, rollback, changeset]

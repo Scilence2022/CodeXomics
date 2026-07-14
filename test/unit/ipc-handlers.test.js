@@ -87,6 +87,11 @@ describe('IPC Handlers Module', () => {
 
   it('should handle MCP server IPC', () => {
     expect(content).toContain('mcp-server');
+    expect(content).toContain("ipcMain.handle('dgr-mcp-request'");
+    expect(content).toContain('await startUnifiedMCPServer()');
+    expect(content).toContain('await stopUnifiedMCPServer()');
+    expect(content).toContain('isRegisteredGenomeSender(event)');
+    expect(content).toContain('limited to registered genome windows');
   });
 
   it('should handle Circos plotter IPC', () => {

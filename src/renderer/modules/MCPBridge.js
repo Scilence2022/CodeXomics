@@ -116,7 +116,8 @@ class MCPBridge {
         this.connectionAttempts = 0;
         this.quiet = false;
 
-        // Send internal client identification with windowId (no API key needed for localhost)
+        // This legacy bridge is accepted only when the standalone server was
+        // explicitly started with the development-only local bypass.
         this.ws.send(
           JSON.stringify({
             type: 'internal-client',
@@ -237,6 +238,10 @@ class MCPBridge {
 
         case 'error':
           console.error('[MCPBridge] Server error:', message.error);
+          if (/internal (?:websocket )?bridge.*disabled/i.test(String(message.error || ''))) {
+            console.warn('[MCPBridge] Secure server rejected the legacy bridge; stopping reconnect attempts');
+            this.stop();
+          }
           break;
 
         default:
@@ -251,7 +256,7 @@ class MCPBridge {
    * Handle tool execution request from MCP server
    */
   async handleToolExecution(message) {
-    const { requestId, method, toolName, parameters } = message;
+    const { requestId, method, toolName, parameters, executionContext } = message;
 
     console.log(`[MCPBridge] Received tool execution request: ${method} (${toolName})`);
 
@@ -262,7 +267,7 @@ class MCPBridge {
 
     try {
       // Delegate to InternalMCPServer.executeMethod
-      const result = await this.internalMCPServer.executeMethod(method, parameters);
+      const result = await this.internalMCPServer.executeMethod(method, parameters, executionContext);
       this.sendResult(requestId, result, null);
     } catch (error) {
       console.error(`[MCPBridge] Tool execution failed: ${method}`, error);

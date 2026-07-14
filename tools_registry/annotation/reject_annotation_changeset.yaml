@@ -1,0 +1,23 @@
+name: reject_annotation_changeset
+version: 2.0.0
+description: Record a curator rejection for an awaiting-review or approved annotation ChangeSet and revoke any outstanding approval capability.
+category: annotation
+subcategory: autonomous_curation
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    changeSetId:
+      type: string
+    reason:
+      type: string
+      maxLength: 2048
+    clientId:
+      type: string
+  required: [changeSetId]
+metadata:
+  added_in: autonomous_annotation_v2
+  priority: high
+  tags: [annotation, rejection, review, changeset]

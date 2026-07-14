@@ -90,7 +90,7 @@ class AnnotationTools {
       update_annotation: {
         name: 'update_annotation',
         description:
-          'Update fields of an existing genome annotation. Can modify product name, gene name, note, db_xref, EC_number, and other qualifier fields. Changes are tracked with agent identity and timestamps for audit purposes.',
+          'Legacy compatibility tool. It creates a reviewable annotation ChangeSet and never writes directly; use create_annotation_changeset, request_annotation_approval, and apply_annotation_changeset for the explicit workflow.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -169,8 +169,9 @@ class AnnotationTools {
             },
             dryRun: {
               type: 'boolean',
-              description: 'If true, return proposed updates without applying them.',
-              default: false,
+              description:
+                'Deprecated compatibility flag. Research merges always create a reviewable ChangeSet and never apply directly.',
+              default: true,
             },
             overwriteProduct: {
               type: 'boolean',
@@ -189,6 +190,253 @@ class AnnotationTools {
             },
           },
           required: [],
+        },
+      },
+
+      resolve_annotation_target: {
+        name: 'resolve_annotation_target',
+        description:
+          'Resolve a gene/locus identifier to an immutable CodeXomics annotation target with featureId, featureHash, and annotation revision. When a GenBank gene and CDS share the same locus tag, the CDS is selected because annotation refinement targets CDS qualifiers. Call this before starting autonomous research.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            identifier: { type: 'string', description: 'locus_tag, gene name, protein_id, or feature identifier.' },
+            chromosome: { type: 'string', description: 'Required when the identifier is ambiguous across replicons.' },
+            clientId: { type: 'string', description: 'Browser client ID for multi-window support.' },
+          },
+          required: ['identifier'],
+        },
+      },
+
+      create_annotation_changeset: {
+        name: 'create_annotation_changeset',
+        description:
+          'Validate a structured research proposal and create an immutable, reviewable annotation ChangeSet. This tool never mutates a genome.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            identifier: {
+              type: 'string',
+              description: 'Target locus_tag, gene name, protein_id, or feature identifier.',
+            },
+            chromosome: { type: 'string', description: 'Target chromosome/replicon.' },
+            baseRevision: { type: 'number', description: 'Annotation revision returned by resolve_annotation_target.' },
+            annotationProposal: {
+              type: 'object',
+              description: 'Versioned proposal with target, operations or restricted qualifier updates, and evidence.',
+            },
+            operations: {
+              type: 'array',
+              description:
+                'Explicit ChangeSet operations: addQualifier, replaceQualifier, removeQualifier, addDbxref, or addEvidenceLink.',
+              items: { type: 'object' },
+            },
+            evidence: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Evidence IDs or immutable evidence-resource URIs.',
+            },
+            researchRun: { type: 'string', description: 'DGR research run ID.' },
+            manifestHash: { type: 'string', description: 'Hash of the immutable DGR evidence manifest.' },
+            idempotencyKey: {
+              type: 'string',
+              description: 'Stable client-generated key used to prevent duplicate commits.',
+            },
+            clientId: { type: 'string', description: 'Browser client ID for multi-window support.' },
+          },
+          required: ['identifier'],
+        },
+      },
+
+      get_annotation_changeset: {
+        name: 'get_annotation_changeset',
+        description: 'Get a pending, approved, stale, or committed annotation ChangeSet.',
+        inputSchema: {
+          type: 'object',
+          properties: { changeSetId: { type: 'string' }, clientId: { type: 'string' } },
+          required: ['changeSetId'],
+        },
+      },
+
+      request_annotation_approval: {
+        name: 'request_annotation_approval',
+        description:
+          'Record a human curator approval for an awaiting-review ChangeSet and return a short-lived commit capability. The proposal creator cannot self-approve.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            changeSetId: { type: 'string' },
+            expiresInMinutes: { type: 'number', default: 30 },
+            clientId: { type: 'string' },
+          },
+          required: ['changeSetId'],
+        },
+      },
+
+      reject_annotation_changeset: {
+        name: 'reject_annotation_changeset',
+        description:
+          'Record a curator rejection for an awaiting-review or approved ChangeSet. Any outstanding approval capability is revoked and the ChangeSet can no longer be committed.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            changeSetId: { type: 'string' },
+            reason: { type: 'string' },
+            clientId: { type: 'string' },
+          },
+          required: ['changeSetId'],
+        },
+      },
+
+      apply_annotation_changeset: {
+        name: 'apply_annotation_changeset',
+        description:
+          'Atomically apply an approved ChangeSet only when its target feature hash and annotation revision still match. Requires the approval capability returned by request_annotation_approval.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            changeSetId: { type: 'string' },
+            approvalToken: { type: 'string' },
+            clientId: { type: 'string' },
+          },
+          required: ['changeSetId', 'approvalToken'],
+        },
+      },
+
+      rollback_annotation_changeset: {
+        name: 'rollback_annotation_changeset',
+        description:
+          'Create a new human-review ChangeSet that reverses a previous committed ChangeSet. Rollback is never applied directly.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            changeSetId: { type: 'string' },
+            principal: { type: 'string' },
+            clientId: { type: 'string' },
+          },
+          required: ['changeSetId'],
+        },
+      },
+
+      get_annotation_audit: {
+        name: 'get_annotation_audit',
+        description: 'Get the per-genome revisioned annotation ChangeSet audit trail.',
+        inputSchema: {
+          type: 'object',
+          properties: { limit: { type: 'number', default: 100 }, clientId: { type: 'string' } },
+          required: [],
+        },
+      },
+
+      start_annotation_research: {
+        name: 'start_annotation_research',
+        description:
+          'Start a resumable Deep Gene Research run bound to an exact CodeXomics feature target. Organism metadata is taken from the loaded genome when available; otherwise organism is required. It never writes annotations directly.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            identifier: { type: 'string' },
+            chromosome: { type: 'string' },
+            organism: {
+              type: 'string',
+              description: 'Scientific organism name; required only when the loaded genome lacks organism metadata.',
+            },
+            geneSymbol: { type: 'string' },
+            researchFocus: { type: 'array', items: { type: 'string' } },
+            specificAspects: { type: 'array', items: { type: 'string' } },
+            userPrompt: { type: 'string' },
+            diseaseContext: { type: 'string' },
+            experimentalApproach: { type: 'string' },
+            language: { type: 'string' },
+            maxResult: { type: 'integer', minimum: 1, maximum: 20, default: 5 },
+            idempotencyKey: { type: 'string', minLength: 1, maxLength: 256 },
+            correlationId: { type: 'string', minLength: 1, maxLength: 256 },
+            clientId: { type: 'string' },
+          },
+          required: ['identifier'],
+        },
+      },
+
+      get_annotation_research_workflow: {
+        name: 'get_annotation_research_workflow',
+        description:
+          'Get a resumable internal DGR research workflow. On completion, annotation:propose callers create a reviewable ChangeSet; research-only callers receive the proposal for later materialization.',
+        inputSchema: {
+          type: 'object',
+          properties: { taskId: { type: 'string' }, clientId: { type: 'string' } },
+          required: ['taskId'],
+        },
+      },
+
+      cancel_annotation_research: {
+        name: 'cancel_annotation_research',
+        description: 'Cancel a DGR research workflow while retaining its durable audit record.',
+        inputSchema: {
+          type: 'object',
+          properties: { taskId: { type: 'string' }, clientId: { type: 'string' } },
+          required: ['taskId'],
+        },
+      },
+
+      edit_annotation: {
+        name: 'edit_annotation',
+        description:
+          'Privileged raw structural editing of one existing genome annotation. Requires annotation:structural permission and bypasses the qualifier-only ChangeSet workflow.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            annotationId: {
+              type: 'string',
+              description: 'Annotation ID, locus_tag, or gene name identifying the feature to edit.',
+            },
+            updates: {
+              type: 'object',
+              description:
+                'Raw annotation fields to merge, such as start, end, strand, type, phase, source, score, or qualifiers.',
+            },
+            clientId: {
+              type: 'string',
+              description: 'Browser client ID for multi-window support.',
+            },
+          },
+          required: ['annotationId', 'updates'],
+        },
+      },
+
+      batch_create_annotations: {
+        name: 'batch_create_annotations',
+        description:
+          'Privileged creation of multiple structural genome annotations on one chromosome. Requires annotation:structural permission and bypasses the qualifier-only ChangeSet workflow.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            annotations: {
+              type: 'array',
+              description: 'Structural annotations to create.',
+              minItems: 1,
+              maxItems: 1000,
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string', description: 'Feature type, such as CDS, gene, or rRNA.' },
+                  start: { type: 'number', description: 'One-based feature start coordinate.' },
+                  end: { type: 'number', description: 'One-based feature end coordinate.' },
+                  strand: { type: 'number', description: 'Feature strand, normally 1 or -1.' },
+                  qualifiers: { type: 'object', description: 'Raw annotation qualifier map.' },
+                },
+                required: ['start', 'end'],
+              },
+            },
+            chromosome: {
+              type: 'string',
+              description: 'Target chromosome or replicon. Defaults to the active chromosome.',
+            },
+            clientId: {
+              type: 'string',
+              description: 'Browser client ID for multi-window support.',
+            },
+          },
+          required: ['annotations'],
         },
       },
 
@@ -342,8 +590,8 @@ class AnnotationTools {
    * All annotation tools delegate to the browser client because genome
    * annotation data lives in-memory on the renderer side (GenomeDataProxy).
    */
-  async executeClientTool(toolName, parameters, clientId) {
-    return await this.server.executeToolOnClient(toolName, parameters, clientId);
+  async executeClientTool(toolName, parameters, clientId, executionContext = null) {
+    return await this.server.executeToolOnClient(toolName, parameters, clientId, executionContext);
   }
 }
 

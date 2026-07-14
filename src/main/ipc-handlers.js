@@ -33,6 +33,14 @@ const {
   sanitizePluginId,
 } = require('./security-utils');
 const { ToolRegistryService } = require('./tool-registry-service');
+const { proxyDgrMcpRequest } = require('./dgr-mcp-proxy');
+const {
+  assertSidecarContentSize,
+  assertSidecarValueSize,
+  buildFallbackPaths,
+  validateFallbackBinding,
+  createMigratedSidecarData,
+} = require('./sidecar-storage');
 
 let BamReaderClass = null;
 const BLAST_EXECUTABLES = new Set(['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx']);
@@ -567,9 +575,7 @@ function registerIpcHandlers(deps) {
     windowRegistry,
 
     getUnifiedMCPServer,
-    setUnifiedMCPServer,
     getUnifiedServerStatus,
-    setUnifiedServerStatus,
 
     analyzerPendingData,
     getWindowRegistryStatus,
@@ -598,6 +604,8 @@ function registerIpcHandlers(deps) {
     createMenu,
 
     updateMCPServerMenu,
+    startUnifiedMCPServer,
+    stopUnifiedMCPServer,
     loadMCPServerSettings,
     saveMCPServerSettings,
     checkPortAvailable,
@@ -605,6 +613,20 @@ function registerIpcHandlers(deps) {
   const bamReaders = new Map();
   const getMainGenomeTarget = () =>
     (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow || null;
+  const isRegisteredGenomeSender = event => {
+    const sender = event?.sender;
+    if (!sender || (typeof sender.isDestroyed === 'function' && sender.isDestroyed())) return false;
+    const mainTarget = getMainGenomeTarget();
+    if (mainTarget?.webContents === sender) return true;
+    for (const [, entry] of windowRegistry.entries()) {
+      const window = entry?.window || entry;
+      if (window?.webContents === sender) return true;
+    }
+    for (const handle of workspaceHostManager.getAllViewHandles()) {
+      if (handle?.webContents === sender) return true;
+    }
+    return false;
+  };
 
   const getOwnedBamReader = (event, readerId) => {
     const entry = bamReaders.get(readerId);
@@ -627,31 +649,140 @@ function registerIpcHandlers(deps) {
     return { reportPath, fileName };
   };
 
-  const hashString = value => {
-    let hash = 0;
-    const input = String(value || '');
-    for (let i = 0; i < input.length; i += 1) {
-      hash = (hash << 5) - hash + input.charCodeAt(i);
-      hash |= 0;
-    }
-    return Math.abs(hash).toString(16);
-  };
-
   const resolveSidecarPaths = genomePath => {
-    const safeGenomePath = assertAllowedFileAccess(app, genomePath, {
+    const authorizedGenomePath = assertAllowedFileAccess(app, genomePath, {
       operation: 'sidecar access',
       mustExist: true,
     });
+    const safeGenomePath = fs.realpathSync.native
+      ? fs.realpathSync.native(authorizedGenomePath)
+      : fs.realpathSync(authorizedGenomePath);
     const parsed = path.parse(safeGenomePath);
     const sidecarPath = path.resolve(parsed.dir, `${parsed.name}.CodeXomics`);
     const fallbackDir = path.resolve(app.getPath('userData'), 'sidecar');
-    const fallbackPath = path.resolve(fallbackDir, `${hashString(safeGenomePath)}.CodeXomics`);
+    const { sourcePathHash, fallbackPath, legacyFallbackPaths } = buildFallbackPaths(
+      fallbackDir,
+      authorizedGenomePath,
+      safeGenomePath
+    );
 
-    if (path.dirname(sidecarPath) !== parsed.dir || path.dirname(fallbackPath) !== fallbackDir) {
+    if (
+      path.dirname(sidecarPath) !== parsed.dir ||
+      path.dirname(fallbackPath) !== fallbackDir ||
+      legacyFallbackPaths.some(candidate => path.dirname(candidate) !== fallbackDir)
+    ) {
       throw new Error('Invalid sidecar path');
     }
 
-    return { safeGenomePath, sidecarPath, fallbackDir, fallbackPath };
+    return {
+      authorizedGenomePath,
+      safeGenomePath,
+      sidecarPath,
+      fallbackDir,
+      fallbackPath,
+      legacyFallbackPaths,
+      sourcePathHash,
+    };
+  };
+
+  const writeFileAtomically = async (destinationPath, content) => {
+    const tempPath = `${destinationPath}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`;
+    let handle;
+    try {
+      handle = await fs.promises.open(tempPath, 'wx', 0o600);
+      await handle.writeFile(content, 'utf8');
+      await handle.sync();
+      await handle.close();
+      handle = null;
+      await fs.promises.rename(tempPath, destinationPath);
+
+      // The file contents and atomic rename are durable only after the parent
+      // directory entry is flushed. Directory fsync is unavailable on some
+      // platforms, so keep this final strengthening step best-effort.
+      let directoryHandle;
+      try {
+        directoryHandle = await fs.promises.open(path.dirname(destinationPath), 'r');
+        await directoryHandle.sync();
+      } catch (syncError) {
+        console.warn(`[Sidecar] Could not fsync ${path.dirname(destinationPath)}: ${syncError.message}`);
+      } finally {
+        await directoryHandle?.close().catch(() => undefined);
+      }
+    } catch (error) {
+      if (handle) await handle.close().catch(() => undefined);
+      await fs.promises.rm(tempPath, { force: true }).catch(() => undefined);
+      throw error;
+    }
+  };
+
+  const sidecarWriteLocks = new Map();
+  const withSidecarWriteLock = async (genomePath, operation) => {
+    const previous = sidecarWriteLocks.get(genomePath) || Promise.resolve();
+    let release;
+    const gate = new Promise(resolve => {
+      release = resolve;
+    });
+    const tail = previous.catch(() => undefined).then(() => gate);
+    sidecarWriteLocks.set(genomePath, tail);
+    await previous.catch(() => undefined);
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (sidecarWriteLocks.get(genomePath) === tail) sidecarWriteLocks.delete(genomePath);
+    }
+  };
+
+  const readNewestSidecarCandidate = async (paths, options = {}) => {
+    const existingPaths = paths.filter(candidatePath => fs.existsSync(candidatePath));
+    if (existingPaths.length === 0) return null;
+
+    const validCandidates = [];
+    const errors = [];
+    for (const candidatePath of existingPaths) {
+      try {
+        const stats = await fs.promises.stat(candidatePath);
+        assertSidecarContentSize(stats.size);
+        const content = await fs.promises.readFile(candidatePath, 'utf8');
+        assertSidecarContentSize(content);
+        const data = JSON.parse(content);
+        assertSidecarValueSize(data);
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          throw new Error('sidecar root must be a JSON object');
+        }
+        const isLegacy = options.legacyFallbackPaths?.has(candidatePath) || false;
+        const isFallback = options.fallbackPaths?.has(candidatePath) || false;
+        if (isFallback) {
+          validateFallbackBinding(data, {
+            ...options,
+            isLegacy,
+          });
+        }
+        const storageRevision =
+          Number.isInteger(data._storageRevision) && data._storageRevision >= 0 ? data._storageRevision : 0;
+        validCandidates.push({
+          path: candidatePath,
+          data,
+          storageRevision,
+          // File mtime is controlled by the storage layer. Never let a
+          // caller-supplied future lastModified value win candidate selection.
+          modifiedAt: stats.mtimeMs || 0,
+          isLegacy,
+        });
+      } catch (error) {
+        errors.push(`${candidatePath}: ${error.message}`);
+      }
+    }
+    if (validCandidates.length === 0) {
+      throw new Error(`All existing sidecar candidates are corrupt (${errors.join('; ')})`);
+    }
+    validCandidates.sort(
+      (left, right) =>
+        right.storageRevision - left.storageRevision ||
+        right.modifiedAt - left.modifiedAt ||
+        left.path.localeCompare(right.path)
+    );
+    return validCandidates[0];
   };
 
   const sanitizeScreenshotFormat = format => {
@@ -1189,21 +1320,56 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('load-sidecar-file', async (event, genomePath) => {
     try {
-      const { safeGenomePath, sidecarPath, fallbackPath } = resolveSidecarPaths(genomePath);
-      const readPath = fs.existsSync(sidecarPath) ? sidecarPath : fallbackPath;
+      const {
+        authorizedGenomePath,
+        safeGenomePath,
+        sidecarPath,
+        fallbackDir,
+        fallbackPath,
+        legacyFallbackPaths,
+        sourcePathHash,
+      } = resolveSidecarPaths(genomePath);
+      return await withSidecarWriteLock(safeGenomePath, async () => {
+        const candidateOptions = {
+          authorizedGenomePath,
+          safeGenomePath,
+          sourcePathHash,
+          legacyFallbackPaths: new Set(legacyFallbackPaths),
+          fallbackPaths: new Set([fallbackPath, ...legacyFallbackPaths]),
+        };
+        let selected = await readNewestSidecarCandidate(
+          [sidecarPath, fallbackPath, ...legacyFallbackPaths],
+          candidateOptions
+        );
 
-      if (!fs.existsSync(readPath)) {
-        return { success: true, exists: false, data: null };
-      }
+        if (!selected) {
+          return { success: true, exists: false, data: null };
+        }
 
-      const content = await fs.promises.readFile(readPath, 'utf8');
-      return {
-        success: true,
-        exists: true,
-        path: readPath,
-        data: JSON.parse(content),
-        sourceFile: path.basename(safeGenomePath),
-      };
+        if (selected.isLegacy) {
+          const migratedData = createMigratedSidecarData(selected.data, safeGenomePath, sourcePathHash);
+          await fs.promises.mkdir(fallbackDir, { recursive: true });
+          assertSidecarValueSize(migratedData);
+          const migratedContent = JSON.stringify(migratedData, null, 2);
+          assertSidecarContentSize(migratedContent);
+          await writeFileAtomically(fallbackPath, migratedContent);
+          selected = {
+            ...selected,
+            path: fallbackPath,
+            data: migratedData,
+            isLegacy: false,
+          };
+        }
+
+        return {
+          success: true,
+          exists: true,
+          path: selected.path,
+          data: selected.data,
+          storageRevision: selected.storageRevision,
+          sourceFile: path.basename(safeGenomePath),
+        };
+      });
     } catch (error) {
       return { success: false, exists: false, error: error.message };
     }
@@ -1211,29 +1377,66 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('save-sidecar-file', async (event, genomePath, data) => {
     try {
-      const { safeGenomePath, sidecarPath, fallbackDir, fallbackPath } = resolveSidecarPaths(genomePath);
-      const content = JSON.stringify(
-        {
-          ...(data || {}),
-          sourceFile: data?.sourceFile || path.basename(safeGenomePath),
-          lastModified: data?.lastModified || new Date().toISOString(),
-        },
-        null,
-        2
-      );
-
-      try {
-        await fs.promises.writeFile(sidecarPath, content, 'utf8');
-        return { success: true, path: sidecarPath, fallback: false };
-      } catch (writeError) {
-        if (!['EACCES', 'EROFS', 'EPERM', 'ENOENT'].includes(writeError.code)) {
-          throw writeError;
+      if (data !== undefined && (!data || typeof data !== 'object' || Array.isArray(data))) {
+        throw new Error('Sidecar data must be a JSON object');
+      }
+      assertSidecarValueSize(data || {});
+      const {
+        authorizedGenomePath,
+        safeGenomePath,
+        sidecarPath,
+        fallbackDir,
+        fallbackPath,
+        legacyFallbackPaths,
+        sourcePathHash,
+      } = resolveSidecarPaths(genomePath);
+      return await withSidecarWriteLock(safeGenomePath, async () => {
+        const current = await readNewestSidecarCandidate([sidecarPath, fallbackPath, ...legacyFallbackPaths], {
+          authorizedGenomePath,
+          safeGenomePath,
+          sourcePathHash,
+          legacyFallbackPaths: new Set(legacyFallbackPaths),
+          fallbackPaths: new Set([fallbackPath, ...legacyFallbackPaths]),
+        });
+        const expectedRevision =
+          Number.isInteger(data?._storageRevision) && data._storageRevision >= 0 ? data._storageRevision : 0;
+        const currentRevision = current?.storageRevision || 0;
+        if (expectedRevision !== currentRevision) {
+          return {
+            success: false,
+            conflict: true,
+            code: 'SIDECAR_CONFLICT',
+            currentRevision,
+            error: `Sidecar changed in another window (expected revision ${expectedRevision}, current revision ${currentRevision}); reload before saving`,
+          };
         }
 
-        await fs.promises.mkdir(fallbackDir, { recursive: true });
-        await fs.promises.writeFile(fallbackPath, content, 'utf8');
-        return { success: true, path: fallbackPath, fallback: true };
-      }
+        const storageRevision = currentRevision + 1;
+        const storedData = {
+          ...(data || {}),
+          _storageRevision: storageRevision,
+          _sourceGenomePathSha256: sourcePathHash,
+          _originalPath: safeGenomePath,
+          sourceFile: data?.sourceFile || path.basename(safeGenomePath),
+          lastModified: data?.lastModified || new Date().toISOString(),
+        };
+        assertSidecarValueSize(storedData);
+        const content = JSON.stringify(storedData, null, 2);
+        assertSidecarContentSize(content);
+
+        try {
+          await writeFileAtomically(sidecarPath, content);
+          return { success: true, path: sidecarPath, fallback: false, storageRevision };
+        } catch (writeError) {
+          if (!['EACCES', 'EROFS', 'EPERM', 'ENOENT'].includes(writeError.code)) {
+            throw writeError;
+          }
+
+          await fs.promises.mkdir(fallbackDir, { recursive: true });
+          await writeFileAtomically(fallbackPath, content);
+          return { success: true, path: fallbackPath, fallback: true, storageRevision };
+        }
+      });
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -1241,10 +1444,18 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('check-sidecar-file', async (event, genomePath) => {
     try {
-      const { sidecarPath, fallbackPath } = resolveSidecarPaths(genomePath);
+      const { authorizedGenomePath, safeGenomePath, sidecarPath, fallbackPath, legacyFallbackPaths, sourcePathHash } =
+        resolveSidecarPaths(genomePath);
+      const selected = await readNewestSidecarCandidate([sidecarPath, fallbackPath, ...legacyFallbackPaths], {
+        authorizedGenomePath,
+        safeGenomePath,
+        sourcePathHash,
+        legacyFallbackPaths: new Set(legacyFallbackPaths),
+        fallbackPaths: new Set([fallbackPath, ...legacyFallbackPaths]),
+      });
       return {
         success: true,
-        exists: fs.existsSync(sidecarPath) || fs.existsSync(fallbackPath),
+        exists: Boolean(selected),
       };
     } catch (error) {
       return { success: false, exists: false, error: error.message };
@@ -2996,187 +3207,36 @@ function registerIpcHandlers(deps) {
   });
 
   // Add Unified MCP Server IPC handlers
-  ipcMain.handle('mcp-server-start', async () => {
-    try {
-      const settings = loadMCPServerSettings();
-
-      // Check if Unified MCP Server is already running
-      if (getUnifiedServerStatus() === 'running') {
-        return {
-          success: true,
-          message: 'Unified Claude MCP Server is already running',
-          status: 'running',
-          serverType: 'unified-claude-mcp',
-          httpPort: settings.httpPort,
-          wsPort: settings.wsPort,
-        };
-      }
-
-      if (getUnifiedServerStatus() === 'starting') {
-        return { success: false, message: 'Unified Claude MCP Server is already starting', status: 'starting' };
-      }
-
-      setUnifiedServerStatus('starting');
-
-      // Pre-flight port check
-      const httpCheck = await checkPortAvailable(settings.httpPort);
-      const wsCheck = await checkPortAvailable(settings.wsPort);
-
-      if (!httpCheck.available) {
-        setUnifiedServerStatus('stopped');
-        return {
-          success: false,
-          message: `HTTP port ${settings.httpPort} is already in use. Please change the port in Settings or free the port.`,
-          status: 'stopped',
-          conflictPort: settings.httpPort,
-          conflictType: 'http',
-        };
-      }
-      if (!wsCheck.available) {
-        setUnifiedServerStatus('stopped');
-        return {
-          success: false,
-          message: `WebSocket port ${settings.wsPort} is already in use. Please change the port in Settings or free the port.`,
-          status: 'stopped',
-          conflictPort: settings.wsPort,
-          conflictType: 'ws',
-        };
-      }
-
-      try {
-        // Create Unified Claude MCP server with configurable ports
-        const server = new (require('../mcp-server'))(settings.httpPort, settings.wsPort, getMainGenomeTarget());
-        setUnifiedMCPServer(server);
-
-        // Forward server log events to the Manager window
-        server.on('log', logEntry => {
-          const mcpWindow = BrowserWindow.getAllWindows().find(
-            win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed()
-          );
-          if (mcpWindow) {
-            mcpWindow.webContents.send('mcp-server-log', logEntry);
-          }
-        });
-
-        // Forward client connection events
-        server.on('client-connected', data => {
-          const mcpWindow = BrowserWindow.getAllWindows().find(
-            win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed()
-          );
-          if (mcpWindow) {
-            mcpWindow.webContents.send('mcp-server-client-update', data);
-          }
-        });
-        server.on('client-disconnected', data => {
-          const mcpWindow = BrowserWindow.getAllWindows().find(
-            win => win.getTitle().includes('MCP Server Manager') && !win.isDestroyed()
-          );
-          if (mcpWindow) {
-            mcpWindow.webContents.send('mcp-server-client-update', data);
-          }
-        });
-
-        // Multi-window support: Link the authoritative windowRegistry so listWindows() always reads live data
-        server.setMainWindowRegistry(windowRegistry);
-
-        // Start the server
-        await server.start();
-
-        setUnifiedServerStatus('running');
-        console.log(
-          `Unified Claude MCP Server started successfully on ports ${settings.httpPort} (HTTP) and ${settings.wsPort} (WebSocket)`
-        );
-
-        // Multi-window support: Also populate the server's local IPC registry for routing
-        for (const [windowId, info] of windowRegistry.entries()) {
-          if (info.window && !info.window.isDestroyed()) {
-            server.registerWindow(windowId, info.window);
-            console.log(`[MCP Server] Registered existing window for IPC routing: ${windowId}`);
-          }
-        }
-
-        return {
-          success: true,
-          message: 'Unified Claude MCP Server started successfully',
-          status: 'running',
-          serverType: 'unified-claude-mcp',
-          httpPort: settings.httpPort,
-          wsPort: settings.wsPort,
-        };
-      } catch (error) {
-        setUnifiedServerStatus('stopped');
-        // Clean up the server instance
-        const currentServer = getUnifiedMCPServer();
-        if (currentServer) {
-          try {
-            await currentServer.stop();
-          } catch (e) {
-            /* ignore */
-          }
-        }
-        setUnifiedMCPServer(null);
-        console.error('Failed to start Unified Claude MCP Server:', error);
-
-        const msg = error.message || '';
-        let conflictPort = null;
-        let conflictType = null;
-        if (msg.includes('HTTP port') && msg.includes('already in use')) {
-          conflictPort = settings.httpPort;
-          conflictType = 'http';
-        } else if ((msg.includes('WebSocket port') || msg.includes('WS port')) && msg.includes('already in use')) {
-          conflictPort = settings.wsPort;
-          conflictType = 'ws';
-        }
-
-        return {
-          success: false,
-          message: msg || `Failed to start Unified Claude MCP Server: ${error.message}`,
-          status: 'stopped',
-          ...(conflictPort ? { conflictPort, conflictType } : {}),
-        };
-      }
-    } catch (error) {
-      setUnifiedServerStatus('stopped');
-      return { success: false, message: error.message, status: 'stopped' };
+  ipcMain.handle('dgr-mcp-request', async (event, request) => {
+    if (!isRegisteredGenomeSender(event)) {
+      throw new Error('Deep Gene Research MCP requests are limited to registered genome windows');
     }
+    return proxyDgrMcpRequest(request);
+  });
+
+  ipcMain.handle('mcp-server-start', async () => {
+    const settings = loadMCPServerSettings();
+    const result = await startUnifiedMCPServer();
+    return {
+      ...result,
+      message:
+        result.message ||
+        (result.success ? 'Unified Claude MCP Server started successfully' : 'Failed to start MCP server'),
+      serverType: result.success ? 'unified-claude-mcp' : undefined,
+      httpPort: result.success ? settings.httpPort : undefined,
+      wsPort: result.success ? settings.wsPort : undefined,
+    };
   });
 
   ipcMain.handle('mcp-server-stop', async () => {
-    try {
-      // Stop Unified MCP Server if running
-      if (getUnifiedServerStatus() === 'running') {
-        setUnifiedServerStatus('stopping');
-
-        const currentServer = getUnifiedMCPServer();
-        if (currentServer) {
-          await currentServer.stop();
-          setUnifiedMCPServer(null);
-        }
-
-        setUnifiedServerStatus('stopped');
-        console.log('Unified Claude MCP Server stopped successfully');
-
-        return {
-          success: true,
-          message: 'Unified Claude MCP Server stopped successfully',
-          status: 'stopped',
-          serverType: 'unified-claude-mcp',
-        };
-      }
-
-      if (getUnifiedServerStatus() === 'stopped') {
-        return { success: true, message: 'Unified Claude MCP Server is already stopped', status: 'stopped' };
-      }
-
-      if (getUnifiedServerStatus() === 'stopping') {
-        return { success: false, message: 'Unified Claude MCP Server is already stopping', status: 'stopping' };
-      }
-
-      return { success: true, message: 'No MCP Server is running', status: 'stopped' };
-    } catch (error) {
-      setUnifiedServerStatus('stopped');
-      return { success: false, message: error.message, status: 'stopped' };
-    }
+    const result = await stopUnifiedMCPServer();
+    return {
+      ...result,
+      message:
+        result.message ||
+        (result.success ? 'Unified Claude MCP Server stopped successfully' : 'Failed to stop MCP server'),
+      serverType: 'unified-claude-mcp',
+    };
   });
 
   ipcMain.handle('mcp-server-status', async () => {

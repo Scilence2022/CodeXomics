@@ -1,0 +1,21 @@
+name: get_annotation_audit
+version: 2.0.0
+description: Get the per-genome revisioned annotation ChangeSet audit trail.
+category: annotation
+subcategory: autonomous_curation
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    limit:
+      type: number
+      default: 100
+    clientId:
+      type: string
+  required: []
+metadata:
+  added_in: autonomous_annotation_v2
+  priority: medium
+  tags: [annotation, audit, changeset]

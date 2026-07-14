@@ -301,6 +301,63 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         manualVerification:
           'Please verify: 1) merge_gene_research_report is called for lacZ, 2) dry_run preview includes conservative annotation updates and evidence.',
       },
+      {
+        id: 'annot_manual_04',
+        name: 'Reject Unauthorized Structural Annotation Edit',
+        type: 'function_call',
+        category: 'annotation',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction:
+          'Attempt to use edit_annotation on the deliberately nonexistent annotation ID "benchmark_structural_edit_target" with start 1, end 9, and strand -1. The standard manual benchmark has no annotation:structural credential, so the tool must reject the call without changing any annotation.',
+        expectedResult: {
+          tool_name: 'edit_annotation',
+          parameters: {
+            annotationId: 'benchmark_structural_edit_target',
+            updates: { start: 1, end: 9, strand: -1 },
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification:
+          'Please verify: 1) edit_annotation is selected with the exact disposable target and coordinates, 2) execution is rejected because annotation:structural is absent, 3) no loaded annotation is modified.',
+      },
+      {
+        id: 'annot_manual_05',
+        name: 'Reject Unauthorized Structural Batch Creation',
+        type: 'function_call',
+        category: 'annotation',
+        complexity: 'simple',
+        evaluation: 'manual',
+        instruction:
+          'Attempt to use batch_create_annotations to add one misc_feature from 1 to 9 on the isolated chromosome name "__benchmark_disposable__" with locus_tag "benchmark_structural_batch_1". The standard manual benchmark has no annotation:structural credential, so the tool must reject the call without creating the chromosome or annotation.',
+        expectedResult: {
+          tool_name: 'batch_create_annotations',
+          parameters: {
+            chromosome: '__benchmark_disposable__',
+            annotations: [
+              {
+                type: 'misc_feature',
+                start: 1,
+                end: 9,
+                strand: 1,
+                qualifiers: {
+                  locus_tag: 'benchmark_structural_batch_1',
+                  note: 'Disposable manual benchmark marker',
+                },
+              },
+            ],
+          },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 300000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        manualVerification:
+          'Please verify: 1) batch_create_annotations is selected with the isolated benchmark chromosome and marker, 2) execution is rejected because annotation:structural is absent, 3) no chromosome or annotation is created.',
+      },
 
       // TRACK CONTROL TASKS - Manual + Simple
       {
