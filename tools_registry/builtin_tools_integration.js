@@ -821,6 +821,13 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('edit_annotation', {
+      method: 'editAnnotation',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('merge_gene_research_report', {
       method: 'mergeGeneResearchReport',
       category: 'annotation',
@@ -833,6 +840,7 @@ class BuiltInToolsIntegration {
       create_annotation_changeset: 'createAnnotationChangeset',
       get_annotation_changeset: 'getAnnotationChangeset',
       request_annotation_approval: 'requestAnnotationApproval',
+      reject_annotation_changeset: 'rejectAnnotationChangeset',
       apply_annotation_changeset: 'applyAnnotationChangeset',
       rollback_annotation_changeset: 'rollbackAnnotationChangeset',
       get_annotation_audit: 'getAnnotationAudit',
@@ -864,6 +872,13 @@ class BuiltInToolsIntegration {
 
     this.builtInToolsMap.set('bulk_update_annotations', {
       method: 'bulkUpdateAnnotations',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('batch_create_annotations', {
+      method: 'batchCreateAnnotations',
       category: 'annotation',
       type: 'built-in',
       priority: 1,
@@ -2350,9 +2365,41 @@ class BuiltInToolsIntegration {
       }
     }
 
+    // Raw structural annotation mutations are intentionally separate from the
+    // qualifier-only ChangeSet workflow and require annotation:structural.
+    const structuralAnnotationEdit =
+      /\b(raw|structural)\s+.*?\b(edit|modify|change|patch)\s+.*?\b(annotations?|features?)\b/i.test(query) ||
+      /\b(edit|modify|change|patch)\s+.*?\b(annotations?|features?)\b.*?\b(coordinates?|start|end|strand|phase|types?|structure|qualifiers?)\b/i.test(
+        query
+      ) ||
+      /\b(change|edit|modify|patch)\s+.*?\b(coordinates?|start|end|strand|phase|types?|structure|qualifiers?)\b.*?\b(annotations?|features?)\b/i.test(
+        query
+      );
+    if (structuralAnnotationEdit) {
+      relevantTools.push({
+        name: 'edit_annotation',
+        confidence: 0.95,
+        reason: 'Privileged structural annotation edit keywords detected',
+      });
+    }
+
+    const batchAnnotationCreation =
+      /\b(batch|bulk)\s+.*?\b(create|add|make)\s+.*?\b(annotations?|features?)\b/i.test(query) ||
+      /\b(create|add|make)\s+.*?\b(multiple|many)\s+.*?\b(annotations?|features?)\b/i.test(query);
+    if (batchAnnotationCreation) {
+      relevantTools.push({
+        name: 'batch_create_annotations',
+        confidence: 0.95,
+        reason: 'Privileged batch annotation creation keywords detected',
+      });
+    }
+
     // Check for annotation patterns
     // Supports intermediate words: "create a new annotation", "add an annotation here"
-    if (/\b(create|add|make)\s+.*?\bannotation\b/i.test(query) || /\bannotate\b/i.test(query)) {
+    if (
+      !batchAnnotationCreation &&
+      (/\b(create|add|make)\s+.*?\bannotation\b/i.test(query) || /\bannotate\b/i.test(query))
+    ) {
       relevantTools.push({
         name: 'create_annotation',
         confidence: 0.85,
@@ -2360,7 +2407,7 @@ class BuiltInToolsIntegration {
       });
     }
 
-    if (/\b(update|edit|modify|change|rewrite|patch)\s+.*?\bannotations?\b/i.test(query)) {
+    if (!structuralAnnotationEdit && /\b(update|edit|modify|change|rewrite|patch)\s+.*?\bannotations?\b/i.test(query)) {
       if (/\b(bulk|batch|multiple|all)\b/i.test(query)) {
         relevantTools.push({
           name: 'bulk_update_annotations',
@@ -2404,6 +2451,17 @@ class BuiltInToolsIntegration {
         name: 'request_annotation_approval',
         confidence: 0.9,
         reason: 'Annotation approval keywords detected',
+      });
+    }
+
+    if (
+      /\b(reject|decline|dismiss)\b.*?\b(changeset|change\s+set|annotation\s+proposal)\b/i.test(query) ||
+      /\b(changeset|change\s+set|annotation\s+proposal)\b.*?\b(reject|decline|dismiss)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'reject_annotation_changeset',
+        confidence: 0.95,
+        reason: 'Annotation ChangeSet rejection keywords detected',
       });
     }
 

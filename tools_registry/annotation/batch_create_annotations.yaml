@@ -1,0 +1,62 @@
+name: batch_create_annotations
+version: 1.0.0
+description: Privileged creation of multiple structural genome annotations on one chromosome. Requires authenticated MCP permission annotation:structural and bypasses the qualifier-only ChangeSet workflow.
+category: annotation
+subcategory: annotation_crud
+keywords:
+  - batch create annotations
+  - create multiple annotations
+  - add structural features
+  - batch add features
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    annotations:
+      type: array
+      description: Structural annotations to create.
+      minItems: 1
+      maxItems: 1000
+      items:
+        type: object
+        properties:
+          type:
+            type: string
+            description: Feature type, such as CDS, gene, rRNA, or misc_feature.
+          start:
+            type: number
+            description: One-based feature start coordinate.
+          end:
+            type: number
+            description: One-based feature end coordinate.
+          strand:
+            type: number
+            description: Feature strand, normally 1 or -1.
+          qualifiers:
+            type: object
+            description: Raw annotation qualifier map.
+        required:
+          - start
+          - end
+    chromosome:
+      type: string
+      description: Target chromosome or replicon. Defaults to the active chromosome.
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support.
+  required:
+    - annotations
+
+metadata:
+  added_in: autonomous_annotation_v2
+  integration: mcp
+  priority: high
+  tags:
+    - annotation
+    - structural
+    - privileged
+    - batch

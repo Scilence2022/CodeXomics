@@ -50,6 +50,7 @@ describe('Preload API Structure', () => {
       'getToolRegistryMetadata',
       'getToolDefinition',
       'reloadToolRegistry',
+      'dgrMcpRequest',
       'onToolRegistryUpdated',
       'invoke',
       'onMenuAction',
@@ -69,6 +70,7 @@ describe('Preload API Structure', () => {
       expect(preloadContent).toContain('allowedInvokeChannels');
       expect(preloadContent).toContain('mcp-server-start');
       expect(preloadContent).toContain('mcp-server-stop');
+      expect(preloadContent).toContain('dgr-mcp-request');
       expect(preloadContent).toContain('tool-registry:get-snapshot');
       expect(preloadContent).toContain('tool-registry:reload');
       expect(preloadContent).toContain('approve-working-directory');

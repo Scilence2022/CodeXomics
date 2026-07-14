@@ -93,4 +93,18 @@ describe('MCPBridge genome name resync', () => {
 
     expect(genomeMessages(sockets[0])).toContain('PHAGE.fasta');
   });
+
+  it('stops reconnecting when a secure standalone server rejects the legacy bridge', () => {
+    const bridge = new MCPBridge();
+    bridge.start();
+    sockets[0].open();
+
+    bridge.handleMessage(
+      JSON.stringify({ type: 'error', error: 'Internal WebSocket bridge registration is disabled' })
+    );
+
+    expect(bridge.enabled).toBe(false);
+    expect(bridge.ws).toBeNull();
+    expect(bridge.reconnectTimer).toBeNull();
+  });
 });

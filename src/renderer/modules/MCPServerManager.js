@@ -15,6 +15,7 @@ class MCPServerManager {
     this.claudeMCPServers = new Map(); // serverId -> Claude MCP server info
     this.claudeMCPConnections = new Map(); // serverId -> Claude MCP connection
     this.serverPrompts = new Map(); // serverId -> array of prompts
+    this.connectionPromises = new Map();
 
     this.loadServerConfigurations();
     this.setupAutoConnect();
@@ -36,10 +37,6 @@ class MCPServerManager {
 
   // Load server configurations from storage
   loadServerConfigurations() {
-    const dgrMcpToken =
-      typeof process !== 'undefined' && process.env
-        ? process.env.DGR_MCP_TOKEN || process.env.ACCESS_PASSWORD || ''
-        : '';
     const defaultServers = new Map([
       // ['genome-studio', {
       //     id: 'genome-studio',
@@ -72,7 +69,6 @@ class MCPServerManager {
           timeout: 600,
           headers: {
             'Content-Type': 'application/json',
-            ...(dgrMcpToken ? { Authorization: `Bearer ${dgrMcpToken}` } : {}),
           },
         },
       ],
@@ -87,6 +83,9 @@ class MCPServerManager {
     } else {
       this.servers = new Map(Object.entries(savedServers));
     }
+
+    const dgrServer = this.servers.get('deep-gene-research');
+    if (dgrServer) this.servers.set('deep-gene-research', this._withoutAuthorizationHeader(dgrServer));
 
     // Clean up duplicate/obsolete servers
     this.cleanupObsoleteServers();
@@ -118,9 +117,21 @@ class MCPServerManager {
   saveServerConfigurations() {
     if (this.configManager) {
       // Convert Map to object for storage
-      const serversObj = Object.fromEntries(this.servers);
+      const serversObj = Object.fromEntries(
+        Array.from(this.servers, ([id, server]) => [
+          id,
+          id === 'deep-gene-research' ? this._withoutAuthorizationHeader(server) : server,
+        ])
+      );
       this.configManager.set('mcpServers', serversObj);
     }
+  }
+
+  _withoutAuthorizationHeader(server) {
+    const headers = Object.fromEntries(
+      Object.entries(server?.headers || {}).filter(([name]) => name.toLowerCase() !== 'authorization')
+    );
+    return { ...server, headers };
   }
 
   // Add a new server configuration
@@ -195,6 +206,74 @@ class MCPServerManager {
 
     this.emit('serverUpdated', { serverId, server: updatedServer });
     return true;
+  }
+
+  async ensureServerConnected(serverId) {
+    if (this.activeServers.has(serverId)) return this.connections.get(serverId) || true;
+    if (this.connectionPromises.has(serverId)) return this.connectionPromises.get(serverId);
+    const connectionPromise = this.connectToServer(serverId).finally(() => this.connectionPromises.delete(serverId));
+    this.connectionPromises.set(serverId, connectionPromise);
+    return connectionPromise;
+  }
+
+  _parseProxyJsonRpcBody(body) {
+    const text = String(body || '').trim();
+    if (!text) throw new Error('Deep Gene Research MCP returned an empty response');
+    if (text.startsWith('event:') || text.includes('\ndata:')) {
+      const dataLines = text
+        .split(/\r?\n/)
+        .filter(line => line.startsWith('data:'))
+        .map(line => line.slice(5).trim())
+        .filter(Boolean);
+      for (let index = dataLines.length - 1; index >= 0; index -= 1) {
+        try {
+          return JSON.parse(dataLines[index]);
+        } catch {
+          // Continue to an earlier complete SSE data event.
+        }
+      }
+      throw new Error('Deep Gene Research MCP returned invalid SSE JSON data');
+    }
+    return JSON.parse(text);
+  }
+
+  async _requestDgrProxy(body, timeoutMs = 30000) {
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      if (typeof window.electronAPI.dgrMcpRequest !== 'function') {
+        throw new Error('Secure Deep Gene Research MCP proxy is unavailable');
+      }
+      const response = await window.electronAPI.dgrMcpRequest({ body, timeoutMs });
+      if (!response?.ok) {
+        throw new Error(
+          `Deep Gene Research MCP returned ${response?.status || 'an error'} ${response?.statusText || ''}`.trim()
+        );
+      }
+      return this._parseProxyJsonRpcBody(response.body);
+    }
+
+    // Non-Electron fallback for unit tests and standalone browser development.
+    const server = this.servers.get('deep-gene-research');
+    const response = await fetch(server.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+      body: JSON.stringify(body),
+      mode: 'cors',
+    });
+    if (!response.ok) throw new Error(`Deep Gene Research MCP returned ${response.status} ${response.statusText}`);
+    return this._parseProxyJsonRpcBody(await response.text());
+  }
+
+  async _executeDgrProxyTool(toolName, parameters) {
+    const response = await this._requestDgrProxy(
+      {
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: { name: toolName, arguments: parameters || {} },
+        id: this.generateRequestId(),
+      },
+      Math.min((this.servers.get('deep-gene-research')?.timeout || 120) * 1000, 120000)
+    );
+    return this.unwrapMcpToolResult(response);
   }
 
   // Connect to a specific server
@@ -358,6 +437,22 @@ class MCPServerManager {
     console.log(`Connecting to HTTP MCP server: ${server.name} (${server.url})`);
 
     try {
+      if (serverId === 'deep-gene-research') {
+        await this._requestDgrProxy({ jsonrpc: '2.0', method: 'ping', id: this.generateRequestId() });
+        const toolsResponse = await this._requestDgrProxy({
+          jsonrpc: '2.0',
+          method: 'tools/list',
+          id: this.generateRequestId(),
+        });
+        const toolsResult = this.unwrapMcpToolResult(toolsResponse);
+        this.serverTools.set(serverId, Array.isArray(toolsResult?.tools) ? toolsResult.tools : []);
+        this.connections.set(serverId, { type: 'http', url: 'main-process-proxy', headers: {} });
+        this.activeServers.add(serverId);
+        this.emit('serverConnected', { serverId, server });
+        this.requestServerPrompts(serverId);
+        return;
+      }
+
       // Test the connection with a simple request
       let response = await fetch(server.url, {
         method: 'GET',
@@ -965,6 +1060,19 @@ class MCPServerManager {
     try {
       console.log(`🔍 requesting prompts via JSON-RPC from ${server.url}`);
 
+      if (serverId === 'deep-gene-research') {
+        const proxyResponse = await this._requestDgrProxy({
+          jsonrpc: '2.0',
+          method: 'prompts/list',
+          id: this.generateRequestId(),
+        });
+        const result = this.unwrapMcpToolResult(proxyResponse);
+        const prompts = Array.isArray(result?.prompts) ? result.prompts : [];
+        this.serverPrompts.set(serverId, prompts);
+        this.emit('promptsUpdated', { serverId, prompts });
+        return;
+      }
+
       // Try standard MCP prompts/list
       const response = await fetch(server.url, {
         method: 'POST',
@@ -1119,21 +1227,40 @@ class MCPServerManager {
    * or accidentally render a queued task as a final report.
    */
   unwrapMcpToolResult(value) {
-    const candidate = value?.result || value?.data || value?.response || value;
+    const makeMcpError = errorValue => {
+      const message =
+        typeof errorValue === 'string'
+          ? errorValue
+          : errorValue?.message || errorValue?.error || JSON.stringify(errorValue || 'Unknown MCP tool error');
+      const error = new Error(String(message));
+      error.name = 'MCPToolError';
+      error.code = errorValue?.code;
+      error.data = errorValue?.data;
+      error.isMcpError = true;
+      return error;
+    };
+    if (value?.error) throw makeMcpError(value.error);
+    const candidate = value?.result ?? value?.data ?? value?.response ?? value;
     if (candidate?.content && Array.isArray(candidate.content)) {
       const text = candidate.content
         .filter(item => item?.type === 'text' && item.text)
         .map(item => item.text)
         .join('\n');
+      let parsedText;
       if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
         try {
-          return JSON.parse(text);
+          parsedText = JSON.parse(text);
         } catch (error) {
           console.warn('[MCPServerManager] Could not parse structured MCP text result:', error.message);
         }
       }
+      if (candidate.isError) throw makeMcpError(parsedText?.error || parsedText || text || 'MCP tool failed');
+      if (parsedText?.error) throw makeMcpError(parsedText.error);
+      if (parsedText !== undefined) return parsedText;
       return text || candidate;
     }
+    if (candidate?.isError) throw makeMcpError(candidate.error || candidate.message || candidate);
+    if (candidate?.error) throw makeMcpError(candidate.error);
     return candidate;
   }
 
@@ -1223,6 +1350,10 @@ class MCPServerManager {
     }
 
     const server = this.servers.get(serverId);
+
+    if (serverId === 'deep-gene-research') {
+      return this._executeDgrProxyTool(toolName, parameters);
+    }
 
     try {
       console.log(`🔧 Executing tool ${toolName} on HTTP server ${serverId}`);
@@ -1459,6 +1590,7 @@ class MCPServerManager {
         // Handle different response formats
         return this.unwrapMcpToolResult(result);
       } catch (jsonError) {
+        if (jsonError?.isMcpError) throw jsonError;
         console.log(`⚠️ Response parsing failed:`, jsonError.message);
         // Try to get whatever response text we can
         if (!responseText) {
@@ -1487,7 +1619,11 @@ class MCPServerManager {
     const server = this.servers.get(serverId);
 
     if (serverId === 'deep-gene-research') {
-      return this.unwrapMcpToolResult(await this.executeToolOnServer(serverId, 'get-task-status', { taskId }));
+      // executeHttpTool() already normalises DGR's MCP content envelope. Do
+      // not unwrap the returned status again: a completed status legitimately
+      // contains a `result` property, and a second unwrap would discard the
+      // task status/progress metadata in favour of that nested result.
+      return await this.executeToolOnServer(serverId, 'get-task-status', { taskId, resultMode: 'annotation' });
     }
 
     try {
@@ -1594,7 +1730,7 @@ class MCPServerManager {
     const server = this.servers.get(serverId);
 
     if (serverId === 'deep-gene-research') {
-      const status = this.unwrapMcpToolResult(await this.executeToolOnServer(serverId, 'get-task-status', { taskId }));
+      const status = await this.executeToolOnServer(serverId, 'get-task-status', { taskId });
       return status.result || status;
     }
 

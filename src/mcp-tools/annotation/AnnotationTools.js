@@ -196,7 +196,7 @@ class AnnotationTools {
       resolve_annotation_target: {
         name: 'resolve_annotation_target',
         description:
-          'Resolve a gene/locus identifier to an immutable CodeXomics annotation target with featureId, featureHash, and annotation revision. Call this before starting autonomous research.',
+          'Resolve a gene/locus identifier to an immutable CodeXomics annotation target with featureId, featureHash, and annotation revision. When a GenBank gene and CDS share the same locus tag, the CDS is selected because annotation refinement targets CDS qualifiers. Call this before starting autonomous research.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -266,11 +266,25 @@ class AnnotationTools {
           type: 'object',
           properties: {
             changeSetId: { type: 'string' },
-            approver: { type: 'string', description: 'Authenticated human curator identity.' },
             expiresInMinutes: { type: 'number', default: 30 },
             clientId: { type: 'string' },
           },
-          required: ['changeSetId', 'approver'],
+          required: ['changeSetId'],
+        },
+      },
+
+      reject_annotation_changeset: {
+        name: 'reject_annotation_changeset',
+        description:
+          'Record a curator rejection for an awaiting-review or approved ChangeSet. Any outstanding approval capability is revoked and the ChangeSet can no longer be committed.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            changeSetId: { type: 'string' },
+            reason: { type: 'string' },
+            clientId: { type: 'string' },
+          },
+          required: ['changeSetId'],
         },
       },
 
@@ -317,29 +331,36 @@ class AnnotationTools {
       start_annotation_research: {
         name: 'start_annotation_research',
         description:
-          'Start a resumable Deep Gene Research run bound to an exact CodeXomics feature target. It never guesses the organism and never writes annotations directly.',
+          'Start a resumable Deep Gene Research run bound to an exact CodeXomics feature target. Organism metadata is taken from the loaded genome when available; otherwise organism is required. It never writes annotations directly.',
         inputSchema: {
           type: 'object',
           properties: {
             identifier: { type: 'string' },
             chromosome: { type: 'string' },
-            organism: { type: 'string', description: 'Explicit scientific organism name.' },
+            organism: {
+              type: 'string',
+              description: 'Scientific organism name; required only when the loaded genome lacks organism metadata.',
+            },
             geneSymbol: { type: 'string' },
             researchFocus: { type: 'array', items: { type: 'string' } },
             specificAspects: { type: 'array', items: { type: 'string' } },
             userPrompt: { type: 'string' },
-            idempotencyKey: { type: 'string' },
-            correlationId: { type: 'string' },
+            diseaseContext: { type: 'string' },
+            experimentalApproach: { type: 'string' },
+            language: { type: 'string' },
+            maxResult: { type: 'integer', minimum: 1, maximum: 20, default: 5 },
+            idempotencyKey: { type: 'string', minLength: 1, maxLength: 256 },
+            correlationId: { type: 'string', minLength: 1, maxLength: 256 },
             clientId: { type: 'string' },
           },
-          required: ['identifier', 'organism'],
+          required: ['identifier'],
         },
       },
 
       get_annotation_research_workflow: {
         name: 'get_annotation_research_workflow',
         description:
-          'Get a resumable internal DGR research workflow. When completed it creates a reviewable CodeXomics ChangeSet.',
+          'Get a resumable internal DGR research workflow. On completion, annotation:propose callers create a reviewable ChangeSet; research-only callers receive the proposal for later materialization.',
         inputSchema: {
           type: 'object',
           properties: { taskId: { type: 'string' }, clientId: { type: 'string' } },
@@ -354,6 +375,68 @@ class AnnotationTools {
           type: 'object',
           properties: { taskId: { type: 'string' }, clientId: { type: 'string' } },
           required: ['taskId'],
+        },
+      },
+
+      edit_annotation: {
+        name: 'edit_annotation',
+        description:
+          'Privileged raw structural editing of one existing genome annotation. Requires annotation:structural permission and bypasses the qualifier-only ChangeSet workflow.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            annotationId: {
+              type: 'string',
+              description: 'Annotation ID, locus_tag, or gene name identifying the feature to edit.',
+            },
+            updates: {
+              type: 'object',
+              description:
+                'Raw annotation fields to merge, such as start, end, strand, type, phase, source, score, or qualifiers.',
+            },
+            clientId: {
+              type: 'string',
+              description: 'Browser client ID for multi-window support.',
+            },
+          },
+          required: ['annotationId', 'updates'],
+        },
+      },
+
+      batch_create_annotations: {
+        name: 'batch_create_annotations',
+        description:
+          'Privileged creation of multiple structural genome annotations on one chromosome. Requires annotation:structural permission and bypasses the qualifier-only ChangeSet workflow.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            annotations: {
+              type: 'array',
+              description: 'Structural annotations to create.',
+              minItems: 1,
+              maxItems: 1000,
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string', description: 'Feature type, such as CDS, gene, or rRNA.' },
+                  start: { type: 'number', description: 'One-based feature start coordinate.' },
+                  end: { type: 'number', description: 'One-based feature end coordinate.' },
+                  strand: { type: 'number', description: 'Feature strand, normally 1 or -1.' },
+                  qualifiers: { type: 'object', description: 'Raw annotation qualifier map.' },
+                },
+                required: ['start', 'end'],
+              },
+            },
+            chromosome: {
+              type: 'string',
+              description: 'Target chromosome or replicon. Defaults to the active chromosome.',
+            },
+            clientId: {
+              type: 'string',
+              description: 'Browser client ID for multi-window support.',
+            },
+          },
+          required: ['annotations'],
         },
       },
 
@@ -507,8 +590,8 @@ class AnnotationTools {
    * All annotation tools delegate to the browser client because genome
    * annotation data lives in-memory on the renderer side (GenomeDataProxy).
    */
-  async executeClientTool(toolName, parameters, clientId) {
-    return await this.server.executeToolOnClient(toolName, parameters, clientId);
+  async executeClientTool(toolName, parameters, clientId, executionContext = null) {
+    return await this.server.executeToolOnClient(toolName, parameters, clientId, executionContext);
   }
 }
 

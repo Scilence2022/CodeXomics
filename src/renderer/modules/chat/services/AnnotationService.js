@@ -31,6 +31,10 @@ class AnnotationService {
     return this._getChangeSetService().resolveAnnotationTarget(params);
   }
 
+  async restoreCommittedAnnotationOverlay() {
+    return this._getChangeSetService().restoreCommittedAnnotationOverlay();
+  }
+
   async createAnnotationChangeset(params) {
     return this._getChangeSetService().createAnnotationChangeset(params);
   }
@@ -41,6 +45,10 @@ class AnnotationService {
 
   async requestAnnotationApproval(params) {
     return this._getChangeSetService().requestAnnotationApproval(params);
+  }
+
+  async rejectAnnotationChangeset(params) {
+    return this._getChangeSetService().rejectAnnotationChangeset(params);
   }
 
   async applyAnnotationChangeset(params) {
@@ -122,16 +130,25 @@ class AnnotationService {
 
       for (const annotation of annotations) {
         const qualifiers = annotation.qualifiers || {};
-        const geneName = Array.isArray(qualifiers.gene) ? qualifiers.gene[0] : qualifiers.gene || '';
-        const locusTag = Array.isArray(qualifiers.locus_tag) ? qualifiers.locus_tag[0] : qualifiers.locus_tag || '';
-        const proteinId = Array.isArray(qualifiers.protein_id) ? qualifiers.protein_id[0] : qualifiers.protein_id || '';
+        const identifiers = [
+          annotation.id,
+          annotation.name,
+          qualifiers.gene,
+          qualifiers.gene_name,
+          qualifiers.locus_tag,
+          qualifiers.protein_id,
+          qualifiers.ID,
+          qualifiers.Name,
+          qualifiers.gene_id,
+          qualifiers.transcript_id,
+          qualifiers.Alias,
+        ]
+          .flat()
+          .flatMap(value => String(value || '').split(','))
+          .map(value => value.trim())
+          .filter(Boolean);
 
-        if (
-          targetIdentifier === annotation.id ||
-          targetIdentifier === geneName ||
-          targetIdentifier === locusTag ||
-          targetIdentifier === proteinId
-        ) {
+        if (identifiers.includes(String(targetIdentifier))) {
           return {
             chromosome: chr,
             annotation: annotation,
@@ -520,14 +537,19 @@ class AnnotationService {
 
   // 2. ANNOTATION MODIFICATION
   async updateAnnotation(params) {
+    if (params.approvalToken && params.changeSetId) {
+      return this.applyAnnotationChangeset({
+        changeSetId: params.changeSetId,
+        approvalToken: params.approvalToken,
+        __executionContext: params.__executionContext,
+      });
+    }
     const changeSet = await this.createAnnotationChangeset({
       ...params,
       annotationProposal: { updates: params.updates || {}, evidence: params.evidence || [] },
       principal: params.principal || params.agent || 'mcp-agent',
+      __executionContext: params.__executionContext,
     });
-    if (params.approvalToken && params.changeSetId) {
-      return this.applyAnnotationChangeset({ changeSetId: params.changeSetId, approvalToken: params.approvalToken });
-    }
     return {
       ...changeSet,
       message:
@@ -577,13 +599,13 @@ class AnnotationService {
       identifier,
     });
     const proposedUpdates = this._buildDeepResearchUpdates(found.annotation, proposal, params);
+    const versionedProposal =
+      annotationProposal?.schema === 'codexomics.annotation-change-set.v2' ? annotationProposal : null;
     const changeSetResult = await this.createAnnotationChangeset({
       identifier,
       chromosome: found.chromosome,
       baseRevision: params.baseRevision,
-      annotationProposal: {
-        schema: 'codexomics.annotation-change-set.v2',
-        target: params.annotationProposal?.target || params.proposal?.target,
+      annotationProposal: versionedProposal || {
         updates: proposedUpdates,
         evidence: proposal.evidence,
         confidence: proposal.confidence,
@@ -595,6 +617,7 @@ class AnnotationService {
       researchRun: params.researchRun || params.researchRunId,
       idempotencyKey: params.idempotencyKey,
       principal: params.principal || params.agent || 'deep-gene-research',
+      __executionContext: params.__executionContext,
     });
     return {
       ...changeSetResult,
@@ -616,11 +639,14 @@ class AnnotationService {
     const errors = [];
     for (const item of updatesList) {
       try {
+        const itemParams = item && typeof item === 'object' ? { ...item } : {};
+        delete itemParams.__executionContext;
         results.push(
           await this.createAnnotationChangeset({
-            ...item,
-            annotationProposal: { updates: item.updates || {}, evidence: params.evidence || [] },
+            ...itemParams,
+            annotationProposal: { updates: itemParams.updates || {}, evidence: params.evidence || [] },
             principal: params.principal || params.agent || 'mcp-agent',
+            __executionContext: params.__executionContext,
           })
         );
       } catch (error) {
@@ -662,12 +688,22 @@ class AnnotationService {
   }
 
   // 3. ANNOTATION CRUD
-  async editAnnotation(params) {
-    if (params.manualCuratorApproval !== true) {
+  _requireStructuralAnnotationPermission(params) {
+    const context = params?.__executionContext;
+    const permissions = Array.isArray(context?.permissions) ? context.permissions : [];
+    if (
+      context?.authenticated !== true ||
+      (context.isAdmin !== true && !permissions.includes('*') && !permissions.includes('annotation:structural'))
+    ) {
       throw new Error(
-        'Raw annotation editing is not available through the autonomous annotation API. Create a constrained ChangeSet instead.'
+        'Raw structural annotation editing requires authenticated MCP permission "annotation:structural"; caller-provided approval flags are not accepted.'
       );
     }
+    return context;
+  }
+
+  async editAnnotation(params) {
+    const authorization = this._requireStructuralAnnotationPermission(params);
     const { annotationId, updates } = params;
 
     if (!this.app.currentAnnotations) {
@@ -709,7 +745,14 @@ class AnnotationService {
 
         // Track changes
         const tracker = this._getChangeTracker();
-        tracker.recordMultiFieldUpdate(annotationId, chr, updates, oldValues, 'chatbox', 'chatbox');
+        tracker.recordMultiFieldUpdate(
+          annotationId,
+          chr,
+          updates,
+          oldValues,
+          authorization.principal || 'authenticated-curator',
+          'mcp'
+        );
 
         updatedAnnotation = annotation;
         annotations[annotationIndex] = annotation;
@@ -729,14 +772,10 @@ class AnnotationService {
   }
 
   async deleteAnnotation(params) {
-    if (params.manualCuratorApproval !== true) {
-      throw new Error(
-        'Feature deletion is a structural genome operation and is not available through the autonomous annotation API. Use the manual genome editor and export a reviewed revision.'
-      );
-    }
+    const authorization = this._requireStructuralAnnotationPermission(params);
     // Support both 'annotationId' (ChatBox) and 'identifier' (MCP) parameter names
     const annotationId = params.annotationId || params.identifier;
-    const agent = params.agent || 'chatbox';
+    const agent = authorization.principal || 'authenticated-curator';
 
     if (!this.app.currentAnnotations) {
       throw new Error('No annotations loaded');
@@ -788,11 +827,7 @@ class AnnotationService {
   }
 
   async batchCreateAnnotations(params) {
-    if (params.manualCuratorApproval !== true) {
-      throw new Error(
-        'Feature creation is a structural genome operation and is not available through the autonomous annotation API. Use the manual genome editor and export a reviewed revision.'
-      );
-    }
+    this._requireStructuralAnnotationPermission(params);
     const { annotations, chromosome } = params;
 
     const chr = chromosome || this.app.currentChromosome;

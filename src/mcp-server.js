@@ -37,9 +37,15 @@ const ToolsIntegrator = require('./mcp-tools/ToolsIntegrator.js');
 const AuthenticationManager = require('./mcp-tools/AuthenticationManager.js');
 const ToolCategoryManager = require('./mcp-tools/ToolCategoryManager.js');
 const ConnectionHealthMonitor = require('./mcp-tools/ConnectionHealthMonitor.js');
+const { getMcpAuthConfig } = require('./main/mcp-auth-config.js');
 
-const DEFAULT_MCP_JSON_PAYLOAD_LIMIT = '96mb';
-const DEFAULT_WS_MAX_PAYLOAD_BYTES = 96 * 1024 * 1024;
+const DEFAULT_MCP_JSON_PAYLOAD_LIMIT = '4mb';
+const DEFAULT_WS_MAX_PAYLOAD_BYTES = 4 * 1024 * 1024;
+const DEFAULT_SHUTDOWN_GRACE_MS = 2000;
+const DEFAULT_SSE_HEARTBEAT_MS = 25000;
+const DEFAULT_MAX_SSE_CONNECTIONS = 64;
+const DEFAULT_MAX_SSE_CONNECTIONS_PER_PRINCIPAL = 8;
+const MAX_SSE_MISSED_DRAINS = 3;
 
 class StandardClaudeMCPServer extends EventEmitter {
   constructor(httpPort = 3002, wsPort = 3003, mainWindow = null, authConfig = {}) {
@@ -49,6 +55,27 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.mainWindow = mainWindow;
     this.pendingRequests = new Map();
     this.activeConnections = new Set();
+    this.sseTransports = new Map();
+    this.sseProtocolServers = new Map();
+    this.sseConnectionIds = new Map();
+    this.sseCleanupInProgress = new Set();
+    this.sseHeartbeatTimers = new Map();
+    this.sseExpiryTimers = new Map();
+    this.sseBackpressureState = new Map();
+    this.connectedProtocolServers = new Set();
+    this.transportExecutionContexts = new Map();
+    this.lifecycleState = 'idle';
+    this._startPromise = null;
+    this._stopPromise = null;
+    this.shutdownGraceMs = Number.isFinite(authConfig.shutdownGraceMs)
+      ? Math.max(25, Number(authConfig.shutdownGraceMs))
+      : DEFAULT_SHUTDOWN_GRACE_MS;
+    this.maxSSEConnections = Number.isInteger(authConfig.maxSSEConnections)
+      ? Math.max(1, authConfig.maxSSEConnections)
+      : DEFAULT_MAX_SSE_CONNECTIONS;
+    this.maxSSEConnectionsPerPrincipal = Number.isInteger(authConfig.maxSSEConnectionsPerPrincipal)
+      ? Math.max(1, authConfig.maxSSEConnectionsPerPrincipal)
+      : DEFAULT_MAX_SSE_CONNECTIONS_PER_PRINCIPAL;
 
     // MCP Server mode: 'tools' (default) or 'agent'
     // - 'tools': Standard MCP tool server - each tools/call maps to a specific tool
@@ -63,17 +90,34 @@ class StandardClaudeMCPServer extends EventEmitter {
     // Initialize authentication manager
     this.authManager = new AuthenticationManager({
       requireAuth: authConfig.requireAuth !== false,
-      enableLocalBypass: authConfig.enableLocalBypass !== false,
+      enableLocalBypass: authConfig.enableLocalBypass === true,
       developmentMode: authConfig.developmentMode || false,
       masterKey: authConfig.masterKey || null,
       ...authConfig,
     });
+    if (
+      this.authManager.config.requireAuth &&
+      !this.authManager.config.enableLocalBypass &&
+      this.authManager.apiKeys.size === 0
+    ) {
+      this.authManager.destroy();
+      throw new Error(
+        'MCP authentication is enabled but no credentials are configured. Set CODEXOMICS_MCP_MASTER_KEY, configure scoped API keys, or explicitly enable local bypass.'
+      );
+    }
 
     // Initialize tool category manager
     this.toolCategoryManager = new ToolCategoryManager();
 
     // Initialize connection health monitor
     this.healthMonitor = new ConnectionHealthMonitor();
+    this.healthMonitor.on('connectionExpired', connection => {
+      const sseSessionId = connection?.metadata?.sseSessionId;
+      if (!sseSessionId) return;
+      this._cleanupSSESession(sseSessionId, { closeTransport: true }).catch(error => {
+        this.serverLog('warn', `⚠️ Failed to close stale SSE connection: ${error.message}`);
+      });
+    });
 
     // Track client bridge connections (for remote tool execution)
     this.clientBridges = new Map();
@@ -107,21 +151,10 @@ class StandardClaudeMCPServer extends EventEmitter {
     // Initialize tools integrator
     this.toolsIntegrator = new ToolsIntegrator(this);
 
-    // Create MCP Server with proper server info
-    this.mcpServer = new Server(
-      {
-        name: 'codexomics',
-        version: '1.0.0',
-      },
-      {
-        capabilities: {
-          tools: {
-            listChanged: true,
-          },
-          logging: {},
-        },
-      }
-    );
+    // Keep a configured protocol server for compatibility with callers that
+    // inspect this property. Legacy SSE streams receive a dedicated protocol
+    // server because the MCP SDK permits only one transport per Server.
+    this.mcpServer = this._createProtocolServer();
 
     // Express app for SSE transport
     this.app = express();
@@ -130,12 +163,11 @@ class StandardClaudeMCPServer extends EventEmitter {
     // WebSocket server for legacy support
     this.wsServer = null;
     this.wsConnections = new Set();
+    this._wsReadyPromise = null;
 
     this.setupMCPServer();
     this.setupExpressApp();
-    this.setupWebSocketServer();
     this.setupIPCCommunication();
-    this.setupErrorHandling();
   }
 
   /**
@@ -161,10 +193,13 @@ class StandardClaudeMCPServer extends EventEmitter {
   }
 
   formatToolResultContent(toolName, result) {
+    const redactionOptions = {
+      preserveApprovalToken: toolName === 'request_annotation_approval',
+    };
     const content = [
       {
         type: 'text',
-        text: JSON.stringify(this.redactImageData(result), null, 2),
+        text: JSON.stringify(this.redactImageData(result, new WeakSet(), redactionOptions), null, 2),
       },
     ];
 
@@ -210,7 +245,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     return normalized === 'jpeg' || normalized === 'jpg' ? 'image/jpeg' : 'image/png';
   }
 
-  redactImageData(value, seen = new WeakSet()) {
+  redactImageData(value, seen = new WeakSet(), options = {}) {
     if (value === null || typeof value !== 'object') {
       return value;
     }
@@ -221,11 +256,30 @@ class StandardClaudeMCPServer extends EventEmitter {
     seen.add(value);
 
     if (Array.isArray(value)) {
-      return value.map(item => this.redactImageData(item, seen));
+      return value.map(item => this.redactImageData(item, seen, options));
     }
 
     const result = {};
     for (const [key, child] of Object.entries(value)) {
+      const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (
+        [
+          'authorization',
+          'cookie',
+          'approvaltoken',
+          'token',
+          'apikey',
+          'password',
+          'secret',
+          'executioncontext',
+          'userprompt',
+          'prompt',
+        ].includes(normalizedKey) &&
+        !(normalizedKey === 'approvaltoken' && options.preserveApprovalToken === true)
+      ) {
+        result[key] = '[redacted]';
+        continue;
+      }
       if (key === 'imageData' || key === 'imageDataUrl' || key === 'imageDataURL') {
         result[key] = typeof child === 'string' ? `[base64 image data omitted: ${child.length} chars]` : '[omitted]';
         continue;
@@ -234,16 +288,177 @@ class StandardClaudeMCPServer extends EventEmitter {
         result[key] = `[base64 image data omitted: ${child.length} chars]`;
         continue;
       }
-      result[key] = this.redactImageData(child, seen);
+      result[key] = this.redactImageData(child, seen, options);
     }
     return result;
   }
 
-  setupMCPServer() {
+  _executionContext(authValue) {
+    if (!authValue) return null;
+    const session = authValue.session || authValue;
+    const principal = session.principal || session.keyId || session.clientId;
+    if (!principal) return null;
+    return {
+      source: 'mcp',
+      authenticated: true,
+      principal: String(principal),
+      permissions: Array.isArray(session.permissions)
+        ? [...session.permissions]
+        : Array.isArray(session.scopes)
+          ? [...session.scopes]
+          : [],
+      isAdmin: session.isAdmin === true,
+      sessionId: session.sessionId || authValue.sessionId || null,
+      transportSessionId: session.transportSessionId || authValue.transportSessionId || null,
+    };
+  }
+
+  _routingClientId(requestedClientId, executionContext) {
+    if (executionContext?.authenticated) {
+      // HTTP authentication deliberately reuses one auth session per API key.
+      // Prefer the MCP transport session when available so two SSE clients that
+      // share a scoped key cannot overwrite each other's default-window pin.
+      return executionContext.transportSessionId || executionContext.sessionId || executionContext.principal;
+    }
+    return requestedClientId || null;
+  }
+
+  _releaseWebSocketAuthenticationSession(sessionId, connectionRole) {
+    if (!sessionId || connectionRole !== 'external-client') return false;
+    const session = this.authManager?.sessions?.get(sessionId);
+    // AuthenticationManager deliberately reuses one local-bypass session.
+    // Closing one compatibility socket must not revoke that shared session
+    // from other local clients. Configured API-key WebSockets receive a fresh,
+    // socket-owned session and should release it immediately on teardown.
+    if (session?.isBypass === true) return false;
+    this.sessionWindowPins?.delete(sessionId);
+    return this.authManager?.invalidateSession?.(sessionId) === true;
+  }
+
+  _executionContextFromRequestExtra(extra = {}) {
+    let authValue = extra.authInfo || null;
+    if (!authValue && extra.sessionId) {
+      const sessionValidation = this.authManager.validateSession(extra.sessionId);
+      authValue = sessionValidation.valid ? sessionValidation : null;
+    }
+    return this._executionContext(authValue) || this.transportExecutionContexts.get(extra.sessionId) || null;
+  }
+
+  _requiredAnnotationPermission(toolName) {
+    const permissionGroups = {
+      'annotation:read': [
+        'resolve_annotation_target',
+        'get_annotation_changeset',
+        'get_annotation_audit',
+        'list_annotations',
+        'get_annotation',
+        'get_annotation_history',
+        'search_annotations',
+        'list_genome_windows',
+        'switch_active_window',
+      ],
+      'annotation:propose': [
+        'create_annotation_changeset',
+        'update_annotation',
+        'merge_gene_research_report',
+        'bulk_update_annotations',
+        'rollback_annotation_changeset',
+      ],
+      'annotation:research': [
+        'start_annotation_research',
+        'get_annotation_research_workflow',
+        'cancel_annotation_research',
+      ],
+      'annotation:approve': ['request_annotation_approval', 'reject_annotation_changeset'],
+      'annotation:commit': ['apply_annotation_changeset'],
+      'annotation:structural': ['edit_annotation', 'delete_annotation', 'batch_create_annotations'],
+    };
+    return Object.entries(permissionGroups).find(([, tools]) => tools.includes(toolName))?.[0] || null;
+  }
+
+  _assertToolPermission(toolName, executionContext) {
+    if (
+      this.mode === 'agent' &&
+      !['codexomics_chat', 'list_genome_windows', 'switch_active_window'].includes(toolName)
+    ) {
+      throw new Error(`Tool ${toolName} is not available while the MCP server is in agent mode`);
+    }
+    if (!this._isToolPermitted(toolName, executionContext)) {
+      if (!executionContext) throw new Error('Authenticated MCP execution context is required');
+      const required = this._requiredAnnotationPermission(toolName);
+      if (required) throw new Error(`MCP permission "${required}" is required for ${toolName}`);
+      throw new Error(`Non-admin MCP credentials are not permitted to execute unmapped tool ${toolName}`);
+    }
+  }
+
+  _isToolPermitted(toolName, executionContext) {
+    if (!executionContext) return false;
+    const permissions = executionContext.permissions || [];
+    if (executionContext.isAdmin || permissions.includes('*')) return true;
+    const required = this._requiredAnnotationPermission(toolName);
+    return Boolean(required && permissions.includes(required));
+  }
+
+  _getPermittedTools(executionContext) {
+    return this.toolsIntegrator.getAvailableTools().filter(tool => this._isToolPermitted(tool.name, executionContext));
+  }
+
+  _executionContextWithDeadline(executionContext, timeoutMs) {
+    if (!executionContext) return null;
+    const startedAt = Date.now();
+    const commitSafetyMarginMs = Math.min(2000, Math.max(250, Math.floor(timeoutMs / 10)));
+    return Object.freeze({
+      ...executionContext,
+      requestDeadline: startedAt + timeoutMs,
+      commitNotAfter: startedAt + Math.max(0, timeoutMs - commitSafetyMarginMs),
+    });
+  }
+
+  _executionHopTimeoutMs(executionContext) {
+    const maximum = this.mode === 'agent' ? 120000 : 30000;
+    const requestDeadline = Number(executionContext?.requestDeadline);
+    if (!Number.isFinite(requestDeadline)) return maximum;
+    const remaining = Math.floor(requestDeadline - Date.now());
+    if (remaining <= 0) throw new Error('The MCP request deadline elapsed before client execution began');
+    return Math.min(maximum, remaining);
+  }
+
+  async _withTimeout(operation, timeoutMs, message) {
+    let timeoutId;
+    try {
+      return await Promise.race([
+        Promise.resolve().then(operation),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  _createProtocolServer() {
+    return new Server(
+      {
+        name: 'codexomics',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {
+          tools: {
+            listChanged: true,
+          },
+          logging: {},
+        },
+      }
+    );
+  }
+
+  setupMCPServer(mcpServer = this.mcpServer) {
     this.serverLog('info', '🔧 Setting up MCP Server handlers');
 
     // Handle initialization
-    this.mcpServer.setRequestHandler(InitializeRequestSchema, async request => {
+    mcpServer.setRequestHandler(InitializeRequestSchema, async (request, extra = {}) => {
       this.serverLog('info', '🔄 Handling initialize request');
       this.serverLog('info', '📥 Client info:', JSON.stringify(request.params?.clientInfo, null, 2));
       this.serverLog('info', '📥 Protocol version:', request.params?.protocolVersion);
@@ -251,7 +466,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       this.clientInfo = request.params?.clientInfo;
       this.protocolVersion = request.params?.protocolVersion || '2024-11-05';
 
-      const tools = this.toolsIntegrator.getAvailableTools();
+      const tools = this._getPermittedTools(this._executionContextFromRequestExtra(extra));
       this.serverLog('info', `📊 Server has ${tools.length} tools available`);
 
       const response = {
@@ -281,21 +496,21 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     // Handle initialized notification
-    this.mcpServer.setNotificationHandler(InitializedNotificationSchema, async notification => {
+    mcpServer.setNotificationHandler(InitializedNotificationSchema, async notification => {
       this.serverLog('info', '✅ Received initialized notification');
       this.isInitialized = true;
       this.serverLog('info', '🎯 MCP Server is now fully initialized and ready');
     });
 
     // Handle list tools
-    this.mcpServer.setRequestHandler(ListToolsRequestSchema, async request => {
+    mcpServer.setRequestHandler(ListToolsRequestSchema, async (request, extra = {}) => {
       this.serverLog('info', '📋 Handling tools/list request');
 
       if (!this.isInitialized) {
         this.serverLog('warn', '⚠️  Tools list requested before initialization complete');
       }
 
-      const tools = this.toolsIntegrator.getAvailableTools();
+      const tools = this._getPermittedTools(this._executionContextFromRequestExtra(extra));
       this.serverLog('info', `✅ Returning ${tools.length} tools`);
 
       return {
@@ -304,38 +519,46 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     // Handle tool execution
-    this.mcpServer.setRequestHandler(CallToolRequestSchema, async request => {
+    mcpServer.setRequestHandler(CallToolRequestSchema, async (request, extra = {}) => {
       const { name: toolName, arguments: args } = request.params;
-      this.serverLog('info', `🔧 Executing tool: ${toolName}`, JSON.stringify(args, null, 2));
+      this.serverLog('info', `🔧 Executing tool: ${toolName}`, {
+        argumentKeys: Object.keys(args || {}).filter(key => key !== 'approvalToken'),
+      });
 
       const startTime = Date.now();
 
       try {
+        const baseExecutionContext = this._executionContextFromRequestExtra(extra);
+        const timeout = this.mode === 'agent' ? 120000 : 30000;
+        const executionContext = this._executionContextWithDeadline(baseExecutionContext, timeout);
+        this._assertToolPermission(toolName, executionContext);
         // Agent mode: intercept all tool calls and route through the agent
         if (this.mode === 'agent' && toolName !== 'codexomics_chat') {
           this.serverLog('info', `🤖 [Agent Mode] Routing tool '${toolName}' through agent`);
           // In agent mode, we still execute individual tools, but also send
           // logging notifications to inform the MCP client about the execution flow
-          this._notifyClient('info', `Executing tool: ${toolName}`);
+          this._notifyProtocolClient(mcpServer, 'info', `Executing tool: ${toolName}`);
         }
 
         // Execute tool with 30 second timeout (extended to 120s for agent mode)
-        const timeout = this.mode === 'agent' ? 120000 : 30000;
-        const result = await Promise.race([
-          this.toolsIntegrator.executeTool(toolName, args, args?.clientId),
-          new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error(`Tool execution timeout after ${timeout / 1000} seconds`));
-            }, timeout);
-          }),
-        ]);
+        const result = await this._withTimeout(
+          () =>
+            this.toolsIntegrator.executeTool(
+              toolName,
+              args,
+              this._routingClientId(args?.clientId, executionContext),
+              executionContext
+            ),
+          timeout,
+          `Tool execution timeout after ${timeout / 1000} seconds`
+        );
 
         const executionTime = Date.now() - startTime;
         this.serverLog('info', `✅ Tool ${toolName} executed successfully in ${executionTime}ms`);
 
         // In agent mode, notify client about completion
         if (this.mode === 'agent' && toolName !== 'codexomics_chat') {
-          this._notifyClient('info', `Tool ${toolName} completed in ${executionTime}ms`);
+          this._notifyProtocolClient(mcpServer, 'info', `Tool ${toolName} completed in ${executionTime}ms`);
         }
 
         return {
@@ -357,7 +580,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     // Handle ping requests
-    this.mcpServer.setRequestHandler(PingRequestSchema, async request => {
+    mcpServer.setRequestHandler(PingRequestSchema, async request => {
       this.serverLog('info', '🏓 Handling ping request');
       return {
         status: 'pong',
@@ -368,12 +591,13 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     // Connection event handlers
-    this.mcpServer.onclose = () => {
+    mcpServer.onclose = () => {
       this.serverLog('info', '🔌 MCP Server connection closed');
-      this.isInitialized = false;
+      this.connectedProtocolServers.delete(mcpServer);
+      if (this.connectedProtocolServers.size === 0) this.isInitialized = false;
     };
 
-    this.mcpServer.onerror = error => {
+    mcpServer.onerror = error => {
       this.serverLog('error', '❌ MCP Server error:', error);
     };
 
@@ -397,7 +621,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     // Authentication middleware for protected endpoints
     this.authMiddleware = (req, res, next) => {
       // Health check endpoint is always public
-      if (req.path === '/health' || req.path === '/mcp') {
+      if (req.path === '/health' || (req.path === '/mcp' && req.method === 'GET')) {
         return next();
       }
 
@@ -480,26 +704,23 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     // SSE endpoint for MCP Client
-    this.app.get('/sse', this.authMiddleware, (req, res) => {
-      this.handleSSEConnection(req, res);
+    this.app.get('/sse', this.authMiddleware, async (req, res) => {
+      await this.handleSSEConnection(req, res);
     });
 
     // POST endpoint for MCP clients that use HTTP POST
     this.app.post('/sse', this.authMiddleware, async (req, res) => {
-      // Monitor connection events
-      req.on('close', () => {
-        this.serverLog('info', '🔌 POST request connection closed');
-      });
-      req.on('error', error => {
-        this.serverLog('info', '❌ POST request error:', error);
-      });
+      await this.handleSSEPostRequest(req, res);
+    });
 
+    // Streamable JSON-RPC endpoint advertised to modern MCP clients.
+    this.app.post('/mcp', this.authMiddleware, async (req, res) => {
       await this.handleMCPPostRequest(req, res);
     });
 
     // Root endpoint for other MCP clients
-    this.app.get('/', this.authMiddleware, (req, res) => {
-      this.handleSSEConnection(req, res);
+    this.app.get('/', this.authMiddleware, async (req, res) => {
+      await this.handleSSEConnection(req, res);
     });
 
     // Client Bridge endpoints - For remote execution of client-side tools
@@ -516,15 +737,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     this.app.get('/bridge/status', this.authMiddleware, (req, res) => {
-      res.json({
-        registered: this.clientBridges.size > 0,
-        bridges: Array.from(this.clientBridges.values()).map(b => ({
-          id: b.id,
-          registeredAt: b.registeredAt,
-          lastActivity: b.lastActivity,
-          capabilities: b.capabilities,
-        })),
-      });
+      this.handleClientBridgeStatus(req, res);
     });
 
     // POST endpoint for root path
@@ -544,6 +757,7 @@ class StandardClaudeMCPServer extends EventEmitter {
   }
 
   setupWebSocketServer() {
+    if (this.wsServer) return this._wsReadyPromise;
     this.serverLog('info', '🔧 Setting up WebSocket server');
 
     // Create WebSocket server
@@ -552,6 +766,16 @@ class StandardClaudeMCPServer extends EventEmitter {
       host: process.env.CODEXOMICS_MCP_BIND_HOST || '127.0.0.1',
       perMessageDeflate: false,
       maxPayload: DEFAULT_WS_MAX_PAYLOAD_BYTES,
+    });
+    this._wsReadyPromise = new Promise(resolve => {
+      let settled = false;
+      const settle = error => {
+        if (settled) return;
+        settled = true;
+        resolve(error || null);
+      };
+      this.wsServer.once('listening', () => settle(null));
+      this.wsServer.once('error', error => settle(error));
     });
 
     this.wsServer.on('connection', (ws, req) => {
@@ -562,10 +786,11 @@ class StandardClaudeMCPServer extends EventEmitter {
       let authenticated = false;
       let sessionId = null;
       let connectionId = null;
+      let connectionRole = 'unauthenticated';
 
       // Set authentication timeout
       const authTimeout = setTimeout(() => {
-        if (!authenticated) {
+        if (!authenticated && ws.readyState === WebSocket.OPEN) {
           this.serverLog('info', '❌ WebSocket authentication timeout');
           ws.send(
             JSON.stringify({
@@ -603,9 +828,21 @@ class StandardClaudeMCPServer extends EventEmitter {
                 ws.close(1008, 'Not localhost');
                 return;
               }
+              if (this.authManager.config.enableLocalBypass !== true) {
+                ws.send(
+                  JSON.stringify({
+                    type: 'error',
+                    error:
+                      'Internal WebSocket bridge registration is disabled; use Electron IPC or explicitly enable the local-bypass compatibility mode',
+                  })
+                );
+                ws.close(1008, 'Internal bridge disabled');
+                return;
+              }
 
               clearTimeout(authTimeout);
               authenticated = true;
+              connectionRole = 'internal-bridge';
               // Use a unique temporary ID if windowId is not yet available to avoid overwriting other connecting windows
               const clientWindowId =
                 message.windowId || `pending_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -648,9 +885,19 @@ class StandardClaudeMCPServer extends EventEmitter {
             }
 
             if (message.type === 'authenticate') {
-              clearTimeout(authTimeout);
+              const rawApiKey = message.apiKey ?? message.headers?.Authorization;
+              if (rawApiKey !== undefined && rawApiKey !== null && typeof rawApiKey !== 'string') {
+                ws.send(
+                  JSON.stringify({
+                    type: 'error',
+                    error: 'API key must be a string',
+                  })
+                );
+                ws.close(1008, 'Invalid API key');
+                return;
+              }
 
-              const apiKey = message.apiKey || message.headers?.Authorization;
+              const apiKey = typeof rawApiKey === 'string' ? rawApiKey.replace(/^Bearer\s+/i, '').trim() : '';
 
               if (!apiKey) {
                 ws.send(
@@ -681,7 +928,13 @@ class StandardClaudeMCPServer extends EventEmitter {
                 return;
               }
 
+              // Keep the fail-closed timeout armed until authentication has
+              // actually succeeded. Validation can throw (for example, if a
+              // custom credential backend fails), and must not leave an idle,
+              // unauthenticated socket open indefinitely.
               authenticated = true;
+              clearTimeout(authTimeout);
+              connectionRole = 'external-client';
               sessionId = authResult.sessionId;
               connectionId = `ws_${sessionId}`;
 
@@ -722,6 +975,12 @@ class StandardClaudeMCPServer extends EventEmitter {
 
           // Handle late re-identification for multi-window support (when windowId is assigned via IPC)
           if (authenticated && message.type === 'internal-client') {
+            if (connectionRole !== 'internal-bridge') {
+              ws.send(
+                JSON.stringify({ type: 'error', error: 'Connection role cannot be changed after authentication' })
+              );
+              return;
+            }
             const newWindowId = message.windowId;
             if (newWindowId && ws.windowId !== newWindowId) {
               this.serverLog(
@@ -748,6 +1007,10 @@ class StandardClaudeMCPServer extends EventEmitter {
 
           // Handle tool execution results from internal client
           if (message.type === 'tool-execution-result') {
+            if (connectionRole !== 'internal-bridge') {
+              ws.send(JSON.stringify({ type: 'error', error: 'Only the internal bridge may submit tool results' }));
+              return;
+            }
             const { requestId, result, error } = message;
             const pending = this.pendingRequests.get(requestId);
 
@@ -777,6 +1040,10 @@ class StandardClaudeMCPServer extends EventEmitter {
 
           // Handle genome loaded updates from internal client
           if (message.type === 'genome-loaded') {
+            if (connectionRole !== 'internal-bridge') {
+              ws.send(JSON.stringify({ type: 'error', error: 'Only the internal bridge may update genome state' }));
+              return;
+            }
             this.serverLog(
               'info',
               `[MCP Server] Client ${ws.windowId || connectionId} loaded genome: ${message.genomeName}`
@@ -785,7 +1052,11 @@ class StandardClaudeMCPServer extends EventEmitter {
             return;
           }
 
-          this.serverLog('info', '📥 WebSocket message:', message);
+          this.serverLog('info', '📥 WebSocket message:', {
+            type: message.type || null,
+            method: message.method || null,
+            tool: message.params?.name || null,
+          });
 
           // Handle MCP-style messages
           const response = await this.handleWebSocketMessage(message, sessionId);
@@ -810,6 +1081,8 @@ class StandardClaudeMCPServer extends EventEmitter {
 
       // Handle connection close
       ws.on('close', () => {
+        clearTimeout(authTimeout);
+        this._releaseWebSocketAuthenticationSession(sessionId, connectionRole);
         this.serverLog('info', '🔌 WebSocket connection closed');
         this.wsConnections.delete(ws);
         this.emit('client-disconnected', { type: 'websocket' });
@@ -841,6 +1114,8 @@ class StandardClaudeMCPServer extends EventEmitter {
 
       // Handle errors
       ws.on('error', error => {
+        clearTimeout(authTimeout);
+        this._releaseWebSocketAuthenticationSession(sessionId, connectionRole);
         this.serverLog('error', '❌ WebSocket error:', error);
         this.wsConnections.delete(ws);
 
@@ -869,6 +1144,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     this.serverLog('info', '✅ WebSocket server configured');
+    return this._wsReadyPromise;
   }
 
   async handleWebSocketMessage(message, sessionId) {
@@ -889,7 +1165,8 @@ class StandardClaudeMCPServer extends EventEmitter {
 
     // Handle different message types
     switch (method) {
-      case 'initialize':
+      case 'initialize': {
+        const tools = this._getPermittedTools(this._executionContext(sessionValidation));
         return {
           jsonrpc: '2.0',
           result: {
@@ -901,14 +1178,21 @@ class StandardClaudeMCPServer extends EventEmitter {
             serverInfo: {
               name: 'codexomics',
               version: '1.0.0',
+              description: `CodeXomics MCP Server with ${tools.length} permitted genomics tools`,
             },
             instructions: this.getServerInstructions(),
           },
           id,
         };
+      }
+
+      case 'notifications/initialized':
+      case 'initialized':
+        this.isInitialized = true;
+        return null;
 
       case 'tools/list': {
-        const tools = this.toolsIntegrator.getAvailableTools();
+        const tools = this._getPermittedTools(this._executionContext(sessionValidation));
         return {
           jsonrpc: '2.0',
           result: { tools },
@@ -918,10 +1202,22 @@ class StandardClaudeMCPServer extends EventEmitter {
 
       case 'tools/call':
         try {
-          const result = await this.toolsIntegrator.executeTool(
-            params.name,
-            params.arguments,
-            params.arguments?.clientId
+          const timeoutMs = this.mode === 'agent' ? 120000 : 30000;
+          const executionContext = this._executionContextWithDeadline(
+            this._executionContext(sessionValidation),
+            timeoutMs
+          );
+          this._assertToolPermission(params.name, executionContext);
+          const result = await this._withTimeout(
+            () =>
+              this.toolsIntegrator.executeTool(
+                params.name,
+                params.arguments,
+                this._routingClientId(params.arguments?.clientId, executionContext),
+                executionContext
+              ),
+            timeoutMs,
+            `Tool execution timeout after ${timeoutMs / 1000} seconds`
           );
           return {
             jsonrpc: '2.0',
@@ -942,6 +1238,7 @@ class StandardClaudeMCPServer extends EventEmitter {
         }
 
       default:
+        if (id === undefined && String(method || '').startsWith('notifications/')) return null;
         return {
           jsonrpc: '2.0',
           error: {
@@ -953,63 +1250,192 @@ class StandardClaudeMCPServer extends EventEmitter {
     }
   }
 
-  handleSSEConnection(req, res) {
+  _sseCapacityError(executionContext) {
+    if (this.sseTransports.size >= this.maxSSEConnections) {
+      return `The MCP server already has ${this.maxSSEConnections} active SSE streams`;
+    }
+    const principal = executionContext?.principal;
+    const principalConnections = Array.from(this.transportExecutionContexts.values()).filter(
+      context => context?.principal === principal
+    ).length;
+    if (principalConnections >= this.maxSSEConnectionsPerPrincipal) {
+      return `MCP principal "${principal}" already has ${this.maxSSEConnectionsPerPrincipal} active SSE streams`;
+    }
+    return null;
+  }
+
+  _startSSEMaintenance(sessionId, response, expiresAt) {
+    const connectionId = this.sseConnectionIds.get(sessionId);
+    const backpressure = { missedDrains: 0, waitingForDrain: false };
+    this.sseBackpressureState.set(sessionId, backpressure);
+    const heartbeat = setInterval(() => {
+      try {
+        if (response.destroyed || response.writableEnded) {
+          void this._cleanupSSESession(sessionId);
+          return;
+        }
+        const accepted = response.write(': keepalive\n\n');
+        if (accepted) {
+          backpressure.missedDrains = 0;
+          if (connectionId) this.healthMonitor.updateActivity(connectionId);
+          return;
+        }
+
+        backpressure.missedDrains += 1;
+        if (!backpressure.waitingForDrain && typeof response.once === 'function') {
+          backpressure.waitingForDrain = true;
+          response.once('drain', () => {
+            if (!this.sseTransports.has(sessionId)) return;
+            backpressure.waitingForDrain = false;
+            backpressure.missedDrains = 0;
+            if (connectionId) this.healthMonitor.updateActivity(connectionId);
+          });
+        }
+        if (backpressure.missedDrains >= MAX_SSE_MISSED_DRAINS) {
+          void this._cleanupSSESession(sessionId, { closeTransport: true });
+        }
+      } catch (_error) {
+        void this._cleanupSSESession(sessionId, { closeTransport: true });
+      }
+    }, DEFAULT_SSE_HEARTBEAT_MS);
+    heartbeat.unref?.();
+    this.sseHeartbeatTimers.set(sessionId, heartbeat);
+
+    const expiryDelay = Number(expiresAt) - Date.now();
+    if (Number.isFinite(expiryDelay)) {
+      const expiry = setTimeout(
+        () => void this._cleanupSSESession(sessionId, { closeTransport: true }),
+        Math.max(0, expiryDelay)
+      );
+      expiry.unref?.();
+      this.sseExpiryTimers.set(sessionId, expiry);
+    }
+  }
+
+  async _cleanupSSESession(sessionId, { closeTransport = false } = {}) {
+    if (!sessionId || this.sseCleanupInProgress.has(sessionId)) return;
+    const transport = this.sseTransports.get(sessionId);
+    const protocolServer = this.sseProtocolServers.get(sessionId);
+    const connectionId = this.sseConnectionIds.get(sessionId);
+    if (!transport && !protocolServer && !connectionId) return;
+
+    this.sseCleanupInProgress.add(sessionId);
+    this.sseTransports.delete(sessionId);
+    this.sseProtocolServers.delete(sessionId);
+    this.sseConnectionIds.delete(sessionId);
+    this.transportExecutionContexts.delete(sessionId);
+    // Transport-scoped routing pins must not survive a disconnected SSE
+    // transport; a reconnect receives a new transport session identifier.
+    this.sessionWindowPins?.delete(sessionId);
+    const heartbeat = this.sseHeartbeatTimers.get(sessionId);
+    const expiry = this.sseExpiryTimers.get(sessionId);
+    if (heartbeat) clearInterval(heartbeat);
+    if (expiry) clearTimeout(expiry);
+    this.sseHeartbeatTimers.delete(sessionId);
+    this.sseExpiryTimers.delete(sessionId);
+    this.sseBackpressureState.delete(sessionId);
+    if (transport) this.activeConnections.delete(transport);
+    if (protocolServer) this.connectedProtocolServers.delete(protocolServer);
+
+    try {
+      if (closeTransport) {
+        try {
+          if (typeof protocolServer?.close === 'function') await protocolServer.close();
+          else if (typeof transport?.close === 'function') await transport.close();
+        } catch (error) {
+          this.serverLog('warn', `⚠️ Failed to close SSE transport: ${error.message}`);
+          if (typeof transport?.close === 'function') await transport.close().catch(() => undefined);
+        }
+      }
+    } finally {
+      if (connectionId) this.healthMonitor.unregisterConnection(connectionId);
+      this.sseCleanupInProgress.delete(sessionId);
+      this.serverLog('info', `📊 Active connections: ${this.activeConnections.size}`);
+    }
+  }
+
+  async handleSSEConnection(req, res) {
     this.serverLog('info', '🔄 New SSE connection request');
+
+    const executionContext = this._executionContext(req.mcpSession);
+    const capacityError = this._sseCapacityError(executionContext);
+    if (capacityError) {
+      return res.status(429).json({ error: 'Too many SSE connections', message: capacityError });
+    }
+
+    let connectionId = null;
+    let transport = null;
+    let protocolServer = null;
+    const cleanup = async ({ closeTransport = false } = {}) => {
+      if (transport?.sessionId) {
+        await this._cleanupSSESession(transport.sessionId, { closeTransport });
+        return;
+      }
+      if (connectionId) this.healthMonitor.unregisterConnection(connectionId);
+    };
 
     try {
       // Create connection ID
-      const connectionId = `sse_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      connectionId = `sse_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const sessionId = req.mcpSession?.sessionId;
 
-      // Set CORS headers before creating transport
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Headers', 'Cache-Control, Authorization');
+      // Every legacy SSE stream needs its own SDK protocol server. The SDK
+      // deliberately rejects connecting two transports to one Server object.
+      transport = new SSEServerTransport('/sse', res);
+      protocolServer = this._createProtocolServer();
+      this.setupMCPServer(protocolServer);
+      if (transport.sessionId) {
+        this.sseTransports.set(transport.sessionId, transport);
+        this.sseProtocolServers.set(transport.sessionId, protocolServer);
+        this.sseConnectionIds.set(transport.sessionId, connectionId);
+        this.transportExecutionContexts.set(transport.sessionId, executionContext);
+      }
 
-      // Register with health monitor
       this.healthMonitor.registerConnection(connectionId, {
         type: 'sse',
         ip: req.ip,
         userAgent: req.get('User-Agent'),
         sessionId,
+        metadata: { sseSessionId: transport.sessionId },
       });
-
-      // Create SSE transport - this will handle setting SSE headers
-      const transport = new SSEServerTransport('/sse', res);
 
       // Track connection
       this.activeConnections.add(transport);
       this.serverLog('info', `📊 Active connections: ${this.activeConnections.size}`);
 
-      // Connect MCP server to transport
-      this.mcpServer.connect(transport);
-      this.serverLog('info', '✅ SSE connection established and MCP server connected');
-
-      // Handle connection events
+      // Install terminal handlers before connecting so an early disconnect
+      // cannot leak the authenticated transport context.
       req.on('close', () => {
         this.serverLog('info', '🔌 SSE connection closed by client');
-        this.activeConnections.delete(transport);
-        this.healthMonitor.unregisterConnection(connectionId);
-        this.serverLog('info', `📊 Active connections: ${this.activeConnections.size}`);
+        void cleanup();
       });
 
       req.on('error', error => {
         this.serverLog('error', '❌ SSE connection error:', error);
-        this.activeConnections.delete(transport);
-        this.healthMonitor.unregisterConnection(connectionId);
+        void cleanup({ closeTransport: true });
       });
 
       res.on('error', error => {
         this.serverLog('error', '❌ SSE response error:', error);
-        this.activeConnections.delete(transport);
-        this.healthMonitor.unregisterConnection(connectionId);
+        void cleanup({ closeTransport: true });
       });
 
       res.on('close', () => {
         this.serverLog('info', '🔌 SSE response closed');
-        this.activeConnections.delete(transport);
-        this.healthMonitor.unregisterConnection(connectionId);
+        void cleanup();
       });
+
+      // Connect the per-stream MCP protocol server to its transport.
+      this.connectedProtocolServers.add(protocolServer);
+      await protocolServer.connect(transport);
+      if (this.sseProtocolServers.get(transport.sessionId) !== protocolServer) {
+        await protocolServer.close().catch(() => undefined);
+        return;
+      }
+      this._startSSEMaintenance(transport.sessionId, res, req.mcpSession?.expiresAt);
+      this.serverLog('info', '✅ SSE connection established and MCP server connected');
     } catch (error) {
+      await cleanup({ closeTransport: true });
       this.serverLog('error', '❌ Failed to establish SSE connection:', error);
       if (!res.headersSent) {
         res.status(500).json({
@@ -1020,10 +1446,53 @@ class StandardClaudeMCPServer extends EventEmitter {
     }
   }
 
+  async handleSSEPostRequest(req, res) {
+    const sessionId = typeof req.query?.sessionId === 'string' ? req.query.sessionId : '';
+    const transport = sessionId ? this.sseTransports.get(sessionId) : null;
+    if (!transport) {
+      return res.status(404).json({ error: 'Unknown or expired SSE session' });
+    }
+
+    const expectedContext = this.transportExecutionContexts.get(sessionId);
+    const requestContext = this._executionContext(req.mcpSession);
+    if (
+      !expectedContext ||
+      !requestContext ||
+      expectedContext.sessionId !== requestContext.sessionId ||
+      expectedContext.principal !== requestContext.principal ||
+      expectedContext.isAdmin !== requestContext.isAdmin
+    ) {
+      return res.status(403).json({ error: 'SSE session credential does not match the connection owner' });
+    }
+
+    try {
+      // SSEServerTransport forwards req.auth as the SDK request authInfo. Bind
+      // it to the context captured when this specific SSE stream was opened so
+      // tools/list and tools/call use the same scoped authorization policy.
+      req.auth = Object.freeze({
+        ...expectedContext,
+        permissions: Object.freeze([...(expectedContext.permissions || [])]),
+        transportSessionId: sessionId,
+      });
+      const connectionId = this.sseConnectionIds.get(sessionId);
+      if (connectionId) this.healthMonitor.updateActivity(connectionId);
+      await transport.handlePostMessage(req, res, req.body);
+      return undefined;
+    } catch (error) {
+      this.serverLog('error', `❌ SSE message handling failed: ${error.message}`);
+      if (!res.headersSent) return res.status(500).json({ error: 'Failed to process SSE MCP message' });
+      return undefined;
+    }
+  }
+
   async handleMCPPostRequest(req, res) {
     const startTime = Date.now();
     this.serverLog('info', '📮 Received POST request:', req.path);
-    this.serverLog('info', '📦 Request body:', JSON.stringify(req.body, null, 2));
+    this.serverLog('info', '📦 JSON-RPC request:', {
+      method: req.body?.method || null,
+      tool: req.body?.params?.name || null,
+      argumentKeys: Object.keys(req.body?.params?.arguments || {}).filter(key => key !== 'approvalToken'),
+    });
     this.serverLog('info', '🔗 Client connection info:', {
       ip: req.ip,
       userAgent: req.get('User-Agent'),
@@ -1032,10 +1501,6 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
 
     try {
-      // Set CORS headers
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Cache-Control');
       res.setHeader('Content-Type', 'application/json');
 
       const request = req.body;
@@ -1074,7 +1539,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           this.clientInfo = params?.clientInfo;
           this.protocolVersion = params?.protocolVersion || '2024-11-05';
 
-          const tools = this.toolsIntegrator.getAvailableTools();
+          const tools = this._getPermittedTools(this._executionContext(req.mcpSession));
           this.serverLog('info', `📊 Server has ${tools.length} tools available`);
 
           response = {
@@ -1090,7 +1555,7 @@ class StandardClaudeMCPServer extends EventEmitter {
               serverInfo: {
                 name: 'codexomics',
                 version: '1.0.0',
-                description: `CodeXomics MCP Server with ${tools.length} genomics tools`,
+                description: `CodeXomics MCP Server with ${tools.length} permitted genomics tools`,
               },
               instructions: this.getServerInstructions(),
             },
@@ -1099,6 +1564,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           break;
         }
 
+        case 'notifications/initialized':
         case 'initialized':
           this.serverLog('info', '✅ Handling initialized notification');
           this.isInitialized = true;
@@ -1107,7 +1573,7 @@ class StandardClaudeMCPServer extends EventEmitter {
 
         case 'tools/list': {
           this.serverLog('info', '📋 Handling tools/list request');
-          const availableTools = this.toolsIntegrator.getAvailableTools();
+          const availableTools = this._getPermittedTools(this._executionContext(req.mcpSession));
           response = {
             jsonrpc: '2.0',
             result: {
@@ -1124,14 +1590,23 @@ class StandardClaudeMCPServer extends EventEmitter {
           const startTime = Date.now();
 
           try {
-            const result = await Promise.race([
-              this.toolsIntegrator.executeTool(toolName, args, args?.clientId),
-              new Promise((_, reject) => {
-                setTimeout(() => {
-                  reject(new Error(`Tool execution timeout after 30 seconds`));
-                }, 30000);
-              }),
-            ]);
+            const timeoutMs = this.mode === 'agent' ? 120000 : 30000;
+            const executionContext = this._executionContextWithDeadline(
+              this._executionContext(req.mcpSession),
+              timeoutMs
+            );
+            this._assertToolPermission(toolName, executionContext);
+            const result = await this._withTimeout(
+              () =>
+                this.toolsIntegrator.executeTool(
+                  toolName,
+                  args,
+                  this._routingClientId(args?.clientId, executionContext),
+                  executionContext
+                ),
+              timeoutMs,
+              `Tool execution timeout after ${timeoutMs / 1000} seconds`
+            );
 
             const executionTime = Date.now() - startTime;
             this.serverLog('info', `✅ Tool ${toolName} executed in ${executionTime}ms`);
@@ -1178,6 +1653,9 @@ class StandardClaudeMCPServer extends EventEmitter {
 
         default:
           this.serverLog('info', `❓ Unknown method: ${method}`);
+          if (id === undefined && String(method).startsWith('notifications/')) {
+            return res.status(204).send();
+          }
           response = {
             jsonrpc: '2.0',
             error: {
@@ -1270,7 +1748,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     }
   }
 
-  async executeToolOnClient(toolName, parameters, clientId) {
+  async executeToolOnClient(toolName, parameters, clientId, executionContext = null) {
     // Check if this tool requires client-side execution
     const validation = this.toolCategoryManager.validateExecution(
       toolName,
@@ -1296,25 +1774,25 @@ class StandardClaudeMCPServer extends EventEmitter {
       if (pinned) targetWindowId = pinned;
     }
 
-    // Try WebSocket internal client first (multi-window aware)
-    if (this.internalClients.size > 0) {
-      return await this.executeViaInternalClient(toolName, parameters, clientId, targetWindowId);
-    }
-
-    // Try local Electron IPC if available (multi-window aware)
+    // Prefer the authenticated in-process Electron route. The localhost
+    // WebSocket bridge is retained only as a compatibility fallback.
     if (this.windowRegistry.size > 0) {
-      return await this.executeViaElectronIPC(toolName, parameters, clientId, targetWindowId);
+      return await this.executeViaElectronIPC(toolName, parameters, clientId, targetWindowId, executionContext);
     }
 
     // Legacy: single mainWindow fallback. Preserve any explicit windowId the
     // client passed instead of silently dropping it (previously forced to null).
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      return await this.executeViaElectronIPC(toolName, parameters, clientId, targetWindowId);
+      return await this.executeViaElectronIPC(toolName, parameters, clientId, targetWindowId, executionContext);
+    }
+
+    if (this.internalClients.size > 0) {
+      return await this.executeViaInternalClient(toolName, parameters, clientId, targetWindowId, executionContext);
     }
 
     // Try client bridge if available
     if (this.clientBridges.size > 0) {
-      return await this.executeViaClientBridge(toolName, parameters, clientId);
+      return await this.executeViaClientBridge(toolName, parameters, clientId, executionContext);
     }
 
     throw new Error(
@@ -1324,7 +1802,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     );
   }
 
-  async executeViaInternalClient(toolName, parameters, clientId, targetWindowId) {
+  async executeViaInternalClient(toolName, parameters, clientId, targetWindowId, executionContext = null) {
     // Resolve the target WS client deterministically. This throws a loud,
     // actionable error for the dangerous case (multiple genome windows open,
     // none focused, no explicit windowId) instead of silently picking one.
@@ -1342,6 +1820,7 @@ class StandardClaudeMCPServer extends EventEmitter {
 
     const genomeName = targetClient.genomeName || null;
     const requestId = `mcp_ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const timeoutMs = this._executionHopTimeoutMs(executionContext);
 
     // Convert snake_case tool name to camelCase method name
     const methodName = toolName.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
@@ -1350,7 +1829,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId);
         reject(new Error(`Tool execution timeout for ${toolName} via internal client (window: ${resolvedWindowId})`));
-      }, 30000);
+      }, timeoutMs);
 
       this.pendingRequests.set(requestId, {
         // Echo the resolved window/genome on every result so clients can detect
@@ -1375,12 +1854,13 @@ class StandardClaudeMCPServer extends EventEmitter {
           toolName,
           parameters,
           clientId,
+          executionContext,
         })
       );
     });
   }
 
-  async executeViaElectronIPC(toolName, parameters, clientId, targetWindowId) {
+  async executeViaElectronIPC(toolName, parameters, clientId, targetWindowId, executionContext = null) {
     // Resolve the target BrowserWindow deterministically. Like the WS path, this
     // fails loudly when the target is ambiguous instead of silently picking the
     // "first available" window (the previous silent wrong-genome hazard).
@@ -1398,6 +1878,7 @@ class StandardClaudeMCPServer extends EventEmitter {
     }
 
     const requestId = `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const timeoutMs = this._executionHopTimeoutMs(executionContext);
 
     // Convert snake_case tool name to camelCase method name
     const methodName = toolName.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
@@ -1406,7 +1887,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId);
         reject(new Error(`Tool execution timeout for ${toolName} (window: ${targetWindowId})`));
-      }, 30000);
+      }, timeoutMs);
 
       this.pendingRequests.set(requestId, {
         // Echo the resolved window/genome on every result (see WS path).
@@ -1427,30 +1908,36 @@ class StandardClaudeMCPServer extends EventEmitter {
         method: methodName,
         parameters,
         clientId,
+        executionContext,
       });
     });
   }
 
-  async executeViaClientBridge(toolName, parameters, clientId) {
-    // Get first available bridge (TODO: implement bridge selection strategy)
-    const bridge = Array.from(this.clientBridges.values())[0];
+  async executeViaClientBridge(toolName, parameters, clientId, executionContext = null) {
+    const ownerSessionId = executionContext?.sessionId;
+    if (!ownerSessionId) throw new Error('Authenticated MCP session is required for client bridge execution');
+    const bridge = Array.from(this.clientBridges.values()).find(candidate => candidate.sessionId === ownerSessionId);
 
     if (!bridge) {
-      throw new Error('No client bridge available');
+      throw new Error('No client bridge is registered for the authenticated MCP session');
     }
 
     const requestId = `bridge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const timeoutMs = this._executionHopTimeoutMs(executionContext);
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         bridge.pendingRequests.delete(requestId);
         reject(new Error(`Bridge tool execution timeout for ${toolName}`));
-      }, 30000);
+      }, timeoutMs);
 
       bridge.pendingRequests.set(requestId, {
         resolve,
         reject,
         timeout,
+        toolName,
+        parameters,
+        executionContext,
       });
 
       // Send execution request to bridge
@@ -1464,11 +1951,18 @@ class StandardClaudeMCPServer extends EventEmitter {
   handleClientBridgeRegistration(req, res) {
     const { bridgeId, capabilities } = req.body;
 
-    if (!bridgeId) {
+    if (!this._isAuthorizedBridgeRequest(req)) {
+      return res.status(403).json({ success: false, error: 'Client bridge access requires an admin credential' });
+    }
+
+    if (!bridgeId || !/^[A-Za-z0-9._-]{1,128}$/.test(String(bridgeId))) {
       return res.status(400).json({
         success: false,
         error: 'Bridge ID required',
       });
+    }
+    if (this.clientBridges.has(bridgeId)) {
+      return res.status(409).json({ success: false, error: 'Bridge ID is already registered' });
     }
 
     const bridge = {
@@ -1494,6 +1988,13 @@ class StandardClaudeMCPServer extends EventEmitter {
 
   handleClientBridgeUnregistration(req, res) {
     const { bridgeId } = req.body;
+    if (!this._isAuthorizedBridgeRequest(req)) {
+      return res.status(403).json({ success: false, error: 'Client bridge access requires an admin credential' });
+    }
+    const bridge = this.clientBridges.get(bridgeId);
+    if (bridge && bridge.sessionId !== req.mcpSession.sessionId) {
+      return res.status(403).json({ success: false, error: 'Bridge belongs to a different MCP session' });
+    }
 
     if (this.clientBridges.delete(bridgeId)) {
       this.serverLog('info', `🔌 Client bridge unregistered: ${bridgeId}`);
@@ -1513,6 +2014,10 @@ class StandardClaudeMCPServer extends EventEmitter {
   async handleClientBridgeExecution(req, res) {
     const { bridgeId, requestId, result, error } = req.body;
 
+    if (!this._isAuthorizedBridgeRequest(req)) {
+      return res.status(403).json({ success: false, error: 'Client bridge access requires an admin credential' });
+    }
+
     const bridge = this.clientBridges.get(bridgeId);
 
     if (!bridge) {
@@ -1520,6 +2025,9 @@ class StandardClaudeMCPServer extends EventEmitter {
         success: false,
         error: 'Bridge not found',
       });
+    }
+    if (bridge.sessionId !== req.mcpSession.sessionId) {
+      return res.status(403).json({ success: false, error: 'Bridge belongs to a different MCP session' });
     }
 
     bridge.lastActivity = Date.now();
@@ -1537,12 +2045,9 @@ class StandardClaudeMCPServer extends EventEmitter {
         } else {
           pendingRequest.resolve(result);
         }
+        return res.json({ success: true, message: 'Response recorded' });
       }
-
-      return res.json({
-        success: true,
-        message: 'Response recorded',
-      });
+      return res.status(404).json({ success: false, error: 'Unknown bridge request ID' });
     }
 
     // Return any pending execution requests for this bridge
@@ -1550,6 +2055,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       requestId: id,
       toolName: req.toolName,
       parameters: req.parameters,
+      executionContext: req.executionContext,
     }));
 
     res.json({
@@ -1558,72 +2064,72 @@ class StandardClaudeMCPServer extends EventEmitter {
     });
   }
 
-  setupErrorHandling() {
-    process.on('SIGINT', async () => {
-      this.serverLog('info', '🛑 Received SIGINT, shutting down gracefully');
-      await this.stop();
-      process.exit(0);
-    });
-
-    process.on('SIGTERM', async () => {
-      this.serverLog('info', '🛑 Received SIGTERM, shutting down gracefully');
-      await this.stop();
-      process.exit(0);
-    });
-
-    process.on('uncaughtException', error => {
-      // Don't crash on EADDRINUSE - it will be caught by the start() method
-      if (error.code === 'EADDRINUSE') {
-        this.serverLog('error', `❌ Port already in use: ${error.port || 'unknown'} (${error.syscall || 'unknown'})`);
-        return;
-      }
-      this.serverLog('error', '💥 Uncaught exception:', error);
-      // Only exit in standalone mode
-      if (!this.mainWindow) {
-        process.exit(1);
-      }
-    });
-
-    process.on('unhandledRejection', (reason, promise) => {
-      this.serverLog('error', '💥 Unhandled rejection at:', promise, 'reason:', reason);
-      // Only exit in standalone mode
-      if (!this.mainWindow) {
-        process.exit(1);
-      }
-    });
+  _isAuthorizedBridgeRequest(req) {
+    const context = this._executionContext(req?.mcpSession);
+    return Boolean(context?.isAdmin && context.sessionId);
   }
 
-  async start() {
+  handleClientBridgeStatus(req, res) {
+    if (!this._isAuthorizedBridgeRequest(req)) {
+      return res.status(403).json({ success: false, error: 'Client bridge access requires an admin credential' });
+    }
+    const bridges = Array.from(this.clientBridges.values())
+      .filter(bridge => bridge.sessionId === req.mcpSession.sessionId)
+      .map(bridge => ({
+        id: bridge.id,
+        registeredAt: bridge.registeredAt,
+        lastActivity: bridge.lastActivity,
+        capabilities: bridge.capabilities,
+      }));
+    return res.json({ registered: bridges.length > 0, bridges });
+  }
+
+  async _startServer() {
     this.serverLog('info', '🚀 Starting Standard Claude MCP Server');
 
-    // Check if WebSocket server failed to bind during construction
-    if (this._wsPortError) {
-      const wsError = this._wsPortError;
-      this._wsPortError = null;
-      const errMsg =
-        wsError.code === 'EADDRINUSE'
-          ? `WebSocket port ${this.wsPort} is already in use`
-          : `Failed to bind WebSocket server on port ${this.wsPort}: ${wsError.message}`;
-      this.serverLog('error', `❌ ${errMsg}`);
-      this.emit('start-failed', { type: 'ws', port: this.wsPort, error: errMsg });
-      throw new Error(errMsg);
-    }
-
     try {
+      // Network listeners are created by start(), never by construction. This
+      // keeps embedded/test instances inert until their lifecycle owner opts in.
+      const initialWsError = await this.setupWebSocketServer();
+      if (initialWsError || this._wsPortError) {
+        const wsError = initialWsError || this._wsPortError;
+        this._wsPortError = null;
+        const error = new Error(
+          wsError.code === 'EADDRINUSE'
+            ? `WebSocket port ${this.wsPort} is already in use`
+            : `Failed to bind WebSocket server on port ${this.wsPort}: ${wsError.message}`
+        );
+        error.mcpPortType = 'ws';
+        throw error;
+      }
+
       await new Promise((resolve, reject) => {
         const bindHost = process.env.CODEXOMICS_MCP_BIND_HOST || '127.0.0.1';
-        this.httpServer = this.app.listen(this.httpPort, bindHost, error => {
-          if (error) {
-            if (error.code === 'EADDRINUSE') {
-              reject(new Error(`HTTP port ${this.httpPort} is already in use`));
-            } else {
-              reject(new Error(`Failed to start HTTP server on port ${this.httpPort}: ${error.message}`));
-            }
-            return;
+        const httpServer = this.app.listen(this.httpPort, bindHost);
+        this.httpServer = httpServer;
+        const onError = error => {
+          httpServer.removeListener('listening', onListening);
+          if (error.code === 'EADDRINUSE') {
+            const bindError = new Error(`HTTP port ${this.httpPort} is already in use`);
+            bindError.mcpPortType = 'http';
+            reject(bindError);
+          } else {
+            const bindError = new Error(`Failed to start HTTP server on port ${this.httpPort}: ${error.message}`);
+            bindError.mcpPortType = 'http';
+            reject(bindError);
           }
+        };
+        const onListening = () => {
+          httpServer.removeListener('error', onError);
           resolve();
-        });
+        };
+        httpServer.once('error', onError);
+        httpServer.once('listening', onListening);
       });
+
+      if (this.lifecycleState === 'stopping') {
+        throw new Error('MCP server startup was cancelled by shutdown');
+      }
 
       // Configure server timeouts
       this.httpServer.keepAliveTimeout = 61000; // 61 seconds
@@ -1641,85 +2147,187 @@ class StandardClaudeMCPServer extends EventEmitter {
       this.serverLog('info', '');
 
       // Emit started event
+      this.lifecycleState = 'running';
       this.emit('started', { httpPort: this.httpPort, wsPort: this.wsPort });
     } catch (error) {
       this.serverLog('error', `💥 Failed to start server: ${error.message}`);
 
       // Emit start-failed event so the main process can handle it gracefully
-      const portType = error.message.includes('HTTP') ? 'http' : 'ws';
+      const portType = error.mcpPortType || (error.message.includes('HTTP') ? 'http' : 'ws');
       const port = portType === 'http' ? this.httpPort : this.wsPort;
       this.emit('start-failed', { type: portType, port, error: error.message });
 
-      // In standalone mode (no mainWindow), exit with error
-      // In-app mode, throw the error so the caller can handle it
-      if (!this.mainWindow) {
-        process.exit(1);
-      } else {
-        throw error;
-      }
+      // A partially bound server is never left alive after a failed start.
+      await this._cleanupResources();
+      this.lifecycleState = 'closed';
+      throw error;
     }
   }
 
-  async stop() {
-    this.serverLog('info', '🛑 Stopping Standard Claude MCP Server');
-
-    try {
-      // Cleanup health monitor
-      if (this.healthMonitor) {
-        this.healthMonitor.destroy();
-      }
-
-      // Cleanup authentication manager
-      if (this.authManager) {
-        this.authManager.destroy();
-      }
-
-      // Close all client bridges
-      for (const [, bridge] of this.clientBridges.entries()) {
-        for (const [, req] of bridge.pendingRequests.entries()) {
-          clearTimeout(req.timeout);
-          req.reject(new Error('Server stopping'));
-        }
-      }
-      this.clientBridges.clear();
-      // Close HTTP server
-      if (this.httpServer) {
-        await new Promise(resolve => {
-          this.httpServer.close(resolve);
-        });
-      }
-
-      // Close WebSocket server
-      if (this.wsServer) {
-        // Close all WebSocket connections
-        this.wsConnections.forEach(ws => {
-          ws.close();
-        });
-        this.wsConnections.clear();
-
-        // Close WebSocket server
-        await new Promise(resolve => {
-          this.wsServer.close(resolve);
-        });
-      }
-
-      // Clear pending requests
-      for (const [, pendingRequest] of this.pendingRequests) {
-        clearTimeout(pendingRequest.timeout);
-        pendingRequest.reject(new Error('Server stopping'));
-      }
-      this.pendingRequests.clear();
-
-      // Clear active connections
-      this.activeConnections.clear();
-
-      this.serverLog('info', '✅ Server stopped successfully');
-
-      // Emit stopped event
-      this.emit('stopped');
-    } catch (error) {
-      this.serverLog('error', '❌ Error stopping server:', error.message);
+  start() {
+    if (this.lifecycleState === 'running') return Promise.resolve();
+    if (this._startPromise) return this._startPromise;
+    if (this.lifecycleState !== 'idle') {
+      return Promise.reject(new Error(`Cannot start an MCP server in lifecycle state "${this.lifecycleState}"`));
     }
+
+    this.lifecycleState = 'starting';
+    this._startPromise = this._startServer().finally(() => {
+      this._startPromise = null;
+    });
+    return this._startPromise;
+  }
+
+  async _settleWithin(operation, timeoutMs = this.shutdownGraceMs) {
+    let timeoutId;
+    try {
+      return await Promise.race([
+        Promise.resolve()
+          .then(operation)
+          .then(
+            () => true,
+            () => true
+          ),
+        new Promise(resolve => {
+          timeoutId = setTimeout(() => resolve(false), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  async _cleanupResources() {
+    // Reject request waiters before closing transports so callers do not hang.
+    for (const [, bridge] of this.clientBridges.entries()) {
+      for (const [, request] of bridge.pendingRequests.entries()) {
+        clearTimeout(request.timeout);
+        request.reject(new Error('Server stopping'));
+      }
+    }
+    this.clientBridges.clear();
+    for (const [, pendingRequest] of this.pendingRequests) {
+      clearTimeout(pendingRequest.timeout);
+      pendingRequest.reject(new Error('Server stopping'));
+    }
+    this.pendingRequests.clear();
+
+    // SSE transports must close before the HTTP listener or server.close()
+    // can wait forever on their long-lived responses.
+    const sseSessionIds = Array.from(this.sseTransports.keys());
+    const unsettledTransports = await Promise.all(
+      sseSessionIds.map(async sessionId => {
+        const transport = this.sseTransports.get(sessionId);
+        const settled = await this._settleWithin(() => this._cleanupSSESession(sessionId, { closeTransport: true }));
+        return settled ? null : transport;
+      })
+    );
+    const transports = Array.from(new Set([...this.activeConnections, ...unsettledTransports.filter(Boolean)]));
+    this.activeConnections.clear();
+    this.sseTransports.clear();
+    this.sseProtocolServers.clear();
+    this.sseConnectionIds.clear();
+    this.sseCleanupInProgress.clear();
+    for (const timer of this.sseHeartbeatTimers.values()) clearInterval(timer);
+    for (const timer of this.sseExpiryTimers.values()) clearTimeout(timer);
+    this.sseHeartbeatTimers.clear();
+    this.sseExpiryTimers.clear();
+    this.sseBackpressureState.clear();
+    this.connectedProtocolServers.clear();
+    this.transportExecutionContexts.clear();
+    await Promise.all(
+      transports.map(transport =>
+        this._settleWithin(async () => {
+          if (typeof transport?.close === 'function') await transport.close();
+        })
+      )
+    );
+
+    const httpServer = this.httpServer;
+    this.httpServer = null;
+    if (httpServer) {
+      const closeHttp = () =>
+        new Promise(resolve => {
+          try {
+            httpServer.close(() => resolve());
+          } catch (_error) {
+            resolve();
+          }
+        });
+      const closedGracefully = await this._settleWithin(closeHttp);
+      if (!closedGracefully) {
+        if (typeof httpServer.closeAllConnections === 'function') httpServer.closeAllConnections();
+        if (typeof httpServer.closeIdleConnections === 'function') httpServer.closeIdleConnections();
+        await this._settleWithin(closeHttp, Math.max(25, Math.floor(this.shutdownGraceMs / 2)));
+      }
+    }
+
+    const wsServer = this.wsServer;
+    this.wsServer = null;
+    this._wsReadyPromise = null;
+    const sockets = Array.from(this.wsConnections);
+    for (const ws of sockets) {
+      try {
+        ws.close(1001, 'Server stopping');
+      } catch (_error) {
+        // Continue closing the remaining sockets.
+      }
+    }
+
+    if (wsServer) {
+      const closeWebSocketServer = () =>
+        new Promise(resolve => {
+          try {
+            wsServer.close(() => resolve());
+          } catch (_error) {
+            resolve();
+          }
+        });
+      const closedGracefully = await this._settleWithin(closeWebSocketServer);
+      if (!closedGracefully) {
+        for (const ws of sockets) {
+          try {
+            ws.terminate();
+          } catch (_error) {
+            // Continue terminating the remaining sockets.
+          }
+        }
+        await this._settleWithin(closeWebSocketServer, Math.max(25, Math.floor(this.shutdownGraceMs / 2)));
+      }
+    }
+    this.wsConnections.clear();
+    this.internalClients.clear();
+    this.internalClient = null;
+    this.internalClientId = null;
+    this.activeConnections.clear();
+
+    if (this.healthMonitor) {
+      this.healthMonitor.destroy();
+    }
+    if (this.authManager) {
+      this.authManager.destroy();
+    }
+  }
+
+  stop() {
+    if (this._stopPromise) return this._stopPromise;
+    if (this.lifecycleState === 'closed') return Promise.resolve();
+
+    const startInFlight = this._startPromise;
+    this.lifecycleState = 'stopping';
+    this._stopPromise = (async () => {
+      this.serverLog('info', '🛑 Stopping Standard Claude MCP Server');
+      if (startInFlight) await startInFlight.catch(() => undefined);
+
+      await this._cleanupResources();
+      this.lifecycleState = 'closed';
+      this.serverLog('info', '✅ Server stopped successfully');
+      this.emit('stopped');
+    })().catch(error => {
+      this.lifecycleState = 'closed';
+      this.serverLog('error', '❌ Error stopping server:', error.message);
+    });
+    return this._stopPromise;
   }
 
   // Utility methods
@@ -1731,21 +2339,26 @@ class StandardClaudeMCPServer extends EventEmitter {
    * @param {string} message - Human-readable message
    * @param {Object} [data] - Optional structured data to include
    */
-  _notifyClient(level, message, data = null) {
+  _notifyProtocolClient(protocolServer, level, message, data = null) {
     try {
-      if (this.mcpServer && typeof this.mcpServer.sendLoggingMessage === 'function') {
-        const params = {
-          level,
-          logger: 'codexomics-agent',
-          data: data ? `${message} | ${JSON.stringify(data)}` : message,
-        };
-        this.mcpServer.sendLoggingMessage(params).catch(err => {
-          // Silently ignore - client may not support logging notifications
-          console.debug(`[MCP] Failed to send logging notification: ${err.message}`);
-        });
-      }
+      if (typeof protocolServer?.sendLoggingMessage !== 'function') return;
+      const params = {
+        level,
+        logger: 'codexomics-agent',
+        data: data ? `${message} | ${JSON.stringify(data)}` : message,
+      };
+      protocolServer.sendLoggingMessage(params).catch(err => {
+        // Silently ignore - client may not support logging notifications
+        console.debug(`[MCP] Failed to send logging notification: ${err.message}`);
+      });
     } catch (e) {
       // Silently ignore - this is best-effort
+    }
+  }
+
+  _notifyClient(level, message, data = null) {
+    for (const protocolServer of this.connectedProtocolServers || []) {
+      this._notifyProtocolClient(protocolServer, level, message, data);
     }
   }
 
@@ -1771,7 +2384,21 @@ class StandardClaudeMCPServer extends EventEmitter {
       error: 'error',
     };
     const level = levelMap[progress.type] || 'info';
-    this._notifyClient(level, `[Agent] ${progress.message}`, progress.data);
+    const sessionId = String(progress.sessionId || '').trim();
+    const transportSessionId = String(progress.transportSessionId || '').trim();
+    if (!sessionId || !transportSessionId) {
+      this.serverLog('warn', '⚠️ Dropping uncorrelated agent progress notification');
+      return;
+    }
+    const context = this.transportExecutionContexts.get(transportSessionId);
+    if (context?.sessionId !== sessionId) {
+      this.serverLog('warn', '⚠️ Dropping agent progress with a mismatched MCP transport binding');
+      return;
+    }
+    this._notifyProtocolClient(this.sseProtocolServers.get(transportSessionId), level, `[Agent] ${progress.message}`, {
+      ...(progress.data || {}),
+      requestId: progress.requestId || null,
+    });
   }
 
   /**
@@ -1790,8 +2417,10 @@ class StandardClaudeMCPServer extends EventEmitter {
     this._notifyClient('notice', `Server mode changed to '${mode}'`, { previousMode, newMode: mode });
 
     // Notify tools list changed since agent mode affects tool availability
-    if (this.mcpServer && typeof this.mcpServer.sendToolListChanged === 'function') {
-      this.mcpServer.sendToolListChanged().catch(() => {});
+    for (const protocolServer of this.connectedProtocolServers || []) {
+      if (typeof protocolServer?.sendToolListChanged === 'function') {
+        protocolServer.sendToolListChanged().catch(() => {});
+      }
     }
   }
 
@@ -2167,14 +2796,32 @@ if (require.main === module) {
     if (['tools', 'agent'].includes(mode)) {
       process.env.CODEXOMICS_MCP_MODE = mode;
     } else {
-      this.serverLog('error', `⚠️  Invalid mode '${mode}'. Use 'tools' or 'agent'. Defaulting to 'tools'.`);
+      console.error(`⚠️  Invalid mode '${mode}'. Use 'tools' or 'agent'. Defaulting to 'tools'.`);
     }
   }
 
-  const server = new StandardClaudeMCPServer();
-  this.serverLog('info', `🚀 Starting MCP Server in '${server.mode}' mode`);
+  const server = new StandardClaudeMCPServer(3002, 3003, null, getMcpAuthConfig());
+  console.error(`🚀 Starting MCP Server in '${server.mode}' mode`);
   server.start().catch(error => {
-    this.serverLog('error', '💥 Startup error:', error.message);
+    console.error('💥 Startup error:', error.message);
     process.exit(1);
   });
+
+  let shutdownPromise = null;
+  const shutdown = signal => {
+    if (shutdownPromise) return shutdownPromise;
+    console.error(`🛑 Received ${signal}; shutting down MCP Server`);
+    shutdownPromise = server
+      .stop()
+      .then(() => {
+        process.exitCode = 0;
+      })
+      .catch(error => {
+        console.error('💥 Shutdown error:', error.message);
+        process.exitCode = 1;
+      });
+    return shutdownPromise;
+  };
+  process.once('SIGINT', () => void shutdown('SIGINT'));
+  process.once('SIGTERM', () => void shutdown('SIGTERM'));
 }

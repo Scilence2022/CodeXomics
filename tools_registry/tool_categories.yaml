@@ -92,7 +92,8 @@ categories:
       - 'annotation_search'
       - 'change_tracking'
       - 'operon_analysis'
-    tools_count: 11
+      - 'autonomous_curation'
+    tools_count: 24
 
   file_operations:
     name: 'File Operations'

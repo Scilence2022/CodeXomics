@@ -168,9 +168,11 @@ class ToolsIntegrator {
     // In agent mode, expose only the codexomics_chat tool + window management tools.
     // The AI agent inside CodeXomics handles all other tools autonomously.
     if (isAgentMode) {
+      const windowTools = this.getWindowManagementTools();
       const agentTools = [
         ...Object.values(this.agentChatTools.getTools()),
-        ...Object.values(this.getWindowManagementTools()),
+        windowTools.list_genome_windows,
+        windowTools.switch_active_window,
       ];
       const result = agentTools.map(tool => {
         const normalized = tool.parameters && !tool.inputSchema ? { ...tool, inputSchema: tool.parameters } : tool;
@@ -211,7 +213,7 @@ class ToolsIntegrator {
     return this.allTools[toolName];
   }
 
-  async executeTool(toolName, parameters, clientId) {
+  async executeTool(toolName, parameters, clientId, executionContext = null) {
     console.log(`[ToolsIntegrator] executeTool called for: ${toolName} (mode: ${this.server?.mode || 'unknown'})`);
     const tool = this.allTools[toolName];
     if (!tool) {
@@ -231,7 +233,7 @@ class ToolsIntegrator {
 
     if (isAgentMode && !isAgentTool && !isWindowTool) {
       console.log(`🤖 [Agent Mode] Routing '${toolName}' through codexomics_chat`);
-      return await this._executeViaAgent(toolName, parameters, clientId);
+      return await this._executeViaAgent(toolName, parameters, clientId, executionContext);
     }
 
     // Route to appropriate tool module based on tool name
@@ -481,12 +483,12 @@ class ToolsIntegrator {
 
       // Annotation tools - delegate all to client
       if (this.annotationTools.getTools()[toolName]) {
-        return await this.annotationTools.executeClientTool(toolName, parameters, clientId);
+        return await this.annotationTools.executeClientTool(toolName, parameters, clientId, executionContext);
       }
 
       // Agent chat tools - delegate to client (CodeXomics App handles the LLM loop)
       if (this.agentChatTools.getTools()[toolName]) {
-        return await this.agentChatTools.executeClientTool(toolName, parameters, clientId);
+        return await this.agentChatTools.executeClientTool(toolName, parameters, clientId, executionContext);
       }
 
       // Multi-window management tools (server-side, no client delegation needed)
@@ -534,7 +536,7 @@ class ToolsIntegrator {
    * @param {string} clientId - Client identifier
    * @returns {Object} Agent execution result
    */
-  async _executeViaAgent(toolName, parameters, clientId) {
+  async _executeViaAgent(toolName, parameters, clientId, executionContext = null) {
     console.log(`[ToolsIntegrator] _executeViaAgent: routing '${toolName}' through agent`);
 
     // Build a natural language prompt from the tool call
@@ -551,7 +553,7 @@ class ToolsIntegrator {
       },
     };
 
-    return await this.agentChatTools.executeClientTool('codexomics_chat', agentParameters, clientId);
+    return await this.agentChatTools.executeClientTool('codexomics_chat', agentParameters, clientId, executionContext);
   }
 
   /**
@@ -582,7 +584,8 @@ class ToolsIntegrator {
       jump_to_gene: p => `Jump to gene ${p.geneName}`,
       find_gene_by_name: p => `Search for gene named "${p.name}"`,
       find_gene: p => `Search for gene named "${p.name}"`,
-      restore_view_state: p => `Restore saved genome browser view state ${p.id ? `with ID ${p.id}` : `named "${p.name}"`}`,
+      restore_view_state: p =>
+        `Restore saved genome browser view state ${p.id ? `with ID ${p.id}` : `named "${p.name}"`}`,
     };
 
     const template = promptTemplates[toolName];

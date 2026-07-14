@@ -11,7 +11,9 @@ parameters:
   properties:
     identifier: { type: string }
     chromosome: { type: string }
-    organism: { type: string, description: Explicit scientific organism name. }
+    organism:
+      type: string
+      description: Scientific organism name. Optional when the loaded genome contains organism metadata; required otherwise.
     geneSymbol: { type: string }
     researchFocus:
       type: array
@@ -20,10 +22,14 @@ parameters:
       type: array
       items: { type: string }
     userPrompt: { type: string }
-    idempotencyKey: { type: string }
-    correlationId: { type: string }
+    diseaseContext: { type: string }
+    experimentalApproach: { type: string }
+    language: { type: string }
+    maxResult: { type: integer, minimum: 1, maximum: 20, default: 5 }
+    idempotencyKey: { type: string, minLength: 1, maxLength: 256 }
+    correlationId: { type: string, minLength: 1, maxLength: 256 }
     clientId: { type: string }
-  required: [identifier, organism]
+  required: [identifier]
 metadata:
   added_in: autonomous_annotation_v2
   priority: high

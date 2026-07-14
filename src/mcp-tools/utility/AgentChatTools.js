@@ -77,8 +77,8 @@ class AgentChatTools {
     };
   }
 
-  async executeClientTool(toolName, parameters, clientId) {
-    return await this.server.executeToolOnClient('codexomics_chat', parameters, clientId);
+  async executeClientTool(toolName, parameters, clientId, executionContext = null) {
+    return await this.server.executeToolOnClient('codexomics_chat', parameters, clientId, executionContext);
   }
 }
 

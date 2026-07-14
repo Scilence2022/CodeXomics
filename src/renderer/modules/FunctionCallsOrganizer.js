@@ -223,6 +223,7 @@ class FunctionCallsOrganizer {
           'create_annotation_changeset',
           'get_annotation_changeset',
           'request_annotation_approval',
+          'reject_annotation_changeset',
           'apply_annotation_changeset',
           'rollback_annotation_changeset',
           'get_annotation_audit',

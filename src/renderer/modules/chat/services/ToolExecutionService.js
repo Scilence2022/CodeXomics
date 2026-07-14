@@ -11,6 +11,13 @@ class ToolExecutionService {
 
   async execute(toolName, parameters, options = {}) {
     try {
+      parameters = parameters && typeof parameters === 'object' ? { ...parameters } : {};
+      // Execution identity is an out-of-band runtime property. Never trust a
+      // model/tool argument that attempts to supply the reserved field.
+      delete parameters.__executionContext;
+      if (options.executionContext && typeof options.executionContext === 'object') {
+        parameters.__executionContext = Object.freeze({ ...options.executionContext });
+      }
       // --- LEGACY ALIAS RESOLUTION ---
       const legacyAliases = {
         find_gene: 'find_gene_by_name',
@@ -60,7 +67,9 @@ class ToolExecutionService {
         toolName = legacyAliases[toolName];
       }
 
-      console.log(`[ToolExecutionService] Executing: ${toolName}`, parameters);
+      console.log(`[ToolExecutionService] Executing: ${toolName}`, {
+        parameterKeys: Object.keys(parameters).filter(key => !['approvalToken', '__executionContext'].includes(key)),
+      });
 
       // --- PRIORITY 1: MULTI-AGENT SETTINGS (if handled exclusively) ---
       if (

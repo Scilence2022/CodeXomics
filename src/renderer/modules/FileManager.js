@@ -1221,8 +1221,20 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     // Extract and store source feature information separately for metadata
     this.extractSourceFeatures(annotations);
 
+    // Bind sidecars and autonomous-annotation replay to the genome source
+    // being parsed before any asynchronous overlay read begins. Waiting for
+    // TabManager.onGenomeLoaded would leave the previous genome path active.
+    this.genomeBrowser.loadedGenomePath = this.currentFile?.path || this.currentFile?.info?.path || null;
     this.genomeBrowser.currentSequence = sequences;
     this.genomeBrowser.currentAnnotations = annotations;
+
+    // A committed autonomous-annotation ChangeSet is materialized in the
+    // per-genome sidecar overlay. Replay it before any chromosome, tab, or
+    // details UI observes the freshly parsed source annotations.
+    const annotationService = this.genomeBrowser.chatManager?.services?.annotation;
+    if (typeof annotationService?.restoreCommittedAnnotationOverlay === 'function') {
+      await annotationService.restoreCommittedAnnotationOverlay();
+    }
 
     // Log parsing results
     const totalFeatures = Object.values(annotations).reduce((sum, feats) => sum + feats.length, 0);
@@ -1625,7 +1637,7 @@ Original error: ${error.message}`;
       const fields = trimmed.split('\t');
       if (fields.length < 9) continue;
 
-      const [seqname, source, feature, start, end, score, strand, , attribute] = fields;
+      const [seqname, source, feature, start, end, score, strand, phase, attribute] = fields;
 
       if (!newAnnotations[seqname]) {
         newAnnotations[seqname] = [];
@@ -1635,18 +1647,36 @@ Original error: ${error.message}`;
       const qualifiers = {};
       const attrs = attribute.split(';');
       for (const attr of attrs) {
-        const [key, value] = attr.split('=');
+        const equalsIndex = attr.indexOf('=');
+        const gtfMatch = equalsIndex < 0 ? attr.trim().match(/^([^\s]+)\s+"([^"]*)"$/) : null;
+        const key = equalsIndex >= 0 ? attr.slice(0, equalsIndex) : gtfMatch?.[1];
+        const value = equalsIndex >= 0 ? attr.slice(equalsIndex + 1) : gtfMatch?.[2];
         if (key && value) {
-          qualifiers[key.trim()] = value.trim().replace(/"/g, '');
+          const normalizedValue = value.trim().replace(/^"|"$/g, '');
+          try {
+            // GFF3 percent escapes encode UTF-8 bytes. Decode the complete
+            // value so non-ASCII identifiers are not corrupted byte-by-byte.
+            qualifiers[key.trim()] = decodeURIComponent(normalizedValue);
+          } catch (_error) {
+            // Preserve malformed third-party values verbatim rather than
+            // making the whole annotation file unloadable.
+            qualifiers[key.trim()] = normalizedValue;
+          }
         }
       }
 
+      const annotationId = qualifiers.ID || qualifiers.gene_id || qualifiers.transcript_id || null;
+      const annotationName = qualifiers.Name || qualifiers.gene || qualifiers.gene_name || annotationId;
+
       const annotation = {
+        id: annotationId,
+        name: annotationName,
         type: feature,
         start: parseInt(start),
         end: parseInt(end),
         strand: strand === '-' ? -1 : 1,
         score: score === '.' ? null : parseFloat(score),
+        phase: phase === '.' ? null : Number.parseInt(phase, 10),
         source: source,
         qualifiers: qualifiers,
       };
@@ -1669,6 +1699,10 @@ Original error: ${error.message}`;
     if (userChoice === 'merge') {
       // Merge with existing annotations instead of replacing
       this.mergeAnnotations(newAnnotations);
+      const annotationService = this.genomeBrowser.chatManager?.services?.annotation;
+      if (typeof annotationService?.restoreCommittedAnnotationOverlay === 'function') {
+        await annotationService.restoreCommittedAnnotationOverlay();
+      }
       this.genomeBrowser.updateStatus(
         `Loaded GFF file with ${featureCount} features for ${Object.keys(newAnnotations).length} sequence(s). Merged with existing annotations.`
       );

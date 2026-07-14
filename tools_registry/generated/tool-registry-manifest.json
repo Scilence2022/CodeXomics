@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-11T08:55:00.343Z",
-  "registryHash": "3492e403211b4022317aa68bfeff173354b00a07a47e7749cdd37d714acaf2ca",
+  "generatedAt": "2026-07-13T16:49:55.419Z",
+  "registryHash": "60ec54ee3f89e152fe922f32a122d9a7afc212ae64e11869ab8ce6380d2ebe0c",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 206,
-    "appTools": 206,
+    "tools": 209,
+    "appTools": 209,
     "userTools": 0,
-    "uniqueTools": 200,
+    "uniqueTools": 203,
     "categories": 18,
-    "builtInTools": 168,
+    "builtInTools": 171,
     "diagnostics": 12
   },
   "categories": {
@@ -85,8 +85,14 @@
         "icon": "🏷️",
         "priority": 1,
         "color": "#8E24AA",
-        "subcategories": ["annotation_crud", "annotation_search", "change_tracking", "operon_analysis"],
-        "tools_count": 11
+        "subcategories": [
+          "annotation_crud",
+          "annotation_search",
+          "change_tracking",
+          "operon_analysis",
+          "autonomous_curation"
+        ],
+        "tools_count": 24
       },
       "file_operations": {
         "name": "File Operations",
@@ -235,6 +241,96 @@
       "builtin": {
         "name": "apply_annotation_changeset",
         "method": "applyAnnotationChangeset",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "batch_create_annotations",
+      "version": "1.0.0",
+      "description": "Privileged creation of multiple structural genome annotations on one chromosome. Requires authenticated MCP permission annotation:structural and bypasses the qualifier-only ChangeSet workflow.",
+      "category": "annotation",
+      "subcategory": "annotation_crud",
+      "keywords": [
+        "batch create annotations",
+        "create multiple annotations",
+        "add structural features",
+        "batch add features"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "description": "Structural annotations to create.",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Feature type, such as CDS, gene, rRNA, or misc_feature."
+                },
+                "start": {
+                  "type": "number",
+                  "description": "One-based feature start coordinate."
+                },
+                "end": {
+                  "type": "number",
+                  "description": "One-based feature end coordinate."
+                },
+                "strand": {
+                  "type": "number",
+                  "description": "Feature strand, normally 1 or -1."
+                },
+                "qualifiers": {
+                  "type": "object",
+                  "description": "Raw annotation qualifier map."
+                }
+              },
+              "required": ["start", "end"]
+            }
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Target chromosome or replicon. Defaults to the active chromosome."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support."
+          }
+        },
+        "required": ["annotations"]
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_v2",
+        "integration": "mcp",
+        "priority": "high",
+        "tags": ["annotation", "structural", "privileged", "batch"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/batch_create_annotations.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "batchCreateAnnotations"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "batch_create_annotations",
+        "method": "batchCreateAnnotations",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -551,6 +647,69 @@
       }
     },
     {
+      "name": "edit_annotation",
+      "version": "1.0.0",
+      "description": "Privileged raw structural editing of one existing genome annotation. Requires authenticated MCP permission annotation:structural and bypasses the qualifier-only ChangeSet workflow.",
+      "category": "annotation",
+      "subcategory": "annotation_crud",
+      "keywords": [
+        "edit annotation structure",
+        "structural annotation edit",
+        "change annotation coordinates",
+        "edit feature coordinates",
+        "change feature strand"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "annotationId": {
+            "type": "string",
+            "description": "Annotation ID, locus_tag, or gene name identifying the feature to edit."
+          },
+          "updates": {
+            "type": "object",
+            "description": "Raw annotation fields to merge, such as start, end, strand, type, phase, source, score, or qualifiers."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support."
+          }
+        },
+        "required": ["annotationId", "updates"]
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_v2",
+        "integration": "mcp",
+        "priority": "high",
+        "tags": ["annotation", "structural", "privileged", "edit"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/edit_annotation.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "editAnnotation"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "edit_annotation",
+        "method": "editAnnotation",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
       "name": "get_annotation",
       "version": "1.0.0",
       "description": "Get detailed information about a specific annotation by locus_tag, gene name, or protein_id. Use this when the user asks for details about one specific gene/annotation by name or identifier. Returns the complete annotation record with all available fields. NOT the same as list_annotations which returns multiple annotations in a region, or search_annotations which searches by keyword pattern.",
@@ -843,7 +1002,7 @@
     {
       "name": "get_annotation_research_workflow",
       "version": "2.0.0",
-      "description": "Retrieve a resumable DGR research workflow and create a reviewable ChangeSet when research completes.",
+      "description": "Retrieve a resumable DGR research workflow; annotation:propose callers materialize completed proposals as reviewable ChangeSets, while research-only callers can defer that step.",
       "category": "annotation",
       "subcategory": "autonomous_curation",
       "execution": {
@@ -1520,9 +1679,9 @@
       }
     },
     {
-      "name": "request_annotation_approval",
+      "name": "reject_annotation_changeset",
       "version": "2.0.0",
-      "description": "Record a human curator approval and obtain a short-lived capability for applying a reviewed ChangeSet.",
+      "description": "Record a curator rejection for an awaiting-review or approved annotation ChangeSet and revoke any outstanding approval capability.",
       "category": "annotation",
       "subcategory": "autonomous_curation",
       "execution": {
@@ -1535,7 +1694,58 @@
           "changeSetId": {
             "type": "string"
           },
-          "approver": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": ["changeSetId"]
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_v2",
+        "priority": "high",
+        "tags": ["annotation", "rejection", "review", "changeset"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/reject_annotation_changeset.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "rejectAnnotationChangeset"
+      },
+      "priority": 1,
+      "keywords": [],
+      "sample_usages": [],
+      "builtin": {
+        "name": "reject_annotation_changeset",
+        "method": "rejectAnnotationChangeset",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "request_annotation_approval",
+      "version": "2.0.0",
+      "description": "Record approval from the authenticated curator identity or a trusted local confirmation dialog and obtain a short-lived apply capability.",
+      "category": "annotation",
+      "subcategory": "autonomous_curation",
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "changeSetId": {
             "type": "string"
           },
           "expiresInMinutes": {
@@ -1546,7 +1756,7 @@
             "type": "string"
           }
         },
-        "required": ["changeSetId", "approver"]
+        "required": ["changeSetId"]
       },
       "metadata": {
         "added_in": "autonomous_annotation_v2",
@@ -1826,7 +2036,7 @@
           },
           "organism": {
             "type": "string",
-            "description": "Explicit scientific organism name."
+            "description": "Scientific organism name. Optional when the loaded genome contains organism metadata; required otherwise."
           },
           "geneSymbol": {
             "type": "string"
@@ -1846,17 +2056,36 @@
           "userPrompt": {
             "type": "string"
           },
-          "idempotencyKey": {
+          "diseaseContext": {
             "type": "string"
           },
-          "correlationId": {
+          "experimentalApproach": {
             "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "maxResult": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
           },
           "clientId": {
             "type": "string"
           }
         },
-        "required": ["identifier", "organism"]
+        "required": ["identifier"]
       },
       "metadata": {
         "added_in": "autonomous_annotation_v2",
@@ -21971,6 +22200,96 @@
         "source": "builtin_tools_map"
       }
     },
+    "batch_create_annotations": {
+      "name": "batch_create_annotations",
+      "version": "1.0.0",
+      "description": "Privileged creation of multiple structural genome annotations on one chromosome. Requires authenticated MCP permission annotation:structural and bypasses the qualifier-only ChangeSet workflow.",
+      "category": "annotation",
+      "subcategory": "annotation_crud",
+      "keywords": [
+        "batch create annotations",
+        "create multiple annotations",
+        "add structural features",
+        "batch add features"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "description": "Structural annotations to create.",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Feature type, such as CDS, gene, rRNA, or misc_feature."
+                },
+                "start": {
+                  "type": "number",
+                  "description": "One-based feature start coordinate."
+                },
+                "end": {
+                  "type": "number",
+                  "description": "One-based feature end coordinate."
+                },
+                "strand": {
+                  "type": "number",
+                  "description": "Feature strand, normally 1 or -1."
+                },
+                "qualifiers": {
+                  "type": "object",
+                  "description": "Raw annotation qualifier map."
+                }
+              },
+              "required": ["start", "end"]
+            }
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Target chromosome or replicon. Defaults to the active chromosome."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support."
+          }
+        },
+        "required": ["annotations"]
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_v2",
+        "integration": "mcp",
+        "priority": "high",
+        "tags": ["annotation", "structural", "privileged", "batch"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/batch_create_annotations.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "batchCreateAnnotations"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "batch_create_annotations",
+        "method": "batchCreateAnnotations",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "bulk_update_annotations": {
       "name": "bulk_update_annotations",
       "version": "1.0.0",
@@ -22278,6 +22597,69 @@
         "source": "builtin_tools_map"
       }
     },
+    "edit_annotation": {
+      "name": "edit_annotation",
+      "version": "1.0.0",
+      "description": "Privileged raw structural editing of one existing genome annotation. Requires authenticated MCP permission annotation:structural and bypasses the qualifier-only ChangeSet workflow.",
+      "category": "annotation",
+      "subcategory": "annotation_crud",
+      "keywords": [
+        "edit annotation structure",
+        "structural annotation edit",
+        "change annotation coordinates",
+        "edit feature coordinates",
+        "change feature strand"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "annotationId": {
+            "type": "string",
+            "description": "Annotation ID, locus_tag, or gene name identifying the feature to edit."
+          },
+          "updates": {
+            "type": "object",
+            "description": "Raw annotation fields to merge, such as start, end, strand, type, phase, source, score, or qualifiers."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support."
+          }
+        },
+        "required": ["annotationId", "updates"]
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_v2",
+        "integration": "mcp",
+        "priority": "high",
+        "tags": ["annotation", "structural", "privileged", "edit"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/edit_annotation.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "editAnnotation"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "edit_annotation",
+        "method": "editAnnotation",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "get_annotation": {
       "name": "get_annotation",
       "version": "1.0.0",
@@ -22571,7 +22953,7 @@
     "get_annotation_research_workflow": {
       "name": "get_annotation_research_workflow",
       "version": "2.0.0",
-      "description": "Retrieve a resumable DGR research workflow and create a reviewable ChangeSet when research completes.",
+      "description": "Retrieve a resumable DGR research workflow; annotation:propose callers materialize completed proposals as reviewable ChangeSets, while research-only callers can defer that step.",
       "category": "annotation",
       "subcategory": "autonomous_curation",
       "execution": {
@@ -23247,10 +23629,10 @@
         "source": "builtin_tools_map"
       }
     },
-    "request_annotation_approval": {
-      "name": "request_annotation_approval",
+    "reject_annotation_changeset": {
+      "name": "reject_annotation_changeset",
       "version": "2.0.0",
-      "description": "Record a human curator approval and obtain a short-lived capability for applying a reviewed ChangeSet.",
+      "description": "Record a curator rejection for an awaiting-review or approved annotation ChangeSet and revoke any outstanding approval capability.",
       "category": "annotation",
       "subcategory": "autonomous_curation",
       "execution": {
@@ -23263,7 +23645,58 @@
           "changeSetId": {
             "type": "string"
           },
-          "approver": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": ["changeSetId"]
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_v2",
+        "priority": "high",
+        "tags": ["annotation", "rejection", "review", "changeset"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/reject_annotation_changeset.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "rejectAnnotationChangeset"
+      },
+      "priority": 1,
+      "keywords": [],
+      "sample_usages": [],
+      "builtin": {
+        "name": "reject_annotation_changeset",
+        "method": "rejectAnnotationChangeset",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "request_annotation_approval": {
+      "name": "request_annotation_approval",
+      "version": "2.0.0",
+      "description": "Record approval from the authenticated curator identity or a trusted local confirmation dialog and obtain a short-lived apply capability.",
+      "category": "annotation",
+      "subcategory": "autonomous_curation",
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "changeSetId": {
             "type": "string"
           },
           "expiresInMinutes": {
@@ -23274,7 +23707,7 @@
             "type": "string"
           }
         },
-        "required": ["changeSetId", "approver"]
+        "required": ["changeSetId"]
       },
       "metadata": {
         "added_in": "autonomous_annotation_v2",
@@ -23554,7 +23987,7 @@
           },
           "organism": {
             "type": "string",
-            "description": "Explicit scientific organism name."
+            "description": "Scientific organism name. Optional when the loaded genome contains organism metadata; required otherwise."
           },
           "geneSymbol": {
             "type": "string"
@@ -23574,17 +24007,36 @@
           "userPrompt": {
             "type": "string"
           },
-          "idempotencyKey": {
+          "diseaseContext": {
             "type": "string"
           },
-          "correlationId": {
+          "experimentalApproach": {
             "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "maxResult": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
           },
           "clientId": {
             "type": "string"
           }
         },
-        "required": ["identifier", "organism"]
+        "required": ["identifier"]
       },
       "metadata": {
         "added_in": "autonomous_annotation_v2",
@@ -44312,6 +44764,16 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "edit_annotation",
+      "method": "editAnnotation",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "merge_gene_research_report",
       "method": "mergeGeneResearchReport",
       "category": "annotation",
@@ -44354,6 +44816,16 @@
     {
       "name": "request_annotation_approval",
       "method": "requestAnnotationApproval",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "reject_annotation_changeset",
+      "method": "rejectAnnotationChangeset",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,
@@ -44444,6 +44916,16 @@
     {
       "name": "bulk_update_annotations",
       "method": "bulkUpdateAnnotations",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "batch_create_annotations",
+      "method": "batchCreateAnnotations",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,
@@ -45994,6 +46476,16 @@
       "isExternal": false,
       "source": "builtin_tools_map"
     },
+    "edit_annotation": {
+      "name": "edit_annotation",
+      "method": "editAnnotation",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
     "merge_gene_research_report": {
       "name": "merge_gene_research_report",
       "method": "mergeGeneResearchReport",
@@ -46037,6 +46529,16 @@
     "request_annotation_approval": {
       "name": "request_annotation_approval",
       "method": "requestAnnotationApproval",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "reject_annotation_changeset": {
+      "name": "reject_annotation_changeset",
+      "method": "rejectAnnotationChangeset",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,
@@ -46127,6 +46629,16 @@
     "bulk_update_annotations": {
       "name": "bulk_update_annotations",
       "method": "bulkUpdateAnnotations",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "batch_create_annotations": {
+      "name": "batch_create_annotations",
+      "method": "batchCreateAnnotations",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,

@@ -1,0 +1,41 @@
+name: edit_annotation
+version: 1.0.0
+description: Privileged raw structural editing of one existing genome annotation. Requires authenticated MCP permission annotation:structural and bypasses the qualifier-only ChangeSet workflow.
+category: annotation
+subcategory: annotation_crud
+keywords:
+  - edit annotation structure
+  - structural annotation edit
+  - change annotation coordinates
+  - edit feature coordinates
+  - change feature strand
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    annotationId:
+      type: string
+      description: Annotation ID, locus_tag, or gene name identifying the feature to edit.
+    updates:
+      type: object
+      description: Raw annotation fields to merge, such as start, end, strand, type, phase, source, score, or qualifiers.
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support.
+  required:
+    - annotationId
+    - updates
+
+metadata:
+  added_in: autonomous_annotation_v2
+  integration: mcp
+  priority: high
+  tags:
+    - annotation
+    - structural
+    - privileged
+    - edit

@@ -828,6 +828,15 @@ class GenomeBrowser {
     let wsPort = 3003;
 
     try {
+      const serverStatus =
+        typeof ipcRenderer !== 'undefined' ? await ipcRenderer.invoke('mcp-server-status') : { isRunning: false };
+      if (serverStatus?.isRunning && serverStatus.serverType === 'unified-claude-mcp') {
+        this.mcpBridge.stop();
+        this.updateMCPBridgeUI(false);
+        console.log(`✅ In-process MCP server is running; renderer WebSocket bridge is not required`);
+        return;
+      }
+
       const settings =
         typeof ipcRenderer !== 'undefined' ? await ipcRenderer.invoke('mcp-server-get-settings') : { wsPort: 3003 };
       wsPort = settings?.wsPort || 3003;
@@ -3592,7 +3601,16 @@ class GenomeBrowser {
 
     // Handle MCP tool calls for action functions and utility functions
     ipcRenderer.on('mcp-tool-call', async (event, data) => {
-      console.log('🔧 MCP tool call received:', data);
+      // InternalMCPServer is the authoritative handler whenever it is
+      // available. Both listeners receive the same IPC event, so the legacy
+      // fallback must not execute or respond in parallel.
+      if (this.internalMCPServer) return;
+      console.log('🔧 MCP tool call received:', {
+        method: data?.method,
+        parameterKeys: Object.keys(data?.parameters || {}).filter(
+          key => !['approvalToken', '__executionContext'].includes(key)
+        ),
+      });
 
       try {
         const { requestId, method, parameters } = data;
@@ -3703,7 +3721,12 @@ class GenomeBrowser {
     // CRITICAL: Handle tool execution requests from MCP server
     // This is the missing bridge that forwards tools to ChatManager
     ipcRenderer.on('execute-tool-request', async (event, data) => {
-      console.log('🔧 [Renderer] Received tool execution request:', data);
+      console.log('🔧 [Renderer] Received tool execution request:', {
+        toolName: data?.toolName,
+        parameterKeys: Object.keys(data?.parameters || {}).filter(
+          key => !['approvalToken', '__executionContext'].includes(key)
+        ),
+      });
       const { requestId, toolName, parameters } = data;
 
       try {

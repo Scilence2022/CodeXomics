@@ -61,6 +61,27 @@ describe('InternalMCPServer agent chat routing', () => {
     );
   });
 
+  it('preserves the trusted MCP execution context across agent-chat delegation', async () => {
+    const AgentChatTools = require('../../src/mcp-tools/utility/AgentChatTools.js');
+    const executeToolOnClient = vi.fn(async () => ({ success: true }));
+    const tools = new AgentChatTools({ executeToolOnClient });
+    const executionContext = Object.freeze({
+      authenticated: true,
+      sessionId: 'auth-session-1',
+      principal: 'agent-1',
+      isAdmin: true,
+    });
+
+    await tools.executeClientTool('codexomics_chat', { prompt: 'research b0001' }, 'window-1', executionContext);
+
+    expect(executeToolOnClient).toHaveBeenCalledWith(
+      'codexomics_chat',
+      { prompt: 'research b0001' },
+      'window-1',
+      executionContext
+    );
+  });
+
   it('forwards agent progress without letting IPC callback errors escape', async () => {
     const InternalMCPServer = require(modulePath);
     const sendError = new Error('renderer IPC unavailable');
@@ -87,9 +108,19 @@ describe('InternalMCPServer agent chat routing', () => {
     });
 
     await expect(
-      server.executeMethod('codexomicsChat', {
-        prompt: 'navigate to 3M',
-      })
+      server.executeMethod(
+        'codexomicsChat',
+        {
+          prompt: 'navigate to 3M',
+        },
+        {
+          authenticated: true,
+          sessionId: 'auth-session-1',
+          transportSessionId: 'sse-session-1',
+          principal: 'agent-1',
+        },
+        'request-1'
+      )
     ).resolves.toEqual({ success: true });
     expect(ipcRenderer.send).toHaveBeenCalledWith(
       'mcp-agent-progress',
@@ -97,6 +128,9 @@ describe('InternalMCPServer agent chat routing', () => {
         type: 'status',
         message: 'Navigating',
         data: { target: '3M' },
+        sessionId: 'auth-session-1',
+        transportSessionId: 'sse-session-1',
+        requestId: 'request-1',
       })
     );
   });

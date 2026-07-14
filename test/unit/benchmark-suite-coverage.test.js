@@ -152,14 +152,36 @@ describe('benchmark suite coverage', () => {
     }
   });
 
-  it('keeps exported automatic benchmark CSV files synchronized with suite definitions', () => {
+  it('keeps privileged structural annotation coverage manual and non-mutating', () => {
+    const manualSuite = loadSuites().find(suite => suite.constructor.name === 'ManualSuite');
+    const testsById = new Map(manualSuite.getTests().map(test => [test.id, test]));
+    const expectedCases = {
+      annot_manual_04: 'edit_annotation',
+      annot_manual_05: 'batch_create_annotations',
+    };
+
+    for (const [testId, toolName] of Object.entries(expectedCases)) {
+      const test = testsById.get(testId);
+      expect(test, `missing structural authorization case ${testId}`).toBeTruthy();
+      expect(test.complexity).toBe('simple');
+      expect(test.evaluation).toBe('manual');
+      expect(test.expectedResult.tool_name).toBe(toolName);
+      expect(test.instruction).toContain('annotation:structural');
+      expect(test.instruction).toMatch(/reject the call without (changing|creating)/);
+      expect(test.manualVerification).toContain('annotation:structural');
+    }
+  });
+
+  it('keeps exported benchmark CSV files synchronized with suite definitions', () => {
     const suites = loadSuites();
-    const automaticSuites = [
+    const exportedSuites = [
       ['AutomaticSimpleSuite', 'benchmark_AutomaticSimpleSuite.csv'],
       ['AutomaticComplexSuite', 'benchmark_AutomaticComplexSuite.csv'],
+      ['ManualSuite', 'benchmark_ManualSuite.csv'],
+      ['ManualComplexSuite', 'benchmark_ManualComplexSuite.csv'],
     ];
 
-    for (const [className, csvFile] of automaticSuites) {
+    for (const [className, csvFile] of exportedSuites) {
       const suite = suites.find(candidate => candidate.constructor.name === className);
       const suiteIds = suite
         .getTests()

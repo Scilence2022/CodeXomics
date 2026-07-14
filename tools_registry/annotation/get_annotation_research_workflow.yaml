@@ -1,6 +1,6 @@
 name: get_annotation_research_workflow
 version: 2.0.0
-description: Retrieve a resumable DGR research workflow and create a reviewable ChangeSet when research completes.
+description: Retrieve a resumable DGR research workflow; annotation:propose callers materialize completed proposals as reviewable ChangeSets, while research-only callers can defer that step.
 category: annotation
 subcategory: autonomous_curation
 execution:

@@ -1,6 +1,6 @@
-name: request_annotation_approval
+name: reject_annotation_changeset
 version: 2.0.0
-description: Record approval from the authenticated curator identity or a trusted local confirmation dialog and obtain a short-lived apply capability.
+description: Record a curator rejection for an awaiting-review or approved annotation ChangeSet and revoke any outstanding approval capability.
 category: annotation
 subcategory: autonomous_curation
 execution:
@@ -11,13 +11,13 @@ parameters:
   properties:
     changeSetId:
       type: string
-    expiresInMinutes:
-      type: number
-      default: 30
+    reason:
+      type: string
+      maxLength: 2048
     clientId:
       type: string
   required: [changeSetId]
 metadata:
   added_in: autonomous_annotation_v2
   priority: high
-  tags: [annotation, approval, review]
+  tags: [annotation, rejection, review, changeset]

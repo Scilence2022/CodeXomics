@@ -137,6 +137,7 @@ const TOOL_NAMES = {
     CREATE_ANNOTATION_CHANGESET: 'create_annotation_changeset',
     GET_ANNOTATION_CHANGESET: 'get_annotation_changeset',
     REQUEST_ANNOTATION_APPROVAL: 'request_annotation_approval',
+    REJECT_ANNOTATION_CHANGESET: 'reject_annotation_changeset',
     APPLY_ANNOTATION_CHANGESET: 'apply_annotation_changeset',
     ROLLBACK_ANNOTATION_CHANGESET: 'rollback_annotation_changeset',
     GET_ANNOTATION_AUDIT: 'get_annotation_audit',
