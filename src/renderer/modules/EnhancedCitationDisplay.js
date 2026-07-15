@@ -5,7 +5,7 @@ class EnhancedCitationDisplay {
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
     this.literatureAPI = new LiteratureAPIService();
-    this.displayMode = 'summary'; // 'pmid', 'summary', 'detailed' - default to summary for Nature-style citations
+    this.displayMode = 'summary'; // 'pmid', 'summary', 'detailed' - default to the citation format
     this.isLoading = false;
     this.literatureData = new Map();
 
@@ -256,6 +256,10 @@ class EnhancedCitationDisplay {
                 display: none;
             }
 
+            .citation-abstract-toggle {
+                margin-top: 4px;
+            }
+
             .expand-abstract-btn {
                 font-size: 10px;
                 color: #007bff;
@@ -461,8 +465,8 @@ class EnhancedCitationDisplay {
                             </button>
                             <button class="view-mode-btn ${this.displayMode === 'summary' ? 'active' : ''}" 
                                     onclick="window.enhancedCitationDisplay.setDisplayMode('summary')" 
-                                    title="Show summary information">
-                                Summary
+                                    title="Show formatted citation">
+                                Citation
                             </button>
                             <button class="view-mode-btn ${this.displayMode === 'detailed' ? 'active' : ''}" 
                                     onclick="window.enhancedCitationDisplay.setDisplayMode('detailed')" 
@@ -764,8 +768,12 @@ class EnhancedCitationDisplay {
             <div class="citation-journal">${literatureInfo.journal.citation}</div>
             <div class="citation-abstract" id="abstract-${citation.id}">
                 ${abstract}
-                ${abstract.length > 200 ? `<span class="expand-abstract-btn" onclick="window.enhancedCitationDisplay.toggleAbstract('${citation.id}')">Show more</span>` : ''}
             </div>
+            ${
+              abstract.length > 200
+                ? `<div class="citation-abstract-toggle"><span class="expand-abstract-btn" onclick="window.enhancedCitationDisplay.toggleAbstract('${citation.id}')">Show more</span></div>`
+                : ''
+            }
             ${
               keywords.length > 0
                 ? `
