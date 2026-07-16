@@ -222,6 +222,7 @@ class FunctionCallsOrganizer {
           'resolve_annotation_target',
           'create_annotation_changeset',
           'get_annotation_changeset',
+          'list_annotation_changesets',
           'request_annotation_approval',
           'reject_annotation_changeset',
           'apply_annotation_changeset',

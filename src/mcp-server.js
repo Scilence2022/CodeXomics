@@ -349,6 +349,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       'annotation:read': [
         'resolve_annotation_target',
         'get_annotation_changeset',
+        'list_annotation_changesets',
         'get_annotation_audit',
         'list_annotations',
         'get_annotation',

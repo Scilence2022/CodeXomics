@@ -1,0 +1,34 @@
+name: list_annotation_changesets
+version: 2.0.0
+description: List lightweight annotation ChangeSet summaries for single or batch human review.
+category: annotation
+subcategory: autonomous_curation
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    statuses:
+      type: array
+      items:
+        type: string
+    riskLevels:
+      type: array
+      items:
+        type: string
+    query:
+      type: string
+    limit:
+      type: number
+      default: 100
+    offset:
+      type: number
+      default: 0
+    clientId:
+      type: string
+  required: []
+metadata:
+  added_in: autonomous_annotation_review_center
+  priority: high
+  tags: [annotation, changeset, review, batch]

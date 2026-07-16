@@ -43,6 +43,10 @@ class AnnotationService {
     return this._getChangeSetService().getAnnotationChangeset(params);
   }
 
+  async listAnnotationChangesets(params) {
+    return this._getChangeSetService().listAnnotationChangesets(params);
+  }
+
   async requestAnnotationApproval(params) {
     return this._getChangeSetService().requestAnnotationApproval(params);
   }

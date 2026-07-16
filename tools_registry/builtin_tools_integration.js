@@ -839,6 +839,7 @@ class BuiltInToolsIntegration {
       resolve_annotation_target: 'resolveAnnotationTarget',
       create_annotation_changeset: 'createAnnotationChangeset',
       get_annotation_changeset: 'getAnnotationChangeset',
+      list_annotation_changesets: 'listAnnotationChangesets',
       request_annotation_approval: 'requestAnnotationApproval',
       reject_annotation_changeset: 'rejectAnnotationChangeset',
       apply_annotation_changeset: 'applyAnnotationChangeset',
@@ -2444,6 +2445,18 @@ class BuiltInToolsIntegration {
         name: 'create_annotation_changeset',
         confidence: 0.95,
         reason: 'Annotation proposal/change-set keywords detected',
+      });
+    }
+
+    if (
+      /\b(list|show|view|review|queue|pending|batch)\b.*?\b(changesets?|change\s+sets?|annotation\s+proposals?)\b/i.test(
+        query
+      )
+    ) {
+      relevantTools.push({
+        name: 'list_annotation_changesets',
+        confidence: 0.96,
+        reason: 'Annotation ChangeSet review-queue keywords detected',
       });
     }
 

@@ -1,4 +1,4 @@
-/* global ActionManager, AdvancedSearchManager, BaseCompositionAnalyzer, BenchmarkManager, BlastManager, BookmarkPanelUI, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, HighlightManager, HighlightRegionsUI, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, ScreenshotManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
+/* global ActionManager, AdvancedSearchManager, AnnotationReviewManager, BaseCompositionAnalyzer, BenchmarkManager, BlastManager, BookmarkPanelUI, ChatManager, CheckpointManager, ConfigManager, EnhancedCitationDisplay, ExportManager, ExternalToolsManager, FileManager, GeneAttachmentsManager, GeneNotesManager, GeneralSettingsManager, GenomeNavigationBar, HighlightManager, HighlightRegionsUI, InternalMCPServer, LLMConfigManager, MCPBridge, ModalDragManager, MultiAgentSettingsManager, MultiFileManager, NavigationManager, NotificationService, PluginManagementUI, PrimerManager, PrimerBindingService, PrimerLibraryUI, ReadsManager, ResizableModalManager, ScreenshotManager, SequenceUtils, SidecarManager, TabManager, ThemeManager, TrackRenderer, UIManager, VERSION_INFO, WindowTabManager, ipcRenderer */
 console.log('Executing src/renderer/renderer-modular.js');
 // ipcRenderer is exposed globally by PluginManagementUI.js (window.ipcRenderer)
 (typeof window !== 'undefined' && window.path) || {
@@ -447,6 +447,21 @@ class GenomeBrowser {
       console.log('✅ ChatManager initialized successfully');
     } catch (error) {
       console.error('❌ Error initializing ChatManager:', error);
+    }
+
+    console.log('🛡️ About to initialize AnnotationReviewManager...');
+    try {
+      if (typeof AnnotationReviewManager !== 'undefined') {
+        this.annotationReviewManager = new AnnotationReviewManager(this);
+        window.annotationReviewManager = this.annotationReviewManager;
+        console.log('✅ AnnotationReviewManager initialized successfully');
+      } else {
+        this.annotationReviewManager = null;
+        console.warn('⚠️ AnnotationReviewManager class not found');
+      }
+    } catch (error) {
+      this.annotationReviewManager = null;
+      console.error('❌ Error initializing AnnotationReviewManager:', error);
     }
 
     // Step 5.1: Benchmark System (will be loaded on demand when menu is accessed)
@@ -6439,6 +6454,12 @@ class GenomeBrowser {
     }
     resourcesTabHtml += resourceAttributesHtml;
 
+    // ---------------- Review Tab ----------------
+    const reviewTabHtml = `
+      <div id="geneAnnotationReviewContent">
+        <div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading review status…</div>
+      </div>`;
+
     const geneTabs = [
       { id: 'general', label: 'General', content: generalTabHtml },
       { id: 'go', label: 'GO', content: goTabHtml },
@@ -6447,6 +6468,7 @@ class GenomeBrowser {
       { id: 'sequence', label: 'Sequence', content: sequenceTabHtml },
       { id: 'notes', label: 'Notes', content: notesTabHtml },
       { id: 'resources', label: 'Resources', content: resourcesTabHtml },
+      { id: 'review', label: 'Review', content: reviewTabHtml },
     ];
 
     // Begin Tabs implementation
@@ -6478,6 +6500,9 @@ class GenomeBrowser {
     // Add event listeners for expandable sections
     this.setupExpandableSequences();
     this.setupGeneDetailsTabs();
+    if (this.annotationReviewManager) {
+      void this.annotationReviewManager.renderGeneReview(geneId);
+    }
 
     // Load literature data if enhanced citation display is available
     if (this.enhancedCitationDisplay && this.citationCollector.size > 0) {
@@ -6496,6 +6521,14 @@ class GenomeBrowser {
         this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
       }
     }
+  }
+
+  showAnnotationReviewCenter(changeSetId = null) {
+    if (!this.annotationReviewManager) {
+      this.showNotification('Annotation Review Center is not available.', 'error');
+      return;
+    }
+    this.annotationReviewManager.showReviewCenter({ changeSetId });
   }
 
   async addGeneResearchReportButton(geneName) {

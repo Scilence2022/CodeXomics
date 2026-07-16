@@ -337,6 +337,80 @@ describe('AnnotationChangeSetService', () => {
     expect(committed.receipt.revision).toBe(1);
   });
 
+  it('lists lightweight ChangeSet summaries for filtered batch review without approval secrets', async () => {
+    const first = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'reviewed regulatory summary' }],
+      evidence: ['PMID:12345678'],
+      principal: 'research-agent',
+      __executionContext: agentContext,
+      idempotencyKey: 'review-queue-first',
+    });
+    const approval = await annotationService.requestAnnotationApproval({
+      changeSetId: first.changeSet.id,
+      __executionContext: curatorContext,
+    });
+
+    const result = await annotationService.listAnnotationChangesets({
+      statuses: ['approved'],
+      query: 'thrL',
+      __executionContext: { ...curatorContext, permissions: ['annotation:read'] },
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.statusCounts.approved).toBe(1);
+    expect(result.changeSets[0]).toMatchObject({
+      id: first.changeSet.id,
+      status: 'approved',
+      operationCount: 1,
+      fields: ['note'],
+      evidenceCount: 1,
+      targetAvailable: true,
+      approval: {
+        approver: 'curator@example.org',
+      },
+    });
+    expect(result.changeSets[0].preview[0]).toMatchObject({
+      field: 'note',
+      before: null,
+      after: 'reviewed regulatory summary',
+    });
+    expect(result.changeSets[0].approval).not.toHaveProperty('tokenHash');
+    expect(JSON.stringify(result)).not.toContain(approval.approvalToken);
+    expect(result.changeSets[0]).not.toHaveProperty('evidenceManifest');
+  });
+
+  it('bounds and deduplicates queue previews while full ChangeSets remain available separately', async () => {
+    const longNote = `Evidence-backed summary: ${'x'.repeat(1200)}`;
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [
+        { op: 'addQualifier', field: 'note', value: longNote },
+        { op: 'addQualifier', field: 'note', value: 'second note operation' },
+      ],
+      evidence: ['PMID:12345678'],
+      principal: 'research-agent',
+      __executionContext: agentContext,
+      idempotencyKey: 'review-queue-bounded-preview',
+    });
+
+    const result = await annotationService.listAnnotationChangesets({
+      statuses: ['awaiting_approval'],
+      query: 'thrL',
+      __executionContext: { ...curatorContext, permissions: ['annotation:read'] },
+    });
+    const full = await annotationService.getAnnotationChangeset({
+      changeSetId: created.changeSet.id,
+      __executionContext: { ...curatorContext, permissions: ['annotation:read'] },
+    });
+
+    expect(result.changeSets[0].preview).toHaveLength(1);
+    expect(result.changeSets[0].preview[0].previewTruncated).toBe(true);
+    expect(result.changeSets[0].preview[0].after.length).toBeLessThanOrEqual(240);
+    expect(JSON.stringify(result)).not.toContain(longNote);
+    expect(full.changeSet.operations[0].value).toBe(longNote);
+  });
+
   it('refuses approval when the genome has no durable sidecar ledger', async () => {
     const mockWindow = loadServices();
     const unsavedService = new mockWindow.AnnotationService(

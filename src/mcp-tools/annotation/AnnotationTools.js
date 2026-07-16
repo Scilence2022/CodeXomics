@@ -258,6 +258,32 @@ class AnnotationTools {
         },
       },
 
+      list_annotation_changesets: {
+        name: 'list_annotation_changesets',
+        description:
+          'List lightweight annotation ChangeSet summaries for human review, including target, status, risk, operation fields, evidence count, and a live preview. Use get_annotation_changeset to retrieve one full immutable proposal.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            statuses: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Optional statuses such as awaiting_approval, approved, committed, rejected, or stale.',
+            },
+            riskLevels: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Optional risk filters: low, medium, or high.',
+            },
+            query: { type: 'string', description: 'Gene, locus tag, chromosome, or ChangeSet ID search text.' },
+            limit: { type: 'number', default: 100 },
+            offset: { type: 'number', default: 0 },
+            clientId: { type: 'string', description: 'Browser client ID for multi-window support.' },
+          },
+          required: [],
+        },
+      },
+
       request_annotation_approval: {
         name: 'request_annotation_approval',
         description:
