@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-15T18:37:45.023Z",
-  "registryHash": "e6d7a90603e4906aa5f044044bc42c438154796fd0a7068b77a400476c0a650e",
+  "generatedAt": "2026-07-16T01:47:38.008Z",
+  "registryHash": "16f5937edae3a1653f6f27057d2f3a7b20f76a0091bc69f2b05f32c1b4e5f84f",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 210,
-    "appTools": 210,
+    "tools": 211,
+    "appTools": 211,
     "userTools": 0,
-    "uniqueTools": 204,
+    "uniqueTools": 205,
     "categories": 18,
-    "builtInTools": 172,
+    "builtInTools": 173,
     "diagnostics": 12
   },
   "categories": {
@@ -252,7 +252,7 @@
     {
       "name": "archive_annotation_research",
       "version": "1.0.0",
-      "description": "Archive a completed external Deep Gene Research task as a verified, genome-scoped JSON attachment for an exact CDS target.",
+      "description": "Archive a completed external Deep Gene Research task only after its target and current qualifier snapshot match the live CDS, then register the verified genome-scoped JSON attachment.",
       "category": "annotation",
       "subcategory": "autonomous_curation",
       "execution": {
@@ -1469,6 +1469,76 @@
       "builtin": {
         "name": "get_operons",
         "method": "getOperons",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "list_annotation_changesets",
+      "version": "2.0.0",
+      "description": "List lightweight annotation ChangeSet summaries for single or batch human review.",
+      "category": "annotation",
+      "subcategory": "autonomous_curation",
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "riskLevels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "number",
+            "default": 100
+          },
+          "offset": {
+            "type": "number",
+            "default": 0
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_review_center",
+        "priority": "high",
+        "tags": ["annotation", "changeset", "review", "batch"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/list_annotation_changesets.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listAnnotationChangesets"
+      },
+      "priority": 1,
+      "keywords": [],
+      "sample_usages": [],
+      "builtin": {
+        "name": "list_annotation_changesets",
+        "method": "listAnnotationChangesets",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -22272,7 +22342,7 @@
     "archive_annotation_research": {
       "name": "archive_annotation_research",
       "version": "1.0.0",
-      "description": "Archive a completed external Deep Gene Research task as a verified, genome-scoped JSON attachment for an exact CDS target.",
+      "description": "Archive a completed external Deep Gene Research task only after its target and current qualifier snapshot match the live CDS, then register the verified genome-scoped JSON attachment.",
       "category": "annotation",
       "subcategory": "autonomous_curation",
       "execution": {
@@ -23489,6 +23559,76 @@
       "builtin": {
         "name": "get_operons",
         "method": "getOperons",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "list_annotation_changesets": {
+      "name": "list_annotation_changesets",
+      "version": "2.0.0",
+      "description": "List lightweight annotation ChangeSet summaries for single or batch human review.",
+      "category": "annotation",
+      "subcategory": "autonomous_curation",
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "riskLevels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "number",
+            "default": 100
+          },
+          "offset": {
+            "type": "number",
+            "default": 0
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_review_center",
+        "priority": "high",
+        "tags": ["annotation", "changeset", "review", "batch"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/list_annotation_changesets.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listAnnotationChangesets"
+      },
+      "priority": 1,
+      "keywords": [],
+      "sample_usages": [],
+      "builtin": {
+        "name": "list_annotation_changesets",
+        "method": "listAnnotationChangesets",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -44952,6 +45092,16 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "list_annotation_changesets",
+      "method": "listAnnotationChangesets",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "request_annotation_approval",
       "method": "requestAnnotationApproval",
       "category": "annotation",
@@ -46667,6 +46817,16 @@
     "get_annotation_changeset": {
       "name": "get_annotation_changeset",
       "method": "getAnnotationChangeset",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "list_annotation_changesets": {
+      "name": "list_annotation_changesets",
+      "method": "listAnnotationChangesets",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,

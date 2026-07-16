@@ -2911,6 +2911,42 @@ class AnnotationChangeSetService {
     }));
   }
 
+  _reviewPreview(changeSet, annotation, maxFields = 6) {
+    const summaries = [];
+    const seenFields = new Set();
+    for (const item of this._preview(changeSet, annotation)) {
+      if (seenFields.has(item.field)) continue;
+      const before = this._compactReviewValue(item.before);
+      const after = this._compactReviewValue(item.after);
+      summaries.push({
+        ...item,
+        before: before.value,
+        after: after.value,
+        previewTruncated: before.truncated || after.truncated,
+      });
+      seenFields.add(item.field);
+      if (summaries.length >= maxFields) break;
+    }
+    return summaries;
+  }
+
+  _compactReviewValue(value, maxCharacters = 240, maxItems = 8) {
+    if (value === undefined || value === null) return { value: value ?? null, truncated: false };
+    if (Array.isArray(value)) {
+      const compacted = value.slice(0, maxItems).map(item => this._compactReviewValue(item, maxCharacters, 1));
+      const truncated = value.length > maxItems || compacted.some(item => item.truncated);
+      const result = compacted.map(item => item.value);
+      if (value.length > maxItems) result.push(`… (+${value.length - maxItems} more)`);
+      return { value: result, truncated };
+    }
+    if (typeof value === 'object') {
+      return this._compactReviewValue(JSON.stringify(value), maxCharacters, maxItems);
+    }
+    if (typeof value !== 'string') return { value, truncated: false };
+    if (value.length <= maxCharacters) return { value, truncated: false };
+    return { value: `${value.slice(0, maxCharacters - 1)}…`, truncated: true };
+  }
+
   async getAnnotationChangeset(params = {}) {
     this._requirePermissionWhenExternal(params, 'annotation:read');
     return this._withLedgerLock(async workspace => {
@@ -2918,6 +2954,118 @@ class AnnotationChangeSetService {
       const changeSet = this._ledgerMapGet(ledger.changeSets, params.changeSetId || params.id);
       if (!changeSet) throw new Error(`ChangeSet "${params.changeSetId || params.id}" not found`);
       return { success: true, changeSet: this._clone(changeSet) };
+    });
+  }
+
+  async listAnnotationChangesets(params = {}) {
+    this._requirePermissionWhenExternal(params, 'annotation:read');
+    return this._withLedgerLock(async workspace => {
+      const ledger = await this._loadLedger(workspace);
+      const requestedStatuses = this._normaliseValues(params.status || params.statuses).map(value =>
+        value.toLowerCase()
+      );
+      const requestedRisks = this._normaliseValues(params.riskLevel || params.riskLevels).map(value =>
+        value.toLowerCase()
+      );
+      const query = String(params.query || params.identifier || '')
+        .trim()
+        .toLowerCase();
+      const limit = Math.max(1, Math.min(Number(params.limit) || 100, 1000));
+      const offset = Math.max(0, Number(params.offset) || 0);
+      const allChangeSets = Object.values(ledger.changeSets || {}).filter(Boolean);
+      const statusCounts = allChangeSets.reduce((counts, changeSet) => {
+        const status = String(changeSet.status || 'unknown');
+        counts[status] = (counts[status] || 0) + 1;
+        return counts;
+      }, {});
+      const filtered = allChangeSets
+        .filter(changeSet => {
+          const status = String(changeSet.status || '').toLowerCase();
+          const risk = String(changeSet.riskLevel || '').toLowerCase();
+          if (requestedStatuses.length > 0 && !requestedStatuses.includes(status)) return false;
+          if (requestedRisks.length > 0 && !requestedRisks.includes(risk)) return false;
+          if (!query) return true;
+          const target = changeSet.target || {};
+          return [
+            changeSet.id,
+            target.geneSymbol,
+            target.locusTag,
+            target.proteinId,
+            target.chromosome,
+            target.organism,
+          ]
+            .filter(Boolean)
+            .some(value => String(value).toLowerCase().includes(query));
+        })
+        .sort((left, right) => Date.parse(right.createdAt || 0) - Date.parse(left.createdAt || 0));
+
+      const page = filtered.slice(offset, offset + limit);
+      const summaries = [];
+      const featureCache = new Map();
+      for (const changeSet of page) {
+        const featureCacheKey =
+          changeSet.target?.featureId ||
+          [changeSet.target?.chromosome, changeSet.target?.locusTag, changeSet.target?.geneSymbol]
+            .filter(Boolean)
+            .join(':') ||
+          changeSet.id;
+        let found = featureCache.get(featureCacheKey);
+        if (found === undefined) {
+          found = await this._findFeatureByRef(changeSet.target, workspace);
+          featureCache.set(featureCacheKey, found || null);
+        }
+        const preview = found ? this._reviewPreview(changeSet, found.annotation) : [];
+        const approval = changeSet.approvalId ? this._ledgerMapGet(ledger.approvals, changeSet.approvalId) : null;
+        summaries.push({
+          id: changeSet.id,
+          status: changeSet.status,
+          createdAt: changeSet.createdAt,
+          createdBy: changeSet.createdBy,
+          baseRevision: changeSet.baseRevision,
+          proposalBaseRevision: changeSet.proposalBaseRevision,
+          target: this._clone(changeSet.target),
+          riskLevel: changeSet.riskLevel,
+          requiresHumanApproval: changeSet.requiresHumanApproval === true,
+          operationCount: changeSet.operations?.length || 0,
+          fields: Array.from(new Set((changeSet.operations || []).map(operation => operation.field))),
+          evidenceCount: changeSet.evidence?.length || 0,
+          researchRun: changeSet.researchRun || null,
+          manifestHash: changeSet.manifestHash || null,
+          changeSetHash: changeSet.changeSetHash || null,
+          reportAttachment:
+            changeSet.proposalMetadata?.archivedDgrReport?.attachmentId ||
+            changeSet.proposalMetadata?.reportAttachment?.attachmentId ||
+            null,
+          targetAvailable: Boolean(found),
+          preview: this._clone(preview),
+          approval: approval
+            ? {
+                id: approval.id,
+                approver: approval.approver,
+                source: approval.source,
+                approvedAt: approval.approvedAt,
+                expiresAt: approval.expiresAt,
+                revokedAt: approval.revokedAt || null,
+              }
+            : null,
+          rejectedAt: changeSet.rejectedAt || null,
+          rejectedBy: changeSet.rejectedBy || null,
+          rejectionReason: changeSet.rejectionReason || null,
+          committedAt: changeSet.commitReceipt?.committedAt || null,
+          committedBy: changeSet.commitReceipt?.principal || null,
+          resultingRevision: changeSet.commitReceipt?.revision ?? null,
+        });
+      }
+
+      return {
+        success: true,
+        revision: ledger.revision,
+        total: filtered.length,
+        offset,
+        limit,
+        statusCounts,
+        changeSets: summaries,
+      };
     });
   }
 

@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="css/forms.css">
     <link rel="stylesheet" href="css/modals.css">
     <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/annotation-review.css">
     <link rel="stylesheet" href="css/sidebar.css">
     <link rel="stylesheet" href="css/primers.css">
     <link rel="stylesheet" href="css/highlights.css">
@@ -373,6 +374,11 @@
                         <button class="dropdown-item" id="mcpSettingsBtn">
                             <i class="fas fa-server"></i>
                             External MCP Servers
+                        </button>
+                        <button class="dropdown-item" id="annotationReviewBtn">
+                            <i class="fas fa-clipboard-check"></i>
+                            Annotation Review
+                            <span class="annotation-review-badge" hidden>0</span>
                         </button>
                         <div class="dropdown-divider"></div>
                         <button class="dropdown-item" id="settingsBtn">
@@ -861,6 +867,12 @@
                     <div class="section-header">
                         <h3>Gene Details</h3>
                         <div class="section-header-buttons">
+                            <button class="annotation-review-panel-btn"
+                                onclick="window.genomeBrowser.showAnnotationReviewCenter()"
+                                title="Annotation ChangeSet Review">
+                                <i class="fas fa-clipboard-check"></i>
+                                <span class="annotation-review-badge" hidden>0</span>
+                            </button>
                             <button class="notes-panel-btn" onclick="window.genomeBrowser.toggleGeneNotes()"
                                 title="Gene Notes" id="geneNotesBtn">
                                 <i class="fas fa-sticky-note"></i>
@@ -1301,6 +1313,135 @@
                 </button>
                 <button class="btn modal-close">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Annotation ChangeSet Review Center -->
+    <div id="annotationReviewModal" class="modal">
+        <div class="modal-content annotation-review-modal resizable">
+            <div class="modal-header">
+                <h3><i class="fas fa-clipboard-check"></i> Annotation Review Center</h3>
+                <div class="modal-controls">
+                    <button class="reset-position-btn" title="Reset Position"><i class="fas fa-crosshairs"></i></button>
+                    <button class="modal-close">&times;</button>
+                </div>
+            </div>
+            <div class="annotation-review-nav" role="tablist">
+                <button class="annotation-review-nav-btn active" data-review-tab="queue" role="tab">
+                    <i class="fas fa-list-check"></i> Review Queue
+                </button>
+                <button class="annotation-review-nav-btn" data-review-tab="governance" role="tab">
+                    <i class="fas fa-user-shield"></i> Security &amp; Governance
+                </button>
+            </div>
+            <div class="modal-body annotation-review-body">
+                <section class="annotation-review-panel active" data-review-panel="queue">
+                    <div class="annotation-review-toolbar">
+                        <div class="annotation-review-filters">
+                            <input id="annotationReviewSearch" type="search" placeholder="Gene, locus tag, chromosome, or ChangeSet ID">
+                            <select id="annotationReviewFilter" aria-label="Filter by status">
+                                <option value="active">Needs action</option>
+                                <option value="awaiting_approval">Awaiting review</option>
+                                <option value="approved">Approved</option>
+                                <option value="committed">Applied</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="stale">Stale</option>
+                                <option value="all">All statuses</option>
+                            </select>
+                            <select id="annotationReviewRiskFilter" aria-label="Filter by risk">
+                                <option value="">All risks</option>
+                                <option value="high">High risk</option>
+                                <option value="medium">Medium risk</option>
+                                <option value="low">Low risk</option>
+                            </select>
+                            <button id="annotationReviewRefreshBtn" class="btn btn-secondary btn-sm" title="Refresh queue">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                        </div>
+                        <div class="annotation-review-queue-meta">
+                            <span id="annotationReviewTotal">0 ChangeSets</span>
+                            <label id="annotationReviewSelectAllLabel">
+                                <input type="checkbox" id="annotationReviewSelectAll">
+                                <span id="annotationReviewEligibleLabel">0 eligible</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="annotation-review-workspace">
+                        <div id="annotationReviewQueue" class="annotation-review-queue"></div>
+                        <aside id="annotationReviewDetail" class="annotation-review-detail" aria-live="polite"></aside>
+                    </div>
+                    <div class="annotation-review-batch-bar">
+                        <span id="annotationReviewSelectedCount">0 selected</span>
+                        <div>
+                            <button id="annotationReviewRejectBtn" class="btn btn-secondary" disabled>
+                                <i class="fas fa-times"></i> Reject selected
+                            </button>
+                            <button id="annotationReviewApproveBtn" class="btn btn-secondary" disabled>
+                                <i class="fas fa-check"></i> Approve selected
+                            </button>
+                            <button id="annotationReviewApproveApplyBtn" class="btn btn-primary" disabled>
+                                <i class="fas fa-check-double"></i> Approve &amp; Apply selected
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="annotation-review-panel" data-review-panel="governance">
+                    <div class="annotation-governance-grid">
+                        <div class="annotation-governance-settings">
+                            <h4><i class="fas fa-user-check"></i> Reviewer preferences</h4>
+                            <div class="form-group">
+                                <label for="annotationCuratorIdentity">Local curator identity</label>
+                                <input id="annotationCuratorIdentity" class="input-full" type="text" maxlength="128"
+                                    placeholder="local-curator">
+                                <small class="help-text">Recorded in approvals and commit receipts. It must differ from the agent that created the ChangeSet.</small>
+                            </div>
+                            <div class="form-group annotation-governance-inline">
+                                <div>
+                                    <label for="annotationApprovalExpiry">Approval lifetime (minutes)</label>
+                                    <input id="annotationApprovalExpiry" class="input-full" type="number" min="1" max="1440">
+                                </div>
+                                <div>
+                                    <label for="annotationBatchLimit">Maximum batch size</label>
+                                    <input id="annotationBatchLimit" class="input-full" type="number" min="1" max="200">
+                                </div>
+                            </div>
+                            <label class="annotation-governance-toggle">
+                                <input id="annotationBatchReviewEnabled" type="checkbox" checked>
+                                Enable batch review actions
+                            </label>
+                            <button id="annotationGovernanceSaveBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save reviewer preferences
+                            </button>
+                        </div>
+
+                        <div class="annotation-governance-invariants">
+                            <h4><i class="fas fa-lock"></i> Enforced security invariants</h4>
+                            <p>These controls are enforced by the annotation ledger and cannot be disabled from the UI.</p>
+                            <ul>
+                                <li><i class="fas fa-check-circle"></i><span><strong>Separation of duties</strong> — a ChangeSet creator cannot approve its own proposal.</span></li>
+                                <li><i class="fas fa-check-circle"></i><span><strong>Explicit human review</strong> — autonomous proposals never mutate the genome directly.</span></li>
+                                <li><i class="fas fa-check-circle"></i><span><strong>Immutable proposal binding</strong> — approval is bound to the exact ChangeSet hash.</span></li>
+                                <li><i class="fas fa-check-circle"></i><span><strong>Target freshness</strong> — feature hash and annotation revision are checked before commit.</span></li>
+                                <li><i class="fas fa-check-circle"></i><span><strong>Evidence requirement</strong> — scientific qualifier changes require bounded evidence references.</span></li>
+                                <li><i class="fas fa-check-circle"></i><span><strong>Durable audit trail</strong> — each item in a batch retains an independent approval and commit receipt.</span></li>
+                            </ul>
+                            <div class="annotation-governance-note">
+                                <i class="fas fa-info-circle"></i>
+                                MCP identities and permissions are configured on the CodeXomics MCP server. This panel manages local human-review preferences, not API keys or server secrets.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <div class="resize-handle resize-handle-n"></div>
+            <div class="resize-handle resize-handle-s"></div>
+            <div class="resize-handle resize-handle-e"></div>
+            <div class="resize-handle resize-handle-w"></div>
+            <div class="resize-handle resize-handle-ne"></div>
+            <div class="resize-handle resize-handle-nw"></div>
+            <div class="resize-handle resize-handle-se"></div>
+            <div class="resize-handle resize-handle-sw"></div>
         </div>
     </div>
 
@@ -5093,6 +5234,7 @@ Supported formats:
     <script src="modules/SidecarManager.js"></script>
     <script src="modules/GeneAttachmentsManager.js"></script>
     <script src="modules/GeneNotesManager.js"></script>
+    <script src="modules/AnnotationReviewManager.js"></script>
     <script src="modules/PrimerDesigner.js"></script>
     <script src="modules/PrimerBindingService.js"></script>
     <script src="modules/PrimerManager.js"></script>

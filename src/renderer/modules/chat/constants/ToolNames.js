@@ -136,6 +136,7 @@ const TOOL_NAMES = {
     RESOLVE_ANNOTATION_TARGET: 'resolve_annotation_target',
     CREATE_ANNOTATION_CHANGESET: 'create_annotation_changeset',
     GET_ANNOTATION_CHANGESET: 'get_annotation_changeset',
+    LIST_ANNOTATION_CHANGESETS: 'list_annotation_changesets',
     REQUEST_ANNOTATION_APPROVAL: 'request_annotation_approval',
     REJECT_ANNOTATION_CHANGESET: 'reject_annotation_changeset',
     APPLY_ANNOTATION_CHANGESET: 'apply_annotation_changeset',
