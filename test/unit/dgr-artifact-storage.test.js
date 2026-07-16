@@ -254,6 +254,33 @@ describe('DGR artifact storage', () => {
     expect(JSON.parse(opened.content)).toEqual(task);
   });
 
+  it('accepts a valid historical five-digit PMID throughout report archival', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    const pmid = '28751';
+    const source = task.result.sources[0];
+    source.provenance.recordId = pmid;
+    source.structuredData.literatureReferences[0].pmid = pmid;
+    const record = task.result.annotationProposal.evidenceManifest.sourceRecords[0];
+    record.identifiers.find(identifier => identifier.scheme === 'pmid').value = pmid;
+    record.sourceBinding.selector.identifier.value = pmid;
+    const fact = task.result.annotationProposal.researchSummary.facts[0];
+    fact.citation.id = pmid;
+    fact.citation.url = `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`;
+    fact.literatureBasis.pmid = pmid;
+
+    await expect(
+      archiveDgrTaskResult({
+        userDataPath,
+        taskId: task.id,
+        target,
+        currentAnnotation: createCurrentAnnotation(),
+        requireCurrentAnnotation: true,
+        proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+      })
+    ).resolves.toMatchObject({ citationValidation: { verified: true, verifiedPubMedSourceCount: 1 } });
+  });
+
   it('requires the DGR task snapshot when external archival requests live current-annotation binding', async () => {
     const target = createTarget();
     const task = createCompletedTask(target);

@@ -180,6 +180,28 @@ class AnnotationChangeSetService {
     return prototype === Object.prototype || prototype === null;
   }
 
+  _isValidPmid(value) {
+    return /^[1-9]\d{0,9}$/.test(String(value || '').trim());
+  }
+
+  _annotationMatchesTarget(annotation, target) {
+    if (!annotation || !target) return false;
+    if (annotation.codexomicsFeatureId && annotation.codexomicsFeatureId === target.featureId) return true;
+    const qualifiers = annotation.qualifiers || {};
+    const stableMatches = [
+      [this._scalar(qualifiers.locus_tag), target.locusTag],
+      [this._scalar(qualifiers.protein_id), target.proteinId],
+      [this._scalar(qualifiers.gene), target.geneSymbol],
+    ].some(([current, expected]) => current && expected && String(current) === String(expected));
+    if (!stableMatches) return false;
+    const coordinates = target.coordinates || {};
+    return (
+      Number(annotation.start) === Number(coordinates.start) &&
+      Number(annotation.end) === Number(coordinates.end) &&
+      Number(annotation.strand) === Number(coordinates.strand)
+    );
+  }
+
   _createLedgerMap(value = {}) {
     const result = Object.create(null);
     for (const key of Object.keys(value || {})) this._ledgerMapSet(result, key, value[key]);
@@ -1915,7 +1937,7 @@ class AnnotationChangeSetService {
           );
         }
         if (
-          !/^\d{6,10}$/.test(String(basis.pmid)) ||
+          !this._isValidPmid(basis.pmid) ||
           !/^[a-f0-9]{64}$/i.test(String(basis.excerptSha256)) ||
           !/^[a-f0-9]{64}$/i.test(String(basis.abstractSha256)) ||
           basis.hashEncoding !== 'utf8' ||
@@ -2016,7 +2038,7 @@ class AnnotationChangeSetService {
       if (!/^https?:\/\//i.test(String(literature.url)) || !['high', 'medium'].includes(literature.relevance)) {
         throw new Error('Research literature entries require an HTTP(S) URL and a supported relevance level');
       }
-      if (literature.pmid && !/^\d{6,10}$/.test(String(literature.pmid))) {
+      if (literature.pmid && !this._isValidPmid(literature.pmid)) {
         throw new Error(`Research literature entry has an invalid PMID: ${literature.pmid}`);
       }
       if (literature.pmid && !isExactPubMedUrl(literature.url, literature.pmid)) {
@@ -2245,7 +2267,7 @@ class AnnotationChangeSetService {
             this.inputLimits.referenceLength,
             { required: true }
           );
-          if (identifier.scheme === 'pmid' && !/^\d{6,10}$/.test(String(identifier.value))) {
+          if (identifier.scheme === 'pmid' && !this._isValidPmid(identifier.value)) {
             throw new Error(`Evidence record ${record.id} contains an invalid PMID identifier`);
           }
           if (identifier.scheme === 'doi' && !/^10\.\d{4,9}\/.+/i.test(String(identifier.value))) {
@@ -2264,7 +2286,7 @@ class AnnotationChangeSetService {
           binding.sourceCollection !== 'sources' ||
           binding.selector?.database !== 'pubmed' ||
           binding.selector?.identifier?.scheme !== 'pmid' ||
-          !/^\d{6,10}$/.test(String(binding.selector?.identifier?.value || '')) ||
+          !this._isValidPmid(binding.selector?.identifier?.value) ||
           binding.content?.relativeJsonPointer !== '/structuredData/literatureReferences/0/abstract' ||
           binding.content?.canonicalization !== 'dgr.pubmed-abstract.v1' ||
           !/^[a-f0-9]{64}$/i.test(String(binding.content?.sha256 || '')) ||
@@ -3511,7 +3533,12 @@ class AnnotationChangeSetService {
         metadata: { changeSetId: changeSet.id, receiptId: receipt.id },
       });
     }
-    if (this.app?.selectedGene?.gene === found.annotation && typeof this.app.populateGeneDetails === 'function') {
+    const selectedGene = this.app?.selectedGene?.gene;
+    if (
+      this._annotationMatchesTarget(selectedGene, changeSet.target) &&
+      typeof this.app.populateGeneDetails === 'function'
+    ) {
+      this.app.selectedGene.gene = found.annotation;
       this.app.populateGeneDetails(found.annotation, this.app.selectedGene.operonInfo);
     }
     return {

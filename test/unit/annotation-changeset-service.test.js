@@ -303,6 +303,13 @@ describe('AnnotationChangeSetService', () => {
     expect(resolved.target.featureType).toBe('CDS');
   });
 
+  it('accepts valid historical PMIDs without accepting zero or malformed identifiers', () => {
+    expect(annotationService.changeSetService._isValidPmid('28751')).toBe(true);
+    expect(annotationService.changeSetService._isValidPmid('1')).toBe(true);
+    expect(annotationService.changeSetService._isValidPmid('0')).toBe(false);
+    expect(annotationService.changeSetService._isValidPmid('PMID:28751')).toBe(false);
+  });
+
   it('creates, approves, and atomically commits a constrained qualifier ChangeSet', async () => {
     const target = await annotationService.resolveAnnotationTarget({ identifier: 'b0001' });
     const created = await annotationService.createAnnotationChangeset({
@@ -335,6 +342,38 @@ describe('AnnotationChangeSetService', () => {
     expect(committed.applied).toBe(true);
     expect(annotation.qualifiers.go_terms).toBe('GO:0003674');
     expect(committed.receipt.revision).toBe(1);
+  });
+
+  it('rebinds a stale selected gene feature to the committed CDS before refreshing Gene Details', async () => {
+    const selectedGeneFeature = {
+      id: 'gene-1',
+      type: 'gene',
+      start: annotation.start,
+      end: annotation.end,
+      strand: annotation.strand,
+      qualifiers: { locus_tag: 'b0001', gene: 'thrL' },
+    };
+    annotationService.app.selectedGene = { gene: selectedGeneFeature, operonInfo: null };
+    annotationService.app.populateGeneDetails = vi.fn();
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      __executionContext: agentContext,
+    });
+    const approval = await annotationService.requestAnnotationApproval({
+      changeSetId: created.changeSet.id,
+      __executionContext: curatorContext,
+    });
+
+    await annotationService.applyAnnotationChangeset({
+      changeSetId: created.changeSet.id,
+      approvalToken: approval.approvalToken,
+      __executionContext: curatorContext,
+    });
+
+    expect(annotationService.app.selectedGene.gene).toBe(annotation);
+    expect(annotationService.app.populateGeneDetails).toHaveBeenCalledWith(annotation, null);
+    expect(annotation.qualifiers.note).toBe('Evidence-backed annotation note.');
   });
 
   it('lists lightweight ChangeSet summaries for filtered batch review without approval secrets', async () => {

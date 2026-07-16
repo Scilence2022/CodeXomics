@@ -217,11 +217,15 @@ function canonicalizePubMedAbstract(value) {
     .trim();
 }
 
+function isValidPmid(value) {
+  return /^[1-9]\d{0,9}$/.test(String(value || '').trim());
+}
+
 function pubMedSourceMetadata(source) {
   if (String(source?.database || '').toLowerCase() !== 'pubmed') return null;
   const reference = source?.structuredData?.literatureReferences?.[0] || {};
   const pmid = String(reference.pmid || source?.pmid || source?.provenance?.recordId || '').trim();
-  if (!/^\d{6,10}$/.test(pmid)) return null;
+  if (!isValidPmid(pmid)) return null;
   return {
     pmid,
     doi: normalizeDoi(reference.doi || source?.doi),
@@ -270,7 +274,7 @@ function validateCitationBoundFacts(task) {
       basis.canonicalization !== 'dgr.pubmed-abstract.v1' ||
       basis.offsetEncoding !== 'utf16_code_units' ||
       basis.hashEncoding !== 'utf8' ||
-      !/^\d{6,10}$/.test(pmid) ||
+      !isValidPmid(pmid) ||
       !excerpt ||
       !Number.isSafeInteger(basis.excerptStart) ||
       !Number.isSafeInteger(basis.excerptEnd) ||
