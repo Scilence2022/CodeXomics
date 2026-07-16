@@ -149,12 +149,24 @@ describe('GeneAttachmentsManager generated DGR reports', () => {
     expect(manager.getAttachmentsForGene('b4024')).toEqual([]);
   });
 
-  it('rejects a generated report for a non-CDS target', async () => {
+  it('accepts a generated report for a supported non-CDS target', async () => {
+    const Manager = loadManager();
+    const manager = new Manager(
+      { fileManager: { currentFile: { path: '/genomes/ecoli.gbk' } } },
+      { get: () => ({}) },
+      { get: vi.fn(async () => ({})), setAndForceSave: vi.fn(async () => undefined) }
+    );
+    await expect(
+      manager.registerGeneratedAttachment('b4024', descriptor(), { ...target(), featureType: 'ncRNA' })
+    ).resolves.toMatchObject({ target: { featureType: 'ncRNA' } });
+  });
+
+  it('rejects a generated report for an unsupported target type', async () => {
     const Manager = loadManager();
     const manager = new Manager({}, { get: () => ({}) });
     await expect(
-      manager.registerGeneratedAttachment('b4024', descriptor(), { ...target(), featureType: 'gene' })
-    ).rejects.toThrow('only be attached to CDS');
+      manager.registerGeneratedAttachment('b4024', descriptor(), { ...target(), featureType: 'exon' })
+    ).rejects.toThrow('supported gene annotation feature');
   });
 
   it('fails closed for an unsaved genome instead of leaking reports through global metadata', async () => {

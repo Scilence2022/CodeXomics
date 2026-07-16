@@ -58,6 +58,83 @@ class AnnotationTools {
         },
       },
 
+      assess_annotation_quality: {
+        name: 'assess_annotation_quality',
+        description:
+          'Assess the completeness and curation quality of one resolved gene annotation feature. Returns a deterministic 0-100 quality score, actionable reasons, missing fields, and recommended research focus. When co-located gene and CDS records share an identifier, the CDS is assessed.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            identifier: {
+              type: 'string',
+              description: 'Locus tag, gene symbol, protein ID, annotation ID, or stable feature ID.',
+            },
+            chromosome: {
+              type: 'string',
+              description: 'Chromosome or replicon used to disambiguate the identifier.',
+            },
+            clientId: {
+              type: 'string',
+              description: 'Browser client ID for multi-window support.',
+            },
+          },
+          required: ['identifier'],
+        },
+      },
+
+      list_annotation_quality_candidates: {
+        name: 'list_annotation_quality_candidates',
+        description:
+          'Rank gene-associated annotation features for curation. Supports CDS, gene, mRNA, coding and non-coding RNA types; collapses co-located duplicate feature records and always prefers CDS when present at the same locus. Returns deterministic quality scores, reasons, and research-focus recommendations.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            chromosome: {
+              type: 'string',
+              description: 'Optional chromosome or replicon filter.',
+            },
+            featureTypes: {
+              type: 'array',
+              items: { type: 'string' },
+              maxItems: 32,
+              description:
+                'Gene-associated feature types to include. Defaults to CDS, gene, mRNA, tRNA, rRNA, ncRNA, tmRNA, other RNA features, and pseudogene.',
+            },
+            maximumQualityScore: {
+              type: 'number',
+              minimum: 0,
+              maximum: 100,
+              default: 100,
+              description: 'Only return features with a quality score at or below this threshold.',
+            },
+            sortBy: {
+              type: 'string',
+              enum: ['quality', 'coordinate'],
+              default: 'quality',
+              description: 'Rank lowest quality first or preserve deterministic coordinate coverage order.',
+            },
+            limit: {
+              type: 'number',
+              minimum: 0,
+              maximum: 100000,
+              default: 100,
+              description: 'Maximum results to return; use 0 for all matching candidates.',
+            },
+            offset: {
+              type: 'number',
+              minimum: 0,
+              default: 0,
+              description: 'Number of ranked candidates to skip.',
+            },
+            clientId: {
+              type: 'string',
+              description: 'Browser client ID for multi-window support.',
+            },
+          },
+          required: [],
+        },
+      },
+
       get_annotation: {
         name: 'get_annotation',
         description:
@@ -196,7 +273,7 @@ class AnnotationTools {
       resolve_annotation_target: {
         name: 'resolve_annotation_target',
         description:
-          'Resolve a gene/locus identifier to an immutable CodeXomics annotation target with featureId, featureHash, and annotation revision. When a GenBank gene and CDS share the same locus tag, the CDS is selected because annotation refinement targets CDS qualifiers. Call this before starting autonomous research.',
+          'Resolve a gene/locus identifier to an immutable CodeXomics annotation target with featureId, featureHash, and annotation revision. Co-located generic gene and specific feature records are collapsed; CDS is preferred when present, otherwise RNA or transcript features are preferred over gene. Call this before autonomous research.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -391,7 +468,7 @@ class AnnotationTools {
       archive_annotation_research: {
         name: 'archive_annotation_research',
         description:
-          'Archive a completed DGR task as a verified, genome-scoped JSON attachment bound to an exact CDS target. CodeXomics re-derives the live scientific qualifier snapshot and requires the DGR task currentAnnotation to match. Use this for research started directly through the DGR MCP server before creating a ChangeSet.',
+          'Archive a completed DGR task as a verified, genome-scoped JSON attachment bound to an exact supported gene annotation target. CodeXomics re-derives the live scientific qualifier snapshot and requires the DGR task currentAnnotation to match. Use this for research started directly through the DGR MCP server before creating a ChangeSet.',
         inputSchema: {
           type: 'object',
           properties: {

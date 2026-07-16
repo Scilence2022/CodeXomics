@@ -19,6 +19,26 @@ class AnnotationResearchWorkflowService {
       taskIdLength: 256,
     });
     this.terminalStatuses = new Set(['completed', 'failed', 'cancelled', 'canceled']);
+    this.supportedFeatureTypes = new Set([
+      'CDS',
+      'GENE',
+      'MRNA',
+      'TRNA',
+      'RRNA',
+      'NCRNA',
+      'TMRNA',
+      'MISC_RNA',
+      'PRECURSOR_RNA',
+      'MIRNA',
+      'SNRNA',
+      'SNORNA',
+      'ANTISENSE_RNA',
+      'GUIDE_RNA',
+      'TELOMERASE_RNA',
+      'RNASE_P_RNA',
+      'RNASE_MRP_RNA',
+      'PSEUDOGENE',
+    ]);
   }
 
   _clone(value) {
@@ -496,11 +516,14 @@ class AnnotationResearchWorkflowService {
       });
       this._assertWorkspace(workspace);
       const target = resolved.target;
-      if (String(target?.featureType || '').toUpperCase() !== 'CDS') {
-        throw new Error('Annotation research refinement is restricted to resolved CDS features');
+      const featureType = String(target?.featureType || '').toUpperCase();
+      if (!this.supportedFeatureTypes.has(featureType)) {
+        throw new Error(
+          `Annotation research does not support resolved feature type "${target?.featureType || 'unknown'}"`
+        );
       }
-      if (!target.locusTag && !target.proteinId) {
-        throw new Error('CDS research requires a stable locus tag or protein identifier for identity-safe retrieval');
+      if (!target.locusTag && !target.proteinId && !target.geneSymbol) {
+        throw new Error('Annotation research requires a stable locus tag, protein identifier, or gene symbol');
       }
       const requestedGeneSymbol = String(params.geneSymbol || '').trim();
       if (
@@ -775,8 +798,12 @@ class AnnotationResearchWorkflowService {
       });
       this._assertWorkspace(workspace);
       const target = resolved.target;
-      if (String(target?.featureType || '').toUpperCase() !== 'CDS' || (!target.locusTag && !target.proteinId)) {
-        throw new Error('External DGR reports can only be archived against a stable resolved CDS target');
+      const featureType = String(target?.featureType || '').toUpperCase();
+      if (
+        !this.supportedFeatureTypes.has(featureType) ||
+        (!target.locusTag && !target.proteinId && !target.geneSymbol)
+      ) {
+        throw new Error('External DGR reports require a supported, stable resolved gene annotation target');
       }
       const currentAnnotation = this._currentAnnotationSnapshot(resolved);
       const currentAnnotationRequestSha256 = await this._hash(currentAnnotation);

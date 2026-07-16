@@ -95,6 +95,8 @@ class FunctionCallsOrganizer {
           'get_annotation',
           'list_annotations',
           'search_annotations',
+          'assess_annotation_quality',
+          'list_annotation_quality_candidates',
           // File loading tools - CRITICAL FIX
           'load_genome',
           'load_genome_file',

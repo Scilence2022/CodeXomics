@@ -355,6 +355,8 @@ class StandardClaudeMCPServer extends EventEmitter {
         'get_annotation',
         'get_annotation_history',
         'search_annotations',
+        'assess_annotation_quality',
+        'list_annotation_quality_candidates',
         'list_genome_windows',
         'switch_active_window',
       ],

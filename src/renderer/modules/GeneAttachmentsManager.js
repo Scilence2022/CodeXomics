@@ -190,6 +190,29 @@ class GeneAttachmentsManager {
     });
   }
 
+  _supportsGeneratedResearchFeature(type) {
+    return new Set([
+      'CDS',
+      'GENE',
+      'MRNA',
+      'TRNA',
+      'RRNA',
+      'NCRNA',
+      'TMRNA',
+      'MISC_RNA',
+      'PRECURSOR_RNA',
+      'MIRNA',
+      'SNRNA',
+      'SNORNA',
+      'ANTISENSE_RNA',
+      'GUIDE_RNA',
+      'TELOMERASE_RNA',
+      'RNASE_P_RNA',
+      'RNASE_MRP_RNA',
+      'PSEUDOGENE',
+    ]).has(String(type || '').toUpperCase());
+  }
+
   /**
    * Register a main-process archived DGR report as a durable gene attachment.
    * The report itself remains outside the renderer; only bounded metadata is
@@ -199,8 +222,8 @@ class GeneAttachmentsManager {
     await this.ready;
     const normalizedGeneId = String(geneId || '').trim();
     if (!normalizedGeneId) throw new Error('A gene identifier is required for a generated report attachment');
-    if (String(target?.featureType || '').toUpperCase() !== 'CDS') {
-      throw new Error('Deep Gene Research reports can only be attached to CDS features');
+    if (!this._supportsGeneratedResearchFeature(target?.featureType)) {
+      throw new Error('Deep Gene Research reports require a supported gene annotation feature');
     }
     const genomePath =
       this.genomeBrowser?.loadedGenomePath ||
@@ -331,7 +354,7 @@ class GeneAttachmentsManager {
         locusTag: target.locusTag || null,
         geneSymbol: target.geneSymbol || null,
         proteinId: target.proteinId || null,
-        featureType: 'CDS',
+        featureType: target.featureType,
       },
       summary,
     };

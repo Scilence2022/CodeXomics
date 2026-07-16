@@ -380,7 +380,7 @@ describe('DGR artifact storage', () => {
         target,
         proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(mismatchedTask)),
       })
-    ).rejects.toThrow(/featureId does not match the bound CDS target/);
+    ).rejects.toThrow(/featureId does not match the bound annotation target/);
     await expect(fs.promises.stat(artifactRoot(userDataPath))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
@@ -435,17 +435,29 @@ describe('DGR artifact storage', () => {
     ).rejects.toThrow(/correlationId does not match/);
   });
 
-  it('rejects non-CDS targets before making a DGR request', async () => {
+  it('archives supported non-CDS gene annotation targets', async () => {
+    const target = createTarget({ featureType: 'tRNA', proteinId: null });
+    const task = createCompletedTask(target);
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+    expect(descriptor.target.featureType).toBe('tRNA');
+  });
+
+  it('rejects unsupported annotation targets before making a DGR request', async () => {
     const proxyRequest = vi.fn();
 
     await expect(
       archiveDgrTaskResult({
         userDataPath,
-        taskId: 'task-rna-001',
-        target: createTarget({ featureType: 'tRNA' }),
+        taskId: 'task-exon-001',
+        target: createTarget({ featureType: 'exon' }),
         proxyRequest,
       })
-    ).rejects.toThrow(/restricted to CDS annotation targets/);
+    ).rejects.toThrow(/does not support feature type/);
     expect(proxyRequest).not.toHaveBeenCalled();
   });
 

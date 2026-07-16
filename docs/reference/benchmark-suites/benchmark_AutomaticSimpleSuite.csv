@@ -11,6 +11,8 @@ annotation,annot_auto_05,Update Annotation,"Update the annotation named ""fakG""
 annotation,annot_auto_06,Delete Annotation,"Delete the annotation named ""fakG"" using delete_annotation without user confirmation."
 annotation,annot_auto_07,Get Annotation History,Get the latest annotation change history with a limit of 10 records.
 annotation,annot_auto_08,Get Operons,List predicted operons for the current chromosome.
+annotation,annot_auto_09,Assess Annotation Quality,Assess the annotation quality of lysC using assess_annotation_quality.
+annotation,annot_auto_10,List Low-quality Annotation Candidates,"List up to 10 gene-associated annotation candidates with quality scores at or below 70, ranked lowest quality first."
 benchmark,bench_auto_01,Open Benchmark Interface,Open the benchmark interface without starting a benchmark run.
 benchmark,bench_auto_02,Get Benchmark Status,Get the current benchmark system status.
 blast,blast_auto_01,BLAST Get Installation Status,Check if BLAST is installed and available on the system.

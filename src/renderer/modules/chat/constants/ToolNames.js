@@ -130,6 +130,8 @@ const TOOL_NAMES = {
     EDIT_ANNOTATION: 'edit_annotation',
     DELETE_ANNOTATION: 'delete_annotation',
     LIST_ANNOTATIONS: 'list_annotations',
+    ASSESS_ANNOTATION_QUALITY: 'assess_annotation_quality',
+    LIST_ANNOTATION_QUALITY_CANDIDATES: 'list_annotation_quality_candidates',
     GET_ANNOTATION: 'get_annotation',
     UPDATE_ANNOTATION: 'update_annotation',
     MERGE_GENE_RESEARCH_REPORT: 'merge_gene_research_report',

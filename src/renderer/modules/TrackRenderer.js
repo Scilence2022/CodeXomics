@@ -7124,7 +7124,7 @@ class TrackRenderer {
   }
 
   _canonicalGeneDetailsFeature(feature) {
-    if (!feature || String(feature.type || '').toUpperCase() === 'CDS') return feature;
+    if (!feature || String(feature.type || '').toUpperCase() !== 'GENE') return feature;
     const scalar = value => (Array.isArray(value) ? value[0] : value) || null;
     const qualifiers = feature.qualifiers || {};
     const identities = [scalar(qualifiers.locus_tag), scalar(qualifiers.protein_id), scalar(qualifiers.gene)].filter(
@@ -7133,8 +7133,14 @@ class TrackRenderer {
     if (identities.length === 0) return feature;
     const chromosome = this.genomeBrowser.currentChromosome || document.getElementById('chromosomeSelect')?.value;
     const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+    const priorities = Object.fromEntries([
+      ['CDS', 100],
+      ...'TRNA RRNA NCRNA TMRNA MISC_RNA PRECURSOR_RNA MIRNA SNRNA SNORNA'.split(' ').map(type => [type, 90]),
+      ['MRNA', 80],
+      ['PSEUDOGENE', 70],
+    ]);
     const candidates = annotations.filter(annotation => {
-      if (String(annotation?.type || '').toUpperCase() !== 'CDS') return false;
+      if (!priorities[String(annotation?.type || '').toUpperCase()]) return false;
       const candidateQualifiers = annotation.qualifiers || {};
       const candidateIdentities = [
         scalar(candidateQualifiers.locus_tag),
@@ -7144,14 +7150,17 @@ class TrackRenderer {
       return identities.some(identity => candidateIdentities.includes(identity));
     });
     if (candidates.length === 0) return feature;
-    return (
-      candidates.find(
-        annotation =>
-          Number(annotation.start) === Number(feature.start) &&
-          Number(annotation.end) === Number(feature.end) &&
-          Number(annotation.strand) === Number(feature.strand)
-      ) || candidates[0]
+    const exact = candidates.filter(
+      annotation =>
+        Number(annotation.start) === Number(feature.start) &&
+        Number(annotation.end) === Number(feature.end) &&
+        Number(annotation.strand) === Number(feature.strand)
     );
+    const ranked = (exact.length > 0 ? exact : candidates).sort(
+      (left, right) =>
+        priorities[String(right.type || '').toUpperCase()] - priorities[String(left.type || '').toUpperCase()]
+    );
+    return ranked[0];
   }
 
   showGeneDetails(gene, operonInfo, options = {}) {
@@ -7162,9 +7171,9 @@ class TrackRenderer {
       return;
     }
 
-    // GenBank commonly provides overlapping gene/CDS pairs. The CDS owns
-    // product, note, translation, and research-backed qualifiers, so always
-    // canonicalize a clicked gene feature to its exact CDS counterpart.
+    // GenBank commonly provides a generic gene record plus a more specific
+    // CDS or RNA record. Prefer the specific co-located feature, with CDS
+    // taking precedence when it exists.
     gene = this._canonicalGeneDetailsFeature(gene);
 
     // Call the main CodeXomics's gene selection methods

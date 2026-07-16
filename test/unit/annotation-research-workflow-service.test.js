@@ -173,9 +173,44 @@ describe('AnnotationResearchWorkflowService', () => {
     );
   });
 
+  it('starts research for a supported non-coding RNA target', async () => {
+    const Service = loadWorkflowService();
+    const target = {
+      workspaceId: 'ws-1',
+      genomeId: 'genome-1',
+      annotationRevision: 0,
+      featureId: 'feature-ffs',
+      featureHash: 'hash-ffs',
+      chromosome: 'chr1',
+      locusTag: 'b0002',
+      geneSymbol: 'ffs',
+      proteinId: null,
+      organism: 'Escherichia coli',
+      featureType: 'ncRNA',
+    };
+    const executeToolOnServer = vi.fn(async () => ({ taskId: 'task-ffs', status: 'queued' }));
+    const service = new Service(
+      { currentChromosome: 'chr1', currentAnnotations: { chr1: [{}] } },
+      {
+        services: { annotation: { resolveAnnotationTarget: vi.fn(async () => ({ target })) } },
+        mcpServerManager: { ensureServerConnected: vi.fn(async () => true), executeToolOnServer },
+      }
+    );
+
+    await service.startAnnotationResearch({ identifier: 'b0002' });
+    expect(executeToolOnServer).toHaveBeenCalledWith(
+      'deep-gene-research',
+      'deep-gene-research',
+      expect.objectContaining({ geneSymbol: 'ffs', target })
+    );
+  });
+
   it.each([
-    [{ featureType: 'tRNA', locusTag: 'b0001' }, 'restricted to resolved CDS features'],
-    [{ featureType: 'CDS', locusTag: null, proteinId: null }, 'requires a stable locus tag or protein identifier'],
+    [{ featureType: 'exon', locusTag: 'b0001' }, 'does not support resolved feature type'],
+    [
+      { featureType: 'CDS', locusTag: null, proteinId: null, geneSymbol: null },
+      'requires a stable locus tag, protein identifier, or gene symbol',
+    ],
   ])('rejects identity-unsafe research targets before contacting DGR', async (targetOverrides, expectedError) => {
     const AnnotationResearchWorkflowService = loadWorkflowService();
     const executeToolOnServer = vi.fn();

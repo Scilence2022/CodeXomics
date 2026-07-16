@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-16T01:47:38.008Z",
-  "registryHash": "16f5937edae3a1653f6f27057d2f3a7b20f76a0091bc69f2b05f32c1b4e5f84f",
+  "generatedAt": "2026-07-16T09:35:00.917Z",
+  "registryHash": "94db53a7f7f37ea26146d0ef6a717ac211e58b628b6dbc148d30772be6485ea9",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 211,
-    "appTools": 211,
+    "tools": 213,
+    "appTools": 213,
     "userTools": 0,
-    "uniqueTools": 205,
+    "uniqueTools": 207,
     "categories": 18,
-    "builtInTools": 173,
+    "builtInTools": 175,
     "diagnostics": 12
   },
   "categories": {
@@ -252,7 +252,7 @@
     {
       "name": "archive_annotation_research",
       "version": "1.0.0",
-      "description": "Archive a completed external Deep Gene Research task only after its target and current qualifier snapshot match the live CDS, then register the verified genome-scoped JSON attachment.",
+      "description": "Archive a completed external Deep Gene Research task only after its target and current qualifier snapshot match the live supported gene annotation feature, then register the verified genome-scoped JSON attachment.",
       "category": "annotation",
       "subcategory": "autonomous_curation",
       "execution": {
@@ -305,6 +305,92 @@
       "builtin": {
         "name": "archive_annotation_research",
         "method": "archiveAnnotationResearch",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "assess_annotation_quality",
+      "version": "1.0.0",
+      "description": "Assess one resolved gene annotation feature with a deterministic completeness and curation-quality policy. Returns a 0-100 quality score, concrete reasons, missing fields, and recommended research focus. Co-located gene/CDS duplicates resolve to CDS.",
+      "category": "annotation",
+      "subcategory": "annotation_quality",
+      "keywords": [
+        "assess annotation quality",
+        "annotation score",
+        "gene annotation completeness",
+        "low confidence annotation",
+        "missing annotation fields"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Locus tag, gene symbol, protein ID, annotation ID, or stable feature ID."
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Optional chromosome or replicon used to disambiguate the identifier."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support.",
+            "default": "default"
+          }
+        },
+        "required": ["identifier"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "target": {
+            "type": "object"
+          },
+          "assessment": {
+            "type": "object"
+          }
+        }
+      },
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["get_annotation", "start_annotation_research"],
+        "alternatives": ["list_annotation_quality_candidates"],
+        "prerequisites": [],
+        "follow_up": ["start_annotation_research"]
+      },
+      "metadata": {
+        "added_in": "0.722.0",
+        "integration": "annotation_quality",
+        "priority": "high",
+        "tags": ["annotation", "quality", "analysis", "read"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/assess_annotation_quality.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "assessAnnotationQuality"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "assess_annotation_quality",
+        "method": "assessAnnotationQuality",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -1539,6 +1625,147 @@
       "builtin": {
         "name": "list_annotation_changesets",
         "method": "listAnnotationChangesets",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "list_annotation_quality_candidates",
+      "version": "1.0.0",
+      "description": "Rank gene-associated annotation features for curation using deterministic quality signals. Covers CDS, gene, mRNA, coding and non-coding RNA types, collapses co-located duplicate records, and prefers CDS at a shared locus.",
+      "category": "annotation",
+      "subcategory": "annotation_quality",
+      "keywords": [
+        "find low quality annotations",
+        "rank annotation candidates",
+        "prioritize genes for curation",
+        "hypothetical proteins",
+        "incomplete annotations",
+        "daily annotation candidates"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Optional chromosome or replicon filter."
+          },
+          "featureTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "description": "Gene-associated feature types to include. Defaults to CDS, gene, mRNA, RNA feature types, and pseudogene."
+          },
+          "maximumQualityScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 100,
+            "description": "Return candidates whose quality score is at or below this value."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": ["quality", "coordinate"],
+            "default": "quality",
+            "description": "Sort lowest-quality first or use deterministic genomic coordinate order."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000,
+            "default": 100,
+            "description": "Maximum results; use 0 for every matching candidate."
+          },
+          "offset": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0,
+            "description": "Number of ranked candidates to skip."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support.",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "selectionPolicy": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          },
+          "excludedAmbiguousLoci": {
+            "type": "number"
+          },
+          "ambiguousLoci": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["assess_annotation_quality", "start_annotation_research"],
+        "alternatives": ["list_annotations", "search_annotations"],
+        "prerequisites": [],
+        "follow_up": ["resolve_annotation_target", "start_annotation_research"]
+      },
+      "metadata": {
+        "added_in": "0.722.0",
+        "integration": "annotation_quality",
+        "priority": "high",
+        "tags": ["annotation", "quality", "prioritization", "read"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/list_annotation_quality_candidates.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listAnnotationQualityCandidates"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "list_annotation_quality_candidates",
+        "method": "listAnnotationQualityCandidates",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -22342,7 +22569,7 @@
     "archive_annotation_research": {
       "name": "archive_annotation_research",
       "version": "1.0.0",
-      "description": "Archive a completed external Deep Gene Research task only after its target and current qualifier snapshot match the live CDS, then register the verified genome-scoped JSON attachment.",
+      "description": "Archive a completed external Deep Gene Research task only after its target and current qualifier snapshot match the live supported gene annotation feature, then register the verified genome-scoped JSON attachment.",
       "category": "annotation",
       "subcategory": "autonomous_curation",
       "execution": {
@@ -22395,6 +22622,92 @@
       "builtin": {
         "name": "archive_annotation_research",
         "method": "archiveAnnotationResearch",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "assess_annotation_quality": {
+      "name": "assess_annotation_quality",
+      "version": "1.0.0",
+      "description": "Assess one resolved gene annotation feature with a deterministic completeness and curation-quality policy. Returns a 0-100 quality score, concrete reasons, missing fields, and recommended research focus. Co-located gene/CDS duplicates resolve to CDS.",
+      "category": "annotation",
+      "subcategory": "annotation_quality",
+      "keywords": [
+        "assess annotation quality",
+        "annotation score",
+        "gene annotation completeness",
+        "low confidence annotation",
+        "missing annotation fields"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Locus tag, gene symbol, protein ID, annotation ID, or stable feature ID."
+          },
+          "chromosome": {
+            "type": "string",
+            "description": "Optional chromosome or replicon used to disambiguate the identifier."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support.",
+            "default": "default"
+          }
+        },
+        "required": ["identifier"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "target": {
+            "type": "object"
+          },
+          "assessment": {
+            "type": "object"
+          }
+        }
+      },
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["get_annotation", "start_annotation_research"],
+        "alternatives": ["list_annotation_quality_candidates"],
+        "prerequisites": [],
+        "follow_up": ["start_annotation_research"]
+      },
+      "metadata": {
+        "added_in": "0.722.0",
+        "integration": "annotation_quality",
+        "priority": "high",
+        "tags": ["annotation", "quality", "analysis", "read"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/assess_annotation_quality.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "assessAnnotationQuality"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "assess_annotation_quality",
+        "method": "assessAnnotationQuality",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -23629,6 +23942,147 @@
       "builtin": {
         "name": "list_annotation_changesets",
         "method": "listAnnotationChangesets",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "list_annotation_quality_candidates": {
+      "name": "list_annotation_quality_candidates",
+      "version": "1.0.0",
+      "description": "Rank gene-associated annotation features for curation using deterministic quality signals. Covers CDS, gene, mRNA, coding and non-coding RNA types, collapses co-located duplicate records, and prefers CDS at a shared locus.",
+      "category": "annotation",
+      "subcategory": "annotation_quality",
+      "keywords": [
+        "find low quality annotations",
+        "rank annotation candidates",
+        "prioritize genes for curation",
+        "hypothetical proteins",
+        "incomplete annotations",
+        "daily annotation candidates"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Optional chromosome or replicon filter."
+          },
+          "featureTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "description": "Gene-associated feature types to include. Defaults to CDS, gene, mRNA, RNA feature types, and pseudogene."
+          },
+          "maximumQualityScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 100,
+            "description": "Return candidates whose quality score is at or below this value."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": ["quality", "coordinate"],
+            "default": "quality",
+            "description": "Sort lowest-quality first or use deterministic genomic coordinate order."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000,
+            "default": 100,
+            "description": "Maximum results; use 0 for every matching candidate."
+          },
+          "offset": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0,
+            "description": "Number of ranked candidates to skip."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Browser client ID for multi-window support.",
+            "default": "default"
+          }
+        },
+        "required": []
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "selectionPolicy": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          },
+          "excludedAmbiguousLoci": {
+            "type": "number"
+          },
+          "ambiguousLoci": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": ["assess_annotation_quality", "start_annotation_research"],
+        "alternatives": ["list_annotations", "search_annotations"],
+        "prerequisites": [],
+        "follow_up": ["resolve_annotation_target", "start_annotation_research"]
+      },
+      "metadata": {
+        "added_in": "0.722.0",
+        "integration": "annotation_quality",
+        "priority": "high",
+        "tags": ["annotation", "quality", "prioritization", "read"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/list_annotation_quality_candidates.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listAnnotationQualityCandidates"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "list_annotation_quality_candidates",
+        "method": "listAnnotationQualityCandidates",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -45022,6 +45476,26 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "assess_annotation_quality",
+      "method": "assessAnnotationQuality",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "list_annotation_quality_candidates",
+      "method": "listAnnotationQualityCandidates",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "get_annotation",
       "method": "getAnnotation",
       "category": "annotation",
@@ -46747,6 +47221,26 @@
     "list_annotations": {
       "name": "list_annotations",
       "method": "listAnnotations",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "assess_annotation_quality": {
+      "name": "assess_annotation_quality",
+      "method": "assessAnnotationQuality",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "list_annotation_quality_candidates": {
+      "name": "list_annotation_quality_candidates",
+      "method": "listAnnotationQualityCandidates",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,

@@ -93,6 +93,31 @@ describe('Genes track sequence selection settings', () => {
     expect(genomeBrowser.populateGeneDetails).toHaveBeenCalledWith(cds, null);
   });
 
+  it('canonicalizes a gene feature to a co-located ncRNA when no CDS exists', () => {
+    const gene = { type: 'gene', start: 500, end: 580, strand: -1, qualifiers: { gene: 'ffs', locus_tag: 'b0002' } };
+    const ncRna = {
+      type: 'ncRNA',
+      start: 500,
+      end: 580,
+      strand: -1,
+      qualifiers: { gene: 'ffs', locus_tag: 'b0002', product: '4.5S RNA' },
+    };
+    const genomeBrowser = {
+      currentChromosome: 'U00096',
+      currentAnnotations: { U00096: [gene, ncRna] },
+      selectGene: vi.fn(),
+      showGeneDetailsPanel: vi.fn(),
+      populateGeneDetails: vi.fn(),
+      scrollBottomSequenceToGene: vi.fn(),
+    };
+    const trackRenderer = new TrackRenderer(genomeBrowser);
+
+    trackRenderer.showGeneDetails(gene, null, { scrollBottomSequence: false });
+
+    expect(genomeBrowser.selectGene).toHaveBeenCalledWith(ncRna, null);
+    expect(genomeBrowser.populateGeneDetails).toHaveBeenCalledWith(ncRna, null);
+  });
+
   it('keeps AI-facing track settings schemas in sync', () => {
     const chatManagerContent = fs.readFileSync(CM_PATH, 'utf-8');
     const mcpTrackSettingsContent = fs.readFileSync(MCP_TRACK_SETTINGS_PATH, 'utf-8');

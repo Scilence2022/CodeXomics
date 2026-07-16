@@ -8428,6 +8428,8 @@ ${coreTools}
       genome_codon_usage_analysis: () => this.genomeCodonUsageAnalysis(parameters),
       // Annotation CRUD tools (Phase 1 - OpenClaw integration)
       list_annotations: () => this.listAnnotations(parameters),
+      assess_annotation_quality: () => this.assessAnnotationQuality(parameters),
+      list_annotation_quality_candidates: () => this.listAnnotationQualityCandidates(parameters),
       get_annotation: () => this.getAnnotation(parameters),
       update_annotation: () => this.updateAnnotation(parameters),
       merge_gene_research_report: () => this.mergeGeneResearchReport(parameters),
@@ -12621,6 +12623,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   async listAnnotations(params) {
     return this.services.annotation.listAnnotations(params);
+  }
+
+  async assessAnnotationQuality(params) {
+    return this.services.annotation.assessAnnotationQuality(params);
+  }
+
+  async listAnnotationQualityCandidates(params) {
+    return this.services.annotation.listAnnotationQualityCandidates(params);
   }
 
   /**
