@@ -1,0 +1,29 @@
+name: archive_annotation_research
+version: 1.0.0
+description: Archive a completed external Deep Gene Research task only after its target and current qualifier snapshot match the live CDS, then register the verified genome-scoped JSON attachment.
+category: annotation
+subcategory: autonomous_curation
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    taskId:
+      type: string
+      minLength: 1
+      maxLength: 256
+    correlationId:
+      type: string
+      minLength: 1
+      maxLength: 256
+    identifier:
+      type: string
+      description: Target locus_tag, gene name, protein_id, or feature identifier resolved against the loaded genome.
+    chromosome: { type: string }
+    clientId: { type: string }
+  required: [taskId, correlationId, identifier]
+metadata:
+  added_in: autonomous_annotation_v2
+  priority: high
+  tags: [annotation, research, dgr, archive, attachment]

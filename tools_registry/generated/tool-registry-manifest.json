@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-13T16:49:55.419Z",
-  "registryHash": "60ec54ee3f89e152fe922f32a122d9a7afc212ae64e11869ab8ce6380d2ebe0c",
+  "generatedAt": "2026-07-15T18:37:45.023Z",
+  "registryHash": "e6d7a90603e4906aa5f044044bc42c438154796fd0a7068b77a400476c0a650e",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 209,
-    "appTools": 209,
+    "tools": 210,
+    "appTools": 210,
     "userTools": 0,
-    "uniqueTools": 203,
+    "uniqueTools": 204,
     "categories": 18,
-    "builtInTools": 171,
+    "builtInTools": 172,
     "diagnostics": 12
   },
   "categories": {
@@ -241,6 +241,70 @@
       "builtin": {
         "name": "apply_annotation_changeset",
         "method": "applyAnnotationChangeset",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "archive_annotation_research",
+      "version": "1.0.0",
+      "description": "Archive a completed external Deep Gene Research task as a verified, genome-scoped JSON attachment for an exact CDS target.",
+      "category": "annotation",
+      "subcategory": "autonomous_curation",
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Target locus_tag, gene name, protein_id, or feature identifier resolved against the loaded genome."
+          },
+          "chromosome": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": ["taskId", "correlationId", "identifier"]
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_v2",
+        "priority": "high",
+        "tags": ["annotation", "research", "dgr", "archive", "attachment"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/archive_annotation_research.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "archiveAnnotationResearch"
+      },
+      "priority": 1,
+      "keywords": [],
+      "sample_usages": [],
+      "builtin": {
+        "name": "archive_annotation_research",
+        "method": "archiveAnnotationResearch",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -2070,6 +2134,11 @@
             "minimum": 1,
             "maximum": 20,
             "default": 5
+          },
+          "forceRefresh": {
+            "type": "boolean",
+            "default": false,
+            "description": "Bypass the DGR semantic result cache while preserving request idempotency."
           },
           "idempotencyKey": {
             "type": "string",
@@ -22200,6 +22269,70 @@
         "source": "builtin_tools_map"
       }
     },
+    "archive_annotation_research": {
+      "name": "archive_annotation_research",
+      "version": "1.0.0",
+      "description": "Archive a completed external Deep Gene Research task as a verified, genome-scoped JSON attachment for an exact CDS target.",
+      "category": "annotation",
+      "subcategory": "autonomous_curation",
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Target locus_tag, gene name, protein_id, or feature identifier resolved against the loaded genome."
+          },
+          "chromosome": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": ["taskId", "correlationId", "identifier"]
+      },
+      "metadata": {
+        "added_in": "autonomous_annotation_v2",
+        "priority": "high",
+        "tags": ["annotation", "research", "dgr", "archive", "attachment"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/archive_annotation_research.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "archiveAnnotationResearch"
+      },
+      "priority": 1,
+      "keywords": [],
+      "sample_usages": [],
+      "builtin": {
+        "name": "archive_annotation_research",
+        "method": "archiveAnnotationResearch",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "batch_create_annotations": {
       "name": "batch_create_annotations",
       "version": "1.0.0",
@@ -24021,6 +24154,11 @@
             "minimum": 1,
             "maximum": 20,
             "default": 5
+          },
+          "forceRefresh": {
+            "type": "boolean",
+            "default": false,
+            "description": "Bypass the DGR semantic result cache while preserving request idempotency."
           },
           "idempotencyKey": {
             "type": "string",
@@ -44874,6 +45012,16 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "archive_annotation_research",
+      "method": "archiveAnnotationResearch",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "get_annotation_research_workflow",
       "method": "getAnnotationResearchWorkflow",
       "category": "annotation",
@@ -46579,6 +46727,16 @@
     "start_annotation_research": {
       "name": "start_annotation_research",
       "method": "startAnnotationResearch",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "archive_annotation_research": {
+      "name": "archive_annotation_research",
+      "method": "archiveAnnotationResearch",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,

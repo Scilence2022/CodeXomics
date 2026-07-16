@@ -366,6 +366,7 @@ class StandardClaudeMCPServer extends EventEmitter {
       ],
       'annotation:research': [
         'start_annotation_research',
+        'archive_annotation_research',
         'get_annotation_research_workflow',
         'cancel_annotation_research',
       ],

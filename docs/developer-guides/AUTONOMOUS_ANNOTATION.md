@@ -14,8 +14,8 @@ CodeXomics **agent mode** is a natural-language gateway to the ChatBox and inten
 ## Lifecycle
 
 1. `resolve_annotation_target` returns an exact feature reference, assembly and feature hashes, and the current annotation revision.
-2. `start_annotation_research` starts an idempotent DGR task bound to that target. A client calling DGR directly passes the same target to `deep-gene-research`.
-3. `get_annotation_research_workflow` polls the durable task. A caller with `annotation:propose` materializes evidence-backed output as a reviewable `codexomics.annotation-change-set.v2`; a research-only caller receives and durably records completion without losing the proposal, then a later propose-capable caller can materialize it. Direct DGR clients can poll `get-task-status` with `resultMode: "annotation"` and pass `result.annotationProposal` to `create_annotation_changeset`.
+2. `start_annotation_research` starts an idempotent DGR task bound to that target and to a bounded snapshot of its current scientific qualifiers. A client calling DGR directly must derive and pass the same `currentAnnotation` snapshot from the `annotation.qualifiers` returned by `resolve_annotation_target`.
+3. `get_annotation_research_workflow` polls the durable task. On first completion, the Electron main process separately fetches `resultMode: "full"`, verifies the task, correlation, proposal, and exact CDS target, and stores a content-addressed JSON artifact under the CodeXomics application-data directory. Only bounded attachment metadata is written to the genome sidecar. A caller with `annotation:propose` materializes evidence-backed output as a reviewable `codexomics.annotation-change-set.v2`; a research-only caller durably records completion without losing the proposal, then a later propose-capable caller can materialize it. Direct DGR clients poll `get-task-status` with `resultMode: "annotation"`, call CodeXomics `archive_annotation_research` with the exact task, correlation, and resolved CDS identifier, and then pass `result.annotationProposal` plus `researchRun: taskId` to `create_annotation_changeset`.
 4. A curator reviews the generated diff and calls either `request_annotation_approval` or `reject_annotation_changeset`. Rejection records the reason and revokes any issued approval capability.
 5. `apply_annotation_changeset` commits only if the approval capability, immutable ChangeSet hash, assembly identity, and target feature hash still match. An unrelated feature commit may advance the global revision and is safely rebased; a change to the proposed feature makes the ChangeSet stale.
 6. `rollback_annotation_changeset` creates a new reviewed inverse ChangeSet. Rollback is never a hidden mutation.
@@ -37,6 +37,11 @@ Always resolve the target after the intended genome and primary annotations are 
 - A DGR proposal can only modify the conservative qualifier allowlist. It cannot change coordinates, strand, feature type, translation, or sequence.
 - Every proposed qualifier value must be linked to supporting evidence. A result with no safe evidence-backed claims remains `draft_requires_evidence`; it is not converted into a ChangeSet.
 - A DGR proposal without an exact CodeXomics target is `draft_requires_target` and cannot be committed.
+- Annotation-refinement research is restricted to resolved `CDS` features with a stable locus tag or protein identifier. A symbol-only or non-CDS target is rejected before CodeXomics contacts DGR.
+- Literature-derived curation facts must use `target_literature`, exactly one non-mutating PubMed evidence record, an exact PMID/DOI identifier match, and a SHA-256-verified abstract span. GeneID-linked contextual papers may appear in the archived bibliography but cannot become facts or annotation operations.
+- A completed full report must be archived and registered successfully before its proposal can become a ChangeSet. The report is capped at 16 MiB, stored with mode `0600`, and opened only after SHA-256 verification in a dedicated, local-only, paged JSON viewer.
+- For research started directly through the DGR MCP server, pass the exact resolved CDS `target` and its bounded `currentAnnotation` snapshot to DGR, then call `archive_annotation_research` with the task ID, correlation ID, and resolved CDS identifier before `create_annotation_changeset`. CodeXomics re-derives the live snapshot and the main process rejects an omitted or mismatched DGR snapshot before storing the report. It also verifies the full task target, every citation-bound PubMed span, and the exact proposal hash; `researchRun` must then name that archived task.
+- A DGR proposal may include `curationNote` plus an `addQualifier(note)` operation. CodeXomics accepts it only when the note text hash matches, every segment exactly reproduces its bound authoritative fact or authenticated PubMed abstract finding, all PMID metadata matches, and the aggregate note claim references the same supporting evidence. The existing CDS note is preserved; the evidence summary is added as a separate qualifier value after curator approval.
 - Each ChangeSet binds its target, base revision, operations, evidence manifest, creator, idempotency request, and immutable hash.
 - The ChangeSet creator cannot approve the same autonomous proposal. Approval requires either a different authenticated MCP curator or the trusted local confirmation UI.
 - The approval token is a short-lived capability, returned when approval is issued and stored only as a secure hash. It is bound to one ChangeSet hash. If it expires or is lost, request approval again; reissuing it revokes the previous capability.
@@ -55,6 +60,8 @@ cd /ABSOLUTE/PATH/TO/deep-gene-research
 export ACCESS_PASSWORD='replace-with-at-least-16-random-characters'
 export MCP_TASK_STORAGE_FILE='/durable/path/deep-gene-research-tasks.json'
 export DGR_WORKER_COUNT=1
+# Optional: raises the documented NCBI E-utilities request allowance.
+export NCBI_API_KEY='your-ncbi-api-key'
 pnpm dev
 ```
 
@@ -157,12 +164,16 @@ resolve_annotation_target
 
 # Direct DGR orchestration
 CodeXomics: resolve_annotation_target
-  -> DGR: deep-gene-research(target, idempotencyKey)
+  -> derive bounded currentAnnotation from the returned annotation.qualifiers
+  -> DGR: deep-gene-research(target, currentAnnotation, idempotencyKey, correlationId)
   -> DGR: get-task-status(taskId, resultMode="annotation")
-  -> CodeXomics: create_annotation_changeset(annotationProposal)
+  -> CodeXomics: archive_annotation_research(taskId, correlationId, identifier)
+  -> CodeXomics: create_annotation_changeset(annotationProposal, researchRun=taskId)
   -> inspect ChangeSet preview and evidence
   -> curator approval and apply
 ```
+
+The CodeXomics-managed sequence archives and attaches the completed report automatically. A task sent directly to DGR is not associated with a CodeXomics workflow until the explicit `archive_annotation_research` call verifies and registers it; after that call, the same report appears in the resolved CDS feature's **Resources** tab and can support a ChangeSet.
 
 Reuse the same idempotency key only for the same semantic request. Reusing it with different research parameters or a different annotation proposal is rejected.
 
@@ -193,6 +204,7 @@ ChatBox may choose the research intent, but it does not free-form the target bin
 - CodeXomics associates the DGR `taskId` with one genome target in `annotationResearchRuns`. Polling a task from another genome is rejected.
 - The default research idempotency key hashes the full workspace/feature target and normalized intent. Explicit keys are checked against that same complete binding before a duplicate can be returned.
 - The first completed annotation proposal is stored as a bounded snapshot with its integrity hash. A later `annotation:propose` caller materializes that exact snapshot even if a subsequent DGR status response omits it.
+- The full DGR task result is not copied into the renderer or sidecar. CodeXomics stores it in `gene_attachments/dgr/` under the application-data directory and records a hash-bound attachment in the associated gene's **Resources** tab. Reopening the attachment uses the dedicated JSON viewer; a missing registration is recovered idempotently on a later completed-task poll while DGR still retains the task.
 - A legacy v2 annotation ledger without an integrity-version marker is upgraded only after its original raw-JSON SHA-256 ChangeSet, approval, receipt, index, and live feature chain can be proven. Legacy plaintext approval capabilities are revoked before the migrated ledger is saved, and the save completes before any overlay is replayed. Weak legacy FNV records or ambiguous feature states require manual reconciliation.
 - CodeXomics restores committed annotation overlays from the genome sidecar only after validating the ledger, ChangeSet and receipt hashes, target chain, and source feature state.
 

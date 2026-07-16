@@ -23,6 +23,13 @@ async function legacyRawHash(value) {
     .join('');
 }
 
+async function sha256Text(value) {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 function legacyScalar(value) {
   return Array.isArray(value) ? value[0] || '' : value || '';
 }
@@ -384,6 +391,32 @@ describe('AnnotationChangeSetService', () => {
         __executionContext: agentContext,
       })
     ).rejects.toThrow('maximum of 100 operations');
+  });
+
+  it('rejects all-no-op qualifier proposals and prunes no-ops from mixed ChangeSets', async () => {
+    annotation.qualifiers.go_terms = ['GO:0003674'];
+    annotation.qualifiers.db_xref = 'GeneID:123';
+    await expect(
+      annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        operations: [{ op: 'addQualifier', field: 'go_terms', value: 'GO:0003674' }],
+        evidence: ['PMID:12345678'],
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('no effective annotation changes');
+
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [
+        { op: 'addQualifier', field: 'go_terms', value: 'GO:0003674' },
+        { op: 'addDbxref', field: 'db_xref', value: 'GeneID:456' },
+      ],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+    expect(created.changeSet.operations).toEqual([
+      expect.objectContaining({ op: 'addDbxref', field: 'db_xref', value: 'GeneID:456' }),
+    ]);
   });
 
   it('bounds durable ledger growth and outstanding proposals per authenticated principal', async () => {
@@ -1218,8 +1251,110 @@ describe('AnnotationChangeSetService', () => {
     }
   });
 
+  it('validates a citation-rich DGR curation note against its exact research facts', async () => {
+    const statement = 'The Escherichia coli lysC riboswitch regulates gene expression through translation initiation.';
+    const segmentText = `${statement} (PMID:38253429).`;
+    const researchSummary = {
+      schema: 'dgr.curation-summary.v1',
+      headline: 'lysC has an evidence-backed regulatory function.',
+      facts: [
+        {
+          id: 'fact_1',
+          category: 'regulation',
+          field: 'literature_finding',
+          value: statement,
+          statement,
+          evidenceIds: ['evidence_1'],
+          confidence: null,
+          directness: 'exact_target',
+          evidenceLevel: 'target_literature',
+          sourceDatabases: ['pubmed'],
+          citation: {
+            type: 'pmid',
+            id: '38253429',
+            label: 'PMID:38253429',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/38253429/',
+            title: 'Exact lysC study',
+          },
+        },
+      ],
+      literature: [],
+      limitations: [],
+    };
+    const evidenceRecords = [{ id: 'evidence_1', supporting: true }];
+    const claims = [
+      {
+        id: 'claim_1',
+        field: 'note',
+        value: segmentText,
+        evidenceIds: ['evidence_1'],
+        confidence: 0.8,
+      },
+    ];
+    const operations = [
+      {
+        op: 'addQualifier',
+        field: 'note',
+        value: segmentText,
+        claimIds: ['claim_1'],
+      },
+    ];
+    const note = {
+      schema: 'dgr.curation-note.v1',
+      text: segmentText,
+      textSha256: await sha256Text(segmentText),
+      segments: [
+        {
+          category: 'regulation',
+          text: segmentText,
+          factIds: ['fact_1'],
+          evidenceIds: ['evidence_1'],
+          citations: [
+            {
+              type: 'pmid',
+              id: '38253429',
+              label: 'PMID:38253429',
+              url: 'https://pubmed.ncbi.nlm.nih.gov/38253429/',
+            },
+          ],
+        },
+      ],
+      factIds: ['fact_1'],
+      evidenceIds: ['evidence_1'],
+      coverage: {
+        availableFactCount: 1,
+        includedFactCount: 1,
+        includedCategories: ['regulation'],
+        omittedFactIds: [],
+      },
+    };
+
+    await expect(
+      annotationService.changeSetService._validateCurationNote(
+        note,
+        researchSummary,
+        evidenceRecords,
+        claims,
+        operations
+      )
+    ).resolves.toEqual(note);
+
+    note.segments[0].text = 'Invented uncited regulation statement. (PMID:38253429).';
+    await expect(
+      annotationService.changeSetService._validateCurationNote(
+        note,
+        researchSummary,
+        evidenceRecords,
+        claims,
+        operations
+      )
+    ).rejects.toThrow('exact citation-bound research fact');
+  });
+
   it('validates and preserves versioned claims and evidence while retaining proposal metadata operations', async () => {
     const resolved = await annotationService.resolveAnnotationTarget({ identifier: 'b0001' });
+    const literatureExcerpt = 'The Escherichia coli thrL target controls transcriptional attenuation.';
+    const literatureExcerptSha256 = await sha256Text(literatureExcerpt);
     const proposal = {
       schema: 'codexomics.annotation-change-set.v2',
       status: 'ready_for_validation',
@@ -1232,11 +1367,42 @@ describe('AnnotationChangeSetService', () => {
         sourceRecords: [
           {
             id: 'evidence_1',
-            label: 'PMID:123',
+            label: 'PMID:123456',
+            sourceId: '123456',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/123456/',
+            database: 'pubmed',
             sourceHash: 'a'.repeat(64),
             retrievedAt: '2026-01-01T00:00:00.000Z',
             type: 'pmid',
             supporting: true,
+          },
+          {
+            id: 'evidence_2',
+            label: 'PMID:123456',
+            sourceId: '123456',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/123456/',
+            database: 'pubmed',
+            identifiers: [{ scheme: 'pmid', value: '123456' }],
+            sourceBinding: {
+              schema: 'dgr.evidence-source-binding.v1',
+              sourceCollection: 'sources',
+              selector: {
+                database: 'pubmed',
+                identifier: { scheme: 'pmid', value: '123456' },
+              },
+              content: {
+                relativeJsonPointer: '/structuredData/literatureReferences/0/abstract',
+                canonicalization: 'dgr.pubmed-abstract.v1',
+                sha256: literatureExcerptSha256,
+                hashEncoding: 'utf8',
+                length: literatureExcerpt.length,
+                lengthEncoding: 'utf16_code_units',
+              },
+            },
+            sourceHash: 'b'.repeat(64),
+            retrievedAt: '2026-01-01T00:00:00.000Z',
+            type: 'pmid',
+            supporting: false,
           },
         ],
       },
@@ -1255,11 +1421,99 @@ describe('AnnotationChangeSetService', () => {
       reportUrl: 'https://example.test/report',
       detailsUrl: 'https://example.test/details',
       generatedAt: '2026-01-01T00:00:00.000Z',
+      researchSummary: {
+        schema: 'dgr.curation-summary.v1',
+        headline: 'thrL has an evidence-backed regulatory function.',
+        facts: [
+          {
+            id: 'fact_1',
+            category: 'function',
+            field: 'molecular_function',
+            value: 'attenuation control',
+            statement: 'molecular function: attenuation control',
+            evidenceIds: ['evidence_1'],
+            confidence: 0.8,
+            directness: 'exact_target',
+            evidenceLevel: 'authoritative_database',
+            sourceDatabases: ['pubmed'],
+          },
+          {
+            id: 'fact_2',
+            category: 'regulation',
+            field: 'literature_finding',
+            value: literatureExcerpt,
+            statement: literatureExcerpt,
+            evidenceIds: ['evidence_2'],
+            confidence: null,
+            directness: 'exact_target',
+            evidenceLevel: 'target_literature',
+            sourceDatabases: ['pubmed'],
+            citation: {
+              type: 'pmid',
+              id: '123456',
+              label: 'PMID:123456',
+              url: 'https://pubmed.ncbi.nlm.nih.gov/123456/',
+              title: 'Exact-target study',
+            },
+            literatureBasis: {
+              kind: 'pubmed_abstract_span',
+              evidenceId: 'evidence_2',
+              pmid: '123456',
+              excerpt: literatureExcerpt,
+              excerptSha256: literatureExcerptSha256,
+              hashEncoding: 'utf8',
+              excerptStart: 0,
+              excerptEnd: literatureExcerpt.length,
+              abstractSha256: literatureExcerptSha256,
+              abstractLength: literatureExcerpt.length,
+              canonicalization: 'dgr.pubmed-abstract.v1',
+              offsetEncoding: 'utf16_code_units',
+            },
+          },
+        ],
+        literature: [
+          {
+            title: 'Exact-target study',
+            pmid: '123456',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/123456/',
+            relevance: 'high',
+            relevanceReason: 'Exact target and organism are present.',
+            evidenceIds: ['evidence_2'],
+          },
+        ],
+        limitations: [],
+      },
+    };
+    const proposalSha256 = await annotationService.changeSetService._hash(proposal);
+    const archivedAttachment = {
+      id: 'dgr:dgr-task-123',
+      kind: 'dgr-research-report',
+      taskId: 'dgr-task-123',
+      sha256: 'd'.repeat(64),
+      proposalSha256,
+      citationValidation: {
+        schema: 'codexomics.dgr-citation-validation.v1',
+        verified: true,
+        factCount: 1,
+      },
+      currentAnnotationValidation: {
+        schema: 'codexomics.dgr-current-annotation-validation.v1',
+        verified: true,
+        required: true,
+        snapshotSha256: 'c'.repeat(64),
+        targetFeatureHash: resolved.target.featureHash,
+      },
+      target: resolved.target,
+    };
+    annotationService.app.geneAttachmentsManager = {
+      ready: Promise.resolve(),
+      getAttachmentsForGene: () => [archivedAttachment],
     };
 
     const created = await annotationService.createAnnotationChangeset({
       identifier: 'b0001',
       annotationProposal: proposal,
+      researchRun: 'dgr-task-123',
       idempotencyKey: 'v2-proposal',
       __executionContext: agentContext,
     });
@@ -1273,13 +1527,108 @@ describe('AnnotationChangeSetService', () => {
       confidence: 0.8,
       reportUrl: 'https://example.test/report',
       detailsUrl: 'https://example.test/details',
+      researchSummary: proposal.researchSummary,
+      archivedDgrReport: expect.objectContaining({
+        taskId: 'dgr-task-123',
+        proposalSha256,
+        currentAnnotationValidation: expect.objectContaining({
+          verified: true,
+          snapshotSha256: 'c'.repeat(64),
+        }),
+      }),
     });
+
+    const verifiedCurrentAnnotation = archivedAttachment.currentAnnotationValidation;
+    delete archivedAttachment.currentAnnotationValidation;
+    await expect(
+      annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
+        idempotencyKey: 'missing-current-annotation-receipt-v2-proposal',
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('has not passed current-annotation snapshot validation');
+    archivedAttachment.currentAnnotationValidation = {
+      ...verifiedCurrentAnnotation,
+      targetFeatureHash: 'different-feature-hash',
+    };
+    await expect(
+      annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
+        idempotencyKey: 'mismatched-current-annotation-receipt-v2-proposal',
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('has not passed current-annotation snapshot validation');
+    archivedAttachment.currentAnnotationValidation = verifiedCurrentAnnotation;
+
+    annotationService.app.geneAttachmentsManager.getAttachmentsForGene = () => [];
+    await expect(
+      annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
+        idempotencyKey: 'missing-archive-v2-proposal',
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('Archive DGR research task');
+    annotationService.app.geneAttachmentsManager.getAttachmentsForGene = () => [archivedAttachment];
+    archivedAttachment.proposalSha256 = 'e'.repeat(64);
+    await expect(
+      annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
+        idempotencyKey: 'mismatched-archive-v2-proposal',
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('does not contain this exact annotation proposal');
+    archivedAttachment.proposalSha256 = proposalSha256;
+
+    proposal.researchSummary.literature[0].pmid = '654321';
+    await expect(
+      annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
+        idempotencyKey: 'citation-mismatch-v2-proposal',
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('does not match its PubMed URL');
+    proposal.researchSummary.literature[0].pmid = '123456';
+
+    proposal.researchSummary.facts[1].literatureBasis.excerptSha256 = 'c'.repeat(64);
+    await expect(
+      annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
+        idempotencyKey: 'bad-literature-span-v2-proposal',
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('excerpt hash does not match');
+    proposal.researchSummary.facts[1].literatureBasis.excerptSha256 = literatureExcerptSha256;
+
+    proposal.researchSummary.facts[1].citation.url = 'https://pubmed.ncbi.nlm.nih.gov/654321/';
+    await expect(
+      annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
+        idempotencyKey: 'bad-literature-url-v2-proposal',
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('citation does not match');
+    proposal.researchSummary.facts[1].citation.url = 'https://pubmed.ncbi.nlm.nih.gov/123456/';
 
     proposal.operations[0].claimIds = ['missing_claim'];
     await expect(
       annotationService.createAnnotationChangeset({
         identifier: 'b0001',
         annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
         idempotencyKey: 'invalid-v2-proposal',
         __executionContext: agentContext,
       })
@@ -1291,6 +1640,7 @@ describe('AnnotationChangeSetService', () => {
       annotationService.createAnnotationChangeset({
         identifier: 'b0001',
         annotationProposal: proposal,
+        researchRun: 'dgr-task-123',
         idempotencyKey: 'non-supporting-v2-proposal',
         __executionContext: agentContext,
       })

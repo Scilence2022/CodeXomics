@@ -487,10 +487,16 @@ Keyboard: Cmd/Ctrl+Shift+D
 
 **Features:**
 
-- Comprehensive gene databases
-- Literature mining
-- Functional annotation
-- Pathway integration
+- Exact CDS target binding through locus/protein identifiers
+- Identity-aware literature retrieval and citation filtering
+- Separate direct abstract-supported findings from exact GeneID-linked contextual bibliography; contextual papers are never used as annotation claims
+- Citation-bound proposal facts with exact PMID/DOI links and verified abstract spans
+- Concise, evidence-linked annotation proposals for curator review
+- Automatic storage of the completed full JSON report in the associated gene's **Resources → Attachments** list
+- A built-in searchable JSON viewer that expands and pages large reports on demand
+- Safe import of externally started DGR tasks through `archive_annotation_research`; CodeXomics re-derives and verifies the exact current CDS qualifier snapshot together with the task, citations, proposal, and target binding before allowing a ChangeSet
+
+Research does not edit the genome directly. When direct literature evidence is available, the proposal includes a compact, citation-rich CDS Note that summarizes the report's key functional, pathway, regulatory, structural, and phenotype findings. Each literature sentence is bound to a verified PubMed abstract span. Review the proposed qualifier diff and its citations before approving a ChangeSet. The full report attachment is integrity checked each time it is opened.
 
 ### CHOPCHOP 🔬
 

@@ -32,7 +32,7 @@ class GeneAttachmentsManager {
       storageLocation: 'project', // 'project' or 'app'
     };
 
-    this.init();
+    this.ready = this.init();
   }
 
   getPathModule() {
@@ -40,18 +40,32 @@ class GeneAttachmentsManager {
       return window.path;
     }
     return {
-      basename: filePath => String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '',
+      basename: filePath =>
+        String(filePath || '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .filter(Boolean)
+          .pop() || '',
       dirname: filePath => {
         const normalized = String(filePath || '').replace(/\\/g, '/');
         const index = normalized.lastIndexOf('/');
         return index <= 0 ? (index === 0 ? '/' : '.') : normalized.slice(0, index);
       },
       extname: filePath => {
-        const base = String(filePath || '').replace(/\\/g, '/').split('/').filter(Boolean).pop() || '';
+        const base =
+          String(filePath || '')
+            .replace(/\\/g, '/')
+            .split('/')
+            .filter(Boolean)
+            .pop() || '';
         const index = base.lastIndexOf('.');
         return index > 0 ? base.slice(index) : '';
       },
-      join: (...parts) => parts.filter(part => part !== undefined && part !== null && part !== '').join('/').replace(/\/+/g, '/'),
+      join: (...parts) =>
+        parts
+          .filter(part => part !== undefined && part !== null && part !== '')
+          .join('/')
+          .replace(/\/+/g, '/'),
     };
   }
 
@@ -99,9 +113,13 @@ class GeneAttachmentsManager {
     if (!gene) return null;
 
     // Use locus_tag, gene name, or create a position-based ID
-    const locusTag = gene.qualifiers?.locus_tag;
-    const geneName = gene.qualifiers?.gene;
-    const product = gene.qualifiers?.product;
+    const firstValue = value => {
+      const candidate = Array.isArray(value) ? value[0] : value;
+      return candidate === undefined || candidate === null ? '' : String(candidate).trim();
+    };
+    const locusTag = firstValue(gene.qualifiers?.locus_tag);
+    const geneName = firstValue(gene.qualifiers?.gene);
+    const product = firstValue(gene.qualifiers?.product);
 
     if (locusTag) return locusTag;
     if (geneName) return geneName;
@@ -116,9 +134,10 @@ class GeneAttachmentsManager {
   async getAttachmentsStoragePath(geneId = null) {
     try {
       // Try to get project-based storage first
-      if (this.genomeBrowser.currentFilePath) {
+      const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+      if (currentFilePath) {
         const path = this.getPathModule();
-        const projectDir = path.dirname(this.genomeBrowser.currentFilePath);
+        const projectDir = path.dirname(currentFilePath);
         let attachmentsDir = path.join(projectDir, 'attachments');
 
         if (geneId) {
@@ -162,7 +181,175 @@ class GeneAttachmentsManager {
    */
   getAttachmentsForGene(geneId) {
     if (!geneId) return [];
-    return this.attachments.get(geneId) || [];
+    return [...(this.attachments.get(geneId) || [])].sort((left, right) => {
+      const leftGenerated = left.kind === 'dgr-research-report' ? 1 : 0;
+      const rightGenerated = right.kind === 'dgr-research-report' ? 1 : 0;
+      if (leftGenerated !== rightGenerated) return rightGenerated - leftGenerated;
+      if (leftGenerated) return String(right.addedDate || '').localeCompare(String(left.addedDate || ''));
+      return 0;
+    });
+  }
+
+  /**
+   * Register a main-process archived DGR report as a durable gene attachment.
+   * The report itself remains outside the renderer; only bounded metadata is
+   * kept in the genome sidecar.
+   */
+  async registerGeneratedAttachment(geneId, descriptor, target) {
+    await this.ready;
+    const normalizedGeneId = String(geneId || '').trim();
+    if (!normalizedGeneId) throw new Error('A gene identifier is required for a generated report attachment');
+    if (String(target?.featureType || '').toUpperCase() !== 'CDS') {
+      throw new Error('Deep Gene Research reports can only be attached to CDS features');
+    }
+    const genomePath =
+      this.genomeBrowser?.loadedGenomePath ||
+      this.genomeBrowser?.fileManager?.currentFile?.path ||
+      this.genomeBrowser?.currentFile?.path ||
+      null;
+    if (!genomePath || !this.sidecarManager) {
+      throw new Error(
+        'Save the genome before archiving a generated DGR report so its attachment remains genome-scoped'
+      );
+    }
+    const taskId = String(descriptor?.taskId || '').trim();
+    const sha256 = String(descriptor?.sha256 || '').toLowerCase();
+    const proposalSha256 = String(descriptor?.proposalSha256 || '').toLowerCase();
+    const storedPath = String(descriptor?.storedPath || '');
+    const filename = String(descriptor?.fileName || '');
+    const size = Number(descriptor?.size);
+    if (!taskId || taskId.length > 256 || !/^[A-Za-z0-9._:-]+$/.test(taskId)) {
+      throw new Error('Generated DGR attachment has an invalid task identifier');
+    }
+    if (!/^[a-f0-9]{64}$/.test(sha256) || !storedPath || !filename.toLowerCase().endsWith('.json')) {
+      throw new Error('Generated DGR attachment is missing verified JSON artifact metadata');
+    }
+    if (
+      !/^[a-f0-9]{64}$/.test(proposalSha256) ||
+      descriptor?.citationValidation?.schema !== 'codexomics.dgr-citation-validation.v1' ||
+      descriptor.citationValidation.verified !== true
+    ) {
+      throw new Error('Generated DGR attachment is missing verified proposal and citation provenance');
+    }
+    const currentAnnotationValidation = descriptor?.currentAnnotationValidation;
+    const validVerifiedSnapshot =
+      currentAnnotationValidation?.verified === true &&
+      /^[a-f0-9]{64}$/.test(String(currentAnnotationValidation.snapshotSha256 || '').toLowerCase());
+    const validLegacySnapshot =
+      currentAnnotationValidation?.verified === false &&
+      currentAnnotationValidation?.required === false &&
+      currentAnnotationValidation?.snapshotSha256 === null;
+    if (
+      currentAnnotationValidation?.schema !== 'codexomics.dgr-current-annotation-validation.v1' ||
+      (!validVerifiedSnapshot && !validLegacySnapshot) ||
+      String(currentAnnotationValidation.targetFeatureHash || '') !== String(target.featureHash || '')
+    ) {
+      throw new Error('Generated DGR attachment is missing a valid current-annotation verification receipt');
+    }
+    if (!Number.isSafeInteger(size) || size < 1 || size > 16 * 1024 * 1024) {
+      throw new Error('Generated DGR attachment exceeds the supported report size');
+    }
+    const attachmentId = `dgr:${taskId}`;
+    for (const [existingGeneId, existingAttachments] of this.attachments) {
+      const existing = existingAttachments.find(item => item.id === attachmentId);
+      if (!existing) continue;
+      if (
+        existingGeneId !== normalizedGeneId ||
+        existing.sha256 !== sha256 ||
+        existing.storedPath !== storedPath ||
+        JSON.stringify(existing.currentAnnotationValidation) !== JSON.stringify(currentAnnotationValidation)
+      ) {
+        throw new Error(`DGR task ${taskId} is already attached with different target or content`);
+      }
+      return existing;
+    }
+
+    const summaryCount = value =>
+      Number.isSafeInteger(Number(value)) ? Math.max(0, Math.min(100000, Number(value))) : 0;
+    const summary =
+      descriptor.summary && typeof descriptor.summary === 'object'
+        ? {
+            title: String(descriptor.summary.title || '').slice(0, 512),
+            sourceCount: summaryCount(descriptor.summary.sourceCount),
+            confidence: Number.isFinite(Number(descriptor.summary.confidence))
+              ? Math.max(0, Math.min(1, Number(descriptor.summary.confidence)))
+              : null,
+            literatureCount: summaryCount(descriptor.summary.literatureCount),
+            directLiteratureCount: summaryCount(descriptor.summary.directLiteratureCount),
+            geneLinkedContextCount: summaryCount(descriptor.summary.geneLinkedContextCount),
+            citationBoundFactCount: summaryCount(descriptor.summary.citationBoundFactCount),
+          }
+        : {
+            title: '',
+            sourceCount: 0,
+            confidence: null,
+            literatureCount: 0,
+            directLiteratureCount: 0,
+            geneLinkedContextCount: 0,
+            citationBoundFactCount: 0,
+          };
+    const attachment = {
+      id: attachmentId,
+      kind: 'dgr-research-report',
+      geneId: normalizedGeneId,
+      filename,
+      storedFilename: filename,
+      storedPath,
+      originalPath: null,
+      extension: 'json',
+      mimeType: 'application/json',
+      size,
+      sizeFormatted: this.formatFileSize(size),
+      addedDate: descriptor.storedAt || new Date().toISOString(),
+      description: summary.title || 'Full Deep Gene Research report',
+      taskId,
+      sha256,
+      proposalSha256,
+      source: 'deep-gene-research',
+      integrity: 'sha256',
+      citationValidation: {
+        schema: 'codexomics.dgr-citation-validation.v1',
+        verified: true,
+        factCount: summaryCount(descriptor.citationValidation.factCount),
+        pubMedSourceCount: summaryCount(descriptor.citationValidation.pubMedSourceCount),
+        verifiedPubMedSourceCount: summaryCount(descriptor.citationValidation.verifiedPubMedSourceCount),
+      },
+      currentAnnotationValidation: {
+        schema: 'codexomics.dgr-current-annotation-validation.v1',
+        verified: currentAnnotationValidation.verified === true,
+        required: currentAnnotationValidation.required === true,
+        snapshotSha256: validVerifiedSnapshot ? String(currentAnnotationValidation.snapshotSha256).toLowerCase() : null,
+        targetFeatureHash: String(currentAnnotationValidation.targetFeatureHash),
+      },
+      target: {
+        workspaceId: target.workspaceId,
+        genomeId: target.genomeId,
+        annotationRevision: target.annotationRevision,
+        featureId: target.featureId,
+        featureHash: target.featureHash,
+        chromosome: target.chromosome,
+        locusTag: target.locusTag || null,
+        geneSymbol: target.geneSymbol || null,
+        proteinId: target.proteinId || null,
+        featureType: 'CDS',
+      },
+      summary,
+    };
+    if (!this.attachments.has(normalizedGeneId)) this.attachments.set(normalizedGeneId, []);
+    const geneAttachments = this.attachments.get(normalizedGeneId);
+    geneAttachments.push(attachment);
+    try {
+      await this.saveAttachmentMetadata({ durable: true, throwOnError: true });
+    } catch (error) {
+      geneAttachments.pop();
+      if (geneAttachments.length === 0) this.attachments.delete(normalizedGeneId);
+      throw error;
+    }
+    const selectedGeneId = this.getGeneIdentifier(this.genomeBrowser?.selectedGene?.gene);
+    if (selectedGeneId === normalizedGeneId && typeof this.genomeBrowser?.refreshGeneAttachments === 'function') {
+      this.genomeBrowser.refreshGeneAttachments(normalizedGeneId);
+    }
+    return attachment;
   }
 
   /**
@@ -382,6 +569,21 @@ class GeneAttachmentsManager {
         return false;
       }
 
+      if (attachment.kind === 'dgr-research-report') {
+        if (!window.electronAPI?.openDgrJsonViewer) {
+          throw new Error('The secure DGR JSON viewer is unavailable');
+        }
+        const viewerResult = await window.electronAPI.openDgrJsonViewer({
+          storedPath: attachment.storedPath,
+          expectedSha256: attachment.sha256,
+          title: attachment.summary?.title || attachment.filename,
+        });
+        if (!viewerResult?.success) {
+          throw new Error(viewerResult?.error || `Failed to open DGR report: ${attachment.filename}`);
+        }
+        return true;
+      }
+
       // For markdown files, optionally use the built-in markdown viewer
       if (attachment.extension === 'md' && window.electronAPI && window.electronAPI.openMarkdownViewer) {
         try {
@@ -428,7 +630,7 @@ class GeneAttachmentsManager {
   /**
    * Save attachment metadata to sidecar file (or fallback to ConfigManager)
    */
-  async saveAttachmentMetadata() {
+  async saveAttachmentMetadata(options = {}) {
     try {
       // Convert Map to plain object for storage
       const metadata = {};
@@ -439,15 +641,24 @@ class GeneAttachmentsManager {
       // Use sidecar manager if available and file is loaded
       const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
       if (this.sidecarManager && currentFilePath) {
-        await this.sidecarManager.set(currentFilePath, 'geneAttachments', metadata);
+        if (options.durable && typeof this.sidecarManager.setAndForceSave === 'function') {
+          await this.sidecarManager.setAndForceSave(currentFilePath, 'geneAttachments', metadata);
+        } else {
+          await this.sidecarManager.set(currentFilePath, 'geneAttachments', metadata);
+        }
         console.log('💾 Saved attachment metadata to sidecar file');
       } else if (this.configManager) {
         // Fallback to ConfigManager (legacy behavior)
         this.configManager.set('geneAttachments.metadata', metadata);
         console.log('💾 Saved attachment metadata to config (fallback)');
+      } else {
+        throw new Error('No attachment metadata store is available');
       }
+      return true;
     } catch (error) {
       console.error('Error saving attachment metadata:', error);
+      if (options.throwOnError) throw error;
+      return false;
     }
   }
 
@@ -502,62 +713,82 @@ class GeneAttachmentsManager {
    * Reload attachments for the current file (call when file changes)
    */
   async reloadForFile() {
-    await this.loadAttachmentMetadata();
+    this.ready = this.loadAttachmentMetadata();
+    await this.ready;
   }
 
-  /**
-   * Render attachments section HTML for a gene
-   */
-  renderAttachmentsSection(geneId) {
+  escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  escapeInlineJsString(value) {
+    return String(value ?? '')
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .replace(/</g, '\\x3c')
+      .replace(/>/g, '\\x3e');
+  }
+
+  renderAttachmentsList(geneId) {
     const attachments = this.getAttachmentsForGene(geneId);
-
-    let html = `
-            <div class="gene-attachments">
-                <div class="gene-attachments-header">
-                    <h4><i class="fas fa-paperclip"></i> Attachments</h4>
-                    <button class="btn btn-sm gene-add-attachment-btn" 
-                            onclick="window.genomeBrowser.addGeneAttachment()"
-                            title="Add attachment files">
-                        <i class="fas fa-plus"></i> Add
-                    </button>
-                </div>
-                <div class="gene-attachments-list" id="geneAttachmentsList">
-        `;
-
     if (attachments.length === 0) {
-      html += `
+      return `
                 <div class="gene-attachments-empty">
                     <i class="fas fa-file-upload"></i>
                     <p>No attachments yet</p>
                     <small>Click "Add" to attach files to this gene</small>
                 </div>
             `;
-    } else {
-      for (const attachment of attachments) {
+    }
+    const escapedGeneId = this.escapeInlineJsString(geneId);
+    return attachments
+      .map(attachment => {
         const icon = this.getFileIcon(attachment.extension);
-        const escapedId = attachment.id.replace(/'/g, "\\'");
-        const escapedGeneId = geneId.replace(/'/g, "\\'");
-
-        html += `
-                    <div class="gene-attachment-item" data-attachment-id="${attachment.id}">
+        const escapedId = this.escapeInlineJsString(attachment.id);
+        const filename = this.escapeHtml(attachment.filename);
+        const reportBadge =
+          attachment.kind === 'dgr-research-report'
+            ? '<span class="gene-attachment-generated-badge">DGR full report</span>'
+            : '';
+        const sourceCount =
+          attachment.kind === 'dgr-research-report' && attachment.summary?.sourceCount
+            ? ` • ${this.escapeHtml(attachment.summary.sourceCount)} sources`
+            : '';
+        const literatureCount =
+          attachment.kind === 'dgr-research-report' && attachment.summary?.literatureCount
+            ? ` • ${this.escapeHtml(attachment.summary.literatureCount)} papers`
+            : '';
+        const findingCount =
+          attachment.kind === 'dgr-research-report' && attachment.summary?.citationBoundFactCount
+            ? ` • ${this.escapeHtml(attachment.summary.citationBoundFactCount)} cited findings`
+            : '';
+        return `
+                    <div class="gene-attachment-item" data-attachment-id="${this.escapeHtml(attachment.id)}">
                         <div class="gene-attachment-icon">
                             <i class="${icon}"></i>
                         </div>
                         <div class="gene-attachment-info">
-                            <div class="gene-attachment-name" title="${attachment.filename}">
-                                ${attachment.filename}
+                            <div class="gene-attachment-name" title="${filename}">
+                                ${filename} ${reportBadge}
                             </div>
                             <div class="gene-attachment-meta">
-                                ${attachment.sizeFormatted} • ${this.formatDate(attachment.addedDate)}
+                                ${this.escapeHtml(attachment.sizeFormatted)} • ${this.escapeHtml(this.formatDate(attachment.addedDate))}${sourceCount}${literatureCount}${findingCount}
                             </div>
                         </div>
                         <div class="gene-attachment-actions">
-                            <button class="gene-attachment-btn open-btn" 
+                            <button class="gene-attachment-btn open-btn"
                                     onclick="window.genomeBrowser.openGeneAttachment('${escapedId}', '${escapedGeneId}')"
                                     title="Open file">
                                 <i class="fas fa-external-link-alt"></i>
                             </button>
-                            <button class="gene-attachment-btn delete-btn" 
+                            <button class="gene-attachment-btn delete-btn"
                                     onclick="window.genomeBrowser.removeGeneAttachment('${escapedId}', '${escapedGeneId}')"
                                     title="Remove attachment">
                                 <i class="fas fa-trash"></i>
@@ -565,8 +796,27 @@ class GeneAttachmentsManager {
                         </div>
                     </div>
                 `;
-      }
-    }
+      })
+      .join('');
+  }
+
+  /**
+   * Render attachments section HTML for a gene
+   */
+  renderAttachmentsSection(geneId) {
+    let html = `
+            <div class="gene-attachments">
+                <div class="gene-attachments-header">
+                    <h4><i class="fas fa-paperclip"></i> Attachments</h4>
+                    <button class="btn btn-sm gene-add-attachment-btn"
+                            onclick="window.genomeBrowser.addGeneAttachment()"
+                            title="Add attachment files">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+                <div class="gene-attachments-list" id="geneAttachmentsList">
+        `;
+    html += this.renderAttachmentsList(geneId);
 
     html += `
                 </div>

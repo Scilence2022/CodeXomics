@@ -34,6 +34,7 @@ const {
 } = require('./security-utils');
 const { ToolRegistryService } = require('./tool-registry-service');
 const { proxyDgrMcpRequest } = require('./dgr-mcp-proxy');
+const { archiveDgrTaskResult, readDgrArtifact } = require('./dgr-artifact-storage');
 const {
   assertSidecarContentSize,
   assertSidecarValueSize,
@@ -3212,6 +3213,65 @@ function registerIpcHandlers(deps) {
       throw new Error('Deep Gene Research MCP requests are limited to registered genome windows');
     }
     return proxyDgrMcpRequest(request);
+  });
+
+  ipcMain.handle('archive-dgr-task-result', async (event, options = {}) => {
+    if (!isRegisteredGenomeSender(event)) {
+      throw new Error('DGR report archival is limited to registered genome windows');
+    }
+    const artifact = await archiveDgrTaskResult({
+      userDataPath: app.getPath('userData'),
+      taskId: options.taskId,
+      target: options.target,
+      correlationId: options.correlationId,
+      currentAnnotation: options.currentAnnotation,
+      requireCurrentAnnotation: options.requireCurrentAnnotation === true,
+      proxyRequest: proxyDgrMcpRequest,
+    });
+    return { success: true, artifact };
+  });
+
+  ipcMain.handle('open-dgr-json-viewer', async (event, options = {}) => {
+    if (!isRegisteredGenomeSender(event)) {
+      throw new Error('The DGR JSON viewer is limited to registered genome windows');
+    }
+    const artifact = await readDgrArtifact({
+      userDataPath: app.getPath('userData'),
+      storedPath: options.storedPath,
+      expectedSha256: options.expectedSha256,
+    });
+    const requestedTitle = typeof options.title === 'string' ? options.title.trim().slice(0, 256) : '';
+    const viewerWindow = new BrowserWindow({
+      width: 1100,
+      height: 780,
+      minWidth: 720,
+      minHeight: 500,
+      title: requestedTitle || `${artifact.fileName} - DGR JSON Viewer`,
+      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      resizable: true,
+      minimizable: true,
+      maximizable: true,
+      show: false,
+      webPreferences: createSecureWebPreferences({
+        preload: path.join(__dirname, '..', 'json-viewer-preload.js'),
+      }),
+    });
+    viewerWindow.setMenuBarVisibility(false);
+    viewerWindow.webContents.once('did-finish-load', () => {
+      if (!viewerWindow.isDestroyed()) {
+        viewerWindow.webContents.send('json-viewer:data', {
+          content: artifact.content,
+          fileName: artifact.fileName,
+          sha256: artifact.sha256,
+          size: artifact.size,
+          title: requestedTitle || artifact.fileName,
+        });
+        artifact.content = '';
+      }
+    });
+    viewerWindow.once('ready-to-show', () => viewerWindow.show());
+    await viewerWindow.loadFile(path.join(__dirname, '..', 'json-viewer.html'));
+    return { success: true };
   });
 
   ipcMain.handle('mcp-server-start', async () => {

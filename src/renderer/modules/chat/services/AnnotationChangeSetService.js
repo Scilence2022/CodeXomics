@@ -1005,8 +1005,9 @@ class AnnotationChangeSetService {
     for (const chain of chains.values()) {
       chain.sort((left, right) => left.commitReceipt.revision - right.commitReceipt.revision);
       const found = await this._findLegacyFeatureByRef(chain[0].target, workspace);
-      if (!found)
+      if (!found) {
         throw new Error(`Legacy committed target ${chain[0].target.featureId} is missing from the loaded genome`);
+      }
       const states = await this._reconstructLegacyFeatureChain(chain, found);
       chain.forEach((changeSet, index) => {
         provenStates.set(changeSet.id, {
@@ -1644,6 +1645,38 @@ class AnnotationChangeSetService {
       .filter(Boolean);
   }
 
+  _currentAnnotationSnapshot(annotation) {
+    const qualifiers = this._isPlainRecord(annotation?.qualifiers) ? annotation.qualifiers : {};
+    const boundedValues = (names, maximumItems, maximumLength) => {
+      const seen = new Set();
+      const result = [];
+      for (const name of names) {
+        const raw = qualifiers[name];
+        const values = Array.isArray(raw) ? raw : raw === undefined || raw === null ? [] : [raw];
+        for (const value of values) {
+          if (typeof value !== 'string') continue;
+          const normalized = value.trim();
+          const key = normalized.toLowerCase();
+          if (!normalized || normalized.length > maximumLength || seen.has(key)) continue;
+          seen.add(key);
+          result.push(normalized);
+          if (result.length >= maximumItems) return result;
+        }
+      }
+      return result;
+    };
+    const product = boundedValues(['product'], 1, 1024)[0];
+    return {
+      ...(product ? { product } : {}),
+      note: boundedValues(['note', 'Note'], 32, 8192),
+      EC_number: boundedValues(['EC_number', 'ec_number'], 64, 64),
+      go_terms: boundedValues(['go_terms', 'GO_terms', 'goTerms'], 256, 64),
+      ko: boundedValues(['ko', 'KO'], 128, 128),
+      pathway: boundedValues(['pathway', 'Pathway'], 256, 256),
+      db_xref: boundedValues(['db_xref', 'dbXref'], 512, 512),
+    };
+  }
+
   _matchingFeatures(identifier, chromosome, workspace) {
     this._assertWorkspace(workspace);
     if (!workspace.annotations) return [];
@@ -1739,7 +1772,412 @@ class AnnotationChangeSetService {
     }
   }
 
-  _validateV2Proposal(proposal, target) {
+  async _validateResearchSummary(summary, evidenceRecords) {
+    if (summary === undefined || summary === null) return null;
+    if (!this._isPlainRecord(summary) || summary.schema !== 'dgr.curation-summary.v1') {
+      throw new Error('annotationProposal.researchSummary must use dgr.curation-summary.v1');
+    }
+    this._assertBoundedScalar(summary.headline, 'Research summary headline', this.inputLimits.textLength, {
+      required: true,
+    });
+    if (!Array.isArray(summary.facts) || summary.facts.length > 100) {
+      throw new Error('Research summary facts must be an array of at most 100 facts');
+    }
+    if (!Array.isArray(summary.literature) || summary.literature.length > 30) {
+      throw new Error('Research summary literature must be an array of at most 30 records');
+    }
+    if (!Array.isArray(summary.limitations) || summary.limitations.length > 30) {
+      throw new Error('Research summary limitations must be an array of at most 30 statements');
+    }
+    this._assertBoundedValues(summary.limitations, 'Research summary limitations', 30, this.inputLimits.textLength);
+    const recordsById = new Map(evidenceRecords.map(record => [String(record.id), record]));
+    const isExactPubMedUrl = (value, pmid) => {
+      try {
+        const url = new URL(String(value));
+        return (
+          url.protocol === 'https:' &&
+          url.hostname.toLowerCase() === 'pubmed.ncbi.nlm.nih.gov' &&
+          url.pathname.split('/').filter(Boolean)[0] === String(pmid)
+        );
+      } catch {
+        return false;
+      }
+    };
+    const categories = new Set([
+      'identity',
+      'function',
+      'protein',
+      'structure',
+      'pathway',
+      'localization',
+      'regulation',
+      'expression',
+      'interaction',
+      'phenotype',
+      'evolution',
+      'cross_reference',
+    ]);
+    const factIds = new Set();
+    for (const fact of summary.facts) {
+      if (!this._isPlainRecord(fact) || !fact.id || factIds.has(fact.id)) {
+        throw new Error(`Research summary contains an invalid or duplicate fact id: ${fact?.id || 'missing'}`);
+      }
+      factIds.add(fact.id);
+      this._assertBoundedScalar(fact.id, 'Research fact id', this.inputLimits.identifierLength, { required: true });
+      this._assertBoundedScalar(fact.field, `Research fact ${fact.id} field`, this.inputLimits.identifierLength, {
+        required: true,
+      });
+      this._assertBoundedScalar(fact.statement, `Research fact ${fact.id} statement`, this.inputLimits.textLength, {
+        required: true,
+      });
+      this._assertBoundedValues(
+        fact.value,
+        `Research fact ${fact.id} value`,
+        this.inputLimits.valuesPerField,
+        this.inputLimits.textLength
+      );
+      if (!categories.has(fact.category) || fact.directness !== 'exact_target') {
+        throw new Error(`Research fact ${fact.id} is not classified as exact-target evidence`);
+      }
+      if (!['reviewed_database', 'authoritative_database', 'target_literature'].includes(fact.evidenceLevel)) {
+        throw new Error(`Research fact ${fact.id} has an unsupported evidence level`);
+      }
+      if (
+        !Array.isArray(fact.evidenceIds) ||
+        fact.evidenceIds.length === 0 ||
+        fact.evidenceIds.length > this.inputLimits.referencesPerOperation ||
+        fact.evidenceIds.some(id => !recordsById.has(String(id)))
+      ) {
+        throw new Error(`Research fact ${fact.id} requires evidence present in the proposal manifest`);
+      }
+      this._assertBoundedValues(
+        fact.sourceDatabases,
+        `Research fact ${fact.id} source databases`,
+        20,
+        this.inputLimits.identifierLength
+      );
+      if (
+        fact.confidence !== null &&
+        fact.confidence !== undefined &&
+        (!Number.isFinite(Number(fact.confidence)) || Number(fact.confidence) < 0 || Number(fact.confidence) > 1)
+      ) {
+        throw new Error(`Research fact ${fact.id} confidence must be between 0 and 1`);
+      }
+      if (fact.evidenceLevel === 'target_literature') {
+        if (fact.confidence !== null || fact.evidenceIds.length !== 1) {
+          throw new Error(
+            `Research literature fact ${fact.id} must use null confidence and exactly one evidence record`
+          );
+        }
+        const basis = fact.literatureBasis;
+        const citation = fact.citation;
+        if (
+          !this._isPlainRecord(basis) ||
+          basis.kind !== 'pubmed_abstract_span' ||
+          !this._isPlainRecord(citation) ||
+          citation.type !== 'pmid'
+        ) {
+          throw new Error(`Research literature fact ${fact.id} requires a PubMed abstract basis and citation`);
+        }
+        this._assertBoundedScalar(
+          basis.pmid,
+          `Research literature fact ${fact.id} PMID`,
+          this.inputLimits.identifierLength,
+          {
+            required: true,
+          }
+        );
+        this._assertBoundedScalar(
+          basis.doi,
+          `Research literature fact ${fact.id} DOI`,
+          this.inputLimits.referenceLength
+        );
+        this._assertBoundedScalar(
+          basis.excerpt,
+          `Research literature fact ${fact.id} excerpt`,
+          this.inputLimits.textLength,
+          {
+            required: true,
+          }
+        );
+        this._assertBoundedScalar(
+          basis.excerptSha256,
+          `Research literature fact ${fact.id} excerpt hash`,
+          this.inputLimits.identifierLength,
+          { required: true }
+        );
+        for (const field of ['evidenceId', 'abstractSha256', 'hashEncoding', 'canonicalization', 'offsetEncoding']) {
+          this._assertBoundedScalar(
+            basis[field],
+            `Research literature fact ${fact.id} ${field}`,
+            this.inputLimits.identifierLength,
+            { required: true }
+          );
+        }
+        if (
+          !/^\d{6,10}$/.test(String(basis.pmid)) ||
+          !/^[a-f0-9]{64}$/i.test(String(basis.excerptSha256)) ||
+          !/^[a-f0-9]{64}$/i.test(String(basis.abstractSha256)) ||
+          basis.hashEncoding !== 'utf8' ||
+          basis.canonicalization !== 'dgr.pubmed-abstract.v1' ||
+          basis.offsetEncoding !== 'utf16_code_units' ||
+          !Number.isSafeInteger(basis.excerptStart) ||
+          !Number.isSafeInteger(basis.excerptEnd) ||
+          !Number.isSafeInteger(basis.abstractLength) ||
+          basis.excerptStart < 0 ||
+          basis.excerptEnd <= basis.excerptStart ||
+          basis.excerptEnd > basis.abstractLength ||
+          basis.excerptEnd - basis.excerptStart !== String(basis.excerpt).length
+        ) {
+          throw new Error(`Research literature fact ${fact.id} has an invalid PMID or excerpt hash`);
+        }
+        if (basis.doi && !/^10\.\d{4,9}\/.+/i.test(String(basis.doi))) {
+          throw new Error(`Research literature fact ${fact.id} has an invalid DOI`);
+        }
+        if (String(fact.statement) !== String(basis.excerpt)) {
+          throw new Error(
+            `Research literature fact ${fact.id} statement must equal its authenticated abstract excerpt`
+          );
+        }
+        const computedExcerptHash = await this._hashSerialized(String(basis.excerpt), { requireSha256: true });
+        if (computedExcerptHash !== String(basis.excerptSha256).toLowerCase()) {
+          throw new Error(`Research literature fact ${fact.id} excerpt hash does not match its excerpt`);
+        }
+        for (const field of ['id', 'label', 'url', 'title']) {
+          this._assertBoundedScalar(
+            citation[field],
+            `Research literature fact ${fact.id} citation ${field}`,
+            this.inputLimits.referenceLength,
+            { required: true }
+          );
+        }
+        this._assertBoundedScalar(
+          citation.doi,
+          `Research literature fact ${fact.id} citation DOI`,
+          this.inputLimits.referenceLength
+        );
+        if (
+          String(citation.id) !== String(basis.pmid) ||
+          String(citation.label) !== `PMID:${basis.pmid}` ||
+          !isExactPubMedUrl(citation.url, basis.pmid) ||
+          (basis.doi && String(citation.doi || '').toLowerCase() !== String(basis.doi).toLowerCase())
+        ) {
+          throw new Error(`Research literature fact ${fact.id} citation does not match its PubMed basis`);
+        }
+        const record = recordsById.get(String(fact.evidenceIds[0]));
+        const identifiers = Array.isArray(record?.identifiers) ? record.identifiers : [];
+        const hasIdentifier = (scheme, value) =>
+          identifiers.some(
+            identifier =>
+              identifier?.scheme === scheme && String(identifier.value).toLowerCase() === String(value).toLowerCase()
+          );
+        const binding = record?.sourceBinding;
+        if (
+          String(basis.evidenceId) !== String(record?.id || '') ||
+          binding?.schema !== 'dgr.evidence-source-binding.v1' ||
+          binding.sourceCollection !== 'sources' ||
+          binding.selector?.database !== 'pubmed' ||
+          binding.selector?.identifier?.scheme !== 'pmid' ||
+          String(binding.selector?.identifier?.value || '') !== String(basis.pmid) ||
+          binding.content?.relativeJsonPointer !== '/structuredData/literatureReferences/0/abstract' ||
+          binding.content?.canonicalization !== 'dgr.pubmed-abstract.v1' ||
+          binding.content?.hashEncoding !== 'utf8' ||
+          binding.content?.lengthEncoding !== 'utf16_code_units' ||
+          String(binding.content?.sha256 || '').toLowerCase() !== String(basis.abstractSha256).toLowerCase() ||
+          binding.content?.length !== basis.abstractLength ||
+          typeof record?.supporting !== 'boolean' ||
+          record?.type !== 'pmid' ||
+          String(record?.database || '').toLowerCase() !== 'pubmed' ||
+          !hasIdentifier('pmid', basis.pmid) ||
+          (basis.doi && !hasIdentifier('doi', basis.doi))
+        ) {
+          throw new Error(
+            `Research literature fact ${fact.id} is not exactly bound to its non-mutating PubMed evidence`
+          );
+        }
+      }
+    }
+    for (const literature of summary.literature) {
+      if (!this._isPlainRecord(literature)) throw new Error('Research literature entries must be JSON objects');
+      this._assertBoundedScalar(literature.title, 'Research literature title', this.inputLimits.referenceLength, {
+        required: true,
+      });
+      this._assertBoundedScalar(literature.url, 'Research literature URL', this.inputLimits.referenceLength, {
+        required: true,
+      });
+      this._assertBoundedScalar(
+        literature.relevanceReason,
+        'Research literature relevance reason',
+        this.inputLimits.textLength,
+        { required: true }
+      );
+      this._assertBoundedScalar(literature.pmid, 'Research literature PMID', this.inputLimits.identifierLength);
+      this._assertBoundedScalar(literature.doi, 'Research literature DOI', this.inputLimits.referenceLength);
+      if (!/^https?:\/\//i.test(String(literature.url)) || !['high', 'medium'].includes(literature.relevance)) {
+        throw new Error('Research literature entries require an HTTP(S) URL and a supported relevance level');
+      }
+      if (literature.pmid && !/^\d{6,10}$/.test(String(literature.pmid))) {
+        throw new Error(`Research literature entry has an invalid PMID: ${literature.pmid}`);
+      }
+      if (literature.pmid && !isExactPubMedUrl(literature.url, literature.pmid)) {
+        throw new Error(`Research literature PMID ${literature.pmid} does not match its PubMed URL`);
+      }
+      if (literature.doi && !/^10\.\d{4,9}\/.+/i.test(String(literature.doi))) {
+        throw new Error(`Research literature entry has an invalid DOI: ${literature.doi}`);
+      }
+      if (
+        !Array.isArray(literature.evidenceIds) ||
+        literature.evidenceIds.length === 0 ||
+        literature.evidenceIds.some(id => !recordsById.has(String(id)))
+      ) {
+        throw new Error('Research literature entry requires evidence present in the proposal manifest');
+      }
+      const referencedRecords = literature.evidenceIds.map(id => recordsById.get(String(id)));
+      const hasExactIdentifier = (scheme, value) =>
+        referencedRecords.some(
+          record =>
+            Array.isArray(record?.identifiers) &&
+            record.identifiers.some(
+              identifier =>
+                identifier?.scheme === scheme && String(identifier.value).toLowerCase() === String(value).toLowerCase()
+            )
+        );
+      if (literature.pmid && !hasExactIdentifier('pmid', literature.pmid)) {
+        throw new Error(`Research literature PMID ${literature.pmid} is not bound to its evidence record`);
+      }
+      if (literature.doi && !hasExactIdentifier('doi', literature.doi)) {
+        throw new Error(`Research literature DOI ${literature.doi} is not bound to its evidence record`);
+      }
+    }
+    this._assertSerializableSize(summary, 'Annotation research summary');
+    return this._clone(summary);
+  }
+
+  _curationNoteSentence(statement) {
+    const compact = String(statement || '')
+      .trim()
+      .replace(/\s+/g, ' ');
+    if (!compact) return '';
+    const sentence = compact.charAt(0).toUpperCase() + compact.slice(1);
+    return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
+  }
+
+  async _validateCurationNote(note, researchSummary, evidenceRecords, claims, operations) {
+    if (note === undefined || note === null) return null;
+    if (!researchSummary || !this._isPlainRecord(note) || note.schema !== 'dgr.curation-note.v1') {
+      throw new Error('annotationProposal.curationNote requires dgr.curation-note.v1 and a validated research summary');
+    }
+    const text = this._assertBoundedScalar(note.text, 'Curation note text', this.inputLimits.textLength, {
+      required: true,
+    });
+    if (!/^[a-f0-9]{64}$/i.test(String(note.textSha256 || ''))) {
+      throw new Error('Curation note requires a SHA-256 text hash');
+    }
+    const computedHash = await this._hashSerialized(text, { requireSha256: true });
+    if (computedHash !== String(note.textSha256).toLowerCase()) {
+      throw new Error('Curation note text hash does not match its text');
+    }
+    if (!Array.isArray(note.segments) || note.segments.length === 0 || note.segments.length > 30) {
+      throw new Error('Curation note requires between 1 and 30 evidence-bound segments');
+    }
+    const factsById = new Map(researchSummary.facts.map(fact => [String(fact.id), fact]));
+    const recordsById = new Map(evidenceRecords.map(record => [String(record.id), record]));
+    const includedFactIds = [];
+    const includedEvidenceIds = [];
+    let literatureSegmentCount = 0;
+    for (const segment of note.segments) {
+      if (!this._isPlainRecord(segment)) throw new Error('Curation note segments must be JSON objects');
+      this._assertBoundedScalar(segment.text, 'Curation note segment text', this.inputLimits.textLength, {
+        required: true,
+      });
+      this._assertBoundedScalar(segment.category, 'Curation note segment category', this.inputLimits.identifierLength, {
+        required: true,
+      });
+      if (!Array.isArray(segment.factIds) || segment.factIds.length !== 1) {
+        throw new Error('Every curation note segment must bind exactly one research fact');
+      }
+      const fact = factsById.get(String(segment.factIds[0]));
+      if (!fact || segment.category !== fact.category) {
+        throw new Error('Curation note segment does not match its research fact category');
+      }
+      if (
+        !Array.isArray(segment.evidenceIds) ||
+        !this._canonicalValuesEqual(segment.evidenceIds, fact.evidenceIds) ||
+        segment.evidenceIds.some(id => !recordsById.has(String(id)))
+      ) {
+        throw new Error('Curation note segment is not bound to its research fact evidence');
+      }
+      if (!Array.isArray(segment.citations) || segment.citations.length > 10) {
+        throw new Error('Curation note segment citations must be a bounded array');
+      }
+      const expectedSentence = this._curationNoteSentence(fact.statement);
+      if (fact.evidenceLevel === 'target_literature') {
+        const citation = fact.citation;
+        if (
+          !citation ||
+          segment.citations.length !== 1 ||
+          segment.citations[0]?.type !== 'pmid' ||
+          String(segment.citations[0]?.id || '') !== String(citation.id) ||
+          String(segment.citations[0]?.label || '') !== String(citation.label) ||
+          String(segment.citations[0]?.url || '') !== String(citation.url) ||
+          segment.text !== `${expectedSentence} (PMID:${citation.id}).`
+        ) {
+          throw new Error('Curation note literature segment is not the exact citation-bound research fact');
+        }
+        literatureSegmentCount += 1;
+      } else if (segment.citations.length !== 0 || segment.text !== expectedSentence) {
+        throw new Error('Curation note authoritative segment is not the exact database fact');
+      }
+      includedFactIds.push(String(fact.id));
+      includedEvidenceIds.push(...segment.evidenceIds.map(String));
+    }
+    if (literatureSegmentCount === 0 || note.segments.map(segment => segment.text).join(' ') !== text) {
+      throw new Error('Curation note must include citation-bound literature and exactly match its segments');
+    }
+    const dedupe = values => Array.from(new Set(values));
+    const factIds = dedupe(includedFactIds);
+    const evidenceIds = dedupe(includedEvidenceIds);
+    if (
+      !this._canonicalValuesEqual(note.factIds, factIds) ||
+      !this._canonicalValuesEqual(note.evidenceIds, evidenceIds)
+    ) {
+      throw new Error('Curation note aggregate bindings do not match its segments');
+    }
+    if (!this._isPlainRecord(note.coverage)) throw new Error('Curation note requires coverage metadata');
+    const omittedFactIds = Array.isArray(note.coverage.omittedFactIds)
+      ? note.coverage.omittedFactIds.map(String)
+      : null;
+    if (
+      !omittedFactIds ||
+      omittedFactIds.some(id => !factsById.has(id) || factIds.includes(id)) ||
+      note.coverage.includedFactCount !== factIds.length ||
+      note.coverage.availableFactCount !== factIds.length + omittedFactIds.length ||
+      !Array.isArray(note.coverage.includedCategories) ||
+      !this._canonicalValuesEqual(
+        note.coverage.includedCategories,
+        dedupe(note.segments.map(segment => segment.category))
+      )
+    ) {
+      throw new Error('Curation note coverage metadata is inconsistent');
+    }
+    const noteClaims = claims.filter(claim => claim.field === 'note' && String(claim.value) === text);
+    const noteOperations = operations.filter(
+      operation => operation.op === 'addQualifier' && operation.field === 'note' && String(operation.value) === text
+    );
+    if (
+      noteClaims.length !== 1 ||
+      noteOperations.length !== 1 ||
+      !this._canonicalValuesEqual(noteClaims[0].evidenceIds, evidenceIds) ||
+      !this._canonicalValuesEqual(noteOperations[0].claimIds, [noteClaims[0].id]) ||
+      evidenceIds.some(id => recordsById.get(id)?.supporting !== true)
+    ) {
+      throw new Error('Curation note is not bound to one evidence-supported note operation');
+    }
+    this._assertSerializableSize(note, 'Curation note');
+    return this._clone(note);
+  }
+
+  async _validateV2Proposal(proposal, target) {
     if (!proposal.schema) return null;
     if (proposal.schema !== 'codexomics.annotation-change-set.v2') {
       throw new Error(`Unsupported annotation proposal schema: ${proposal.schema}`);
@@ -1791,6 +2229,52 @@ class AnnotationChangeSetService {
           `Evidence record ${record.id} ${field}`,
           this.inputLimits.referenceLength
         );
+      }
+      if (record.identifiers !== undefined) {
+        if (!Array.isArray(record.identifiers) || record.identifiers.length === 0 || record.identifiers.length > 10) {
+          throw new Error(`Evidence record ${record.id} identifiers must contain between 1 and 10 entries`);
+        }
+        const identifierKeys = new Set();
+        for (const identifier of record.identifiers) {
+          if (!this._isPlainRecord(identifier) || !['pmid', 'doi'].includes(identifier.scheme)) {
+            throw new Error(`Evidence record ${record.id} contains an unsupported structured identifier`);
+          }
+          this._assertBoundedScalar(
+            identifier.value,
+            `Evidence record ${record.id} identifier`,
+            this.inputLimits.referenceLength,
+            { required: true }
+          );
+          if (identifier.scheme === 'pmid' && !/^\d{6,10}$/.test(String(identifier.value))) {
+            throw new Error(`Evidence record ${record.id} contains an invalid PMID identifier`);
+          }
+          if (identifier.scheme === 'doi' && !/^10\.\d{4,9}\/.+/i.test(String(identifier.value))) {
+            throw new Error(`Evidence record ${record.id} contains an invalid DOI identifier`);
+          }
+          const key = `${identifier.scheme}:${String(identifier.value).toLowerCase()}`;
+          if (identifierKeys.has(key)) throw new Error(`Evidence record ${record.id} contains duplicate identifiers`);
+          identifierKeys.add(key);
+        }
+      }
+      if (record.sourceBinding !== undefined) {
+        const binding = record.sourceBinding;
+        if (
+          !this._isPlainRecord(binding) ||
+          binding.schema !== 'dgr.evidence-source-binding.v1' ||
+          binding.sourceCollection !== 'sources' ||
+          binding.selector?.database !== 'pubmed' ||
+          binding.selector?.identifier?.scheme !== 'pmid' ||
+          !/^\d{6,10}$/.test(String(binding.selector?.identifier?.value || '')) ||
+          binding.content?.relativeJsonPointer !== '/structuredData/literatureReferences/0/abstract' ||
+          binding.content?.canonicalization !== 'dgr.pubmed-abstract.v1' ||
+          !/^[a-f0-9]{64}$/i.test(String(binding.content?.sha256 || '')) ||
+          binding.content?.hashEncoding !== 'utf8' ||
+          !Number.isSafeInteger(binding.content?.length) ||
+          binding.content.length < 1 ||
+          binding.content?.lengthEncoding !== 'utf16_code_units'
+        ) {
+          throw new Error(`Evidence record ${record.id} has an invalid archived-source binding`);
+        }
       }
       if (!allowedEvidenceTypes.has(record.type)) throw new Error(`Unsupported evidence record type: ${record.type}`);
       if (!/^[a-f0-9]{64}$/i.test(record.sourceHash)) {
@@ -1884,6 +2368,14 @@ class AnnotationChangeSetService {
     if (referencedClaims.size !== claims.size) {
       throw new Error('Version 2 annotation proposal contains claims that are not bound to an operation');
     }
+    const researchSummary = await this._validateResearchSummary(proposal.researchSummary, manifest.sourceRecords);
+    const curationNote = await this._validateCurationNote(
+      proposal.curationNote,
+      researchSummary,
+      manifest.sourceRecords,
+      proposal.claims,
+      proposal.operations
+    );
     return {
       evidenceManifest: this._clone(manifest),
       claims: this._clone(proposal.claims),
@@ -1893,8 +2385,65 @@ class AnnotationChangeSetService {
         reportUrl: proposal.reportUrl || null,
         detailsUrl: proposal.detailsUrl || null,
         generatedAt: proposal.generatedAt || null,
+        researchSummary,
+        curationNote,
       },
       proposalBaseRevision,
+    };
+  }
+
+  async _requireArchivedDgrReport(proposal, target, researchRun) {
+    if (proposal?.researchSummary?.schema !== 'dgr.curation-summary.v1') return null;
+    const taskId = String(researchRun || '').trim();
+    if (!taskId || taskId.length > 256 || !/^[A-Za-z0-9._:-]+$/.test(taskId)) {
+      throw new Error('A DGR curation proposal requires its archived researchRun task ID');
+    }
+    const attachments = this.app?.geneAttachmentsManager;
+    if (attachments?.ready) await attachments.ready;
+    if (!attachments || typeof attachments.getAttachmentsForGene !== 'function') {
+      throw new Error('A DGR curation proposal requires the genome-scoped report attachment store');
+    }
+    const geneId = String(target.locusTag || target.geneSymbol || target.proteinId || target.featureId);
+    const attachment = attachments
+      .getAttachmentsForGene(geneId)
+      .find(item => item?.id === `dgr:${taskId}` && item?.kind === 'dgr-research-report');
+    if (!attachment) {
+      throw new Error(`Archive DGR research task ${taskId} as a gene report before creating its ChangeSet`);
+    }
+    for (const field of ['workspaceId', 'genomeId', 'annotationRevision', 'featureId', 'featureHash', 'chromosome']) {
+      if (String(attachment.target?.[field] ?? '') !== String(target[field] ?? '')) {
+        throw new Error(`Archived DGR report ${taskId} ${field} does not match the selected CDS target`);
+      }
+    }
+    if (
+      attachment.citationValidation?.schema !== 'codexomics.dgr-citation-validation.v1' ||
+      attachment.citationValidation.verified !== true
+    ) {
+      throw new Error(`Archived DGR report ${taskId} has not passed citation-to-abstract validation`);
+    }
+    const currentAnnotationValidation = attachment.currentAnnotationValidation;
+    if (
+      currentAnnotationValidation?.schema !== 'codexomics.dgr-current-annotation-validation.v1' ||
+      currentAnnotationValidation.verified !== true ||
+      !/^[a-f0-9]{64}$/i.test(String(currentAnnotationValidation.snapshotSha256 || '')) ||
+      String(currentAnnotationValidation.targetFeatureHash || '') !== String(target.featureHash || '')
+    ) {
+      throw new Error(`Archived DGR report ${taskId} has not passed current-annotation snapshot validation`);
+    }
+    const proposalHash = await this._hash(proposal);
+    if (
+      !/^[a-f0-9]{64}$/i.test(String(attachment.proposalSha256 || '')) ||
+      proposalHash !== attachment.proposalSha256
+    ) {
+      throw new Error(`Archived DGR report ${taskId} does not contain this exact annotation proposal`);
+    }
+    return {
+      attachmentId: attachment.id,
+      taskId,
+      sha256: attachment.sha256,
+      proposalSha256: attachment.proposalSha256,
+      citationValidation: this._clone(attachment.citationValidation),
+      currentAnnotationValidation: this._clone(currentAnnotationValidation),
     };
   }
 
@@ -2027,6 +2576,18 @@ class AnnotationChangeSetService {
     return { ...operation, field };
   }
 
+  _operationWouldChange(annotation, operation) {
+    const current = this._normaliseValues(annotation?.qualifiers?.[operation.field]);
+    if (operation.op === 'removeQualifier') return current.length > 0;
+    const incoming = this._normaliseValues(operation.value);
+    if (operation.op === 'replaceQualifier') {
+      if (current.length !== incoming.length) return true;
+      return current.some((value, index) => value.toLowerCase() !== incoming[index]?.toLowerCase());
+    }
+    const existing = new Set(current.map(value => value.toLowerCase()));
+    return incoming.some(value => !existing.has(value.toLowerCase()));
+  }
+
   _proposalToOperations(params) {
     const proposal = params.annotationProposal || params.proposal || {};
     if (proposal.schema === 'codexomics.annotation-change-set.v2') {
@@ -2152,6 +2713,7 @@ class AnnotationChangeSetService {
         id: found.annotation.id || null,
         qualifiers: this._clone(found.annotation.qualifiers || {}),
       },
+      currentAnnotation: this._currentAnnotationSnapshot(found.annotation),
     };
   }
 
@@ -2232,7 +2794,11 @@ class AnnotationChangeSetService {
     if (!found) throw new Error(`Target feature ${target.featureId} is no longer available`);
 
     const proposal = params.annotationProposal || params.proposal || {};
-    const proposalContract = this._validateV2Proposal(proposal, target);
+    const proposalContract = await this._validateV2Proposal(proposal, target);
+    const archivedDgrReport = proposalContract
+      ? await this._requireArchivedDgrReport(proposal, target, params.researchRun || params.researchRunId)
+      : null;
+    if (archivedDgrReport) proposalContract.proposalMetadata.archivedDgrReport = archivedDgrReport;
     if (proposal.target && !proposalContract) this._assertProposalTarget(proposal.target, target);
     if (params.baseRevision !== undefined && Number(params.baseRevision) !== ledger.revision) {
       const requestedRevision = Number(params.baseRevision);
@@ -2251,7 +2817,13 @@ class AnnotationChangeSetService {
     const rawOperations = this._proposalToOperations(params);
     if (rawOperations.length === 0) throw new Error('ChangeSet contains no supported annotation operations');
     this._validateOperationPayloads(rawOperations, 'resolved operations');
-    const operations = rawOperations.map(operation => this._validateOperation({ ...operation }, found.annotation));
+    const operations = rawOperations
+      .map(operation => this._validateOperation({ ...operation }, found.annotation))
+      .filter(operation => this._operationWouldChange(found.annotation, operation));
+    if (operations.length === 0) {
+      throw new Error('ChangeSet contains no effective annotation changes after existing qualifiers are considered');
+    }
+    const effectiveClaimIds = new Set(operations.flatMap(operation => operation.claimIds || []));
     const riskLevel = operations.some(
       operation =>
         operation.requiresHumanReview || operation.op === 'replaceQualifier' || operation.op === 'removeQualifier'
@@ -2296,7 +2868,7 @@ class AnnotationChangeSetService {
       target,
       evidence,
       evidenceManifest,
-      claims: proposalContract?.claims || [],
+      claims: proposalContract?.claims?.filter(claim => effectiveClaimIds.has(claim.id)) || [],
       proposalMetadata: proposalContract?.proposalMetadata || null,
       researchRun: params.researchRun || params.researchRunId || null,
       manifestHash,

@@ -142,6 +142,7 @@ const TOOL_NAMES = {
     ROLLBACK_ANNOTATION_CHANGESET: 'rollback_annotation_changeset',
     GET_ANNOTATION_AUDIT: 'get_annotation_audit',
     START_ANNOTATION_RESEARCH: 'start_annotation_research',
+    ARCHIVE_ANNOTATION_RESEARCH: 'archive_annotation_research',
     GET_ANNOTATION_RESEARCH_WORKFLOW: 'get_annotation_research_workflow',
     CANCEL_ANNOTATION_RESEARCH: 'cancel_annotation_research',
     SEARCH_ANNOTATIONS: 'search_annotations',
