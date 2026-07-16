@@ -64,6 +64,7 @@ class AnnotationReviewManager {
       }
     };
     bind('annotationReviewBtn', 'click', () => this.showReviewCenter());
+    bind('annotationReviewToolbarBtn', 'click', () => this.showReviewCenter());
     bind('annotationReviewRefreshBtn', 'click', () => this.refreshQueue());
     bind('annotationReviewFilter', 'change', () => this.refreshQueue());
     bind('annotationReviewRiskFilter', 'change', () => this.refreshQueue());

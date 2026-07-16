@@ -18,6 +18,14 @@
   display: none;
 }
 
+.annotation-review-launch-btn {
+  position: relative;
+}
+
+.annotation-review-launch-btn .annotation-review-badge {
+  margin-left: 4px;
+}
+
 .annotation-review-panel-btn {
   position: relative;
   display: inline-flex;

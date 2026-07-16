@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 const REVIEW_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/AnnotationReviewManager.js');
+const RENDERER_INDEX_PATH = path.join(process.cwd(), 'src/renderer/index.html');
 
 function loadManager(mockWindow) {
   const code = fs.readFileSync(REVIEW_MANAGER_PATH, 'utf8');
@@ -14,6 +15,7 @@ function loadManager(mockWindow) {
 function reviewDom() {
   document.body.innerHTML = `
     <div id="annotationReviewModal"></div>
+    <button id="annotationReviewToolbarBtn"></button>
     <input id="annotationReviewSearch" value="">
     <select id="annotationReviewFilter"><option value="active" selected>active</option></select>
     <select id="annotationReviewRiskFilter"><option value="" selected>all</option></select>
@@ -55,6 +57,24 @@ function summary(id, gene, hash) {
 describe('AnnotationReviewManager', () => {
   beforeEach(() => {
     reviewDom();
+  });
+
+  it('opens the review center from the global toolbar entry', () => {
+    const mockWindow = { confirm: vi.fn(), prompt: vi.fn(), alert: vi.fn() };
+    const Manager = loadManager(mockWindow);
+    const manager = new Manager({ configManager: null });
+    const showReviewCenter = vi.spyOn(manager, 'showReviewCenter').mockImplementation(() => {});
+
+    document.getElementById('annotationReviewToolbarBtn').click();
+
+    expect(showReviewCenter).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a labeled global Review entry in the renderer toolbar', () => {
+    const html = fs.readFileSync(RENDERER_INDEX_PATH, 'utf8');
+
+    expect(html).toContain('id="annotationReviewToolbarBtn"');
+    expect(html).toMatch(/id="annotationReviewToolbarBtn"[\s\S]*?<span>Review<\/span>/);
   });
 
   it('uses one explicit batch confirmation while issuing independent approvals and commits', async () => {
