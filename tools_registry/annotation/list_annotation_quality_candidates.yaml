@@ -1,0 +1,103 @@
+name: list_annotation_quality_candidates
+version: 1.0.0
+description: 'Rank gene-associated annotation features for curation using deterministic quality signals. Covers CDS, gene, mRNA, coding and non-coding RNA types, collapses co-located duplicate records, and prefers CDS at a shared locus.'
+category: annotation
+subcategory: annotation_quality
+keywords:
+  - find low quality annotations
+  - rank annotation candidates
+  - prioritize genes for curation
+  - hypothetical proteins
+  - incomplete annotations
+  - daily annotation candidates
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Optional chromosome or replicon filter.
+    featureTypes:
+      type: array
+      items:
+        type: string
+      maxItems: 32
+      description: Gene-associated feature types to include. Defaults to CDS, gene, mRNA, RNA feature types, and pseudogene.
+    maximumQualityScore:
+      type: number
+      minimum: 0
+      maximum: 100
+      default: 100
+      description: Return candidates whose quality score is at or below this value.
+    sortBy:
+      type: string
+      enum:
+        - quality
+        - coordinate
+      default: quality
+      description: Sort lowest-quality first or use deterministic genomic coordinate order.
+    limit:
+      type: number
+      minimum: 0
+      maximum: 100000
+      default: 100
+      description: Maximum results; use 0 for every matching candidate.
+    offset:
+      type: number
+      minimum: 0
+      default: 0
+      description: Number of ranked candidates to skip.
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support.
+      default: default
+  required: []
+returns:
+  type: object
+  properties:
+    success:
+      type: boolean
+    schema:
+      type: string
+    policyVersion:
+      type: string
+    selectionPolicy:
+      type: string
+    total:
+      type: number
+    count:
+      type: number
+    excludedAmbiguousLoci:
+      type: number
+    ambiguousLoci:
+      type: array
+      items:
+        type: object
+    candidates:
+      type: array
+      items:
+        type: object
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances:
+    - assess_annotation_quality
+    - start_annotation_research
+  alternatives:
+    - list_annotations
+    - search_annotations
+  prerequisites: []
+  follow_up:
+    - resolve_annotation_target
+    - start_annotation_research
+metadata:
+  added_in: 0.722.0
+  integration: annotation_quality
+  priority: high
+  tags:
+    - annotation
+    - quality
+    - prioritization
+    - read

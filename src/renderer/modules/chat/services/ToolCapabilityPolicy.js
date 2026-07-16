@@ -257,6 +257,8 @@ class ToolCapabilityPolicy {
           'get_annotation',
           'list_annotations',
           'search_annotations',
+          'assess_annotation_quality',
+          'list_annotation_quality_candidates',
           'get_operons',
           'list_highlights',
           'get_bookmarks',

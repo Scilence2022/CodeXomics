@@ -1,4 +1,47 @@
 // @ts-check
+
+const GENE_ANNOTATION_FEATURE_TYPES = Object.freeze([
+  'CDS',
+  'gene',
+  'mRNA',
+  'tRNA',
+  'rRNA',
+  'ncRNA',
+  'tmRNA',
+  'misc_RNA',
+  'precursor_RNA',
+  'miRNA',
+  'snRNA',
+  'snoRNA',
+  'antisense_RNA',
+  'guide_RNA',
+  'telomerase_RNA',
+  'RNase_P_RNA',
+  'RNase_MRP_RNA',
+  'pseudogene',
+]);
+
+const GENE_ANNOTATION_TYPE_PRIORITY = Object.freeze({
+  CDS: 100,
+  TRNA: 90,
+  RRNA: 90,
+  NCRNA: 90,
+  TMRNA: 90,
+  MISC_RNA: 90,
+  PRECURSOR_RNA: 90,
+  MIRNA: 90,
+  SNRNA: 90,
+  SNORNA: 90,
+  ANTISENSE_RNA: 90,
+  GUIDE_RNA: 90,
+  TELOMERASE_RNA: 90,
+  RNASE_P_RNA: 90,
+  RNASE_MRP_RNA: 90,
+  MRNA: 80,
+  PSEUDOGENE: 70,
+  GENE: 10,
+});
+
 /**
  * AnnotationService - Handles annotation-related operations extracted from ChatManager
  */
@@ -257,6 +300,367 @@ class AnnotationService {
       query,
       total: results.length,
       results,
+    };
+  }
+
+  _qualityFeatureType(value) {
+    return String(value || '')
+      .trim()
+      .toUpperCase();
+  }
+
+  _qualityValues(qualifiers, names) {
+    const result = [];
+    const seen = new Set();
+    for (const name of names) {
+      const raw = qualifiers?.[name];
+      const values = Array.isArray(raw) ? raw : raw === undefined || raw === null ? [] : [raw];
+      for (const value of values) {
+        const text = String(value || '').trim();
+        const key = text.toLowerCase();
+        if (!text || seen.has(key)) continue;
+        seen.add(key);
+        result.push(text);
+      }
+    }
+    return result;
+  }
+
+  _qualityPrimary(qualifiers, names) {
+    return this._qualityValues(qualifiers, names)[0] || null;
+  }
+
+  _qualityIdentities(annotation) {
+    const qualifiers = annotation?.qualifiers || {};
+    return this._qualityValues(qualifiers, [
+      'locus_tag',
+      'locusTag',
+      'protein_id',
+      'proteinId',
+      'gene',
+      'gene_name',
+      'Name',
+      'ID',
+      'gene_id',
+      'transcript_id',
+    ]).map(value => value.toLowerCase());
+  }
+
+  _qualityTypePriority(type) {
+    return GENE_ANNOTATION_TYPE_PRIORITY[this._qualityFeatureType(type)] || 0;
+  }
+
+  _isSupportedGeneAnnotationType(type) {
+    return this._qualityTypePriority(type) > 0;
+  }
+
+  _qualityBand(score) {
+    if (score < 30) return { qualityBand: 'critical', priority: 'critical' };
+    if (score < 50) return { qualityBand: 'low', priority: 'high' };
+    if (score < 75) return { qualityBand: 'medium', priority: 'medium' };
+    return { qualityBand: 'high', priority: 'low' };
+  }
+
+  _assessAnnotationObject(annotation, chromosome) {
+    const qualifiers = annotation?.qualifiers || {};
+    const featureType = String(annotation?.type || 'unknown');
+    const normalizedType = this._qualityFeatureType(featureType);
+    const product = this._qualityPrimary(qualifiers, ['product', 'Product']);
+    const locusTag = this._qualityPrimary(qualifiers, ['locus_tag', 'locusTag']);
+    const gene = this._qualityPrimary(qualifiers, ['gene', 'gene_name', 'Gene', 'Name']);
+    const proteinId = this._qualityPrimary(qualifiers, ['protein_id', 'proteinId']);
+    const notes = this._qualityValues(qualifiers, ['note', 'Note', 'function', 'Function']);
+    const dbXrefs = this._qualityValues(qualifiers, ['db_xref', 'dbXref', 'Dbxref']);
+    const translation = this._qualityPrimary(qualifiers, ['translation', 'Translation']);
+    const reasons = [];
+    const missingFields = new Set();
+    const recommendedResearchFocus = new Set();
+    let deduction = 0;
+    const addReason = (code, points, severity, message, fields, focus) => {
+      deduction += points;
+      for (const field of fields || []) missingFields.add(field);
+      for (const item of focus || []) recommendedResearchFocus.add(item);
+      reasons.push({ code, deduction: points, severity, message, fields: fields || [] });
+    };
+
+    const genericProduct =
+      /^(?:(?:conserved\s+)?(?:hypothetical|uncharacteri[sz]ed|unknown|predicted)(?:\s+(?:protein|gene|gene product|rna))?|(?:protein|gene product|rna)(?:\s+of)?\s+unknown\s+function)$/i;
+    const uncertainProduct = /^(?:putative|probable|predicted)\b/i;
+    const productIsExpected = !['GENE', 'PSEUDOGENE'].includes(normalizedType);
+    if (!product && productIsExpected) {
+      addReason(
+        'missing_product',
+        30,
+        'high',
+        'The selected feature has no product qualifier.',
+        ['product'],
+        ['molecular function', 'standardized product']
+      );
+    } else if (product && genericProduct.test(product)) {
+      addReason(
+        'generic_product',
+        30,
+        'high',
+        `The product qualifier is non-specific: ${product}`,
+        ['product'],
+        ['molecular function', 'standardized product', 'ortholog evidence']
+      );
+    } else if (product && uncertainProduct.test(product)) {
+      addReason(
+        'uncertain_product',
+        8,
+        'medium',
+        `The product qualifier is explicitly uncertain: ${product}`,
+        [],
+        ['molecular function', 'ortholog evidence']
+      );
+    }
+
+    if (!locusTag && !proteinId) {
+      addReason(
+        'missing_stable_accession',
+        15,
+        'high',
+        'The feature has neither a locus tag nor a protein identifier.',
+        ['locus_tag', 'protein_id'],
+        ['gene identity', 'nomenclature']
+      );
+    }
+    if (!gene) {
+      addReason(
+        'missing_gene_symbol',
+        8,
+        'medium',
+        'The feature has no gene symbol or accepted gene name.',
+        ['gene'],
+        ['gene identity', 'nomenclature']
+      );
+    }
+    if (notes.length === 0) {
+      addReason(
+        'missing_functional_note',
+        15,
+        'medium',
+        'The feature has no functional annotation Note.',
+        ['note'],
+        ['physiological role', 'evidence and citations']
+      );
+    }
+    if (dbXrefs.length === 0) {
+      addReason(
+        'missing_database_cross_references',
+        10,
+        'medium',
+        'The feature has no external database cross-reference.',
+        ['db_xref'],
+        ['database cross-references']
+      );
+    }
+    if (notes.length > 0 && !notes.some(note => /(?:PMID\s*:\s*\d+|doi\s*:\s*10\.\d{4,9}\/)/i.test(note))) {
+      addReason(
+        'missing_literature_citation',
+        5,
+        'low',
+        'The functional Note has no recognizable PMID or DOI citation.',
+        [],
+        ['evidence and citations']
+      );
+    }
+
+    if (normalizedType === 'CDS') {
+      if (!proteinId) {
+        addReason(
+          'missing_protein_identifier',
+          8,
+          'medium',
+          'The CDS has no protein identifier.',
+          ['protein_id'],
+          ['protein identity']
+        );
+      }
+      if (!translation) {
+        addReason(
+          'missing_translation',
+          12,
+          'high',
+          'The CDS has no translated amino-acid sequence.',
+          ['translation'],
+          ['coding sequence integrity']
+        );
+      } else if (translation.slice(0, -1).includes('*')) {
+        addReason(
+          'internal_stop_codon',
+          25,
+          'critical',
+          'The CDS translation contains an internal stop codon.',
+          ['translation'],
+          ['coding sequence integrity', 'pseudogene status']
+        );
+      }
+    } else if (normalizedType.includes('RNA')) {
+      recommendedResearchFocus.add('RNA function');
+      recommendedResearchFocus.add('RNA processing and structure');
+    }
+
+    const qualityScore = Math.max(0, Math.min(100, 100 - deduction));
+    const band = this._qualityBand(qualityScore);
+    return {
+      schema: 'codexomics.annotation-quality-assessment.v1',
+      policyVersion: 'codexomics.annotation-quality-policy.v1',
+      chromosome,
+      feature: {
+        id: annotation?.id || null,
+        featureType,
+        start: annotation?.start ?? null,
+        end: annotation?.end ?? null,
+        strand: annotation?.strand ?? null,
+        locusTag,
+        gene,
+        proteinId,
+        product,
+      },
+      qualityScore,
+      ...band,
+      reasons,
+      missingFields: Array.from(missingFields).sort(),
+      recommendedResearchFocus: Array.from(recommendedResearchFocus),
+    };
+  }
+
+  async assessAnnotationQuality(params = {}) {
+    const identifier = params.identifier || params.annotationId || params.gene || params.locusTag;
+    if (!identifier) throw new Error('assess_annotation_quality requires an annotation identifier');
+    const resolved = await this.resolveAnnotationTarget(params);
+    const target = resolved.target || {};
+    const annotation = {
+      id: resolved.annotation?.id || target.annotationId || null,
+      type: target.featureType,
+      start: target.coordinates?.start,
+      end: target.coordinates?.end,
+      strand: target.coordinates?.strand,
+      qualifiers: resolved.annotation?.qualifiers || {},
+    };
+    return {
+      success: true,
+      target,
+      assessment: this._assessAnnotationObject(annotation, target.chromosome),
+    };
+  }
+
+  async listAnnotationQualityCandidates(params = {}) {
+    if (!this.app.currentAnnotations) throw new Error('No annotations loaded');
+    const requestedTypes =
+      Array.isArray(params.featureTypes) && params.featureTypes.length > 0
+        ? params.featureTypes
+        : GENE_ANNOTATION_FEATURE_TYPES;
+    const typeKeys = new Set(requestedTypes.map(type => this._qualityFeatureType(type)));
+    const unsupported = Array.from(typeKeys).filter(type => !GENE_ANNOTATION_TYPE_PRIORITY[type]);
+    if (unsupported.length > 0) {
+      throw new Error(`Unsupported gene annotation feature type(s): ${unsupported.join(', ')}`);
+    }
+    const maximumQualityScore = params.maximumQualityScore === undefined ? 100 : Number(params.maximumQualityScore);
+    if (!Number.isFinite(maximumQualityScore) || maximumQualityScore < 0 || maximumQualityScore > 100) {
+      throw new Error('maximumQualityScore must be a number from 0 to 100');
+    }
+    const sortBy = String(params.sortBy || 'quality').toLowerCase();
+    if (!['quality', 'coordinate'].includes(sortBy)) {
+      throw new Error('sortBy must be either "quality" or "coordinate"');
+    }
+    const requestedLimit = params.limit === undefined ? 100 : Number(params.limit);
+    const limit = Math.max(0, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 100, 100000));
+    const offset = Math.max(0, Number(params.offset) || 0);
+    const chromosomes = params.chromosome ? [params.chromosome] : Object.keys(this.app.currentAnnotations);
+    const groups = [];
+    const groupByIdentity = new Map();
+
+    for (const chromosome of chromosomes) {
+      for (const annotation of this.app.currentAnnotations[chromosome] || []) {
+        if (!typeKeys.has(this._qualityFeatureType(annotation?.type))) continue;
+        const location = `${chromosome}:${annotation.start}:${annotation.end}:${annotation.strand ?? ''}`;
+        const identities = this._qualityIdentities(annotation);
+        const keys = identities.map(identity => `${location}:${identity}`);
+        let group = keys.map(key => groupByIdentity.get(key)).find(Boolean);
+        if (!group) {
+          group = { chromosome, features: [] };
+          groups.push(group);
+        }
+        group.features.push(annotation);
+        for (const key of keys) groupByIdentity.set(key, group);
+      }
+    }
+
+    const ambiguousLoci = [];
+    const candidates = groups
+      .map(group => {
+        const ranked = [...group.features].sort((left, right) => {
+          const typeDifference = this._qualityTypePriority(right.type) - this._qualityTypePriority(left.type);
+          if (typeDifference) return typeDifference;
+          return String(left.id || '').localeCompare(String(right.id || ''));
+        });
+        const representative = ranked[0];
+        const bestPriority = this._qualityTypePriority(representative?.type);
+        const equallyPreferred = ranked.filter(feature => this._qualityTypePriority(feature.type) === bestPriority);
+        if (equallyPreferred.length > 1) {
+          ambiguousLoci.push({
+            chromosome: group.chromosome,
+            start: representative?.start ?? null,
+            end: representative?.end ?? null,
+            strand: representative?.strand ?? null,
+            featureType: representative?.type || null,
+            featureIds: equallyPreferred.map(feature => feature.id).filter(Boolean),
+            reason: 'Multiple equally preferred feature records occupy the same locus',
+          });
+          return null;
+        }
+        const assessment = this._assessAnnotationObject(representative, group.chromosome);
+        return {
+          ...assessment,
+          coLocatedFeatureTypes: Array.from(new Set(ranked.map(feature => String(feature.type || 'unknown')))),
+          suppressedFeatureIds: ranked
+            .slice(1)
+            .map(feature => feature.id)
+            .filter(Boolean),
+          selectionReason:
+            ranked.length > 1
+              ? `Preferred ${representative.type} over co-located ${ranked
+                  .slice(1)
+                  .map(feature => feature.type)
+                  .join(', ')}`
+              : 'Only supported gene annotation feature at this locus',
+        };
+      })
+      .filter(Boolean)
+      .filter(candidate => candidate.qualityScore <= maximumQualityScore);
+
+    candidates.sort((left, right) => {
+      if (sortBy === 'quality') {
+        const scoreDifference = left.qualityScore - right.qualityScore;
+        if (scoreDifference) return scoreDifference;
+      }
+      return (
+        String(left.chromosome).localeCompare(String(right.chromosome)) ||
+        Number(left.feature.start || 0) - Number(right.feature.start || 0) ||
+        String(left.feature.locusTag || left.feature.gene || left.feature.id || '').localeCompare(
+          String(right.feature.locusTag || right.feature.gene || right.feature.id || '')
+        )
+      );
+    });
+    const total = candidates.length;
+    const page = limit > 0 ? candidates.slice(offset, offset + limit) : candidates.slice(offset);
+    return {
+      success: true,
+      schema: 'codexomics.annotation-quality-candidates.v1',
+      policyVersion: 'codexomics.annotation-quality-policy.v1',
+      selectionPolicy: sortBy === 'quality' ? 'low-quality' : 'coordinate',
+      maximumQualityScore,
+      featureTypes: requestedTypes,
+      total,
+      offset,
+      limit,
+      count: page.length,
+      excludedAmbiguousLoci: ambiguousLoci.length,
+      ambiguousLoci,
+      candidates: page,
     };
   }
 

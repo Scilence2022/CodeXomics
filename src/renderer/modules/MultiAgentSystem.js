@@ -899,6 +899,8 @@ class MultiAgentSystem {
         'search_sequences',
         'search_annotations',
         'list_annotations',
+        'assess_annotation_quality',
+        'list_annotation_quality_candidates',
         'get_data_statistics',
         'get_genome_summary',
         'create_annotation',

@@ -807,6 +807,20 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('assess_annotation_quality', {
+      method: 'assessAnnotationQuality',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('list_annotation_quality_candidates', {
+      method: 'listAnnotationQualityCandidates',
+      category: 'annotation',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('get_annotation', {
       method: 'getAnnotation',
       category: 'annotation',
@@ -1650,6 +1664,36 @@ class BuiltInToolsIntegration {
         name: 'list_annotations',
         confidence: 0.95,
         reason: 'Annotation listing keywords detected (list/show/display annotations)',
+      });
+    }
+
+    if (
+      /\b(assess|evaluate|score|check)\s+.*?\b(annotation|gene|feature)\s+.*?\b(quality|completeness|confidence)\b/i.test(
+        query
+      ) ||
+      /\b(annotation|gene|feature)\s+.*?\b(quality|completeness|confidence)\s+.*?\b(score|assessment|check)\b/i.test(
+        query
+      )
+    ) {
+      relevantTools.push({
+        name: 'assess_annotation_quality',
+        confidence: 0.97,
+        reason: 'Single-feature annotation quality assessment keywords detected',
+      });
+    }
+
+    if (
+      /\b(find|list|rank|select|prioriti[sz]e)\s+.*?\b(low[- ]quality|poor|incomplete|hypothetical|uncharacteri[sz]ed)\s+.*?\b(annotations?|genes?|features?)\b/i.test(
+        query
+      ) ||
+      /\b(annotations?|genes?|features?)\s+.*?\b(low[- ]quality|poor|incomplete|quality candidates?|quality ranking)\b/i.test(
+        query
+      )
+    ) {
+      relevantTools.push({
+        name: 'list_annotation_quality_candidates',
+        confidence: 0.98,
+        reason: 'Genome-wide annotation quality prioritization keywords detected',
       });
     }
 

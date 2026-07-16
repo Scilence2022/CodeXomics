@@ -2656,6 +2656,41 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 30000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
+      {
+        id: 'annot_auto_09',
+        name: 'Assess Annotation Quality',
+        type: 'function_call',
+        category: 'annotation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'Assess the annotation quality of lysC using assess_annotation_quality.',
+        expectedResult: {
+          tool_name: 'assess_annotation_quality',
+          parameters: { identifier: 'lysC' },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 15000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
+      {
+        id: 'annot_auto_10',
+        name: 'List Low-quality Annotation Candidates',
+        type: 'function_call',
+        category: 'annotation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction:
+          'List up to 10 gene-associated annotation candidates with quality scores at or below 70, ranked lowest quality first.',
+        expectedResult: {
+          tool_name: 'list_annotation_quality_candidates',
+          parameters: { maximumQualityScore: 70, sortBy: 'quality', limit: 10 },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 15000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
 
       // DATABASE AND PROTEIN TASKS - Automatic + Simple
       {

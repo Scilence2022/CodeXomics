@@ -15,6 +15,26 @@ const REQUIRED_TARGET_FIELDS = [
   'chromosome',
 ];
 const CURRENT_ANNOTATION_VALIDATION_SCHEMA = 'codexomics.dgr-current-annotation-validation.v1';
+const SUPPORTED_GENE_ANNOTATION_FEATURE_TYPES = new Set([
+  'CDS',
+  'GENE',
+  'MRNA',
+  'TRNA',
+  'RRNA',
+  'NCRNA',
+  'TMRNA',
+  'MISC_RNA',
+  'PRECURSOR_RNA',
+  'MIRNA',
+  'SNRNA',
+  'SNORNA',
+  'ANTISENSE_RNA',
+  'GUIDE_RNA',
+  'TELOMERASE_RNA',
+  'RNASE_P_RNA',
+  'RNASE_MRP_RNA',
+  'PSEUDOGENE',
+]);
 const CURRENT_ANNOTATION_LIMITS = Object.freeze({
   product: { maximumItems: 1, maximumLength: 1024, scalar: true },
   note: { maximumItems: 32, maximumLength: 8192 },
@@ -79,29 +99,31 @@ function assertBoundTarget(actual, expected, label) {
   }
   for (const field of REQUIRED_TARGET_FIELDS) {
     if (expected[field] === undefined || expected[field] === null || expected[field] === '') {
-      throw new Error(`Bound CDS target is missing required field "${field}"`);
+      throw new Error(`Bound annotation target is missing required field "${field}"`);
     }
     if (actual[field] === undefined || actual[field] === null || actual[field] === '') {
       throw new Error(`${label} is missing required target field "${field}"`);
     }
   }
   if (!Number.isInteger(Number(expected.annotationRevision)) || Number(expected.annotationRevision) < 0) {
-    throw new Error('Bound CDS target annotationRevision must be a non-negative integer');
+    throw new Error('Bound annotation target annotationRevision must be a non-negative integer');
   }
   for (const field of REQUIRED_TARGET_FIELDS) {
     if (String(actual[field]) !== String(expected[field])) {
-      throw new Error(`${label} ${field} does not match the bound CDS target`);
+      throw new Error(`${label} ${field} does not match the bound annotation target`);
     }
   }
-  if (String(expected.featureType || '').toUpperCase() !== 'CDS') {
-    throw new Error('DGR report archival is restricted to CDS annotation targets');
+  const expectedFeatureType = String(expected.featureType || '').toUpperCase();
+  const actualFeatureType = String(actual.featureType || '').toUpperCase();
+  if (!SUPPORTED_GENE_ANNOTATION_FEATURE_TYPES.has(expectedFeatureType)) {
+    throw new Error(`DGR report archival does not support feature type "${expected.featureType || 'unknown'}"`);
   }
-  if (String(actual.featureType || '').toUpperCase() !== 'CDS') {
-    throw new Error(`${label} is not bound to a CDS feature`);
+  if (actualFeatureType !== expectedFeatureType) {
+    throw new Error(`${label} featureType does not match the bound annotation target`);
   }
   for (const field of ['locusTag', 'geneSymbol', 'proteinId', 'assemblyAccession']) {
     if (actual[field] !== undefined && String(actual[field] ?? '') !== String(expected[field] ?? '')) {
-      throw new Error(`${label} ${field} does not match the bound CDS target`);
+      throw new Error(`${label} ${field} does not match the bound annotation target`);
     }
   }
 }
@@ -412,7 +434,7 @@ async function archiveDgrTaskResult({
 }) {
   const safeTaskId = assertSafeTaskId(taskId);
   if (!target || typeof target !== 'object' || Array.isArray(target)) {
-    throw new Error('A bound CDS target is required to archive a DGR report');
+    throw new Error('A bound gene annotation target is required to archive a DGR report');
   }
   assertBoundTarget(target, target, 'Requested target');
   if (typeof proxyRequest !== 'function') throw new Error('DGR report archival transport is unavailable');

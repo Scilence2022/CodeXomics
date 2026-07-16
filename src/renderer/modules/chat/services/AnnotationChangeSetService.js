@@ -202,6 +202,30 @@ class AnnotationChangeSetService {
     );
   }
 
+  _geneFeatureTypePriority(type) {
+    const priorities = {
+      CDS: 100,
+      TRNA: 90,
+      RRNA: 90,
+      NCRNA: 90,
+      TMRNA: 90,
+      MISC_RNA: 90,
+      PRECURSOR_RNA: 90,
+      MIRNA: 90,
+      SNRNA: 90,
+      SNORNA: 90,
+      ANTISENSE_RNA: 90,
+      GUIDE_RNA: 90,
+      TELOMERASE_RNA: 90,
+      RNASE_P_RNA: 90,
+      RNASE_MRP_RNA: 90,
+      MRNA: 80,
+      PSEUDOGENE: 70,
+      GENE: 10,
+    };
+    return priorities[String(type || '').toUpperCase()] || 0;
+  }
+
   _createLedgerMap(value = {}) {
     const result = Object.create(null);
     for (const key of Object.keys(value || {})) this._ledgerMapSet(result, key, value[key]);
@@ -2434,7 +2458,7 @@ class AnnotationChangeSetService {
     }
     for (const field of ['workspaceId', 'genomeId', 'annotationRevision', 'featureId', 'featureHash', 'chromosome']) {
       if (String(attachment.target?.[field] ?? '') !== String(target[field] ?? '')) {
-        throw new Error(`Archived DGR report ${taskId} ${field} does not match the selected CDS target`);
+        throw new Error(`Archived DGR report ${taskId} ${field} does not match the selected annotation target`);
       }
     }
     if (
@@ -2710,16 +2734,44 @@ class AnnotationChangeSetService {
     if (matches.length === 0) {
       throw new Error(`Annotation "${identifier}" not found${chromosome ? ` on chromosome "${chromosome}"` : ''}`);
     }
-    // GenBank commonly stores a gene feature and its CDS with the same
-    // locus_tag. Annotation research and qualifier updates must target the
-    // CDS, because that is where product/function qualifiers live. Prefer a
-    // single CDS only when the duplicate is the gene/CDS pair on one
-    // replicon; retain the ambiguity error for multiple CDS copies or
-    // cross-replicon matches.
+    // GenBank commonly stores a generic gene feature together with a more
+    // specific CDS or RNA feature. Collapse only exact co-located duplicates
+    // on one replicon, and prefer the biologically specific feature. CDS has
+    // the highest priority when it is present at that locus.
     if (matches.length > 1) {
-      const cdsMatches = matches.filter(match => String(match.annotation?.type || '').toUpperCase() === 'CDS');
       const chromosomes = new Set(matches.map(match => match.chromosome));
-      if (cdsMatches.length === 1 && chromosomes.size === 1) matches = cdsMatches;
+      const locations = new Set(
+        matches.map(
+          match =>
+            `${match.chromosome}:${match.annotation?.start}:${match.annotation?.end}:${match.annotation?.strand ?? ''}`
+        )
+      );
+      const qualifierSets = names => {
+        const values = new Set();
+        for (const match of matches) {
+          const value = this._scalar(this._qualifierValue(match.annotation?.qualifiers || {}, names));
+          if (value) values.add(String(value).trim().toLowerCase());
+        }
+        return values;
+      };
+      const hasIdentityConflict = [
+        qualifierSets(['locus_tag', 'locusTag']),
+        qualifierSets(['protein_id', 'proteinId']),
+        qualifierSets(['gene', 'gene_name', 'Gene', 'Name']),
+      ].some(values => values.size > 1);
+      if (chromosomes.size === 1 && locations.size === 1 && !hasIdentityConflict) {
+        const ranked = [...matches].sort(
+          (left, right) =>
+            this._geneFeatureTypePriority(right.annotation?.type) -
+              this._geneFeatureTypePriority(left.annotation?.type) ||
+            String(left.annotation?.id || '').localeCompare(String(right.annotation?.id || ''))
+        );
+        const bestPriority = this._geneFeatureTypePriority(ranked[0]?.annotation?.type);
+        const preferred = ranked.filter(
+          match => this._geneFeatureTypePriority(match.annotation?.type) === bestPriority
+        );
+        if (bestPriority > 0 && preferred.length === 1) matches = preferred;
+      }
     }
     if (matches.length > 1) {
       const locations = matches.map(match => match.chromosome).join(', ');

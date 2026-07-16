@@ -1,0 +1,58 @@
+name: assess_annotation_quality
+version: 1.0.0
+description: 'Assess one resolved gene annotation feature with a deterministic completeness and curation-quality policy. Returns a 0-100 quality score, concrete reasons, missing fields, and recommended research focus. Co-located gene/CDS duplicates resolve to CDS.'
+category: annotation
+subcategory: annotation_quality
+keywords:
+  - assess annotation quality
+  - annotation score
+  - gene annotation completeness
+  - low confidence annotation
+  - missing annotation fields
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    identifier:
+      type: string
+      description: Locus tag, gene symbol, protein ID, annotation ID, or stable feature ID.
+    chromosome:
+      type: string
+      description: Optional chromosome or replicon used to disambiguate the identifier.
+    clientId:
+      type: string
+      description: Browser client ID for multi-window support.
+      default: default
+  required:
+    - identifier
+returns:
+  type: object
+  properties:
+    success:
+      type: boolean
+    target:
+      type: object
+    assessment:
+      type: object
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances:
+    - get_annotation
+    - start_annotation_research
+  alternatives:
+    - list_annotation_quality_candidates
+  prerequisites: []
+  follow_up:
+    - start_annotation_research
+metadata:
+  added_in: 0.722.0
+  integration: annotation_quality
+  priority: high
+  tags:
+    - annotation
+    - quality
+    - analysis
+    - read
