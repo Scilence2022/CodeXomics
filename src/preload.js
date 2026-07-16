@@ -8,6 +8,8 @@ const allowedInvokeChannels = [
   'mcp-server-save-settings',
   'mcp-server-check-port',
   'dgr-mcp-request',
+  'archive-dgr-task-result',
+  'open-dgr-json-viewer',
   'broadcast-theme-to-pm',
   'request-current-theme',
   'screenshot:capture',
@@ -602,6 +604,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // MCP Server APIs
   dgrMcpRequest: request => ipcRenderer.invoke('dgr-mcp-request', request),
+  archiveDgrTaskResult: options => ipcRenderer.invoke('archive-dgr-task-result', options),
+  openDgrJsonViewer: options => ipcRenderer.invoke('open-dgr-json-viewer', options),
   invoke: (channel, ...args) => {
     if (allowedInvokeChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...args);

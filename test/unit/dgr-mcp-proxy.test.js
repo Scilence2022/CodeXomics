@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { proxyDgrMcpRequest, resolveDgrMcpEndpoint, validateProxyRequest } = require('../../src/main/dgr-mcp-proxy');
+const {
+  MAX_RESPONSE_BYTES,
+  proxyDgrMcpRequest,
+  resolveDgrMcpEndpoint,
+  validateProxyRequest,
+} = require('../../src/main/dgr-mcp-proxy');
 
 describe('DGR main-process MCP proxy', () => {
   it('allows loopback HTTP and requires HTTPS for remote endpoints', () => {
@@ -75,5 +80,25 @@ describe('DGR main-process MCP proxy', () => {
         { env: { DGR_MCP_TOKEN: 'short' }, fetchImpl: vi.fn() }
       )
     ).rejects.toThrow('at least 16 characters');
+  });
+
+  it('allows bounded JSON-RPC escaping overhead above the final 16 MiB artifact cap', async () => {
+    const escapedEnvelope = `{"result":{"content":[{"type":"text","text":"${'\\\\n'.repeat(9 * 1024 * 1024)}"}]}}`;
+    expect(Buffer.byteLength(escapedEnvelope)).toBeGreaterThan(16 * 1024 * 1024);
+    expect(Buffer.byteLength(escapedEnvelope)).toBeLessThan(MAX_RESPONSE_BYTES);
+    const result = await proxyDgrMcpRequest(
+      { body: { jsonrpc: '2.0', method: 'tools/list', id: 1 } },
+      {
+        env: { DGR_MCP_URL: 'http://127.0.0.1:3000/api/mcp' },
+        fetchImpl: vi.fn(
+          async () =>
+            new Response(escapedEnvelope, {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            })
+        ),
+      }
+    );
+    expect(result.body).toHaveLength(escapedEnvelope.length);
   });
 });

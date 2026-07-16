@@ -26,6 +26,10 @@ parameters:
     experimentalApproach: { type: string }
     language: { type: string }
     maxResult: { type: integer, minimum: 1, maximum: 20, default: 5 }
+    forceRefresh:
+      type: boolean
+      default: false
+      description: Bypass the DGR semantic result cache while preserving request idempotency.
     idempotencyKey: { type: string, minLength: 1, maxLength: 256 }
     correlationId: { type: string, minLength: 1, maxLength: 256 }
     clientId: { type: string }

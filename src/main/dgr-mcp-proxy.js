@@ -11,7 +11,10 @@
 
 const DEFAULT_DGR_MCP_URL = 'http://127.0.0.1:3000/api/mcp';
 const MAX_REQUEST_BYTES = 1024 * 1024;
-const MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
+// A full task is serialized once into MCP text and again into the JSON-RPC/SSE
+// envelope. Keep the final artifact cap at 16 MiB, but allow bounded transport
+// escaping overhead so an otherwise valid artifact can reach the archiver.
+const MAX_RESPONSE_BYTES = 36 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 30000;
 const MAX_TIMEOUT_MS = 120000;
 const ALLOWED_JSON_RPC_METHODS = new Set([

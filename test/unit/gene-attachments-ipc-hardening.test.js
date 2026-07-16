@@ -14,10 +14,13 @@ describe('GeneAttachmentsManager IPC hardening', () => {
     expect(source).toContain('window.electronAPI.copyAttachmentFile');
     expect(source).toContain('window.electronAPI.deleteAttachmentFile');
     expect(source).toContain('window.electronAPI.openAttachmentFile');
+    expect(source).toContain('window.electronAPI.openDgrJsonViewer');
     expect(source).toContain('window.electronAPI.checkFileExists');
     expect(preload).toContain('copyAttachmentFile:');
     expect(preload).toContain('deleteAttachmentFile:');
     expect(preload).toContain('openAttachmentFile:');
+    expect(preload).toContain('archiveDgrTaskResult:');
+    expect(preload).toContain('openDgrJsonViewer:');
     expect(source).not.toMatch(/\brequire\(['"]fs['"]\)/);
     expect(source).not.toMatch(/\brequire\(['"]path['"]\)/);
     expect(source).not.toMatch(/\brequire\(['"]electron['"]\)/);

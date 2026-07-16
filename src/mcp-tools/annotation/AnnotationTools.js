@@ -349,11 +349,36 @@ class AnnotationTools {
             experimentalApproach: { type: 'string' },
             language: { type: 'string' },
             maxResult: { type: 'integer', minimum: 1, maximum: 20, default: 5 },
+            forceRefresh: {
+              type: 'boolean',
+              default: false,
+              description: 'Bypass the DGR semantic result cache while preserving request idempotency.',
+            },
             idempotencyKey: { type: 'string', minLength: 1, maxLength: 256 },
             correlationId: { type: 'string', minLength: 1, maxLength: 256 },
             clientId: { type: 'string' },
           },
           required: ['identifier'],
+        },
+      },
+
+      archive_annotation_research: {
+        name: 'archive_annotation_research',
+        description:
+          'Archive a completed DGR task as a verified, genome-scoped JSON attachment bound to an exact CDS target. CodeXomics re-derives the live scientific qualifier snapshot and requires the DGR task currentAnnotation to match. Use this for research started directly through the DGR MCP server before creating a ChangeSet.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string', minLength: 1, maxLength: 256 },
+            correlationId: { type: 'string', minLength: 1, maxLength: 256 },
+            identifier: {
+              type: 'string',
+              description: 'Target locus_tag, gene name, protein_id, or feature identifier.',
+            },
+            chromosome: { type: 'string' },
+            clientId: { type: 'string' },
+          },
+          required: ['taskId', 'correlationId', 'identifier'],
         },
       },
 

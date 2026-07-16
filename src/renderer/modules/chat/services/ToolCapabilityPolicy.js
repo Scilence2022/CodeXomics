@@ -87,6 +87,7 @@ class ToolCapabilityPolicy {
           'rollback_annotation_changeset',
           'get_annotation_audit',
           'start_annotation_research',
+          'archive_annotation_research',
           'get_annotation_research_workflow',
           'cancel_annotation_research',
         ],

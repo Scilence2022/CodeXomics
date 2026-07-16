@@ -845,6 +845,7 @@ class BuiltInToolsIntegration {
       rollback_annotation_changeset: 'rollbackAnnotationChangeset',
       get_annotation_audit: 'getAnnotationAudit',
       start_annotation_research: 'startAnnotationResearch',
+      archive_annotation_research: 'archiveAnnotationResearch',
       get_annotation_research_workflow: 'getAnnotationResearchWorkflow',
       cancel_annotation_research: 'cancelAnnotationResearch',
     })) {
@@ -2443,6 +2444,17 @@ class BuiltInToolsIntegration {
         name: 'create_annotation_changeset',
         confidence: 0.95,
         reason: 'Annotation proposal/change-set keywords detected',
+      });
+    }
+
+    if (
+      /\b(archive|attach|store|save)\s+.*?\b(deep\s+gene\s+research|dgr|gene\s+research)\b/i.test(query) ||
+      /\b(deep\s+gene\s+research|dgr|gene\s+research)\s+.*?\b(archive|attach|store|save)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'archive_annotation_research',
+        confidence: 0.98,
+        reason: 'Durable DGR report archival keywords detected',
       });
     }
 

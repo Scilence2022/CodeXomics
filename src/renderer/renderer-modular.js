@@ -5722,7 +5722,7 @@ class GenomeBrowser {
     let processedText = text;
 
     // Pattern for PMID references: PMID:1234567 or PMID 1234567
-    const pmidPattern = /\b(PMID:?\s*(\d{7,8}))/gi;
+    const pmidPattern = /\b(PMID:?\s*(\d{6,10}))/gi;
     processedText = processedText.replace(pmidPattern, (match, fullMatch, pmidId) => {
       const citationNumber = this.addUnifiedCitation('PMID', pmidId);
       return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}/" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
@@ -5758,7 +5758,7 @@ class GenomeBrowser {
     });
 
     // Pattern for generic numeric references in brackets: [1234567]
-    const genericPmidPattern = /\[(\d{7,8})\]/g;
+    const genericPmidPattern = /\[(\d{6,10})\]/g;
     processedText = processedText.replace(genericPmidPattern, (match, pmidId) => {
       // Skip if it's already part of a link
       if (processedText.includes(`href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}"`)) {
@@ -6721,55 +6721,7 @@ class GenomeBrowser {
 
     const attachmentsList = document.getElementById('geneAttachmentsList');
     if (!attachmentsList) return;
-
-    // Re-render just the attachments list content
-    const attachments = this.geneAttachmentsManager.getAttachmentsForGene(geneId);
-
-    if (attachments.length === 0) {
-      attachmentsList.innerHTML = `
-                <div class="gene-attachments-empty">
-                    <i class="fas fa-file-upload"></i>
-                    <p>No attachments yet</p>
-                    <small>Click "Add" to attach files to this gene</small>
-                </div>
-            `;
-    } else {
-      let html = '';
-      for (const attachment of attachments) {
-        const icon = this.geneAttachmentsManager.getFileIcon(attachment.extension);
-        const escapedId = attachment.id.replace(/'/g, "\\'");
-        const escapedGeneId = geneId.replace(/'/g, "\\'");
-
-        html += `
-                    <div class="gene-attachment-item" data-attachment-id="${attachment.id}">
-                        <div class="gene-attachment-icon">
-                            <i class="${icon}"></i>
-                        </div>
-                        <div class="gene-attachment-info">
-                            <div class="gene-attachment-name" title="${attachment.filename}">
-                                ${attachment.filename}
-                            </div>
-                            <div class="gene-attachment-meta">
-                                ${attachment.sizeFormatted} • ${this.geneAttachmentsManager.formatDate(attachment.addedDate)}
-                            </div>
-                        </div>
-                        <div class="gene-attachment-actions">
-                            <button class="gene-attachment-btn open-btn" 
-                                    onclick="window.genomeBrowser.openGeneAttachment('${escapedId}', '${escapedGeneId}')"
-                                    title="Open file">
-                                <i class="fas fa-external-link-alt"></i>
-                            </button>
-                            <button class="gene-attachment-btn delete-btn" 
-                                    onclick="window.genomeBrowser.removeGeneAttachment('${escapedId}', '${escapedGeneId}')"
-                                    title="Remove attachment">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-      }
-      attachmentsList.innerHTML = html;
-    }
+    attachmentsList.innerHTML = this.geneAttachmentsManager.renderAttachmentsList(geneId);
   }
 
   /**
@@ -7198,7 +7150,15 @@ class GenomeBrowser {
       return attributeValue;
     }
 
-    let enhancedValue = attributeValue;
+    // Qualifiers may originate in external research records. Escape the raw
+    // value before selectively adding the trusted links below so a citation-
+    // rich DGR note cannot inject markup into the gene sidebar.
+    let enhancedValue = attributeValue
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
 
     // Pattern for GO terms: GO:XXXXXXX or goid XXXXXXX
     const goTermPattern = /\b(GO:\d{7}|goid\s+(\d{7}))\b/gi;

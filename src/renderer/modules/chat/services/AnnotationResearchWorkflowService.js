@@ -118,6 +118,41 @@ class AnnotationResearchWorkflowService {
     return value;
   }
 
+  _currentAnnotationSnapshot(resolved) {
+    if (this._isPlainRecord(resolved?.currentAnnotation)) {
+      return this._clone(resolved.currentAnnotation);
+    }
+    const qualifiers = this._isPlainRecord(resolved?.annotation?.qualifiers) ? resolved.annotation.qualifiers : {};
+    const boundedValues = (names, maximumItems, maximumLength) => {
+      const result = [];
+      const seen = new Set();
+      for (const name of names) {
+        const raw = qualifiers[name];
+        const values = Array.isArray(raw) ? raw : raw === undefined || raw === null ? [] : [raw];
+        for (const value of values) {
+          if (typeof value !== 'string') continue;
+          const normalized = value.trim();
+          const key = normalized.toLowerCase();
+          if (!normalized || normalized.length > maximumLength || seen.has(key)) continue;
+          seen.add(key);
+          result.push(normalized);
+          if (result.length >= maximumItems) return result;
+        }
+      }
+      return result;
+    };
+    const product = boundedValues(['product'], 1, 1024)[0];
+    return {
+      ...(product ? { product } : {}),
+      note: boundedValues(['note', 'Note'], 32, 8192),
+      EC_number: boundedValues(['EC_number', 'ec_number'], 64, 64),
+      go_terms: boundedValues(['go_terms', 'GO_terms', 'goTerms'], 256, 64),
+      ko: boundedValues(['ko', 'KO'], 128, 128),
+      pathway: boundedValues(['pathway', 'Pathway'], 256, 256),
+      db_xref: boundedValues(['db_xref', 'dbXref'], 512, 512),
+    };
+  }
+
   _initialRunStatus(value) {
     return typeof value === 'string' && value.trim() && value.length <= 64 ? value : 'pending';
   }
@@ -299,6 +334,11 @@ class AnnotationResearchWorkflowService {
           `Stored annotation proposal for research task ${workflow.taskId} failed integrity verification`
         );
       }
+      if (workflow.reportAttachment?.proposalSha256 && snapshotHash !== workflow.reportAttachment.proposalSha256) {
+        throw new Error(
+          `Stored annotation proposal for research task ${workflow.taskId} does not match its archived full report`
+        );
+      }
       if (returnedProposal) {
         const returnedHash = await this._hash(returnedProposal);
         this._assertWorkspace(workspace);
@@ -315,11 +355,120 @@ class AnnotationResearchWorkflowService {
     if (this._serializedBytes(returnedProposal) > this.runLimits.proposalBytes) {
       throw new Error(`Completed DGR annotation proposal exceeds ${this.runLimits.proposalBytes} bytes`);
     }
-    workflow.proposalSnapshot = this._clone(returnedProposal);
-    workflow.proposalHash = await this._hash(workflow.proposalSnapshot);
+    const returnedHash = await this._hash(returnedProposal);
     this._assertWorkspace(workspace);
+    if (workflow.reportAttachment?.proposalSha256 && returnedHash !== workflow.reportAttachment.proposalSha256) {
+      throw new Error(
+        `DGR annotation proposal for research task ${workflow.taskId} does not match its archived full report`
+      );
+    }
+    workflow.proposalSnapshot = this._clone(returnedProposal);
+    workflow.proposalHash = returnedHash;
     workflow.proposalCapturedAt = new Date().toISOString();
     return this._clone(workflow.proposalSnapshot);
+  }
+
+  async _validatedCurrentAnnotationReceipt(workflow, receipt, workspace) {
+    const required = workflow.currentAnnotationBindingRequired === true;
+    if (!required && !receipt) return null;
+    if (!this._isPlainRecord(receipt)) {
+      throw new Error(`DGR report ${workflow.taskId} is missing its current-annotation verification receipt`);
+    }
+    if (!required && receipt.verified !== true) {
+      if (
+        receipt.schema !== 'codexomics.dgr-current-annotation-validation.v1' ||
+        receipt.required !== false ||
+        receipt.snapshotSha256 !== null ||
+        String(receipt.targetFeatureHash || '') !== String(workflow.target?.featureHash || '')
+      ) {
+        throw new Error(`DGR report ${workflow.taskId} has an invalid legacy current-annotation receipt`);
+      }
+      return this._clone(receipt);
+    }
+    if (
+      receipt.schema !== 'codexomics.dgr-current-annotation-validation.v1' ||
+      receipt.verified !== true ||
+      !/^[a-f0-9]{64}$/i.test(String(receipt.snapshotSha256 || '')) ||
+      String(receipt.targetFeatureHash || '') !== String(workflow.target?.featureHash || '')
+    ) {
+      throw new Error(`DGR report ${workflow.taskId} failed current-annotation binding verification`);
+    }
+    const expectedHash =
+      workflow.currentAnnotationRequestSha256 ||
+      (workflow.currentAnnotationSnapshot ? await this._hash(workflow.currentAnnotationSnapshot) : null);
+    this._assertWorkspace(workspace);
+    if (!expectedHash || String(receipt.snapshotSha256).toLowerCase() !== String(expectedHash).toLowerCase()) {
+      throw new Error(`DGR report ${workflow.taskId} current-annotation snapshot hash does not match its workflow`);
+    }
+    return this._clone(receipt);
+  }
+
+  async _archiveCompletedReport(workflow, workspace) {
+    if (workflow.reportAttachment) {
+      await this._validatedCurrentAnnotationReceipt(
+        workflow,
+        workflow.reportAttachment.currentAnnotationValidation,
+        workspace
+      );
+      const attachmentManager = this.app?.geneAttachmentsManager;
+      if (attachmentManager?.ready) await attachmentManager.ready;
+      if (typeof attachmentManager?.getAttachmentsForGene !== 'function') return workflow.reportAttachment;
+      const registered = attachmentManager
+        .getAttachmentsForGene(workflow.reportAttachment.geneId)
+        .some(attachment => attachment.id === workflow.reportAttachment.attachmentId);
+      if (registered) return workflow.reportAttachment;
+      workflow.reportAttachment = null;
+      workflow.reportArchiveRecoveryAt = new Date().toISOString();
+    }
+    const archiveReport = typeof window !== 'undefined' && window.electronAPI?.archiveDgrTaskResult;
+    // Unit/headless contexts and older preload bridges cannot persist an
+    // artifact. The production Electron bridge always provides this API.
+    if (typeof archiveReport !== 'function') return null;
+    const attachments = this.app?.geneAttachmentsManager;
+    if (!attachments || typeof attachments.registerGeneratedAttachment !== 'function') {
+      throw new Error('DGR completed, but the gene attachment store is not available to archive its full report');
+    }
+    const response = await archiveReport({
+      taskId: workflow.taskId,
+      target: this._clone(workflow.target),
+      correlationId: workflow.correlationId,
+      targetBindingHash: workflow.targetBindingHash,
+      currentAnnotation: this._clone(workflow.currentAnnotationSnapshot),
+      requireCurrentAnnotation: workflow.currentAnnotationBindingRequired === true,
+    });
+    this._assertWorkspace(workspace);
+    if (!response?.success || !this._isPlainRecord(response.artifact)) {
+      throw new Error(response?.error || 'CodeXomics could not archive the completed DGR full report');
+    }
+    const currentAnnotationValidation = await this._validatedCurrentAnnotationReceipt(
+      workflow,
+      response.artifact.currentAnnotationValidation,
+      workspace
+    );
+    const geneId = String(
+      workflow.target.locusTag || workflow.target.geneSymbol || workflow.target.proteinId || workflow.target.featureId
+    );
+    const attachment = await attachments.registerGeneratedAttachment(
+      geneId,
+      response.artifact,
+      this._clone(workflow.target)
+    );
+    this._assertWorkspace(workspace);
+    if (!attachment?.id) throw new Error('CodeXomics archived the DGR report but could not register its attachment');
+    workflow.reportAttachment = {
+      attachmentId: String(attachment.id),
+      geneId,
+      fileName: String(response.artifact.fileName || attachment.filename || ''),
+      size: Number(response.artifact.size || 0),
+      sha256: String(response.artifact.sha256 || ''),
+      proposalSha256: String(response.artifact.proposalSha256 || ''),
+      citationValidation: this._clone(response.artifact.citationValidation || null),
+      currentAnnotationValidation,
+      storedAt: response.artifact.storedAt || new Date().toISOString(),
+    };
+    workflow.currentAnnotationValidation = this._clone(currentAnnotationValidation);
+    workflow.reportArchivedAt = new Date().toISOString();
+    return workflow.reportAttachment;
   }
 
   async _validatedWorkflowTargetBindingHash(workflow, workspace) {
@@ -347,6 +496,12 @@ class AnnotationResearchWorkflowService {
       });
       this._assertWorkspace(workspace);
       const target = resolved.target;
+      if (String(target?.featureType || '').toUpperCase() !== 'CDS') {
+        throw new Error('Annotation research refinement is restricted to resolved CDS features');
+      }
+      if (!target.locusTag && !target.proteinId) {
+        throw new Error('CDS research requires a stable locus tag or protein identifier for identity-safe retrieval');
+      }
       const requestedGeneSymbol = String(params.geneSymbol || '').trim();
       if (
         requestedGeneSymbol &&
@@ -357,8 +512,8 @@ class AnnotationResearchWorkflowService {
           `Requested research geneSymbol "${requestedGeneSymbol}" conflicts with resolved target gene "${target.geneSymbol}"`
         );
       }
-      const geneSymbol = target.geneSymbol || target.locusTag;
-      if (!geneSymbol) throw new Error('The resolved annotation has no gene symbol or locus tag for DGR research');
+      const geneSymbol = target.geneSymbol || target.locusTag || target.proteinId;
+      if (!geneSymbol) throw new Error('The resolved annotation has no stable identifier for DGR research');
 
       const requestedOrganism = String(params.organism || '').trim();
       const targetOrganism = String(target.organism || '').trim();
@@ -375,6 +530,9 @@ class AnnotationResearchWorkflowService {
       if (!organism) {
         throw new Error('start_annotation_research requires an explicit organism when genome taxonomy is unavailable');
       }
+      const currentAnnotation = this._currentAnnotationSnapshot(resolved);
+      const currentAnnotationRequestSha256 = await this._hash(currentAnnotation);
+      this._assertWorkspace(workspace);
 
       const manager = this._manager();
       if (typeof manager.ensureServerConnected === 'function') {
@@ -394,6 +552,8 @@ class AnnotationResearchWorkflowService {
         userPrompt: params.userPrompt || null,
         language: params.language || null,
         maxResult: params.maxResult ?? null,
+        forceRefresh: params.forceRefresh === true,
+        currentAnnotation,
       });
       this._assertWorkspace(workspace);
       const targetBindingHash = await this._hash(target);
@@ -427,6 +587,9 @@ class AnnotationResearchWorkflowService {
         targetBindingHash,
         correlationId,
         initiatedBy: persistedInitiatedBy,
+        currentAnnotationSnapshot: this._clone(currentAnnotation),
+        currentAnnotationRequestSha256,
+        currentAnnotationBindingRequired: true,
         createdAt: new Date().toISOString(),
         changeSetId: null,
       };
@@ -441,9 +604,11 @@ class AnnotationResearchWorkflowService {
         userPrompt: params.userPrompt,
         language: params.language,
         maxResult: params.maxResult,
+        forceRefresh: params.forceRefresh === true,
         enableCitationImage: false,
         includeCodeXomicsAnnotationProposal: true,
         target,
+        currentAnnotation,
         idempotencyKey,
         correlationId,
       });
@@ -506,6 +671,10 @@ class AnnotationResearchWorkflowService {
       workflow.updatedAt = new Date().toISOString();
       workflow.error = this._optionalRemoteString(status.error, 2048);
 
+      if (status.status === 'completed' && !workflow.reportAttachment) {
+        await this._archiveCompletedReport(workflow, workspace);
+      }
+
       if (status.status === 'completed' && !workflow.changeSetId && !workflow.proposalHandledAt) {
         const proposal = await this._boundCompletedProposal(workflow, status, workspace);
         workflow.proposalStatus = proposal.status || 'unknown';
@@ -550,6 +719,101 @@ class AnnotationResearchWorkflowService {
         result.annotationProposal = this._clone(workflow.proposalSnapshot);
       }
       return { success: true, workflow, result };
+    });
+  }
+
+  async archiveAnnotationResearch(params = {}) {
+    this._requireResearchPermission(params);
+    return this._withRunsLock(async workspace => {
+      const taskId = String(params.taskId || params.id || '').trim();
+      const correlationId = String(params.correlationId || '').trim();
+      const identifier = params.identifier || params.geneSymbol || params.gene || params.locusTag;
+      if (!taskId || taskId.length > this.runLimits.taskIdLength || !/^[A-Za-z0-9._:-]+$/.test(taskId)) {
+        throw new Error('archive_annotation_research requires a valid DGR taskId');
+      }
+      if (!correlationId || correlationId.length > 256) {
+        throw new Error('archive_annotation_research requires the DGR correlationId');
+      }
+      if (!identifier) throw new Error('archive_annotation_research requires an annotation identifier');
+
+      const resolved = await this._annotationService().resolveAnnotationTarget({
+        identifier,
+        chromosome: params.chromosome,
+      });
+      this._assertWorkspace(workspace);
+      const target = resolved.target;
+      if (String(target?.featureType || '').toUpperCase() !== 'CDS' || (!target.locusTag && !target.proteinId)) {
+        throw new Error('External DGR reports can only be archived against a stable resolved CDS target');
+      }
+      const currentAnnotation = this._currentAnnotationSnapshot(resolved);
+      const currentAnnotationRequestSha256 = await this._hash(currentAnnotation);
+      this._assertWorkspace(workspace);
+      const targetBindingHash = await this._hash(target);
+      this._assertWorkspace(workspace);
+      const runs = await this._loadRuns(workspace);
+      let workflow = this._runMapGet(runs, taskId);
+      if (workflow) {
+        const existingTargetHash = await this._validatedWorkflowTargetBindingHash(workflow, workspace);
+        if (existingTargetHash !== targetBindingHash || workflow.correlationId !== correlationId) {
+          throw new Error(`DGR task ${taskId} is already bound to a different annotation research workflow`);
+        }
+        if (
+          workflow.currentAnnotationRequestSha256 &&
+          workflow.currentAnnotationRequestSha256 !== currentAnnotationRequestSha256
+        ) {
+          throw new Error(`DGR task ${taskId} is already bound to a different current annotation snapshot`);
+        }
+        workflow.currentAnnotationSnapshot ||= this._clone(currentAnnotation);
+        workflow.currentAnnotationRequestSha256 ||= currentAnnotationRequestSha256;
+        workflow.currentAnnotationBindingRequired = true;
+      } else {
+        const initiatedBy = this._boundedPersistedString(
+          String(params.__executionContext?.principal || 'external-dgr-agent'),
+          'Research initiator',
+          512
+        );
+        workflow = {
+          taskId,
+          status: 'completed',
+          target: this._clone(target),
+          geneSymbol: this._boundedPersistedString(
+            String(target.geneSymbol || target.locusTag || target.proteinId),
+            'Research gene symbol',
+            128
+          ),
+          organism: this._boundedPersistedString(
+            String(target.organism || params.organism || 'unknown organism'),
+            'Research organism',
+            256
+          ),
+          idempotencyKey: `external-archive:${taskId}`,
+          intentHash: `external:${taskId}`,
+          targetBindingHash,
+          correlationId,
+          initiatedBy,
+          currentAnnotationSnapshot: this._clone(currentAnnotation),
+          currentAnnotationRequestSha256,
+          currentAnnotationBindingRequired: true,
+          createdAt: new Date().toISOString(),
+          externalTask: true,
+          changeSetId: null,
+        };
+        this._assertCanStartRun(runs, initiatedBy, workflow);
+      }
+      const reportAttachment = await this._archiveCompletedReport(workflow, workspace);
+      if (!reportAttachment) {
+        throw new Error('The Electron report archive bridge is unavailable');
+      }
+      workflow.status = 'completed';
+      workflow.updatedAt = new Date().toISOString();
+      workflow.externalArchiveCompletedAt ||= workflow.updatedAt;
+      this._runMapSet(runs, taskId, workflow);
+      await this._saveRuns(runs, workspace);
+      return {
+        success: true,
+        taskId,
+        reportAttachment: this._clone(reportAttachment),
+      };
     });
   }
 

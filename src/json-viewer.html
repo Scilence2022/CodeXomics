@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    />
+    <title>DGR JSON Viewer</title>
+    <link rel="stylesheet" href="json-viewer.css" />
+    <script src="json-viewer.js" defer></script>
+  </head>
+  <body>
+    <div id="loadingState" class="center-state" role="status" aria-live="polite">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p>Loading and verifying the archived research report…</p>
+    </div>
+
+    <div id="errorState" class="center-state error-state" role="alert" hidden>
+      <h1>Unable to display this report</h1>
+      <p id="errorMessage"></p>
+    </div>
+
+    <div id="appShell" class="app-shell" hidden>
+      <header class="app-header">
+        <div class="title-block">
+          <p class="eyebrow">Deep Gene Research archive</p>
+          <h1 id="reportTitle">Research report</h1>
+          <div id="fileMetadata" class="file-metadata" aria-label="Artifact metadata"></div>
+        </div>
+
+        <div class="header-actions">
+          <div class="view-switcher" role="tablist" aria-label="Report view">
+            <button
+              id="treeViewButton"
+              class="view-button active"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="treeView"
+            >
+              Tree
+            </button>
+            <button
+              id="rawViewButton"
+              class="view-button"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="rawView"
+            >
+              Raw JSON
+            </button>
+          </div>
+          <button id="resetTreeButton" class="secondary-button" type="button">Reset tree</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="viewer-panel" aria-label="JSON report">
+          <div id="treeView" class="view-pane" role="tabpanel" aria-labelledby="treeViewButton">
+            <div class="tree-help">
+              <span>Expand only the sections you need.</span>
+              <span>Large collections are displayed 100 entries at a time.</span>
+            </div>
+            <div id="jsonTree" class="json-tree" aria-label="JSON tree"></div>
+          </div>
+
+          <div
+            id="rawView"
+            class="view-pane raw-view"
+            role="tabpanel"
+            aria-labelledby="rawViewButton"
+            hidden
+          >
+            <div class="raw-warning">
+              The complete raw document is rendered only after this view is opened and may be large.
+            </div>
+            <pre id="rawOutput" tabindex="0" aria-label="Raw JSON document"></pre>
+          </div>
+        </section>
+
+        <aside class="search-panel" aria-labelledby="searchHeading">
+          <div class="search-header">
+            <h2 id="searchHeading">Search report</h2>
+            <p>Search property names and scalar values. Results reveal their location in the tree.</p>
+          </div>
+          <div class="search-controls">
+            <label class="sr-only" for="searchInput">Search JSON</label>
+            <input
+              id="searchInput"
+              type="search"
+              maxlength="256"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="e.g. PMID, catalytic activity"
+            />
+            <button id="searchButton" type="button">Search</button>
+          </div>
+          <p id="searchStatus" class="search-status" role="status" aria-live="polite">
+            Enter a term to search the complete report.
+          </p>
+          <div id="searchResults" class="search-results" aria-label="Search results"></div>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>
