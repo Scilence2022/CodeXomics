@@ -746,6 +746,65 @@
 }
 
 /* ===== Gene Notes Section ===== */
+.gene-annotation-note-section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--primary-color);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.gene-annotation-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gene-annotation-note-header h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.gene-annotation-note-header h4 i {
+  color: var(--primary-color);
+}
+
+.gene-annotation-note-badge {
+  padding: 2px 7px;
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.gene-annotation-note-help {
+  margin: 8px 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.gene-annotation-note-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gene-annotation-note-value {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .gene-notes-section {
   background: var(--bg-secondary);
   border-radius: var(--radius-md);

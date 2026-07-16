@@ -7123,6 +7123,37 @@ class TrackRenderer {
     });
   }
 
+  _canonicalGeneDetailsFeature(feature) {
+    if (!feature || String(feature.type || '').toUpperCase() === 'CDS') return feature;
+    const scalar = value => (Array.isArray(value) ? value[0] : value) || null;
+    const qualifiers = feature.qualifiers || {};
+    const identities = [scalar(qualifiers.locus_tag), scalar(qualifiers.protein_id), scalar(qualifiers.gene)].filter(
+      Boolean
+    );
+    if (identities.length === 0) return feature;
+    const chromosome = this.genomeBrowser.currentChromosome || document.getElementById('chromosomeSelect')?.value;
+    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
+    const candidates = annotations.filter(annotation => {
+      if (String(annotation?.type || '').toUpperCase() !== 'CDS') return false;
+      const candidateQualifiers = annotation.qualifiers || {};
+      const candidateIdentities = [
+        scalar(candidateQualifiers.locus_tag),
+        scalar(candidateQualifiers.protein_id),
+        scalar(candidateQualifiers.gene),
+      ].filter(Boolean);
+      return identities.some(identity => candidateIdentities.includes(identity));
+    });
+    if (candidates.length === 0) return feature;
+    return (
+      candidates.find(
+        annotation =>
+          Number(annotation.start) === Number(feature.start) &&
+          Number(annotation.end) === Number(feature.end) &&
+          Number(annotation.strand) === Number(feature.strand)
+      ) || candidates[0]
+    );
+  }
+
   showGeneDetails(gene, operonInfo, options = {}) {
     const featureType = (gene.type || '').toLowerCase();
     if (featureType === 'primer' || featureType === 'primer_bind') {
@@ -7130,6 +7161,11 @@ class TrackRenderer {
       this.genomeBrowser.selectPrimer(gene);
       return;
     }
+
+    // GenBank commonly provides overlapping gene/CDS pairs. The CDS owns
+    // product, note, translation, and research-backed qualifiers, so always
+    // canonicalize a clicked gene feature to its exact CDS counterpart.
+    gene = this._canonicalGeneDetailsFeature(gene);
 
     // Call the main CodeXomics's gene selection methods
     this.genomeBrowser.selectGene(gene, operonInfo);

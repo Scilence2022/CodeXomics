@@ -386,6 +386,10 @@ describe('AnnotationResearchWorkflowService', () => {
       'artifact disk unavailable'
     );
     expect(createAnnotationChangeset).not.toHaveBeenCalled();
+    expect(service.memoryRuns.get('chr1')['task-archive-failure']).toMatchObject({
+      status: 'completed',
+      reportArchiveError: 'artifact disk unavailable',
+    });
   });
 
   it('archives a directly started DGR task through the external MCP workflow', async () => {
@@ -574,6 +578,13 @@ describe('AnnotationResearchWorkflowService', () => {
       'does not match its archived full report'
     );
     expect(createAnnotationChangeset).not.toHaveBeenCalled();
+    expect(service.memoryRuns.get('chr1')['task-proposal-mismatch']).toMatchObject({
+      status: 'completed',
+      changeSetStatus: 'validation_failed',
+      proposalAvailable: true,
+      proposalMaterializationError: expect.stringContaining('does not match its archived full report'),
+      reportAttachment: expect.objectContaining({ attachmentId: 'dgr:task-proposal-mismatch' }),
+    });
   });
 
   it('preserves the authenticated context when materializing a completed research proposal', async () => {

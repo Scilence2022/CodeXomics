@@ -68,6 +68,31 @@ describe('Genes track sequence selection settings', () => {
     expect(genomeBrowser.scrollBottomSequenceToGene).not.toHaveBeenCalled();
   });
 
+  it('canonicalizes an overlapping gene feature to the qualifier-rich CDS for Gene Details', () => {
+    const gene = { type: 'gene', start: 12, end: 120, strand: 1, qualifiers: { gene: 'thrA', locus_tag: 'b0002' } };
+    const cds = {
+      type: 'CDS',
+      start: 12,
+      end: 120,
+      strand: 1,
+      qualifiers: { gene: 'thrA', locus_tag: 'b0002', note: 'Evidence-backed annotation note.' },
+    };
+    const genomeBrowser = {
+      currentChromosome: 'U00096',
+      currentAnnotations: { U00096: [gene, cds] },
+      selectGene: vi.fn(),
+      showGeneDetailsPanel: vi.fn(),
+      populateGeneDetails: vi.fn(),
+      scrollBottomSequenceToGene: vi.fn(),
+    };
+    const trackRenderer = new TrackRenderer(genomeBrowser);
+
+    trackRenderer.showGeneDetails(gene, null, { scrollBottomSequence: false });
+
+    expect(genomeBrowser.selectGene).toHaveBeenCalledWith(cds, null);
+    expect(genomeBrowser.populateGeneDetails).toHaveBeenCalledWith(cds, null);
+  });
+
   it('keeps AI-facing track settings schemas in sync', () => {
     const chatManagerContent = fs.readFileSync(CM_PATH, 'utf-8');
     const mcpTrackSettingsContent = fs.readFileSync(MCP_TRACK_SETTINGS_PATH, 'utf-8');

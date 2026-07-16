@@ -174,7 +174,7 @@ class GeneNotesManager {
     return `
             <div class="gene-notes-section">
                 <div class="gene-notes-header">
-                    <h4><i class="fas fa-sticky-note"></i> Notes</h4>
+                    <h4><i class="fas fa-sticky-note"></i> Curator Notes</h4>
                     <div class="gene-notes-header-actions">
                         ${
                           hasNote
@@ -191,7 +191,7 @@ class GeneNotesManager {
                     <textarea 
                         id="geneNoteTextarea" 
                         class="gene-notes-textarea" 
-                        placeholder="Add notes about this gene..."
+                        placeholder="Add private curator notes about this gene..."
                         onblur="window.genomeBrowser.saveGeneNote('${escapedGeneId}')"
                     >${this.escapeHtml(content)}</textarea>
                 </div>

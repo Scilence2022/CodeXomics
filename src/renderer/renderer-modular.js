@@ -6417,14 +6417,36 @@ class GenomeBrowser {
     sequenceTabHtml += `</div>`;
 
     // ---------------- Notes Tab ----------------
-    let notesTabHtml = '';
+    const annotationNoteValues = this.getAllQualifierValues(gene.qualifiers, 'note').filter(
+      value => value != null && String(value).trim()
+    );
+    let notesTabHtml = `
+      <div class="gene-annotation-note-section">
+        <div class="gene-annotation-note-header">
+          <h4><i class="fas fa-file-signature"></i> Annotation Note</h4>
+          <span class="gene-annotation-note-badge">CDS /note</span>
+        </div>
+        <p class="gene-annotation-note-help">Reviewed annotation text stored with this CDS and included in GenBank exports.</p>
+        <div class="gene-annotation-note-content">
+          ${
+            annotationNoteValues.length > 0
+              ? annotationNoteValues
+                  .map(
+                    value =>
+                      `<div class="gene-annotation-note-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(value)))}</div>`
+                  )
+                  .join('')
+              : '<div class="gene-tab-empty">No formal CDS annotation note has been applied.</div>'
+          }
+        </div>
+      </div>`;
     if (this.geneNotesManager) {
       notesTabHtml += this.geneNotesManager.renderNotesSection(geneId);
     } else {
       notesTabHtml += `
                 <div class="gene-notes-section">
                     <div class="gene-notes-header">
-                        <h4><i class="fas fa-sticky-note"></i> Notes</h4>
+                        <h4><i class="fas fa-sticky-note"></i> Curator Notes</h4>
                     </div>
                     <div class="gene-notes-content">
                         <p style="color: var(--text-muted);">Notes system initializing...</p>

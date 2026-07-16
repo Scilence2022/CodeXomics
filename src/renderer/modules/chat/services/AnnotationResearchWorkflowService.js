@@ -671,44 +671,77 @@ class AnnotationResearchWorkflowService {
       workflow.updatedAt = new Date().toISOString();
       workflow.error = this._optionalRemoteString(status.error, 2048);
 
+      // Persist the authoritative remote status before local archival or
+      // proposal materialization. Those post-processing steps can fail even
+      // though DGR itself completed successfully, and a retry must not leave
+      // the durable workflow looking indefinitely in progress.
+      this._runMapSet(runs, taskId, workflow);
+      await this._saveRuns(runs, workspace);
+
       if (status.status === 'completed' && !workflow.reportAttachment) {
-        await this._archiveCompletedReport(workflow, workspace);
+        try {
+          await this._archiveCompletedReport(workflow, workspace);
+          delete workflow.reportArchiveError;
+          delete workflow.reportArchiveErrorAt;
+          this._runMapSet(runs, taskId, workflow);
+          await this._saveRuns(runs, workspace);
+        } catch (error) {
+          workflow.reportArchiveError = this._optionalRemoteString(error?.message || String(error), 2048);
+          workflow.reportArchiveErrorAt = new Date().toISOString();
+          this._runMapSet(runs, taskId, workflow);
+          await this._saveRuns(runs, workspace);
+          throw error;
+        }
       }
 
       if (status.status === 'completed' && !workflow.changeSetId && !workflow.proposalHandledAt) {
-        const proposal = await this._boundCompletedProposal(workflow, status, workspace);
-        workflow.proposalStatus = proposal.status || 'unknown';
-        if (['draft_requires_evidence', 'draft_requires_target'].includes(proposal.status)) {
-          workflow.changeSetStatus = 'not_created';
-          workflow.proposalReason =
-            proposal.status === 'draft_requires_evidence'
-              ? 'Deep Gene Research completed, but found no evidence-backed claims that are safe to propose.'
-              : 'Deep Gene Research completed, but could not bind its proposal to the exact genome target.';
-          workflow.proposalHandledAt = new Date().toISOString();
-        } else if (!this._canProposeAnnotation(params)) {
-          workflow.proposalStatus = proposal.status || 'ready_for_validation';
-          workflow.proposalAvailable = true;
-          workflow.changeSetStatus = 'requires_annotation_propose';
-          workflow.proposalReason =
-            'Research completed successfully. An authenticated annotation:propose caller must materialize the reviewed proposal as a ChangeSet.';
-        } else {
-          const changeSet = await this._annotationService().createAnnotationChangeset({
-            identifier: workflow.target.locusTag || workflow.target.geneSymbol || workflow.target.proteinId,
-            chromosome: workflow.target.chromosome,
-            baseRevision: workflow.target.annotationRevision,
-            annotationProposal: proposal,
-            evidence: proposal.evidence || proposal.evidenceManifest?.sourceRecords?.map(record => record.label) || [],
-            researchRun: taskId,
-            idempotencyKey: `changeset:${workflow.idempotencyKey}`,
-            principal: workflow.initiatedBy || 'codexomics-chatbox-workflow',
-            __executionContext: params.__executionContext,
-          });
-          this._assertWorkspace(workspace);
-          workflow.changeSetId = changeSet.changeSet.id;
-          workflow.changeSetStatus = changeSet.changeSet.status;
-          workflow.proposalAvailable = true;
-          workflow.proposalReason = null;
-          workflow.proposalHandledAt = new Date().toISOString();
+        try {
+          const proposal = await this._boundCompletedProposal(workflow, status, workspace);
+          workflow.proposalStatus = proposal.status || 'unknown';
+          if (['draft_requires_evidence', 'draft_requires_target'].includes(proposal.status)) {
+            workflow.changeSetStatus = 'not_created';
+            workflow.proposalReason =
+              proposal.status === 'draft_requires_evidence'
+                ? 'Deep Gene Research completed, but found no evidence-backed claims that are safe to propose.'
+                : 'Deep Gene Research completed, but could not bind its proposal to the exact genome target.';
+            workflow.proposalHandledAt = new Date().toISOString();
+          } else if (!this._canProposeAnnotation(params)) {
+            workflow.proposalStatus = proposal.status || 'ready_for_validation';
+            workflow.proposalAvailable = true;
+            workflow.changeSetStatus = 'requires_annotation_propose';
+            workflow.proposalReason =
+              'Research completed successfully. An authenticated annotation:propose caller must materialize the reviewed proposal as a ChangeSet.';
+          } else {
+            const changeSet = await this._annotationService().createAnnotationChangeset({
+              identifier: workflow.target.locusTag || workflow.target.geneSymbol || workflow.target.proteinId,
+              chromosome: workflow.target.chromosome,
+              baseRevision: workflow.target.annotationRevision,
+              annotationProposal: proposal,
+              evidence:
+                proposal.evidence || proposal.evidenceManifest?.sourceRecords?.map(record => record.label) || [],
+              researchRun: taskId,
+              idempotencyKey: `changeset:${workflow.idempotencyKey}`,
+              principal: workflow.initiatedBy || 'codexomics-chatbox-workflow',
+              __executionContext: params.__executionContext,
+            });
+            this._assertWorkspace(workspace);
+            workflow.changeSetId = changeSet.changeSet.id;
+            workflow.changeSetStatus = changeSet.changeSet.status;
+            workflow.proposalAvailable = true;
+            workflow.proposalReason = null;
+            workflow.proposalHandledAt = new Date().toISOString();
+          }
+          delete workflow.proposalMaterializationError;
+          delete workflow.proposalMaterializationErrorAt;
+        } catch (error) {
+          workflow.proposalAvailable = Boolean(workflow.proposalSnapshot || status.result?.annotationProposal);
+          workflow.changeSetStatus = 'validation_failed';
+          workflow.proposalReason = this._optionalRemoteString(error?.message || String(error), 2048);
+          workflow.proposalMaterializationError = workflow.proposalReason;
+          workflow.proposalMaterializationErrorAt = new Date().toISOString();
+          this._runMapSet(runs, taskId, workflow);
+          await this._saveRuns(runs, workspace);
+          throw error;
         }
       }
       this._runMapSet(runs, taskId, workflow);
