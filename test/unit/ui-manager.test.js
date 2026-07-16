@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createRequire } from 'module';
+import fs from 'fs';
+import path from 'path';
 
 const require = createRequire(import.meta.url);
 const UIManager = require('../../src/renderer/modules/UIManager.js');
@@ -10,6 +12,7 @@ describe('UIManager dropdown handlers', () => {
   });
 
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -58,6 +61,7 @@ describe('UIManager sidebar controls', () => {
   });
 
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -71,5 +75,38 @@ describe('UIManager sidebar controls', () => {
     expect(document.getElementById('toggleSidebar').checked).toBe(true);
     expect(document.getElementById('splitterToggleBtn').classList.contains('collapsed')).toBe(false);
     expect(document.getElementById('splitterToggleBtn').title).toBe('Hide Sidebar');
+  });
+
+  it('clears stale collapsed overflow when a saved non-zero width makes the sidebar visible immediately', () => {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.width = '420px';
+    sidebar.style.overflow = 'hidden';
+    sidebar.dataset.previousWidth = '420px';
+
+    const manager = new UIManager({});
+    manager.showSidebarIfHidden();
+
+    expect(sidebar.classList.contains('collapsed')).toBe(false);
+    expect(sidebar.style.width).toBe('420px');
+    expect(sidebar.style.overflow).toBe('');
+    expect(sidebar.style.overflowY).toBe('');
+  });
+
+  it('records a saved width without re-expanding a collapsed sidebar during initialization', () => {
+    localStorage.setItem('sidebarWidth', '360px');
+    const sidebar = document.getElementById('sidebar');
+    const manager = new UIManager({});
+
+    manager.restoreSidebarWidth();
+
+    expect(sidebar.classList.contains('collapsed')).toBe(true);
+    expect(sidebar.style.width).toBe('0px');
+    expect(sidebar.dataset.previousWidth).toBe('360px');
+  });
+
+  it('keeps the expanded sidebar CSS state scrollable despite stale inline overflow', () => {
+    const layoutCss = fs.readFileSync(path.join(process.cwd(), 'src/renderer/css/layout.css'), 'utf8');
+
+    expect(layoutCss).toMatch(/\.sidebar:not\(\.collapsed\)\s*\{[^}]*overflow-y:\s*auto\s*!important;/s);
   });
 });

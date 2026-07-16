@@ -215,22 +215,31 @@ class UIManager {
       sidebar.classList.remove('collapsed');
       if (splitter) splitter.classList.remove('collapsed');
       mainContent.classList.remove('sidebar-collapsed');
-
-      // Restore width if it was set to 0
-      if (sidebar.style.width === '0px' || sidebar.offsetWidth === 0) {
-        const previousWidth = sidebar.dataset.previousWidth || '280px';
-        sidebar.style.width = previousWidth;
-        sidebar.style.minWidth = '';
-        sidebar.style.overflow = '';
-        sidebar.style.flex = 'none';
-      }
-
-      // Keep both sidebar controls synchronized with the visible state
-      this.updateToggleButtonStates();
-
-      // Trigger resize event
-      window.dispatchEvent(new Event('resize'));
     }
+
+    // Repair the complete expanded-state contract even when the sidebar is
+    // already visible. A saved width can make offsetWidth non-zero immediately
+    // after removing `collapsed`, while stale inline overflow remains hidden.
+    this.restoreExpandedSidebarStyles(sidebar);
+
+    // Keep both sidebar controls synchronized with the visible state
+    this.updateToggleButtonStates();
+
+    if (isHidden) window.dispatchEvent(new Event('resize'));
+  }
+
+  restoreExpandedSidebarStyles(sidebar) {
+    if (!sidebar) return;
+    const inlineWidth = sidebar.style.width && sidebar.style.width !== '0px' ? sidebar.style.width : null;
+    const savedWidth = localStorage.getItem('sidebarWidth');
+    const previousWidth = sidebar.dataset.previousWidth || inlineWidth || savedWidth || '280px';
+    sidebar.style.width = previousWidth;
+    sidebar.style.minWidth = '';
+    sidebar.style.overflow = '';
+    sidebar.style.removeProperty('overflow-x');
+    sidebar.style.removeProperty('overflow-y');
+    sidebar.style.flex = 'none';
+    sidebar.dataset.previousWidth = previousWidth;
   }
 
   // Toggle functionality
@@ -267,12 +276,7 @@ class UIManager {
       if (splitter) splitter.classList.remove('collapsed');
       mainContent.classList.remove('sidebar-collapsed');
 
-      // Restore previous width or use default
-      const previousWidth = sidebar.dataset.previousWidth || '280px';
-      sidebar.style.width = previousWidth;
-      sidebar.style.minWidth = '';
-      sidebar.style.overflow = '';
-      sidebar.style.flex = 'none';
+      this.restoreExpandedSidebarStyles(sidebar);
     } else {
       // Hide sidebar
       sidebar.classList.add('collapsed');
@@ -1546,6 +1550,7 @@ class UIManager {
 
       // Update sidebar width
       sidebar.style.width = `${newWidth}px`;
+      sidebar.dataset.previousWidth = sidebar.style.width;
 
       e.preventDefault();
     };
@@ -1575,6 +1580,7 @@ class UIManager {
       // Reset to default width with smooth transition
       sidebar.style.transition = 'width 0.3s ease';
       sidebar.style.width = '280px';
+      sidebar.dataset.previousWidth = '280px';
 
       // Save the reset width
       localStorage.setItem('sidebarWidth', '280px');
@@ -1639,6 +1645,7 @@ class UIManager {
       }
 
       sidebar.style.width = `${newWidth}px`;
+      sidebar.dataset.previousWidth = sidebar.style.width;
       localStorage.setItem('sidebarWidth', sidebar.style.width);
       window.dispatchEvent(new Event('resize'));
     });
@@ -1655,6 +1662,7 @@ class UIManager {
       if (currentSidebarWidth > newMaxWidth) {
         const constrainedWidth = Math.max(200, newMaxWidth);
         sidebar.style.width = `${constrainedWidth}px`;
+        sidebar.dataset.previousWidth = sidebar.style.width;
         localStorage.setItem('sidebarWidth', `${constrainedWidth}px`);
         console.log(`📺 Screen resized: Sidebar adjusted from ${currentSidebarWidth}px to ${constrainedWidth}px`);
       }
@@ -1668,21 +1676,26 @@ class UIManager {
 
     if (savedWidth && sidebar) {
       const width = parseInt(savedWidth);
+      if (!Number.isFinite(width)) {
+        localStorage.removeItem('sidebarWidth');
+        return;
+      }
       const maxWidth = window.innerWidth * 0.5;
 
       // Check if saved width is valid for current screen size
-      if (width >= 200 && width <= maxWidth) {
-        sidebar.style.width = savedWidth;
-      } else {
+      let restoredWidth = savedWidth;
+      if (!(width >= 200 && width <= maxWidth)) {
         // If saved width exceeds current limits, use the maximum allowed
         const constrainedWidth = Math.max(200, Math.min(maxWidth, width));
-        sidebar.style.width = `${constrainedWidth}px`;
+        restoredWidth = `${constrainedWidth}px`;
         // Update localStorage with the new constrained value
-        localStorage.setItem('sidebarWidth', `${constrainedWidth}px`);
+        localStorage.setItem('sidebarWidth', restoredWidth);
         console.log(
           `🔧 Sidebar width adjusted from ${width}px to ${constrainedWidth}px for current screen (${window.innerWidth}px)`
         );
       }
+      sidebar.dataset.previousWidth = restoredWidth;
+      if (!sidebar.classList.contains('collapsed')) sidebar.style.width = restoredWidth;
     }
   }
 }

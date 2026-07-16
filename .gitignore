@@ -202,6 +202,7 @@ sample-files/
 .arts/
 .codearts/
 .codex/
+.playwright-cli/
 
 # =============================================================================
 # Project Specific
@@ -227,4 +228,3 @@ manuscript/
 
 # Generated documentation reports (keep source, ignore generated)
 docs/reports/dynamic-tool-registry-multiagent-integration-report.md
-

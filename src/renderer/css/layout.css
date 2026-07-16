@@ -96,8 +96,18 @@
   border-right: 1px solid var(--border-color);
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
   flex-shrink: 0;
   transition: width 0.2s ease;
+}
+
+/* Expanded is an explicit layout state. This rule intentionally overrides
+ * stale inline `overflow: hidden` left by an interrupted collapse/restore
+ * sequence so long annotation panels always remain scrollable. */
+.sidebar:not(.collapsed) {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
 }
 
 .sidebar.collapsed {
