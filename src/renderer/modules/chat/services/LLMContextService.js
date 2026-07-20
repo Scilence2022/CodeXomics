@@ -609,6 +609,28 @@ class LLMContextService {
       return false;
     }
 
+    // Match an explicit selection request to the capability that actually changes
+    // selection state. A successful search/navigation call is useful context, but it
+    // must not be mistaken for completion of "select/highlight this gene".
+    const evidenceToolNames = [
+      ...toolsToExecute.map(tool => tool.tool_name),
+      ...successfulResults.map(result => result.tool),
+    ];
+    const isDirectGeneSelection =
+      typeof this.chatManager?.isGeneSelectionRequest === 'function'
+        ? this.chatManager.isGeneSelectionRequest(originalMessage, evidenceToolNames)
+        : false;
+    if (isDirectGeneSelection) {
+      const selectionWasRequested = toolsToExecute.some(tool => tool.tool_name === 'select_gene');
+      const selectionSucceeded = successfulResults.some(
+        result =>
+          result.tool === 'select_gene' &&
+          result.result &&
+          (result.result.success === true || result.result.selected === true || result.result.gene_info)
+      );
+      return selectionWasRequested && selectionSucceeded;
+    }
+
     // Simple task patterns that typically complete with one tool call
     const singleExecutionPatterns = [
       // Search patterns
@@ -873,6 +895,26 @@ class LLMContextService {
 
     if (sequencingCues.some(cue => message.includes(cue))) return true;
 
+    // A completed UI action may still be followed by a requested prose answer.
+    // Keep the loop alive for that answer even though the follow-up needs no tool.
+    if (
+      /\band\s+(?:(?:then\s+)?(?:tell|explain|describe|summari[sz]e|report|answer)\b|(?:what|why|how|where|when|who)\b)/.test(
+        message
+      )
+    ) {
+      return true;
+    }
+
+    // Explicit repeat counts are multi-action requests too. Otherwise commands
+    // such as "pan right 3x" or "open three tabs" stop after the first success.
+    if (
+      /\b(?:[2-9]|1\d)\s*(?:x|times?|rounds?|steps?|tabs?|windows?)\b/.test(message) ||
+      /\b(?:twice|thrice)\b/.test(message) ||
+      /\b(?:two|three|four|five|six|seven|eight|nine|ten)\s+(?:times?|rounds?|steps?|tabs?|windows?)\b/.test(message)
+    ) {
+      return true;
+    }
+
     // Enumerated actions written as a list: "do X, do Y, and/or/then do Z".
     // A comma immediately followed by a coordinating conjunction strongly signals
     // multiple discrete steps, even when a clause contains a single-execution
@@ -911,6 +953,9 @@ class LLMContextService {
 
   normalizeParams(params) {
     if (!params || typeof params !== 'object') return {};
+    if (Array.isArray(params)) {
+      return params.map(value => (value && typeof value === 'object' ? this.normalizeParams(value) : value));
+    }
     const sorted = {};
     Object.keys(params)
       .sort()

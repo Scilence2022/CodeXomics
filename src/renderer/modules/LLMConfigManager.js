@@ -1947,6 +1947,178 @@ class LLMConfigManager {
     return null;
   }
 
+  /**
+   * Extract readable text from the content/reasoning shapes used by supported
+   * providers. Structured response envelopes continue to retain their native
+   * blocks; this helper is only used for the legacy plain-text return path.
+   */
+  extractProviderText(value) {
+    if (typeof value === 'string') return value;
+    if (!value) return '';
+
+    if (Array.isArray(value)) {
+      return value.map(item => this.extractProviderText(item)).join('');
+    }
+
+    if (typeof value !== 'object') return '';
+    if (typeof value.text === 'string') return value.text;
+    if (typeof value.summary === 'string') return value.summary;
+    if (typeof value.content === 'string') return value.content;
+
+    return '';
+  }
+
+  /**
+   * Preserve the historical <think> representation for ordinary text while
+   * making provider reasoning available even when the visible answer is empty.
+   */
+  formatProviderText(content, reasoning = null) {
+    const contentText = this.extractProviderText(content);
+    const reasoningText = this.extractProviderText(reasoning);
+
+    if (!reasoningText || contentText.includes('<think>')) return contentText;
+    return `<think>\n${reasoningText}\n</think>${contentText ? `\n${contentText}` : ''}`;
+  }
+
+  /**
+   * Normalize an OpenAI Chat Completions-compatible response.
+   *
+   * Contract: a normal prose completion returns a string. A completion with
+   * tool_calls, legacy function_call, refusal, or a non-terminal finish reason
+   * returns the native message fields plus { provider, finish_reason }.
+   */
+  normalizeOpenAICompatibleResponse(data, provider = 'openai') {
+    const choice = data?.choices?.[0];
+    const message = choice?.message;
+    if (!message || typeof message !== 'object') {
+      throw new Error(`Invalid response structure from ${provider}. Expected choices[0].message.`);
+    }
+
+    const reasoning = message.reasoning_content ?? message.reasoning ?? message.reasoning_details ?? null;
+    const formattedContent = this.formatProviderText(message.content, reasoning);
+    const hasToolCalls = Array.isArray(message.tool_calls)
+      ? message.tool_calls.length > 0
+      : Boolean(message.tool_calls);
+    const hasFunctionCall = Boolean(message.function_call);
+    const finishReason = choice.finish_reason ?? choice.finishReason ?? null;
+    const normalizedFinishReason = String(finishReason || '').toLowerCase();
+    const hasAbnormalFinish =
+      finishReason !== null && !['', 'stop', 'end_turn', 'stop_sequence'].includes(normalizedFinishReason);
+    const hasRefusal = Boolean(message.refusal);
+
+    if (!hasToolCalls && !hasFunctionCall && !hasAbnormalFinish && !hasRefusal) {
+      return formattedContent;
+    }
+
+    return {
+      ...message,
+      // Keep structured content parts intact; string/null content can safely use
+      // the reasoning-aware display form without changing tool-call structure.
+      content:
+        typeof message.content === 'string' || message.content === null || message.content === undefined
+          ? formattedContent
+          : message.content,
+      finish_reason: finishReason,
+      provider,
+    };
+  }
+
+  normalizeLocalResponse(data) {
+    const normalizedResponse = this.normalizeOpenAICompatibleResponse(data, 'local');
+    if (typeof normalizedResponse !== 'string' || normalizedResponse.trim() !== '') {
+      return normalizedResponse;
+    }
+
+    console.warn('Local LLM returned empty content, this might indicate a model issue');
+    return 'I apologize, but the local LLM model returned an empty response. This could indicate:\n\n• The model is still loading or initializing\n• The model encountered an issue processing the request\n• The model requires different parameters\n\nPlease try:\n1. Waiting a moment and trying again\n2. Checking if the local LLM service is running properly\n3. Switching to a different LLM provider temporarily';
+  }
+
+  /**
+   * Normalize an Anthropic Messages response while preserving mixed content
+   * blocks (including tool_use and thinking blocks) whenever protocol state is
+   * present.
+   */
+  normalizeAnthropicResponse(data) {
+    if (!data || !Array.isArray(data.content)) {
+      throw new Error('Invalid response structure from Anthropic. Expected a content block array.');
+    }
+
+    const hasToolUse = data.content.some(block => block?.type === 'tool_use');
+    const stopReason = data.stop_reason ?? data.stopReason ?? null;
+    const normalizedStopReason = String(stopReason || '').toLowerCase();
+    const hasAbnormalStop = stopReason !== null && !['', 'end_turn', 'stop_sequence'].includes(normalizedStopReason);
+
+    if (hasToolUse || hasAbnormalStop) {
+      return {
+        ...data,
+        provider: 'anthropic',
+      };
+    }
+
+    const visibleText = data.content
+      .filter(block => block?.type === 'text')
+      .map(block => block.text || '')
+      .join('');
+    const reasoningText = data.content
+      .filter(block => block?.type === 'thinking')
+      .map(block => block.thinking || block.text || '')
+      .join('\n');
+    return this.formatProviderText(visibleText, reasoningText);
+  }
+
+  /**
+   * Normalize a Gemini generateContent response. Function calls and abnormal
+   * finish states retain the complete first candidate, including its original
+   * content.parts array.
+   */
+  normalizeGoogleResponse(data) {
+    const candidate = data?.candidates?.[0];
+    if (!candidate) {
+      const blockReason = data?.promptFeedback?.blockReason ?? data?.prompt_feedback?.block_reason;
+      if (blockReason) {
+        return {
+          ...data,
+          provider: 'google',
+          finishReason: blockReason,
+        };
+      }
+      throw new Error('Invalid response structure from Google API. Expected at least one candidate.');
+    }
+
+    const finishReason = candidate.finishReason ?? candidate.finish_reason ?? null;
+    const normalizedFinishReason = String(finishReason || '').toUpperCase();
+    const hasAbnormalFinish =
+      finishReason !== null && !['', 'STOP', 'END_TURN', 'STOP_SEQUENCE'].includes(normalizedFinishReason);
+    const parts = candidate.content?.parts;
+
+    if (!Array.isArray(parts)) {
+      return {
+        ...candidate,
+        content: { ...(candidate.content || {}), parts: [] },
+        provider: 'google',
+      };
+    }
+
+    const hasFunctionCall = parts.some(part => Boolean(part?.functionCall));
+
+    if (hasFunctionCall || hasAbnormalFinish) {
+      return {
+        ...candidate,
+        provider: 'google',
+      };
+    }
+
+    const visibleText = parts
+      .filter(part => typeof part?.text === 'string' && part.thought !== true)
+      .map(part => part.text)
+      .join('');
+    const reasoningText = parts
+      .filter(part => typeof part?.text === 'string' && part.thought === true)
+      .map(part => part.text)
+      .join('\n');
+    return this.formatProviderText(visibleText, reasoningText);
+  }
+
   async sendOpenAIMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
     console.log(
@@ -1982,13 +2154,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0].message;
-    let content = choiceMessage.content || '';
-    const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
-    if (reasoning && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'openai');
   }
 
   async sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2037,13 +2203,7 @@ class LLMConfigManager {
       'OpenAI',
       async response => {
         const data = await response.json();
-        const choiceMessage = data.choices[0].message;
-        let content = choiceMessage.content || '';
-        const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
-        if (reasoning && !content.includes('<think>')) {
-          content = `<think>\n${reasoning}\n</think>\n${content}`;
-        }
-        return content;
+        return this.normalizeOpenAICompatibleResponse(data, 'openai');
       }
     );
   }
@@ -2070,6 +2230,7 @@ class LLMConfigManager {
         'x-api-key': provider.apiKey,
         'Content-Type': 'application/json',
         'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
         model: provider.model,
@@ -2084,7 +2245,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.content[0].text;
+    return this.normalizeAnthropicResponse(data);
   }
 
   async sendAnthropicMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2111,6 +2272,7 @@ class LLMConfigManager {
         'x-api-key': provider.apiKey,
         'Content-Type': 'application/json',
         'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify(payload),
     });
@@ -2120,7 +2282,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    return data.content[0].text;
+    return this.normalizeAnthropicResponse(data);
   }
 
   async sendGoogleMessage(provider, message, context, memoryContext = null) {
@@ -2167,18 +2329,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    if (
-      data.candidates &&
-      data.candidates.length > 0 &&
-      data.candidates[0].content &&
-      data.candidates[0].content.parts &&
-      data.candidates[0].content.parts.length > 0
-    ) {
-      return data.candidates[0].content.parts[0].text;
-    } else {
-      console.error('Invalid response structure from Google API:', data);
-      throw new Error('Invalid response structure from Google API. Check console for details.');
-    }
+    return this.normalizeGoogleResponse(data);
   }
 
   async sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2240,18 +2391,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    if (
-      data.candidates &&
-      data.candidates.length > 0 &&
-      data.candidates[0].content &&
-      data.candidates[0].content.parts &&
-      data.candidates[0].content.parts.length > 0
-    ) {
-      return data.candidates[0].content.parts[0].text;
-    } else {
-      console.error('Invalid response structure from Google API:', data);
-      throw new Error('Invalid response structure from Google API. Check console for details.');
-    }
+    return this.normalizeGoogleResponse(data);
   }
 
   async sendDeepSeekMessage(provider, message, context, memoryContext = null) {
@@ -2289,13 +2429,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0].message;
-    let content = choiceMessage.content || '';
-    const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
-    if (reasoning && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'deepseek');
   }
 
   async sendDeepSeekMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2332,13 +2466,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0].message;
-    let content = choiceMessage.content || '';
-    const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
-    if (reasoning && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'deepseek');
   }
 
   async sendSiliconFlowMessage(provider, message, context, memoryContext = null) {
@@ -2376,13 +2504,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0].message;
-    let content = choiceMessage.content || '';
-    const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
-    if (reasoning && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'siliconflow');
   }
 
   /**
@@ -2535,17 +2657,9 @@ class LLMConfigManager {
         }
 
         console.log('SiliconFlow Message Object:', choice.message);
-        const msg = choice.message;
-        let content = msg.content || '';
-        const reasoning = msg.reasoning_content || msg.reasoning;
-        if (reasoning && !content.includes('<think>')) {
-          content = `<think>\n${reasoning}\n</think>\n${content}`;
-        }
-        console.log('SiliconFlow Content Extracted:', content);
-        console.log('Content type:', typeof content);
-        console.log('Content length:', content ? content.length : 'null/undefined');
-
-        return content;
+        const normalizedResponse = this.normalizeOpenAICompatibleResponse(data, 'siliconflow');
+        console.log('SiliconFlow Response Normalized:', normalizedResponse);
+        return normalizedResponse;
       }
     );
   }
@@ -2627,26 +2741,14 @@ class LLMConfigManager {
             throw new Error(`HTTP ${status}: ${response.statusText} - ${errorText || fbText}`);
           }
           const fbData = await response.json();
-          const fbMsg = fbData.choices[0]?.message;
-          let fbContent = fbMsg?.content ?? '';
-          const fbReasoning = fbMsg?.reasoning_content || fbMsg?.reasoning;
-          if (fbReasoning && fbContent && !fbContent.includes('<think>')) {
-            fbContent = `<think>\n${fbReasoning}\n</think>\n${fbContent}`;
-          }
-          return fbContent;
+          return this.normalizeOpenAICompatibleResponse(fbData, 'openrouter');
         }
       }
       throw new Error(`HTTP ${status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0]?.message;
-    let content = choiceMessage?.content ?? '';
-    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
-    if (reasoning && content && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'openrouter');
   }
 
   async sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2702,26 +2804,14 @@ class LLMConfigManager {
             throw new Error(`HTTP ${status}: ${response.statusText} - ${errorText || fbText}`);
           }
           const fbData = await response.json();
-          const fbMsg = fbData.choices[0]?.message;
-          let fbContent = fbMsg?.content ?? '';
-          const fbReasoning = fbMsg?.reasoning_content || fbMsg?.reasoning;
-          if (fbReasoning && fbContent && !fbContent.includes('<think>')) {
-            fbContent = `<think>\n${fbReasoning}\n</think>\n${fbContent}`;
-          }
-          return fbContent;
+          return this.normalizeOpenAICompatibleResponse(fbData, 'openrouter');
         }
       }
       throw new Error(`HTTP ${status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0]?.message;
-    let content = choiceMessage?.content ?? '';
-    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
-    if (reasoning && content && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'openrouter');
   }
 
   getOpenRouterFallbackModel(originalModel) {
@@ -2816,13 +2906,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0]?.message;
-    let content = choiceMessage?.content ?? '';
-    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
-    if (reasoning && content && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'minimax');
   }
 
   async sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2860,13 +2944,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0]?.message;
-    let content = choiceMessage?.content ?? '';
-    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
-    if (reasoning && content && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'minimax');
   }
 
   async sendMinimax_cnMessage(provider, message, context, memoryContext = null) {
@@ -2905,13 +2983,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0]?.message;
-    let content = choiceMessage?.content ?? '';
-    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
-    if (reasoning && content && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'minimax_cn');
   }
 
   async sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -2949,13 +3021,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    const choiceMessage = data.choices[0]?.message;
-    let content = choiceMessage?.content ?? '';
-    const reasoning = choiceMessage?.reasoning_content || choiceMessage?.reasoning;
-    if (reasoning && content && !content.includes('<think>')) {
-      content = `<think>\n${reasoning}\n</think>\n${content}`;
-    }
-    return content;
+    return this.normalizeOpenAICompatibleResponse(data, 'minimax_cn');
   }
 
   async sendLocalMessage(provider, message, context, memoryContext = null) {
@@ -3001,33 +3067,7 @@ class LLMConfigManager {
     // Log the full raw response from the local LLM
     console.log('Full raw response from Local LLM:', JSON.stringify(data, null, 2));
 
-    // Check if the response structure indicates a tool call (OpenAI-like pattern)
-    if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.tool_calls) {
-      console.log('Local LLM appears to be requesting a tool call:', data.choices[0].message.tool_calls);
-      // Return the entire message object, which includes tool_calls, so ChatManager can process it.
-      return data.choices[0].message;
-    } else if (
-      data.choices &&
-      data.choices[0] &&
-      data.choices[0].message &&
-      typeof data.choices[0].message.content === 'string'
-    ) {
-      const choiceMessage = data.choices[0].message;
-      let content = choiceMessage.content;
-      const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
-      if (reasoning && !content.includes('<think>')) {
-        content = `<think>\n${reasoning}\n</think>\n${content}`;
-      }
-      if (content.trim() === '') {
-        console.warn('Local LLM returned empty content, this might indicate a model issue');
-        return 'I apologize, but the local LLM model returned an empty response. This could indicate:\n\n• The model is still loading or initializing\n• The model encountered an issue processing the request\n• The model requires different parameters\n\nPlease try:\n1. Waiting a moment and trying again\n2. Checking if the local LLM service is running properly\n3. Switching to a different LLM provider temporarily';
-      }
-      // Standard text response
-      return content;
-    } else {
-      console.error('Unexpected response structure from Local LLM:', data);
-      throw new Error('Unexpected response structure from Local LLM. Check console for details.');
-    }
+    return this.normalizeLocalResponse(data);
   }
 
   async sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
@@ -3072,30 +3112,7 @@ class LLMConfigManager {
     const data = await response.json();
     console.log('Full raw response from Local LLM:', JSON.stringify(data, null, 2));
 
-    if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.tool_calls) {
-      console.log('Local LLM appears to be requesting a tool call:', data.choices[0].message.tool_calls);
-      return data.choices[0].message;
-    } else if (
-      data.choices &&
-      data.choices[0] &&
-      data.choices[0].message &&
-      typeof data.choices[0].message.content === 'string'
-    ) {
-      const choiceMessage = data.choices[0].message;
-      let content = choiceMessage.content;
-      const reasoning = choiceMessage.reasoning_content || choiceMessage.reasoning;
-      if (reasoning && !content.includes('<think>')) {
-        content = `<think>\n${reasoning}\n</think>\n${content}`;
-      }
-      if (content.trim() === '') {
-        console.warn('Local LLM returned empty content, this might indicate a model issue');
-        return 'I apologize, but the local LLM model returned an empty response. This could indicate:\n\n• The model is still loading or initializing\n• The model encountered an issue processing the request\n• The model requires different parameters\n\nPlease try:\n1. Waiting a moment and trying again\n2. Checking if the local LLM service is running properly\n3. Switching to a different LLM provider temporarily';
-      }
-      return content;
-    } else {
-      console.error('Unexpected response structure from Local LLM:', data);
-      throw new Error('Unexpected response structure from Local LLM. Check console for details.');
-    }
+    return this.normalizeLocalResponse(data);
   }
 
   buildMessages(userMessage, context, providerType = 'openai', memoryContext = null) {

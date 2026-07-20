@@ -191,14 +191,26 @@ class SmartExecutor {
     const promises = tools.map(tool => this.executeSingleTool(tool));
     const results = await Promise.allSettled(promises);
 
-    return results.map((result, index) => ({
-      tool: tools[index].tool_name,
-      parameters: tools[index].parameters,
-      success: result.status === 'fulfilled',
-      result: result.status === 'fulfilled' ? result.value : null,
-      error: result.status === 'rejected' ? result.reason.message : null,
-      executionMode: 'parallel',
-    }));
+    return results.map((result, index) => {
+      const explicitFailure =
+        result.status === 'fulfilled' &&
+        result.value &&
+        typeof result.value === 'object' &&
+        result.value.success === false;
+      return {
+        tool: tools[index].tool_name,
+        parameters: tools[index].parameters,
+        success: result.status === 'fulfilled' && !explicitFailure,
+        result: result.status === 'fulfilled' && !explicitFailure ? result.value : null,
+        error:
+          result.status === 'rejected'
+            ? result.reason.message
+            : explicitFailure
+              ? result.value.error || result.value.message || 'Tool reported an unsuccessful result'
+              : null,
+        executionMode: 'parallel',
+      };
+    });
   }
 
   /**
@@ -210,12 +222,13 @@ class SmartExecutor {
     for (const tool of tools) {
       try {
         const result = await this.executeSingleTool(tool);
+        const explicitFailure = result && typeof result === 'object' && result.success === false;
         results.push({
           tool: tool.tool_name,
           parameters: tool.parameters,
-          success: true,
-          result: result,
-          error: null,
+          success: !explicitFailure,
+          result: explicitFailure ? null : result,
+          error: explicitFailure ? result.error || result.message || 'Tool reported an unsuccessful result' : null,
           executionMode: 'sequential',
         });
       } catch (error) {

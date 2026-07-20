@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRequire } from 'module';
+import fs from 'fs';
+import path from 'path';
 
 const require = createRequire(import.meta.url);
 const DynamicToolsSnapshotAdapter = require('../../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
@@ -60,6 +62,109 @@ describe('DynamicToolsSnapshotAdapter relevance selection', () => {
     expect(primerTools.map(tool => tool.name)).not.toContain('run_blast_search');
     expect(blastTools.map(tool => tool.name)).toContain('run_blast_search');
     expect(blastTools.map(tool => tool.name)).not.toContain('design_primers');
+  });
+
+  it('keeps an explicit gene-selection request focused on select_gene', () => {
+    const tools = [
+      createTool('select_gene', 'Select and highlight a gene', ['select', 'highlight', 'gene']),
+      createTool('find_gene_by_name', 'Find a gene by name or locus tag', ['find', 'search', 'gene']),
+      createTool('jump_to_gene', 'Navigate to a gene', ['jump', 'navigate', 'gene']),
+      createTool('load_genome_file', 'Load a genome file', ['load genome']),
+      createTool('get_current_state', 'Get the current browser state', ['current state']),
+    ];
+    const adapter = new DynamicToolsSnapshotAdapter(
+      {
+        tools,
+        builtInTools: tools.map(tool => ({ name: tool.name, category: tool.category, priority: tool.priority })),
+        categories: { categories: {} },
+        counts: { tools: tools.length, builtInTools: tools.length },
+      },
+      { agentSystemEnabled: false }
+    );
+
+    const selectedNames = adapter.selectRelevantTools('select lysC gene').map(tool => tool.name);
+
+    expect(selectedNames).toContain('select_gene');
+    expect(selectedNames).not.toContain('find_gene_by_name');
+    expect(selectedNames).not.toContain('jump_to_gene');
+    expect(selectedNames).not.toContain('load_genome_file');
+
+    const themeNames = adapter.selectRelevantTools('select dark theme').map(tool => tool.name);
+    expect(themeNames).not.toContain('select_gene');
+
+    for (const nonGeneRequest of ['select dark mode', 'select blue color', 'select all primers']) {
+      expect(adapter.selectRelevantTools(nonGeneRequest).map(tool => tool.name)).not.toContain('select_gene');
+    }
+
+    const modelForGene = adapter.selectRelevantTools('select a model for this gene').map(tool => tool.name);
+    expect(modelForGene).not.toContain('select_gene');
+  });
+
+  it('selects select_gene for the exact lysC request against the generated registry', () => {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), 'tools_registry/generated/tool-registry-manifest.json'), 'utf8')
+    );
+    const adapter = new DynamicToolsSnapshotAdapter(manifest, { agentSystemEnabled: false });
+
+    const selectedNames = adapter.selectRelevantTools('select lysC gene').map(tool => tool.name);
+
+    expect(selectedNames).toContain('select_gene');
+    expect(selectedNames).not.toContain('find_gene_by_name');
+    expect(selectedNames).not.toContain('jump_to_gene');
+    expect(selectedNames).not.toContain('zoom_to_gene');
+
+    const shorthandNames = adapter.selectRelevantTools('select lysC').map(tool => tool.name);
+    expect(shorthandNames).toContain('select_gene');
+    expect(shorthandNames).not.toContain('find_gene_by_name');
+
+    const pluralNames = adapter.selectRelevantTools('select all genes').map(tool => tool.name);
+    expect(pluralNames).not.toContain('select_gene');
+  });
+
+  it('renders mixed YAML samples as canonical JSON tool calls', () => {
+    const adapter = createAdapter();
+    const tool = {
+      ...createTool('select_gene', 'Select a gene', ['select gene']),
+      parameters: {
+        type: 'object',
+        properties: {
+          geneName: { type: 'string', examples: ['lacZ'] },
+        },
+        required: ['geneName'],
+      },
+      sample_usages: [
+        {
+          user_query: 'select lysC gene',
+          tool_call: "select_gene(geneName='lysC')",
+        },
+      ],
+    };
+
+    const rendered = adapter.formatSampleUsages([tool]);
+
+    expect(rendered).toContain('{"tool_name":"select_gene","parameters":{"geneName":"lysC"}}');
+    expect(rendered).not.toContain('select_gene(geneName=');
+    expect(rendered).not.toContain('"geneName":"lacZ"');
+  });
+
+  it('canonicalizes nested Python-like sample arguments without inventing placeholders', () => {
+    const adapter = createAdapter();
+    const rendered = adapter.formatSampleUsages([
+      {
+        ...createTool('set_track_settings', 'Set track settings', ['track settings']),
+        sample_usages: [
+          {
+            user_query: 'make the genes track taller',
+            tool_call: "set_track_settings(track_type='genes', settings={'height': 150})",
+          },
+        ],
+      },
+    ]);
+
+    expect(rendered).toContain(
+      '{"tool_name":"set_track_settings","parameters":{"track_type":"genes","settings":{"height":150}}}'
+    );
+    expect(rendered).not.toContain('<track_type>');
   });
 
   it('selects the region BLAST tool for coordinate-based BLAST prompts', () => {
