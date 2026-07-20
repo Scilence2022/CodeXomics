@@ -27,6 +27,9 @@ class ToolExecutionPolicy {
 
   defaultNormalizeParams(params) {
     if (!params || typeof params !== 'object') return {};
+    if (Array.isArray(params)) {
+      return params.map(value => (value && typeof value === 'object' ? this.defaultNormalizeParams(value) : value));
+    }
     const sorted = {};
     Object.keys(params)
       .sort()
@@ -76,6 +79,13 @@ class ToolExecutionPolicy {
     return `${tool.tool_name}:${JSON.stringify(this.normalizeToolParams(tool.tool_name, tool.parameters))}`;
   }
 
+  isExecutionFeedbackMessage(message) {
+    return Boolean(
+      message?.content &&
+      (message.role === 'system' || (message.role === 'user' && message.__codexomicsToolFeedback === true))
+    );
+  }
+
   hasViewStateChangedSinceLastExecution(toolName, conversationHistory) {
     if (!conversationHistory || !Array.isArray(conversationHistory)) {
       return false;
@@ -84,7 +94,7 @@ class ToolExecutionPolicy {
     let lastExecIdx = -1;
     for (let i = conversationHistory.length - 1; i >= 0; i--) {
       const msg = conversationHistory[i];
-      if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
+      if (this.isExecutionFeedbackMessage(msg) && msg.content.includes(`${toolName} executed successfully`)) {
         lastExecIdx = i;
         break;
       }
@@ -121,7 +131,7 @@ class ToolExecutionPolicy {
 
     for (let i = lastExecIdx + 1; i < conversationHistory.length; i++) {
       const msg = conversationHistory[i];
-      if (msg.role === 'system' && msg.content) {
+      if (this.isExecutionFeedbackMessage(msg)) {
         for (const viewTool of viewChangingTools) {
           if (msg.content.includes(`${viewTool} executed successfully`)) {
             console.log(

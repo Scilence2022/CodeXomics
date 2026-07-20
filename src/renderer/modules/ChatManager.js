@@ -4885,7 +4885,10 @@ class ChatManager {
       }
 
       // Get maximum function call rounds from configuration
-      const maxRounds = this.configManager.get('llm.functionCallRounds', 10);
+      const configuredMaxRounds = Number(this.configManager.get('llm.functionCallRounds', 10));
+      const maxRounds = Number.isFinite(configuredMaxRounds)
+        ? Math.max(1, Math.min(Math.trunc(configuredMaxRounds), 20))
+        : 10;
       const enableEarlyCompletion = this.configManager.get('llm.enableEarlyCompletion', true);
       console.log('🔧 Maximum function call rounds from config:', maxRounds);
       console.log('🔧 Early completion enabled:', enableEarlyCompletion);
@@ -4963,6 +4966,7 @@ class ChatManager {
         }
 
         currentRound++;
+        executionData.rounds = currentRound;
         console.log(`=== FUNCTION CALL ROUND ${currentRound}/${maxRounds} ===`);
 
         // Update the thinking process - add more detailed information
@@ -4979,6 +4983,8 @@ class ChatManager {
           context,
           memoryContext
         );
+        const responseAnalysis = this.analyzeLLMResponse(response, message);
+        const responseText = responseAnalysis.text;
 
         // Check whether the response was aborted
         if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
@@ -4987,7 +4993,7 @@ class ChatManager {
 
         console.log('=== LLM Raw Response ===');
         console.log('Response type:', typeof response);
-        console.log('Response length:', response ? response.length : 'null');
+        console.log('Response length:', responseText.length);
         console.log('Response is null:', response === null);
         console.log('Response is undefined:', response === undefined);
         console.log('Response is empty string:', response === '');
@@ -4997,20 +5003,36 @@ class ChatManager {
 
         // Show the LLM's thinking process (if the response contains thinking tags)
         if (this.showThinkingProcess) {
-          this.updateThinkingMessage(`✅ Response received (${response ? response.length : 0} chars)`);
-          this.displayLLMThinking(response);
+          this.updateThinkingMessage(`✅ Response received (${responseText.length} chars)`);
+          this.displayLLMThinking(responseText, responseAnalysis.reasoningText, responseAnalysis.toolCalls);
         }
 
-        // CRITICAL FIX: Check for tool calls FIRST, before task completion
-        // This prevents early completion from skipping tool execution
-        const toolCall = this.parseToolCall(response);
-
-        // Also check for multiple tool calls in response
-        const multipleToolCalls = this.parseMultipleToolCalls(response);
-
-        // Determine which tools to execute
-        const detectedTools = multipleToolCalls.length > 0 ? multipleToolCalls : toolCall ? [toolCall] : [];
+        // Consume one provider-neutral response analysis. It preserves native
+        // structured calls while retaining the text-JSON compatibility protocol.
+        const detectedTools = responseAnalysis.toolCalls;
         const detectedToolCount = detectedTools.length;
+
+        if (detectedToolCount > 0 && this.shouldRecoverBeforeToolExecution(responseAnalysis)) {
+          const recoveryDecision = this.getModelTurnRecoveryDecision(
+            responseAnalysis,
+            toolExecutionState,
+            currentRound,
+            maxRounds
+          );
+          if (recoveryDecision.action === 'retry') {
+            if (responseText.trim()) conversationHistory.push({ role: 'assistant', content: responseText });
+            conversationHistory.push({
+              role: 'user',
+              content: this.buildToolProtocolRecoveryMessage(recoveryDecision.reason),
+            });
+            continue;
+          }
+          taskCompleted = true;
+          finalResponse = recoveryDecision.finalResponse;
+          toolExecutionState.terminationReason = recoveryDecision.reason;
+          break;
+        }
+
         const pendingExecution = this.createPendingToolExecutionQueue(
           detectedTools,
           successfulToolExecutionCounts,
@@ -5032,6 +5054,8 @@ class ChatManager {
             );
           } else if (detectedToolCount > 0) {
             this.updateThinkingMessage(`🔍 Detected ${detectedToolCount} tool call(s), none queued for execution`);
+          } else if (responseAnalysis.hasToolCallIntent) {
+            this.updateThinkingMessage(`⚠️ Tool-like response detected but it could not be normalized`);
           } else {
             this.updateThinkingMessage(`💬 No tool calls detected - conversational response`);
           }
@@ -5066,7 +5090,7 @@ class ChatManager {
 
           conversationHistory.push({
             role: 'assistant',
-            content: response || JSON.stringify(pendingExecution.suppressedTools),
+            content: responseText || JSON.stringify(pendingExecution.suppressedTools),
           });
           this.appendToolExecutionStateMessage(conversationHistory, toolExecutionState, {
             reason: 'duplicate tool call suppressed',
@@ -5075,12 +5099,17 @@ class ChatManager {
 
           if (toolExecutionState.consecutiveSuppressedRounds >= 2 || currentRound >= maxRounds) {
             taskCompleted = true;
-            finalResponse =
-              lastSuccessfulResults.length > 0
-                ? this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools)
-                : policyBlockedToolCount > 0
-                  ? 'The requested tool call was blocked by the tool execution policy.'
-                  : 'The response repeated the same tool call beyond the requested repeat limit.';
+            const verifiedToolOnlyCompletion = this.canFinalizeFromSuccessfulToolResults(
+              toolExecutionState,
+              lastSuccessfulResults,
+              lastSuccessfulTools,
+              message
+            );
+            finalResponse = verifiedToolOnlyCompletion
+              ? this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools)
+              : policyBlockedToolCount > 0
+                ? 'The requested tool call was blocked by the tool execution policy before every requested step completed.'
+                : 'The model repeated a tool call beyond the request limit before every requested step completed.';
             break;
           }
 
@@ -5091,10 +5120,40 @@ class ChatManager {
         // Tool detection is intentionally scoped to the latest LLM response.
         // Previous assistant messages may contain already-executed calls and must not seed a new queue.
 
+        if (detectedToolCount === 0) {
+          const recoveryDecision = this.getModelTurnRecoveryDecision(
+            responseAnalysis,
+            toolExecutionState,
+            currentRound,
+            maxRounds
+          );
+          if (recoveryDecision.action === 'retry') {
+            if (responseText.trim()) {
+              conversationHistory.push({ role: 'assistant', content: responseText });
+            }
+            conversationHistory.push({
+              role: 'user',
+              content: this.buildToolProtocolRecoveryMessage(recoveryDecision.reason),
+            });
+            if (this.showThinkingProcess) {
+              this.updateThinkingMessage(
+                `🔁 Retrying model turn (${toolExecutionState.protocolRecoveryAttempts}/2): ${recoveryDecision.reason}`
+              );
+            }
+            continue;
+          }
+          if (recoveryDecision.action === 'fail') {
+            taskCompleted = true;
+            finalResponse = recoveryDecision.finalResponse;
+            toolExecutionState.terminationReason = recoveryDecision.reason;
+            break;
+          }
+        }
+
         // Check for task completion signals if early completion is enabled
         // BUT ONLY if there are NO tool calls to execute
         if (enableEarlyCompletion && toolsToExecute.length === 0) {
-          const completionResult = this.checkTaskCompletion(response);
+          const completionResult = this.checkTaskCompletion(responseText);
           if (completionResult.isCompleted) {
             console.log('=== TASK COMPLETION DETECTED (NO TOOL CALLS) ===');
             console.log('Completion reason:', completionResult.reason);
@@ -5102,7 +5161,8 @@ class ChatManager {
             console.log('================================================');
 
             taskCompleted = true;
-            finalResponse = completionResult.summary || response;
+            finalResponse = completionResult.summary || responseText;
+            toolExecutionState.terminationReason = 'completion heuristic';
             this.showNotification(
               `Task completed early (Round ${currentRound}/${maxRounds}): ${completionResult.reason}`,
               'success'
@@ -5279,6 +5339,8 @@ class ChatManager {
             const failedResults = toolResults.filter(r => !r.success);
 
             if (successfulResults.length > 0) {
+              toolExecutionState.consecutiveFailureRounds = 0;
+              toolExecutionState.protocolRecoveryAttempts = 0;
               successfulResults.forEach(result => {
                 const toolKey = this.getToolExecutionKey(result.tool, result.parameters);
                 successfulToolExecutionCounts.set(toolKey, (successfulToolExecutionCounts.get(toolKey) || 0) + 1);
@@ -5289,7 +5351,9 @@ class ChatManager {
                 parameters: this.normalizeToolParams(result.tool, result.parameters),
               }));
 
-              // Add successful tool results to conversation with SYSTEM role to prevent re-execution
+              // Add successful tool results as protocol feedback. Anthropic and
+              // Gemini adapters keep only the leading system message, so later
+              // runtime results must use a user-visible role on every provider.
               // IMPORTANT: Sanitize results before sending to LLM to prevent context overflow
               const successMessages = successfulResults.map(result => {
                 const sanitizedResult = this.sanitizeResultForLLM(result.result, result.tool);
@@ -5303,17 +5367,14 @@ class ChatManager {
                 }
                 return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeToolParams(result.tool, result.parameters))}: ${sanitizedStr}`;
               });
-              conversationHistory.push({
-                role: 'system',
-                content: `Tool execution completed: ${successMessages.join('; ')}`,
-              });
+              conversationHistory.push(
+                this.createToolExecutionFeedbackMessage(`[Tool Result]\n${successMessages.join('; ')}`)
+              );
 
               // ENHANCED: Check for simple task completion after successful tool execution
-              const shouldTerminateEarly = this.shouldTerminateAfterToolExecution(
-                toolsToExecute,
-                successfulResults,
-                message
-              );
+              const shouldTerminateEarly =
+                this.hasSuccessfulExecutionForRequest(toolExecutionState) &&
+                this.shouldTerminateAfterToolExecution(toolsToExecute, successfulResults, message);
               if (shouldTerminateEarly) {
                 console.log('=== EARLY TERMINATION AFTER SUCCESSFUL TOOL EXECUTION ===');
                 console.log('Simple task completed successfully, terminating early');
@@ -5331,19 +5392,21 @@ class ChatManager {
             }
 
             if (failedResults.length > 0) {
-              // Add failed tool results to conversation with SYSTEM role
+              // Add failed results in a role preserved by every provider adapter.
               const errorMessages = failedResults.map(
                 result => `${result.tool} failed: ${result.error || 'Unknown error'}`
               );
-              conversationHistory.push({
-                role: 'system',
-                content: `Tool execution errors: ${errorMessages.join('; ')}`,
-              });
+              conversationHistory.push(
+                this.createToolExecutionFeedbackMessage(`[Tool Execution Error]\n${errorMessages.join('; ')}`)
+              );
               console.log(`${failedResults.length} tool(s) failed:`, failedResults);
 
-              // CRITICAL FIX: If ALL tools failed, terminate to prevent infinite retry
+              // Give the model one bounded opportunity to correct parameters or
+              // choose an alternate capability. Repeated failure still terminates.
               if (successfulResults.length === 0) {
-                console.log('=== ALL TOOLS FAILED - TERMINATING TO PREVENT INFINITE RETRY ===');
+                toolExecutionState.consecutiveFailureRounds += 1;
+                const automaticRetryAllowed = this.canAutomaticallyRetryToolFailures(failedResults);
+                console.log('=== ALL TOOLS FAILED ===');
                 console.log(
                   'Failed tools:',
                   failedResults.map(r => r.tool)
@@ -5352,28 +5415,43 @@ class ChatManager {
                   'Errors:',
                   failedResults.map(r => r.error)
                 );
-                console.log('This prevents infinite retry loops when tools consistently fail');
-                console.log('================================================================');
+                console.log('Consecutive failed tool rounds:', toolExecutionState.consecutiveFailureRounds);
+                console.log('Automatic retry allowed:', automaticRetryAllowed);
+                console.log('========================');
 
-                taskCompleted = true;
+                if (
+                  !automaticRetryAllowed ||
+                  toolExecutionState.consecutiveFailureRounds >= 2 ||
+                  currentRound >= maxRounds
+                ) {
+                  taskCompleted = true;
+                  toolExecutionState.terminationReason = automaticRetryAllowed
+                    ? 'repeated tool execution failure'
+                    : 'non-retryable tool execution failure';
 
-                // Generate more informative error response based on the specific tool
-                if (failedResults.length === 1 && failedResults[0].tool === 'get_genome_info') {
-                  finalResponse =
-                    `ℹ️ **Unable to retrieve genome information**\n\n` +
-                    `The genome information tool is currently unavailable. This might be because:\n` +
-                    `- No genome file is currently loaded\n` +
-                    `- The genome browser is not initialized\n` +
-                    `- The requested data is not available\n\n` +
-                    `Please try loading a genome file first or check if the genome browser is properly initialized.`;
-                } else {
-                  finalResponse =
-                    `❌ **Tool Execution Failed**\n\n` +
-                    `The following tool(s) could not be executed:\n` +
-                    failedResults.map(r => `- **${r.tool}**: ${r.error || 'Unknown error'}`).join('\n') +
-                    `\n\nPlease check your system configuration or try a different approach.`;
+                  // Generate more informative error response based on the specific tool
+                  if (failedResults.length === 1 && failedResults[0].tool === 'get_genome_info') {
+                    finalResponse =
+                      `ℹ️ **Unable to retrieve genome information**\n\n` +
+                      `The genome information tool is currently unavailable. This might be because:\n` +
+                      `- No genome file is currently loaded\n` +
+                      `- The genome browser is not initialized\n` +
+                      `- The requested data is not available\n\n` +
+                      `Please try loading a genome file first or check if the genome browser is properly initialized.`;
+                  } else {
+                    const retryDescription = automaticRetryAllowed
+                      ? 'after a recovery attempt'
+                      : 'without an automatic retry because the operation may have side effects';
+                    finalResponse =
+                      `❌ **Tool Execution Failed**\n\n` +
+                      `The following tool(s) could not be executed ${retryDescription}:\n` +
+                      failedResults.map(r => `- **${r.tool}**: ${r.error || 'Unknown error'}`).join('\n') +
+                      `\n\nPlease check your system configuration or try a different approach.`;
+                  }
+                  break;
                 }
-                break;
+
+                console.log('Returning failure state to the model for one corrective round.');
               }
             }
 
@@ -5384,16 +5462,38 @@ class ChatManager {
               });
             }
           } catch (error) {
+            if (error.message === 'AbortError') throw error;
             console.error('=== TOOL EXECUTION EXCEPTION ===');
             console.error('Error:', error);
             console.error('Stack:', error.stack);
             console.error('================================');
 
-            // Add error to conversation and continue
-            conversationHistory.push({
-              role: 'system',
-              content: `Tool execution error: ${error.message}`,
-            });
+            toolExecutionState.consecutiveFailureRounds += 1;
+            const automaticRetryAllowed = this.canAutomaticallyRetryToolFailures(
+              toolsToExecute.map(tool => ({ tool: tool.tool_name }))
+            );
+            // Use a user-role protocol message so every provider retains the error;
+            // Anthropic and Gemini adapters keep only the leading system message.
+            conversationHistory.push(
+              this.createToolExecutionFeedbackMessage(
+                `[Tool Execution Error]\n${error.message}\n` +
+                  'Choose a corrected call or a different available tool. Do not repeat the same failing call unchanged.'
+              )
+            );
+            if (
+              !automaticRetryAllowed ||
+              toolExecutionState.consecutiveFailureRounds >= 2 ||
+              currentRound >= maxRounds
+            ) {
+              taskCompleted = true;
+              toolExecutionState.terminationReason = automaticRetryAllowed
+                ? 'repeated tool execution exception'
+                : 'non-retryable tool execution exception';
+              finalResponse = automaticRetryAllowed
+                ? `❌ Tool execution failed repeatedly: ${error.message}`
+                : `❌ Tool execution failed and was not retried because the operation may have side effects: ${error.message}`;
+              break;
+            }
           }
         } else {
           console.log('=== NO TOOL CALL DETECTED ===');
@@ -5401,24 +5501,19 @@ class ChatManager {
           console.log('===============================');
 
           // No tool call detected - this is our final response
-          finalResponse = response;
+          finalResponse = responseText;
+          toolExecutionState.terminationReason = 'final conversational response';
           break;
         }
       }
 
-      // If we've exhausted all rounds and still haven't got a final response
+      // Reaching the configured bound is an incomplete state, not permission for
+      // one uncounted and unparsed "summary" call that may emit more tool JSON.
       if (!finalResponse) {
         console.log('=== MAX ROUNDS REACHED ===');
-        console.log('Requesting final summary from LLM...');
-
-        // Ask LLM for a final summary
-        conversationHistory.push({
-          role: 'user',
-          content: 'Please provide a final summary of the actions taken and results achieved.',
-        });
-
-        finalResponse = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context, memoryContext);
-        console.log('Final summary response:', finalResponse);
+        toolExecutionState.terminationReason = 'maximum rounds reached';
+        finalResponse = this.buildRoundLimitResponse(maxRounds, lastSuccessfulResults, lastSuccessfulTools);
+        console.log('Returning deterministic incomplete response:', finalResponse);
       }
 
       // BENCHMARK INTEGRATION: Complete execution data tracking
@@ -5427,6 +5522,7 @@ class ChatManager {
         this.lastExecutionData.totalExecutionTime = this.lastExecutionData.endTime - this.lastExecutionData.startTime;
         this.lastExecutionData.finalResponse =
           finalResponse || 'I completed the requested actions. Please let me know if you need anything else.';
+        this.lastExecutionData.terminationReason = toolExecutionState.terminationReason;
         console.log('📊 Execution data for benchmark:', this.lastExecutionData);
       }
 
@@ -6593,6 +6689,19 @@ class ChatManager {
       }
     }
 
+    const requestPlan = this.getSequentialActionRequirements(originalMessage);
+    if (requestPlan.actionableClauseCount > 0) {
+      const matchingRequirements = requestPlan.requirements.filter(requirement =>
+        requirement.matcher(tool.tool_name, { tool: tool.tool_name, parameters: tool.parameters || {} })
+      );
+      if (matchingRequirements.length === 0) return 1;
+      const requestedCount = matchingRequirements.reduce(
+        (total, requirement) => total + Math.max(1, Number(requirement.count) || 1),
+        0
+      );
+      return Math.min(requestedCount, maximumRequestedExecutions);
+    }
+
     const message = String(originalMessage || '').toLowerCase();
     const numberWords = {
       once: 1,
@@ -6643,12 +6752,792 @@ class ChatManager {
     return 1;
   }
 
+  isInstructionalRequest(message) {
+    const text = String(message || '').trim();
+    return (
+      /\b(?:how\s+(?:do|can|should|would)\s+(?:i|we)|how\s+to|show\s+me\s+how|explain\s+how|walk\s+me\s+through|tutorial|examples?\s+(?:of|for)|give\s+me\s+\w*\s*examples?|demonstrate|syntax\s+for|what\s+would[\s\S]{0,80}\bcall\s+look\s+like|what\s+does[\s\S]{0,60}\bdo)\b/i.test(
+        text
+      ) || /(?:如何|怎么|怎样|请解释|教程|示例|演示).{0,40}(使用|调用|操作|工作|实现)?/.test(text)
+    );
+  }
+
+  analyzeLLMResponse(response, originalMessage = '') {
+    const intentService = this.services?.intent;
+    if (intentService && typeof intentService.analyzeResponse === 'function') {
+      const analyzed =
+        intentService.analyzeResponse(response, {
+          allowTextToolCalls: !this.isInstructionalRequest(originalMessage),
+        }) || {};
+      let toolCalls = Array.isArray(analyzed.toolCalls) ? analyzed.toolCalls : [];
+      const invalidToolCalls = Array.isArray(analyzed.invalidToolCalls)
+        ? analyzed.invalidToolCalls
+        : Array.isArray(analyzed.malformedToolCalls)
+          ? analyzed.malformedToolCalls
+          : [];
+      const actionRequested = this.requestRequiresToolExecution(originalMessage, '');
+      const suppressedToolCalls = [];
+      toolCalls = toolCalls.filter(toolCall => {
+        if (actionRequested || this.isReadOnlyToolForInformationalRequest(toolCall.tool_name)) return true;
+        suppressedToolCalls.push({
+          ...toolCall,
+          reason: 'State-changing tool call suppressed for an informational request',
+        });
+        return false;
+      });
+      const selectedToolNames = new Set(
+        (this.lastSystemPromptMetadata?.selectedTools || []).map(tool => tool.name).filter(Boolean)
+      );
+      if (selectedToolNames.size > 0) {
+        const advertisedCalls = [];
+        for (const toolCall of toolCalls) {
+          if (selectedToolNames.has(toolCall.tool_name)) {
+            advertisedCalls.push(toolCall);
+          } else {
+            invalidToolCalls.push({
+              ...toolCall,
+              reason: `Tool was not advertised for the current request: ${toolCall.tool_name}`,
+            });
+          }
+        }
+        toolCalls = advertisedCalls;
+      }
+      const requestConsistentCalls = [];
+      for (const toolCall of toolCalls) {
+        const mismatchReason = this.getToolCallRequestMismatchReason(toolCall, originalMessage);
+        if (mismatchReason) {
+          invalidToolCalls.push({ ...toolCall, reason: mismatchReason });
+        } else {
+          requestConsistentCalls.push(toolCall);
+        }
+      }
+      toolCalls = requestConsistentCalls;
+      const text = String(analyzed.displayText ?? analyzed.text ?? analyzed.content ?? '');
+      return {
+        ...analyzed,
+        text,
+        toolCalls,
+        suppressedToolCalls,
+        invalidToolCalls,
+        stopReason: analyzed.stopReason || analyzed.finishReason || null,
+        reasoningText: String(analyzed.reasoningText || ''),
+        hasToolCallIntent: Boolean(
+          analyzed.hasToolCallIntent ||
+          analyzed.hasToolLikeContent ||
+          invalidToolCalls.length > 0 ||
+          suppressedToolCalls.length > 0
+        ),
+        isEmpty:
+          text.trim() === '' &&
+          toolCalls.length === 0 &&
+          invalidToolCalls.length === 0 &&
+          suppressedToolCalls.length === 0,
+      };
+    }
+
+    const text =
+      typeof response === 'string'
+        ? response
+        : typeof response?.content === 'string'
+          ? response.content
+          : response === null || response === undefined
+            ? ''
+            : JSON.stringify(response);
+    const toolCalls = this.parseMultipleToolCalls(response);
+    return {
+      text,
+      toolCalls,
+      invalidToolCalls: [],
+      stopReason:
+        response?.stopReason || response?.stop_reason || response?.finishReason || response?.finish_reason || null,
+      hasToolCallIntent: false,
+      isEmpty: text.trim() === '' && toolCalls.length === 0,
+    };
+  }
+
+  shouldRecoverBeforeToolExecution(responseAnalysis) {
+    const stopReason = String(responseAnalysis?.stopReason || '').toLowerCase();
+    const refusal =
+      responseAnalysis?.refusal ||
+      responseAnalysis?.isRefusal ||
+      /refusal|safety|content_filter|blocked|prohibited|recitation|blocklist|spii/.test(stopReason);
+    const incomplete = /length|max_tokens|max_output_tokens|model_context_window_exceeded|incomplete/.test(stopReason);
+    const toolProtocolError = /malformed_function_call|unexpected_tool_call|tool_(?:use_)?error/.test(stopReason);
+    return Boolean(
+      refusal ||
+      incomplete ||
+      toolProtocolError ||
+      stopReason === 'pause_turn' ||
+      (responseAnalysis?.invalidToolCalls || []).length > 0
+    );
+  }
+
+  isReadOnlyToolForInformationalRequest(toolName) {
+    const readOnlyPolicyNames = new Set(['search', 'analysis', 'state', 'external_api']);
+    const readOnlyTools = new Set([
+      'find_gene_by_name',
+      'search_features',
+      'search_annotations',
+      'get_current_state',
+      'get_genome_info',
+      'get_file_info',
+      'get_sequence',
+      'get_coding_sequence',
+      'design_primers',
+      'calculate_primer_properties',
+      'find_primer_binding_sites',
+      'list_primers',
+    ]);
+    if (readOnlyTools.has(toolName)) return true;
+    const policyName = this.services?.context
+      ?.getToolExecutionPolicy?.()
+      ?.capabilityPolicy?.getPolicyForTool?.(toolName)?.name;
+    return readOnlyPolicyNames.has(policyName);
+  }
+
+  getToolCallRequestMismatchReason(toolCall, originalMessage) {
+    if (toolCall?.tool_name !== 'select_gene') return null;
+    const requestedSelection = this.getRequestedGeneSelection(originalMessage);
+    if (!requestedSelection) {
+      return 'select_gene does not match the selection target in the current request';
+    }
+    if (!requestedSelection.geneName) return null;
+
+    const parameters = toolCall.parameters || {};
+    const selectedGene = parameters.geneName || parameters.gene_name || parameters.name;
+    if (typeof selectedGene !== 'string' || selectedGene.toLowerCase() !== requestedSelection.geneName.toLowerCase()) {
+      return `select_gene target does not match the requested gene ${requestedSelection.geneName}`;
+    }
+    return null;
+  }
+
+  isInterimActionResponse(responseText) {
+    if (!responseText || typeof responseText !== 'string') return false;
+    const text = responseText.toLowerCase();
+    const planningLanguage =
+      /\b(i(?:'|’)ll|i\s+will|let\s+me|i(?:'|’)m\s+going\s+to|i\s+need\s+to|i\s+can\s+start\s+by|first,?\s+i)\b/.test(
+        text
+      );
+    const actionLanguage =
+      /\b(?:us(?:e|ing)|call(?:ing)?|search(?:ing)?|find(?:ing)?|locat(?:e|ing)|select(?:ing)?|navigat(?:e|ing)|open(?:ing)?|load(?:ing)?|fetch(?:ing)?|run(?:ning)?|calculat(?:e|ing)|analy[sz](?:e|ing)|check(?:ing)?|retriev(?:e|ing)|execut(?:e|ing))\b/.test(
+        text
+      );
+    const chinesePlanning =
+      /(我会|我将|让我|接下来|首先).{0,24}(使用|调用|搜索|查找|定位|选择|导航|打开|加载|运行|计算|分析|执行)/.test(
+        responseText
+      );
+    return (planningLanguage && actionLanguage) || chinesePlanning;
+  }
+
+  getActionVerbPattern() {
+    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|fetch|retrieve|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry)';
+  }
+
+  requestRequiresToolExecution(originalMessage, responseText = '') {
+    if (this.isInstructionalRequest(originalMessage)) return false;
+    const message = String(originalMessage || '')
+      .trim()
+      .toLowerCase();
+    const actionVerb = this.getActionVerbPattern();
+    const actionRequest =
+      new RegExp(`^(?:please\\s+|kindly\\s+)?${actionVerb}\\b`).test(message) ||
+      new RegExp(`\\b(?:can|could|would)\\s+you\\s+(?:please\\s+)?${actionVerb}\\b`).test(message) ||
+      new RegExp(`\\b(?:i\\s+(?:want|need)\\s+you\\s+to|help\\s+me(?:\\s+to)?|kindly)\\s+${actionVerb}\\b`).test(
+        message
+      ) ||
+      new RegExp(
+        `\\bi\\s+(?:want|need)\\s+to\\s+${actionVerb}\\b|\\bi\\s+would\\s+like\\s+(?:you\\s+)?to\\s+${actionVerb}\\b|\\bi(?:'|’)d\\s+like\\s+(?:you\\s+)?to\\s+${actionVerb}\\b`
+      ).test(message) ||
+      /\b(?:i\s+(?:want|need)|please\s+have)\s+.+?\b(?:selected|highlighted|activated)\b/.test(message) ||
+      /\bmake\s+.+?\b(?:the\s+)?(?:active\s+gene|active\s+selection|selected|highlighted)\b/.test(message) ||
+      /^(?:(?:请|帮我|麻烦|能否|可以)\s*)?(?:选择|选中|高亮|打开|关闭|切换|导航|跳转|缩放|搜索|查找|定位|加载|导入|导出|保存|删除|创建|添加|移除|编辑|更新|计算|分析|翻译|运行|显示|隐藏|获取|设计|模拟|复制|粘贴|插入)/.test(
+        String(originalMessage || '').trim()
+      );
+    const knowledgeAction = /\b(?:calculate|compute|analy[sz]e|show)\b/.test(message);
+    const contextRequiredAction =
+      /\b(?:calculate|compute|analy[sz]e|assess|predict|show|find|search|locate|open|fetch|retrieve)\b/.test(message);
+    const genomicsOrAppContext =
+      /\b(?:genome|gene|dna|rna|sequence|annotation|feature|chromosome|track|tab|window|file|image|primer|protein|blast|codon|gc|domain|motif|region|position|view|browser|state|task|action|bookmark|setting|theme|style|mode|model|provider|option|sidebar|panel|plugin|workflow|benchmark|database|uniprot|interpro|report|screenshot|directory|folder|reads?|variants?|wig|operon|fasta|genbank|bed|gff|vcf|molecular|translation)\b/.test(
+        message
+      ) ||
+      /(?:基因组|基因|序列|注释|染色体|轨道|标签页|文件|引物|蛋白|区域|位置|视图|状态|任务|设置|数据库|截图|目录|变异|操纵子)/.test(
+        String(originalMessage || '')
+      );
+    const conceptualKnowledgeRequest =
+      /\b(?:why|explain|role|essential|function|importance|meaning|how[\s\S]{0,40}\bworks?)\b/.test(message) &&
+      !/\b(?:current|loaded|this\s+(?:genome|sequence|gene)|gc|codon|molecular\s+weight|domains?|motifs?|primers?|length|coordinates?|frequency|entropy|restriction|blast)\b/.test(
+        message
+      );
+    const clarification =
+      /\b(?:which|what|where|when|how many|do you mean|should i|would you like|can you provide)[^?]*\?\s*$/i.test(
+        responseText.trim()
+      ) ||
+      /\b(?:please|could you)\s+(?:specify|provide|choose|clarify)\b/i.test(responseText) ||
+      /(?:哪一个|哪个|什么|哪里|是否|请提供|请指定|请选择|需要您|需要你).*[？?]\s*$/.test(responseText);
+    return (
+      actionRequest &&
+      (!contextRequiredAction || genomicsOrAppContext) &&
+      (!knowledgeAction || (genomicsOrAppContext && !conceptualKnowledgeRequest)) &&
+      !clarification
+    );
+  }
+
+  getRequestedGeneSelection(originalMessage) {
+    const message = String(originalMessage || '');
+    const token = '([A-Za-z][A-Za-z0-9_.-]*)';
+    const explicitPatterns = [
+      new RegExp(
+        `\\b(?:select|highlight|choose|pick|activate)\\s+(?:the\\s+)?gene\\s+(?:(?:named|called)\\s+)?${token}\\b`,
+        'i'
+      ),
+      new RegExp(`\\b(?:select|highlight|choose|pick|activate)\\s+(?:the\\s+)?${token}\\s+gene\\b`, 'i'),
+      new RegExp(`\\bset\\s+(?:the\\s+)?(?:active|current|selected)\\s+gene\\s+(?:to|as)\\s+${token}\\b`, 'i'),
+      new RegExp(`\\bmake\\s+${token}\\s+(?:the\\s+)?(?:active|current|selected)\\s+gene\\b`, 'i'),
+    ];
+    for (const pattern of explicitPatterns) {
+      const match = message.match(pattern);
+      if (match && !/^(?:all|every|multiple|current|active|selected|gene)$/i.test(match[1])) {
+        return { geneName: match[1] };
+      }
+    }
+
+    if (
+      /\b(?:select|highlight|choose|pick|activate)\s+(?:the\s+)?(?:(?:active|current|selected)\s+)?gene\b/i.test(
+        message
+      ) ||
+      /(?:选择|选中|高亮)(?:当前|活跃|选定)?基因(?:\s*[:：]?\s*([A-Za-z][A-Za-z0-9_.-]*))?/.test(message)
+    ) {
+      const chineseTarget = message.match(
+        /(?:选择|选中|高亮)(?:当前|活跃|选定)?基因(?:\s*[:：]?\s*([A-Za-z][A-Za-z0-9_.-]*))?/
+      )?.[1];
+      return { geneName: chineseTarget || null };
+    }
+
+    const chineseSuffixTarget = message.match(/(?:选择|选中|高亮)\s*([A-Za-z][A-Za-z0-9_.-]*)\s*基因/)?.[1];
+    if (chineseSuffixTarget) return { geneName: chineseSuffixTarget };
+
+    const shorthandMatch = message.match(
+      /\b(?:select|highlight|choose|pick|activate)\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_.-]*)\b/i
+    );
+    if (!shorthandMatch) return null;
+
+    const nonGeneSelectionTarget =
+      /\b(?:all|every|multiple|primers?|themes?|styles?|modes?|models?|providers?|options?|items?|tabs?|tracks?|files?|regions?|sequences?|annotations?|features?|chromosomes?|positions?|colou?rs?|accents?|presets?|dna|rna|proteins?)\b/i.test(
+        message
+      );
+    if (nonGeneSelectionTarget) return null;
+
+    const shorthandToken = shorthandMatch[1];
+    const looksLikeGeneSymbol = /[A-Z0-9]/.test(shorthandToken.substring(1));
+    const looksLikeProviderName = /^(?:gpt|claude|gemini|llama|qwen|deepseek|openai|anthropic)/i.test(shorthandToken);
+
+    return !looksLikeProviderName && looksLikeGeneSymbol ? { geneName: shorthandToken } : null;
+  }
+
+  isGeneSelectionRequest(originalMessage) {
+    return Boolean(this.getRequestedGeneSelection(originalMessage));
+  }
+
+  getSequentialRequestClauses(originalMessage) {
+    const actionVerb = this.getActionVerbPattern();
+    return String(originalMessage || '')
+      .split(
+        new RegExp(
+          `\\s*(?:[,;，；]\\s*(?:(?:and\\s+)?then\\s+)?|\\b(?:and\\s+then|then|after\\s+that|followed\\s+by|next|finally)\\b|\\band(?=\\s+(?:please\\s+)?${actionVerb}\\b)|(?:然后|接着|之后|下一步|最后))\\s*`,
+          'i'
+        )
+      )
+      .map(clause => clause.trim())
+      .filter(Boolean);
+  }
+
+  getRequestClauseEffectRequirement(clause, inheritedDomain = '') {
+    const text = String(clause || '').trim();
+    const message = text.toLowerCase();
+    const contextMessage = `${message} ${inheritedDomain}`.trim();
+    const requirement = (capability, matcher, repeatToolName = capability) => ({
+      capability,
+      matcher,
+      count: this.getRequestedExecutionCountFallback(text, repeatToolName),
+    });
+
+    const requestedGeneSelection = this.getRequestedGeneSelection(text);
+    if (requestedGeneSelection) {
+      return requirement(
+        'gene_selection',
+        (toolName, record) => {
+          if (toolName !== 'select_gene') return false;
+          if (!requestedGeneSelection.geneName) return true;
+          const parameters = record?.normalizedParameters || record?.parameters || {};
+          const selectedGene = parameters.geneName || parameters.gene_name || parameters.name;
+          return (
+            typeof selectedGene === 'string' &&
+            selectedGene.toLowerCase() === requestedGeneSelection.geneName.toLowerCase()
+          );
+        },
+        'select_gene'
+      );
+    }
+    if (/\b(?:select|highlight|choose|pick|activate)\b|(?:选择|选中|高亮)/.test(message)) {
+      return requirement(
+        'selection',
+        toolName => /^(?:select_|highlight_|switch_|set_)/.test(toolName),
+        'select_sequence_region'
+      );
+    }
+    if (
+      /\b(?:create|add|open)\b|(?:创建|添加|打开)/.test(message) &&
+      /\b(?:tabs?|windows?)\b|标签页|窗口/.test(contextMessage)
+    ) {
+      return requirement('open_tab', toolName => toolName === 'open_new_tab', 'open_new_tab');
+    }
+    if (/\b(?:create|add)\b|(?:创建|添加)/.test(message) && /\bannotations?\b|注释/.test(contextMessage)) {
+      return requirement(
+        'create_annotation',
+        toolName => /^(?:create_annotation|batch_create_annotations)$/.test(toolName),
+        'create_annotation'
+      );
+    }
+    if (
+      /\b(?:edit|update|modify|rename|apply)\b|(?:编辑|更新|修改|重命名|应用)/.test(message) &&
+      /\bannotations?\b|注释/.test(contextMessage)
+    ) {
+      return requirement(
+        'edit_annotation',
+        toolName =>
+          /^(?:edit_annotation|update_annotation|bulk_update_annotations|apply_annotation_changeset)$/.test(toolName),
+        'edit_annotation'
+      );
+    }
+    if (/\b(?:delete|remove)\b|(?:删除|移除)/.test(message) && /\bannotations?\b|注释/.test(contextMessage)) {
+      return requirement(
+        'delete_annotation',
+        toolName => /^(?:delete_annotation|apply_annotation_changeset)$/.test(toolName),
+        'delete_annotation'
+      );
+    }
+    if (
+      /\b(?:insert|replace|cut|paste|delete)\b|(?:插入|替换|剪切|粘贴|删除)/.test(message) &&
+      /\bsequences?\b|序列/.test(contextMessage)
+    ) {
+      return requirement(
+        'edit_sequence',
+        toolName =>
+          /^(?:insert_sequence|replace_sequence|cut_sequence|paste_sequence|delete_sequence|execute_actions)$/.test(
+            toolName
+          ),
+        'execute_actions'
+      );
+    }
+    if (/\b(?:create|add|insert)\b|(?:创建|添加|插入)/.test(message)) {
+      return requirement(
+        'create',
+        toolName => /^(?:create_|add_|insert_|batch_create_)/.test(toolName),
+        'create_annotation'
+      );
+    }
+    if (
+      /\b(?:edit|update|modify|rename|replace|apply|set|configure)\b|(?:编辑|更新|修改|重命名|替换|应用|设置|配置)/.test(
+        message
+      )
+    ) {
+      return requirement(
+        'edit',
+        toolName => /^(?:edit_|update_|replace_|apply_|bulk_update_|set_|configure_)/.test(toolName),
+        'edit_annotation'
+      );
+    }
+    if (/\bsave\b|保存/.test(message) && /\bprimers?\b|引物/.test(contextMessage)) {
+      return requirement('save_primer', toolName => toolName === 'save_primer', 'save_primer');
+    }
+    if (/\bsave\b|保存/.test(message) && /\bviews?\b|视图/.test(contextMessage)) {
+      return requirement('save_view', toolName => toolName === 'save_view_state', 'save_view_state');
+    }
+    if (/\b(?:save|archive)\b|(?:保存|归档)/.test(message)) {
+      return requirement('save', toolName => /^(?:save_|archive_)/.test(toolName), 'save_view_state');
+    }
+    if (/\b(?:delete|remove|clear|uninstall)\b|(?:删除|移除|清除|卸载)/.test(message)) {
+      return requirement(
+        'delete',
+        toolName => /^(?:delete_|remove_|clear_|uninstall_|apply_annotation_changeset$)/.test(toolName),
+        'delete_sequence'
+      );
+    }
+    if (/\b(?:export|download)\b|(?:导出|下载)/.test(message)) {
+      return requirement('export', toolName => toolName === 'export_data' || /^export_/.test(toolName), 'export_data');
+    }
+    if (/\b(?:load|import)\b|(?:加载|导入)/.test(message)) {
+      return requirement('load', toolName => /^(?:load_|import_)/.test(toolName), 'load_genome_file');
+    }
+    if (/\bopen\b|打开/.test(message)) {
+      const isTabRequest = /\b(?:tabs?|windows?)\b|标签页|窗口/.test(message);
+      return requirement(
+        isTabRequest ? 'open_tab' : 'open',
+        toolName => (isTabRequest ? toolName === 'open_new_tab' : /^(?:open_|view_)/.test(toolName)),
+        isTabRequest ? 'open_new_tab' : 'open_image_file'
+      );
+    }
+    if (/\bclose\b|关闭/.test(message)) {
+      const isTabRequest = /\b(?:tabs?|windows?)\b|标签页|窗口/.test(message);
+      return requirement(
+        isTabRequest ? 'close_tab' : 'close',
+        toolName => (isTabRequest ? toolName === 'close_tab' : /^(?:close_|hide_)/.test(toolName)),
+        isTabRequest ? 'close_tab' : 'close'
+      );
+    }
+    if (/\bswitch\b|切换/.test(message)) {
+      const isTabRequest = /\b(?:tabs?|windows?)\b|标签页|窗口/.test(message);
+      return requirement(
+        isTabRequest ? 'switch_tab' : 'switch',
+        toolName => (isTabRequest ? toolName === 'switch_to_tab' : /^(?:switch_|set_)/.test(toolName)),
+        isTabRequest ? 'switch_to_tab' : 'switch'
+      );
+    }
+    if (/\bzoom\b|缩放/.test(message)) {
+      const direction = /\b(?:out|away)\b|缩小/.test(message) ? 'out' : /\bin\b|放大/.test(message) ? 'in' : null;
+      return requirement(
+        direction ? `zoom_${direction}` : 'zoom',
+        toolName => (direction ? toolName === `zoom_${direction}` : /^zoom_/.test(toolName)),
+        direction ? `zoom_${direction}` : 'zoom_in'
+      );
+    }
+    if (/\b(?:navigate|jump|pan|scroll)\b|(?:导航|跳转|平移|滚动)/.test(message)) {
+      const directionalTool = [
+        ['pan_right', /\bpan\s+right\b|向右平移/],
+        ['pan_left', /\bpan\s+left\b|向左平移/],
+        ['scroll_right', /\bscroll\s+right\b|向右滚动/],
+        ['scroll_left', /\bscroll\s+left\b|向左滚动/],
+      ].find(([, pattern]) => pattern.test(message))?.[0];
+      return requirement(
+        directionalTool || 'navigation',
+        toolName =>
+          directionalTool ? toolName === directionalTool : /^(?:navigate_|jump_|pan_|scroll_)/.test(toolName),
+        directionalTool || 'navigate_to_position'
+      );
+    }
+    if (/\b(?:search|find|locate)\b|(?:搜索|查找|定位)/.test(message)) {
+      return requirement('search', toolName => /^(?:search_|find_|locate_|get_)/.test(toolName), 'search_features');
+    }
+    if (/\btranslate\b|翻译/.test(message)) {
+      return requirement('translate', toolName => /^translate_/.test(toolName), 'translate_sequence');
+    }
+    if (/\balign\b|比对/.test(message)) {
+      return requirement('align', toolName => /^(?:align_|blast_)/.test(toolName), 'align');
+    }
+    if (/\b(?:calculate|compute)\b|计算/.test(message)) {
+      return requirement(
+        'calculate',
+        toolName => /^(?:calculate_|compute_|calc_)/.test(toolName) || /_analysis$/.test(toolName),
+        'calculate_molecular_weight'
+      );
+    }
+    if (/\b(?:analy[sz]e|assess|predict)\b|(?:分析|评估|预测)/.test(message)) {
+      return requirement(
+        'analysis',
+        toolName => /^(?:analy[sz]e_|assess_|predict_)/.test(toolName) || /_analysis$/.test(toolName),
+        'analyze'
+      );
+    }
+    if (/\bdesign\b|设计/.test(message)) {
+      return requirement('design', toolName => /^(?:design_|create_)/.test(toolName), 'design_primers');
+    }
+    if (
+      /\b(?:run|execute|start|stop|pause|resume|simulate|retry)\b|(?:运行|执行|启动|停止|暂停|恢复|模拟|重试)/.test(
+        message
+      )
+    ) {
+      return requirement(
+        'execute',
+        toolName => /^(?:run_|execute_|start_|stop_|pause_|resume_|simulate_|virtual_|retry_)/.test(toolName),
+        'execute_actions'
+      );
+    }
+    if (/\bcopy\b|复制/.test(message)) {
+      return requirement('copy', toolName => /^copy_/.test(toolName), 'copy_sequence');
+    }
+    if (/\bpaste\b|粘贴/.test(message)) {
+      return requirement('paste', toolName => /^(?:paste_|insert_)/.test(toolName), 'paste_sequence');
+    }
+    if (/\b(?:show|hide|toggle)\b|(?:显示|隐藏)/.test(message)) {
+      return requirement('display', toolName => /^(?:show_|hide_|toggle_|view_|list_|get_)/.test(toolName), 'show');
+    }
+    if (/\b(?:fetch|retrieve)\b|获取/.test(message)) {
+      return requirement('retrieve', toolName => /^(?:fetch_|retrieve_|get_|list_|search_)/.test(toolName), 'fetch');
+    }
+
+    const directPrefixAction = message.match(
+      /\b(bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize)\b/
+    )?.[1];
+    if (directPrefixAction) {
+      return requirement(
+        directPrefixAction,
+        toolName => toolName === directPrefixAction || toolName.startsWith(`${directPrefixAction}_`),
+        directPrefixAction
+      );
+    }
+
+    return null;
+  }
+
+  getRequestObjectDomain(clause) {
+    const message = String(clause || '').toLowerCase();
+    if (/\bannotations?\b|注释/.test(message)) return 'annotation';
+    if (/\bsequences?\b|序列/.test(message)) return 'sequence';
+    if (/\bprimers?\b|引物/.test(message)) return 'primer';
+    if (/\bviews?\b|视图/.test(message)) return 'view';
+    if (/\b(?:tabs?|windows?)\b|标签页|窗口/.test(message)) return 'tab';
+    if (/\btracks?\b|轨道/.test(message)) return 'track';
+    if (/\bgenes?\b|基因/.test(message)) return 'gene';
+    return '';
+  }
+
+  getSequentialActionRequirements(originalMessage) {
+    const clauses = this.getSequentialRequestClauses(originalMessage);
+    const actionableClauses = [];
+    const requirements = [];
+    let inheritedDomain = '';
+
+    for (const clause of clauses) {
+      inheritedDomain = this.getRequestObjectDomain(clause) || inheritedDomain;
+      const clauseWithDomain = inheritedDomain ? `${clause} ${inheritedDomain}` : clause;
+      if (!this.requestRequiresToolExecution(clauseWithDomain)) continue;
+      actionableClauses.push(clause);
+      const requirement = this.getRequestClauseEffectRequirement(clause, inheritedDomain);
+      if (requirement) requirements.push(requirement);
+    }
+
+    return {
+      actionableClauseCount: actionableClauses.length,
+      requirements,
+    };
+  }
+
+  doSuccessfulRecordsSatisfyRequirements(successfulRecords, requirements) {
+    const unmatchedRecords = successfulRecords.slice();
+    for (const requirement of requirements) {
+      const requiredCount = Math.max(1, Number(requirement.count) || 1);
+      for (let occurrence = 0; occurrence < requiredCount; occurrence++) {
+        const matchingIndex = unmatchedRecords.findIndex(record => requirement.matcher(record.tool, record));
+        if (matchingIndex === -1) return false;
+        unmatchedRecords.splice(matchingIndex, 1);
+      }
+    }
+    return true;
+  }
+
+  hasSuccessfulExecutionForRequest(toolExecutionState) {
+    const successfulRecords = (toolExecutionState?.records || []).filter(record => record.status === 'success');
+    if (successfulRecords.length === 0) return false;
+
+    const originalMessage = String(toolExecutionState?.originalMessage || '');
+    const requestedActions = this.getSequentialActionRequirements(originalMessage);
+    if (requestedActions.actionableClauseCount === 0) return true;
+    if (requestedActions.requirements.length !== requestedActions.actionableClauseCount) return false;
+    return this.doSuccessfulRecordsSatisfyRequirements(successfulRecords, requestedActions.requirements);
+  }
+
+  canFinalizeFromSuccessfulToolResults(toolExecutionState, successfulResults, successfulTools, originalMessage) {
+    return Boolean(
+      successfulResults.length > 0 &&
+      this.hasSuccessfulExecutionForRequest(toolExecutionState) &&
+      this.shouldTerminateAfterToolExecution(successfulTools, successfulResults, originalMessage)
+    );
+  }
+
+  getRequestedExecutionCountFallback(originalMessage, toolName) {
+    const message = String(originalMessage || '').toLowerCase();
+    const numberWords = {
+      once: 1,
+      one: 1,
+      twice: 2,
+      two: 2,
+      thrice: 3,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+    };
+    const repeatNoun =
+      toolName === 'open_new_tab' ? '(?:(?:new|additional|analysis|browser)\\s+)*(?:tabs?|windows?)' : null;
+    const genericRepeatTarget = '(?:times?|rounds?|steps?)';
+    const repeatTarget = repeatNoun ? `(?:${repeatNoun}|${genericRepeatTarget})` : genericRepeatTarget;
+    const numeric = message.match(new RegExp(`\\b(\\d{1,2})\\s*(?:x|${repeatTarget})\\b`));
+    if (numeric) return Math.max(1, Math.min(Number(numeric[1]), 20));
+    for (const [word, count] of Object.entries(numberWords)) {
+      if (new RegExp(`\\b${word}\\s+${repeatTarget}\\b`).test(message)) {
+        return count;
+      }
+    }
+    const standaloneRepeat = message.match(/\b(once|twice|thrice)\b/);
+    if (standaloneRepeat) return numberWords[standaloneRepeat[1]];
+    return 1;
+  }
+
+  canAutomaticallyRetryToolFailures(failedResults = []) {
+    const safePolicyNames = new Set([
+      'feature_navigation',
+      'position_navigation',
+      'scroll_operations',
+      'zoom_operations',
+      'search',
+      'analysis',
+      'state',
+      'external_api',
+      'screenshot_operations',
+      'display_operations',
+    ]);
+    const safePrimerTools = new Set([
+      'design_primers',
+      'calculate_primer_properties',
+      'find_primer_binding_sites',
+      'list_primers',
+    ]);
+    const safeFallbackTools = new Set([
+      'select_gene',
+      'select_sequence_region',
+      'jump_to_gene',
+      'find_gene_by_name',
+      'search_features',
+      'get_current_state',
+      'get_genome_info',
+      'get_file_info',
+    ]);
+    const capabilityPolicy = this.services?.context?.getToolExecutionPolicy?.()?.capabilityPolicy;
+
+    return (
+      failedResults.length > 0 &&
+      failedResults.every(result => {
+        const toolName = result.tool || result.tool_name;
+        if (safePrimerTools.has(toolName) || safeFallbackTools.has(toolName)) return true;
+        const policyName = capabilityPolicy?.getPolicyForTool?.(toolName)?.name;
+        return safePolicyNames.has(policyName);
+      })
+    );
+  }
+
+  getModelTurnRecoveryDecision(responseAnalysis, toolExecutionState, currentRound, maxRounds) {
+    const stopReason = String(responseAnalysis?.stopReason || '').toLowerCase();
+    const responseText = String(responseAnalysis?.text || '');
+    const invalidToolCalls = responseAnalysis?.invalidToolCalls || [];
+    const refusal =
+      responseAnalysis?.refusal ||
+      responseAnalysis?.isRefusal ||
+      /refusal|safety|content_filter|blocked|prohibited|recitation|blocklist|spii/.test(stopReason);
+
+    if (refusal) {
+      return {
+        action: 'fail',
+        reason: 'provider refusal or safety stop',
+        finalResponse:
+          responseText || 'The model declined this request before the requested action could be completed.',
+      };
+    }
+
+    let reason = null;
+    const requiresToolExecution = this.requestRequiresToolExecution(toolExecutionState?.originalMessage, responseText);
+    const hasSuppressedCalls = (responseAnalysis?.suppressedToolCalls || []).length > 0;
+    const safeSuppressedInformationalAnswer =
+      hasSuppressedCalls &&
+      invalidToolCalls.length === 0 &&
+      !requiresToolExecution &&
+      responseText.trim().length > 0 &&
+      !this.isInterimActionResponse(responseText);
+    if (/length|max_tokens|max_output_tokens|model_context_window_exceeded|incomplete/.test(stopReason)) {
+      reason = `truncated model response (${stopReason})`;
+    } else if (stopReason === 'pause_turn') {
+      reason = 'provider requested continuation';
+    } else if (/malformed_function_call|unexpected_tool_call|tool_(?:use_)?error/.test(stopReason)) {
+      reason = `provider rejected the tool protocol (${stopReason})`;
+    } else if (
+      invalidToolCalls.length > 0 ||
+      (responseAnalysis?.hasToolCallIntent && !safeSuppressedInformationalAnswer)
+    ) {
+      reason =
+        responseAnalysis?.suppressedToolCalls?.length > 0
+          ? 'a state-changing tool call was not authorized for this informational request'
+          : 'malformed or unsupported tool call';
+    } else if (responseAnalysis?.isEmpty) {
+      reason = 'empty model response';
+    } else if (requiresToolExecution && this.isInterimActionResponse(responseText)) {
+      reason = 'the response announced an action without issuing a valid tool call';
+    } else if (requiresToolExecution && !this.hasSuccessfulExecutionForRequest(toolExecutionState)) {
+      const failedExecutionWasExplained =
+        toolExecutionState?.records?.some(record => record.status === 'failed') &&
+        /\b(?:could not|unable|failed|not found|unavailable|cannot|can(?:'|’)t)\b/i.test(responseText);
+      if (!failedExecutionWasExplained) {
+        reason = 'an actionable request ended without a verified successful tool execution';
+      }
+    }
+
+    if (!reason) {
+      return { action: 'complete', reason: 'final conversational response' };
+    }
+
+    const maxRepairRounds = 2;
+    const attemptedRepairs = toolExecutionState?.protocolRecoveryAttempts || 0;
+    if (currentRound >= maxRounds || attemptedRepairs >= maxRepairRounds) {
+      return {
+        action: 'fail',
+        reason,
+        finalResponse:
+          `I could not complete the requested action because the model repeatedly returned ${reason} ` +
+          'instead of a valid tool call.',
+      };
+    }
+
+    if (toolExecutionState) {
+      toolExecutionState.protocolRecoveryAttempts = attemptedRepairs + 1;
+      toolExecutionState.updatedAt = new Date().toISOString();
+    }
+    return { action: 'retry', reason };
+  }
+
+  buildToolProtocolRecoveryMessage(reason) {
+    return (
+      `[Tool Protocol Repair]\n` +
+      `The previous response did not complete the request: ${reason}.\n` +
+      `If an available tool is needed, respond with ONLY canonical JSON in this form:\n` +
+      `{"tool_name":"exact_tool_name","parameters":{"exact_parameter_name":"value"}}\n` +
+      `For independent calls, use a JSON array. For dependent steps, return only the next call and wait for its result.\n` +
+      `Do not announce or describe a tool call without emitting it. If no tool is needed, provide the final answer directly.`
+    );
+  }
+
+  buildRoundLimitResponse(maxRounds, lastSuccessfulResults = [], lastSuccessfulTools = []) {
+    const header =
+      `Processing stopped after the configured limit of ${maxRounds} rounds before the model produced a final answer. ` +
+      'The request may be incomplete.';
+    if (lastSuccessfulResults.length === 0) {
+      return `⚠️ ${header}`;
+    }
+
+    const lastResults = this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools);
+    return `⚠️ ${header}\n\nLast successful tool result:\n${lastResults}`;
+  }
+
+  createToolExecutionFeedbackMessage(content) {
+    const message = { role: 'user', content };
+    // Keep provenance available to local policy checks without serializing an
+    // unsupported field into provider request payloads.
+    Object.defineProperty(message, '__codexomicsToolFeedback', {
+      value: true,
+      enumerable: false,
+    });
+    return message;
+  }
+
   createToolExecutionState(originalMessage) {
     return {
       originalMessage,
       records: [],
       lastInjectedRecordCount: 0,
       consecutiveSuppressedRounds: 0,
+      consecutiveFailureRounds: 0,
+      protocolRecoveryAttempts: 0,
+      terminationReason: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -6727,22 +7616,31 @@ class ChatManager {
       return;
     }
 
+    const unmatchedResultIndices = new Set(toolResults.map((_, index) => index));
     toolsToExecute.forEach((tool, index) => {
       if (!tool.executionId) {
         return;
       }
 
-      const result =
-        toolResults[index] ||
-        toolResults.find(
-          item =>
-            item.tool === tool.tool_name &&
-            this.areToolParametersEqual(tool.tool_name, item.parameters || {}, tool.parameters || {})
-        );
+      const indexedResult = toolResults[index];
+      const indexedResultMatches =
+        unmatchedResultIndices.has(index) &&
+        indexedResult?.tool === tool.tool_name &&
+        this.areToolParametersEqual(tool.tool_name, indexedResult.parameters || {}, tool.parameters || {});
+      const resultIndex = indexedResultMatches
+        ? index
+        : toolResults.findIndex(
+            (item, candidateIndex) =>
+              unmatchedResultIndices.has(candidateIndex) &&
+              item.tool === tool.tool_name &&
+              this.areToolParametersEqual(tool.tool_name, item.parameters || {}, tool.parameters || {})
+          );
+      const result = resultIndex === -1 ? null : toolResults[resultIndex];
 
       if (!result) {
         return;
       }
+      unmatchedResultIndices.delete(resultIndex);
 
       this.updateToolExecutionStateRecord(toolExecutionState, tool.executionId, {
         status: result.success ? 'success' : 'failed',
@@ -6898,14 +7796,16 @@ class ChatManager {
         ?.getToolExecutionPolicy?.()
         ?.capabilityPolicy?.getPolicyForTool(tool.tool_name);
       const isRequestBoundedRepeat = policyEntry?.policy?.policy === 'bounded_repeat';
-      const alreadySucceeded = isRequestBoundedRepeat
+      const requestedLimit = this.getRequestedToolExecutionLimit(originalMessage, tool);
+      const hasExplicitRepeatBudget = requestedLimit > 1;
+      const useToolNameBudget = isRequestBoundedRepeat || hasExplicitRepeatBudget;
+      const alreadySucceeded = useToolNameBudget
         ? successfulToolNameCounts.get(tool.tool_name) || 0
         : successfulToolExecutionCounts.get(toolKey) || 0;
-      const alreadyPlanned = isRequestBoundedRepeat
+      const alreadyPlanned = useToolNameBudget
         ? plannedToolNameCounts.get(tool.tool_name) || 0
         : plannedToolExecutionCounts.get(toolKey) || 0;
-      const requestedLimit = this.getRequestedToolExecutionLimit(originalMessage, tool);
-      const usedRequestBudget = isRequestBoundedRepeat ? alreadySucceeded + alreadyPlanned : alreadyPlanned;
+      const usedRequestBudget = useToolNameBudget ? alreadySucceeded + alreadyPlanned : alreadyPlanned;
 
       if (usedRequestBudget >= requestedLimit) {
         console.log(
@@ -6916,14 +7816,14 @@ class ChatManager {
         continue;
       }
 
-      if (alreadySucceeded > 0) {
+      if (alreadySucceeded > 0 && !useToolNameBudget) {
         console.log(
           `🔄 [ToolLoop] Treating new-round tool call as fresh: ${tool.tool_name} ` +
             `(previous successes ${alreadySucceeded})`
         );
       }
 
-      if (isRequestBoundedRepeat) {
+      if (useToolNameBudget) {
         plannedToolNameCounts.set(tool.tool_name, alreadyPlanned + 1);
       } else {
         plannedToolExecutionCounts.set(toolKey, alreadyPlanned + 1);
@@ -6950,15 +7850,18 @@ class ChatManager {
       try {
         executionParameters = this.resolveToolParameterReferences(recordedParameters, referenceContext);
         const result = await this.executeToolByName(tool.tool_name, executionParameters);
+        const explicitFailure = result && typeof result === 'object' && result.success === false;
         const toolResult = {
           tool: tool.tool_name,
           parameters: recordedParameters,
-          success: true,
-          result: result,
-          error: null,
+          success: !explicitFailure,
+          result: explicitFailure ? null : result,
+          error: explicitFailure ? result.error || result.message || 'Tool reported an unsuccessful result' : null,
         };
         toolResults.push(toolResult);
-        referenceContext.push(toolResult);
+        if (toolResult.success) {
+          referenceContext.push(toolResult);
+        }
       } catch (error) {
         toolResults.push({
           tool: tool.tool_name,
@@ -7179,6 +8082,9 @@ class ChatManager {
 
   normalizeParams(params) {
     if (!params || typeof params !== 'object') return {};
+    if (Array.isArray(params)) {
+      return params.map(value => (value && typeof value === 'object' ? this.normalizeParams(value) : value));
+    }
     const sorted = {};
     Object.keys(params)
       .sort()
@@ -7268,7 +8174,7 @@ class ChatManager {
    * Check if a tool with specific parameters was executed successfully in conversation history
    */
   wasToolExecutedSuccessfully(toolKey, conversationHistory) {
-    // Look for system messages indicating successful execution
+    // Look for legacy system feedback and provider-portable protocol feedback.
     const [toolName, ...paramsParts] = toolKey.split(':');
     const paramsStr = paramsParts.join(':');
     let parsedKeyParams = null;
@@ -7277,7 +8183,8 @@ class ChatManager {
     } catch (e) {}
 
     for (const msg of conversationHistory) {
-      if (msg.role === 'system' && msg.content && msg.content.includes('executed successfully')) {
+      const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
+      if (isExecutionFeedback && msg.content && msg.content.includes('executed successfully')) {
         // Extract tool name and check if it matches
         if (msg.content.includes(`${toolName} executed successfully`)) {
           // If message contains parameters, check for exact match
@@ -7322,8 +8229,9 @@ class ChatManager {
     for (let i = conversationHistory.length - 1; i >= 0; i--) {
       const msg = conversationHistory[i];
 
-      // Check system messages for successful executions
-      if (msg.role === 'system' && msg.content) {
+      // Check legacy system feedback and provider-portable tool result feedback.
+      const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
+      if (isExecutionFeedback && msg.content) {
         if (msg.content.includes(`${toolName} executed successfully`)) {
           // Estimate message timestamp (conversations are usually recent)
           const estimatedTimestamp = now - (conversationHistory.length - 1 - i) * 1000;
@@ -7397,7 +8305,8 @@ class ChatManager {
     let count = 0;
 
     for (const msg of conversationHistory) {
-      if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
+      const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
+      if (isExecutionFeedback && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
         if (msg.content.includes('with parameters:')) {
           const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
           if (msgParamsStr) {
@@ -7429,7 +8338,8 @@ class ChatManager {
   getToolExecutionCountByName(toolName, conversationHistory) {
     let count = 0;
     for (const msg of conversationHistory) {
-      if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
+      const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
+      if (isExecutionFeedback && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
         count++;
       }
     }
@@ -7448,7 +8358,8 @@ class ChatManager {
     } catch (e) {}
 
     for (const msg of conversationHistory) {
-      if (msg.role === 'system' && msg.content && msg.content.includes(`${toolName} executed`)) {
+      const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
+      if (isExecutionFeedback && msg.content && msg.content.includes(`${toolName} executed`)) {
         // Check for parameter match
         const hasParams = msg.content.includes('with parameters:');
         if (hasParams) {
@@ -7673,10 +8584,17 @@ class ChatManager {
       let combinedResponse = '';
       const processedResults = [];
 
+      const findMatchingTool = result =>
+        toolsToExecute.find(
+          tool =>
+            tool.tool_name === result.tool &&
+            this.areToolParametersEqual(tool.tool_name, tool.parameters || {}, result.parameters || {})
+        ) || { tool_name: result.tool, parameters: result.parameters || {} };
+
       // Process each tool result individually
       for (let i = 0; i < successfulResults.length; i++) {
-        const tool = toolsToExecute[i];
         const result = successfulResults[i];
+        const tool = findMatchingTool(result);
 
         console.log(`🔧 [generateCompletionResponseFromToolResults] Processing tool ${i + 1}: ${tool.tool_name}`);
 
@@ -7697,8 +8615,12 @@ class ChatManager {
     }
 
     // Handle single tool (original logic)
-    const tool = toolsToExecute[0];
     const result = successfulResults[0];
+    const tool = toolsToExecute.find(
+      candidate =>
+        candidate.tool_name === result.tool &&
+        this.areToolParametersEqual(candidate.tool_name, candidate.parameters || {}, result.parameters || {})
+    ) || { tool_name: result.tool, parameters: result.parameters || {} };
 
     return this.generateSingleToolResponse(tool, result) || 'Task completed successfully.';
   }
@@ -15480,11 +16402,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   /**
    * Show the LLM's thinking process
    */
-  displayLLMThinking(response) {
+  displayLLMThinking(response, normalizedReasoning = '', normalizedToolCalls = null) {
+    const responseText = typeof response === 'string' ? response : String(response?.content || '');
     // Check whether the response contains thinking tags
-    const thinkingMatch = response.match(/<think>([\s\S]*?)<\/think>/);
-    if (thinkingMatch) {
-      const thinkingContent = thinkingMatch[1].trim();
+    const thinkingMatch = responseText.match(/<think>([\s\S]*?)<\/think>/);
+    const thinkingContent = String(normalizedReasoning || thinkingMatch?.[1] || '').trim();
+    if (thinkingContent) {
       // Format the thinking content to make it more readable
       const formattedThinking = this.formatThinkingContent(thinkingContent);
 
@@ -15499,12 +16422,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     // Check for tool calls and show the parameter-extraction process
-    if (response.includes('tool_name') || response.includes('function_name')) {
+    const detectedTools = Array.isArray(normalizedToolCalls)
+      ? normalizedToolCalls
+      : this.parseMultipleToolCalls(response);
+    if (detectedTools.length > 0) {
       this.updateThinkingMessage(`🔧 Analyzing tool call structure...`);
 
       // Extract and display parameter information
       try {
-        const toolCall = this.parseToolCall(response);
+        const toolCall = detectedTools[0];
         if (toolCall) {
           const paramCount = Object.keys(toolCall.parameters || {}).length;
           this.updateThinkingMessage(`&nbsp;&nbsp;✅ Tool identified: <strong>${toolCall.tool_name}</strong>`);
@@ -15519,11 +16445,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       } catch (e) {
         console.warn('Error analyzing tool call:', e);
       }
-    } else if (response && response.length > 0) {
+    } else if (responseText.length > 0) {
       // No tool call - this is a conversational response
       this.updateThinkingMessage(`💬 Conversational response generated`);
-      if (response.length > 100) {
-        this.updateThinkingMessage(`&nbsp;&nbsp;📝 Response preview: "${response.substring(0, 100)}..."`);
+      if (responseText.length > 100) {
+        this.updateThinkingMessage(`&nbsp;&nbsp;📝 Response preview: "${responseText.substring(0, 100)}..."`);
       }
     }
   }

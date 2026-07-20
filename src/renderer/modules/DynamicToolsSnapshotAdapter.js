@@ -398,17 +398,68 @@ class DynamicToolsSnapshotAdapter {
       return true;
     });
 
-    const selected = validTools
+    let scoredTools = validTools
       .map(tool => ({ tool, score: this.scoreTool(tool, query, context) }))
       .filter(entry => entry.score > 0.6)
-      .sort((a, b) => b.score - a.score)
-      .map(entry => entry.tool);
+      .sort((a, b) => b.score - a.score);
 
-    for (const name of this.getFallbackToolNames()) {
-      if (selected.length >= 10) break;
-      const fallbackTool = this.toolsByName.get(name);
-      if (fallbackTool && !selected.some(tool => tool.name === name)) {
-        selected.push(fallbackTool);
+    const originalQueryText = String(query || '');
+    const queryText = originalQueryText.toLowerCase();
+    const fallbackGeneSelectionIntent = (() => {
+      const explicitSelection =
+        /\b(?:select|highlight|choose|pick|activate)\s+(?:the\s+)?(?:[A-Za-z][A-Za-z0-9_.-]*\s+gene|gene(?:\s+(?:named|called))?\s+[A-Za-z][A-Za-z0-9_.-]*)\b/i.test(
+          originalQueryText
+        ) ||
+        /\b(?:select|highlight|choose|pick|activate)\s+(?:the\s+)?(?:active|current|selected)?\s*gene\b/i.test(
+          originalQueryText
+        );
+      if (explicitSelection && !/\b(?:all|every|multiple)\b/i.test(originalQueryText)) return true;
+      const shorthandMatch = originalQueryText.match(
+        /\b(?:select|highlight|choose|pick|activate)\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_.-]*)\b/i
+      );
+      if (!shorthandMatch) return false;
+      const hasNonGeneTarget =
+        /\b(?:all|every|multiple|primers?|themes?|styles?|modes?|models?|providers?|options?|items?|tabs?|tracks?|files?|regions?|sequences?|annotations?|features?|chromosomes?|positions?|colou?rs?|accents?|presets?|dna|rna|proteins?)\b/i.test(
+          originalQueryText
+        );
+      return !hasNonGeneTarget && /[A-Z0-9]/.test(shorthandMatch[1].substring(1));
+    })();
+    const hasGeneSelectionIntent =
+      typeof this.chatManager?.isGeneSelectionRequest === 'function'
+        ? this.chatManager.isGeneSelectionRequest(originalQueryText)
+        : fallbackGeneSelectionIntent;
+    const isDirectGeneSelection =
+      hasGeneSelectionIntent && !/\b(find|search|locate|look\s+for|jump|navigate|zoom|centre|center)\b/.test(queryText);
+    if (isDirectGeneSelection && scoredTools.some(entry => entry.tool.name === 'select_gene')) {
+      scoredTools = scoredTools.filter(
+        entry => !['find_gene_by_name', 'jump_to_gene', 'zoom_to_gene'].includes(entry.tool.name)
+      );
+    }
+
+    const isNonGeneSelection =
+      /\b(?:select|choose|use|switch\s+to)\b[\s\S]*?\b(?:genes?|primers?|themes?|styles?|modes?|models?|providers?|options?|items?|tabs?|tracks?|files?|regions?|sequences?|annotations?|features?|chromosomes?|positions?|colou?rs?|accents?|presets?)\b/.test(
+        queryText
+      ) ||
+      /\b(?:themes?|styles?|modes?|models?|providers?|colou?rs?|accents?|presets?)\b[\s\S]*?\b(?:select|choose|use|switch)\b/.test(
+        queryText
+      );
+    if (isNonGeneSelection && !isDirectGeneSelection) {
+      scoredTools = scoredTools.filter(
+        entry => !['select_gene', 'find_gene_by_name', 'jump_to_gene', 'zoom_to_gene'].includes(entry.tool.name)
+      );
+    }
+
+    const selected = scoredTools.map(entry => entry.tool);
+
+    // Fallback tools keep a completely unmatched prompt usable. They must not
+    // pad a strong, unambiguous result set with competing capabilities.
+    if (selected.length === 0) {
+      for (const name of this.getFallbackToolNames()) {
+        if (selected.length >= 10) break;
+        const fallbackTool = this.toolsByName.get(name);
+        if (fallbackTool && !selected.some(tool => tool.name === name)) {
+          selected.push(fallbackTool);
+        }
       }
     }
 
@@ -467,12 +518,128 @@ class DynamicToolsSnapshotAdapter {
       .join(', ');
   }
 
+  splitSampleArguments(source) {
+    const argumentsList = [];
+    let current = '';
+    let quote = null;
+    let escaped = false;
+    let depth = 0;
+
+    for (const char of source) {
+      if (escaped) {
+        current += char;
+        escaped = false;
+        continue;
+      }
+      if (char === '\\' && quote) {
+        current += char;
+        escaped = true;
+        continue;
+      }
+      if (quote) {
+        current += char;
+        if (char === quote) quote = null;
+        continue;
+      }
+      if (char === '"' || char === "'") {
+        quote = char;
+        current += char;
+        continue;
+      }
+      if (char === '{' || char === '[' || char === '(') depth += 1;
+      if (char === '}' || char === ']' || char === ')') depth -= 1;
+      if (char === ',' && depth === 0) {
+        argumentsList.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+
+    if (current.trim()) argumentsList.push(current.trim());
+    return argumentsList;
+  }
+
+  parseSampleLiteral(source) {
+    const value = String(source || '').trim();
+    if (!value) return '';
+    if ((value.startsWith("'") && value.endsWith("'")) || (value.startsWith('"') && value.endsWith('"'))) {
+      return value.substring(1, value.length - 1).replace(/\\(['"\\])/g, '$1');
+    }
+    if (/^(?:true|false)$/i.test(value)) return value.toLowerCase() === 'true';
+    if (/^(?:null|none)$/i.test(value)) return null;
+    if (/^-?\d+(?:\.\d+)?$/.test(value)) return Number(value);
+
+    if ((value.startsWith('{') && value.endsWith('}')) || (value.startsWith('[') && value.endsWith(']'))) {
+      try {
+        const jsonCompatible = value
+          .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_match, inner) =>
+            JSON.stringify(inner.replace(/\\'/g, "'").replace(/\\\\/g, '\\'))
+          )
+          .replace(/\bTrue\b/g, 'true')
+          .replace(/\bFalse\b/g, 'false')
+          .replace(/\bNone\b/g, 'null');
+        return JSON.parse(jsonCompatible);
+      } catch (error) {
+        return undefined;
+      }
+    }
+
+    return value;
+  }
+
+  buildCanonicalSampleCall(tool, sample) {
+    const rawCall = sample?.tool_call;
+    if (!rawCall) return null;
+
+    if (typeof rawCall === 'object') {
+      const name = rawCall.tool_name || rawCall.name || tool.name;
+      let parameters = rawCall.parameters ?? rawCall.arguments ?? {};
+      if (typeof parameters === 'string') {
+        try {
+          parameters = JSON.parse(parameters);
+        } catch (error) {
+          return null;
+        }
+      }
+      if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) return null;
+      return { tool_name: name, parameters };
+    }
+
+    const callText = String(rawCall).trim();
+    try {
+      const parsed = JSON.parse(callText);
+      return this.buildCanonicalSampleCall(tool, { tool_call: parsed });
+    } catch (error) {
+      // Most registry samples use function-like notation; parse it without eval.
+    }
+
+    const match = callText.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\(([\s\S]*)\)$/);
+    if (!match) return null;
+    const parameters = {};
+    for (const argument of this.splitSampleArguments(match[2])) {
+      const equalsIndex = argument.indexOf('=');
+      if (equalsIndex <= 0) return null;
+      const name = argument.substring(0, equalsIndex).trim();
+      const value = this.parseSampleLiteral(argument.substring(equalsIndex + 1));
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || value === undefined) return null;
+      parameters[name] = value;
+    }
+
+    return { tool_name: tool.name || match[1], parameters };
+  }
+
   formatSampleUsages(tools) {
     const usages = [];
     for (const tool of tools) {
       const sample = Array.isArray(tool.sample_usages) ? tool.sample_usages[0] : null;
       if (!sample) continue;
-      usages.push(`- ${tool.name}: "${sample.user_query}" -> ${sample.tool_call}`);
+      // YAML samples historically used JSON, Python-like calls, and provider-native
+      // shapes. Render one canonical protocol so the response contract is unambiguous.
+      const parsedCall = this.buildCanonicalSampleCall(tool, sample);
+      if (!parsedCall) continue;
+      const canonicalCall = JSON.stringify(parsedCall);
+      usages.push(`- ${tool.name}: "${sample.user_query}" -> ${canonicalCall}`);
       if (usages.length >= 8) break;
     }
     return usages.length > 0 ? usages.join('\n') : '- Use JSON tool calls with the exact tool name and parameters.';
@@ -579,8 +746,8 @@ ${this.formatSampleUsages(tools)}
 
 1. Prefer directly available built-in tools when they satisfy the request.
 2. Use file loading tools for importing genome, annotation, variant, reads, WIG, and operon files.
-3. Combine multiple JSON tool calls when the user asks for sequential operations.
-4. Check tool results before continuing dependent steps.
+3. Return multiple tool calls together only when they are independent and all arguments are already known.
+4. For sequential or dependent steps, return only the next call, inspect its result, and then choose the following call.
 5. Consider current genome state, loaded data, network status, and authentication.
 6. Use MCP Server Tools when a connected MCP server exposes the requested external capability.
 
@@ -591,7 +758,7 @@ For a single tool call, respond with only a JSON object:
 {"tool_name": "tool_name", "parameters": {"param1": "value1"}}
 \`\`\`
 
-For multiple sequential tool calls, respond with multiple JSON objects, each in its own code block.
+For multiple independent tool calls, respond with one JSON array of canonical tool-call objects. Never include explanatory prose around tool-call JSON.
 
 ## Tool Categories & Relationships
 
