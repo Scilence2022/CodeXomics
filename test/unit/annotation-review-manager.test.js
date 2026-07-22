@@ -275,6 +275,13 @@ describe('AnnotationReviewManager', () => {
         baseRevision: 'revision-1',
         operations: [{ op: 'addQualifier', field: 'note', value: 'Reviewed note', claimIds: [] }],
         evidence: ['curated evidence'],
+        proposalMetadata: {
+          archivedDgrReport: {
+            attachmentId: 'dgr:task-details',
+            summary: { fullTextSourceCount: 3, fullTextFindingCount: 7 },
+            citationValidation: { verifiedFullTextSourceCount: 2 },
+          },
+        },
       },
     }));
     const app = {
@@ -295,6 +302,9 @@ describe('AnnotationReviewManager', () => {
     itemMain.click();
     await vi.waitFor(() => expect(getAnnotationChangeset).toHaveBeenCalledWith({ changeSetId: pending.id }));
     expect(document.getElementById('annotationReviewDetail').textContent).toContain('Reviewed note');
+    expect(document.getElementById('annotationReviewDetail').textContent).toContain(
+      'Full text: 2/3 evidence-linked sources, 7 findings'
+    );
     expect(item.classList.contains('is-active')).toBe(true);
     expect(itemMain.getAttribute('aria-expanded')).toBe('true');
 

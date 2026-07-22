@@ -1917,13 +1917,15 @@ class AnnotationChangeSetService {
         }
         const basis = fact.literatureBasis;
         const citation = fact.citation;
+        const isAbstractBasis = basis?.kind === 'pubmed_abstract_span';
+        const isFullTextBasis = basis?.kind === 'full_text_span';
         if (
           !this._isPlainRecord(basis) ||
-          basis.kind !== 'pubmed_abstract_span' ||
+          (!isAbstractBasis && !isFullTextBasis) ||
           !this._isPlainRecord(citation) ||
           citation.type !== 'pmid'
         ) {
-          throw new Error(`Research literature fact ${fact.id} requires a PubMed abstract basis and citation`);
+          throw new Error(`Research literature fact ${fact.id} requires an authenticated literature basis and PMID citation`);
         }
         this._assertBoundedScalar(
           basis.pmid,
@@ -1952,7 +1954,7 @@ class AnnotationChangeSetService {
           this.inputLimits.identifierLength,
           { required: true }
         );
-        for (const field of ['evidenceId', 'abstractSha256', 'hashEncoding', 'canonicalization', 'offsetEncoding']) {
+        for (const field of ['evidenceId', 'hashEncoding', 'canonicalization', 'offsetEncoding']) {
           this._assertBoundedScalar(
             basis[field],
             `Research literature fact ${fact.id} ${field}`,
@@ -1960,29 +1962,60 @@ class AnnotationChangeSetService {
             { required: true }
           );
         }
+        if (isAbstractBasis) {
+          this._assertBoundedScalar(
+            basis.abstractSha256,
+            `Research literature fact ${fact.id} abstract hash`,
+            this.inputLimits.identifierLength,
+            { required: true }
+          );
+        } else {
+          for (const field of ['documentSha256', 'sourceOrigin', 'textSha256']) {
+            this._assertBoundedScalar(
+              basis[field],
+              `Research literature fact ${fact.id} ${field}`,
+              this.inputLimits.identifierLength,
+              { required: true }
+            );
+          }
+        }
         if (
           !this._isValidPmid(basis.pmid) ||
           !/^[a-f0-9]{64}$/i.test(String(basis.excerptSha256)) ||
-          !/^[a-f0-9]{64}$/i.test(String(basis.abstractSha256)) ||
           basis.hashEncoding !== 'utf8' ||
-          basis.canonicalization !== 'dgr.pubmed-abstract.v1' ||
           basis.offsetEncoding !== 'utf16_code_units' ||
           !Number.isSafeInteger(basis.excerptStart) ||
           !Number.isSafeInteger(basis.excerptEnd) ||
-          !Number.isSafeInteger(basis.abstractLength) ||
           basis.excerptStart < 0 ||
           basis.excerptEnd <= basis.excerptStart ||
-          basis.excerptEnd > basis.abstractLength ||
           basis.excerptEnd - basis.excerptStart !== String(basis.excerpt).length
         ) {
           throw new Error(`Research literature fact ${fact.id} has an invalid PMID or excerpt hash`);
+        }
+        const sourceTextLength = isAbstractBasis ? basis.abstractLength : basis.textLength;
+        if (
+          !Number.isSafeInteger(sourceTextLength) ||
+          sourceTextLength < 1 ||
+          basis.excerptEnd > sourceTextLength ||
+          (isAbstractBasis &&
+            (!/^[a-f0-9]{64}$/i.test(String(basis.abstractSha256)) ||
+              basis.canonicalization !== 'dgr.pubmed-abstract.v1')) ||
+          (isFullTextBasis &&
+            (!/^[a-f0-9]{64}$/i.test(String(basis.documentSha256)) ||
+              !/^[a-f0-9]{64}$/i.test(String(basis.textSha256)) ||
+              !['user_upload', 'pmc_xml'].includes(String(basis.sourceOrigin)) ||
+              basis.canonicalization !== 'dgr.full-text.v1' ||
+              (basis.pageNumber !== undefined &&
+                (!Number.isSafeInteger(basis.pageNumber) || basis.pageNumber < 1))))
+        ) {
+          throw new Error(`Research literature fact ${fact.id} has an invalid source document binding`);
         }
         if (basis.doi && !/^10\.\d{4,9}\/.+/i.test(String(basis.doi))) {
           throw new Error(`Research literature fact ${fact.id} has an invalid DOI`);
         }
         if (String(fact.statement) !== String(basis.excerpt)) {
           throw new Error(
-            `Research literature fact ${fact.id} statement must equal its authenticated abstract excerpt`
+            `Research literature fact ${fact.id} statement must equal its authenticated source excerpt`
           );
         }
         const computedExcerptHash = await this._hashSerialized(String(basis.excerpt), { requireSha256: true });
@@ -2018,27 +2051,33 @@ class AnnotationChangeSetService {
               identifier?.scheme === scheme && String(identifier.value).toLowerCase() === String(value).toLowerCase()
           );
         const binding = record?.sourceBinding;
-        if (
+        const commonBindingInvalid =
           String(basis.evidenceId) !== String(record?.id || '') ||
           binding?.schema !== 'dgr.evidence-source-binding.v1' ||
           binding.sourceCollection !== 'sources' ||
-          binding.selector?.database !== 'pubmed' ||
           binding.selector?.identifier?.scheme !== 'pmid' ||
           String(binding.selector?.identifier?.value || '') !== String(basis.pmid) ||
-          binding.content?.relativeJsonPointer !== '/structuredData/literatureReferences/0/abstract' ||
-          binding.content?.canonicalization !== 'dgr.pubmed-abstract.v1' ||
           binding.content?.hashEncoding !== 'utf8' ||
           binding.content?.lengthEncoding !== 'utf16_code_units' ||
-          String(binding.content?.sha256 || '').toLowerCase() !== String(basis.abstractSha256).toLowerCase() ||
-          binding.content?.length !== basis.abstractLength ||
           typeof record?.supporting !== 'boolean' ||
           record?.type !== 'pmid' ||
-          String(record?.database || '').toLowerCase() !== 'pubmed' ||
+          String(binding.selector?.database || '').toLowerCase() !== String(record?.database || '').toLowerCase() ||
           !hasIdentifier('pmid', basis.pmid) ||
-          (basis.doi && !hasIdentifier('doi', basis.doi))
-        ) {
+          (basis.doi && !hasIdentifier('doi', basis.doi));
+        const sourceBindingInvalid = isAbstractBasis
+          ? binding?.selector?.database !== 'pubmed' ||
+            String(record?.database || '').toLowerCase() !== 'pubmed' ||
+            binding?.content?.relativeJsonPointer !== '/structuredData/literatureReferences/0/abstract' ||
+            binding?.content?.canonicalization !== 'dgr.pubmed-abstract.v1' ||
+            String(binding?.content?.sha256 || '').toLowerCase() !== String(basis.abstractSha256).toLowerCase() ||
+            binding?.content?.length !== basis.abstractLength
+          : binding?.content?.relativeJsonPointer !== '/fullText/text' ||
+            binding?.content?.canonicalization !== 'dgr.full-text.v1' ||
+            String(binding?.content?.sha256 || '').toLowerCase() !== String(basis.textSha256).toLowerCase() ||
+            binding?.content?.length !== basis.textLength;
+        if (commonBindingInvalid || sourceBindingInvalid) {
           throw new Error(
-            `Research literature fact ${fact.id} is not exactly bound to its non-mutating PubMed evidence`
+            `Research literature fact ${fact.id} is not exactly bound to its non-mutating literature evidence`
           );
         }
       }
@@ -2304,15 +2343,26 @@ class AnnotationChangeSetService {
       }
       if (record.sourceBinding !== undefined) {
         const binding = record.sourceBinding;
+        const selectorScheme = binding?.selector?.identifier?.scheme;
+        const selectorValue = binding?.selector?.identifier?.value;
+        const isAbstractBinding =
+          binding?.content?.relativeJsonPointer === '/structuredData/literatureReferences/0/abstract' &&
+          binding?.content?.canonicalization === 'dgr.pubmed-abstract.v1' &&
+          binding?.selector?.database === 'pubmed' &&
+          selectorScheme === 'pmid' &&
+          this._isValidPmid(selectorValue);
+        const isFullTextBinding =
+          binding?.content?.relativeJsonPointer === '/fullText/text' &&
+          binding?.content?.canonicalization === 'dgr.full-text.v1' &&
+          typeof binding?.selector?.database === 'string' &&
+          binding.selector.database.length > 0 &&
+          ((selectorScheme === 'pmid' && this._isValidPmid(selectorValue)) ||
+            (selectorScheme === 'sha256' && /^[a-f0-9]{64}$/i.test(String(selectorValue || ''))));
         if (
           !this._isPlainRecord(binding) ||
           binding.schema !== 'dgr.evidence-source-binding.v1' ||
           binding.sourceCollection !== 'sources' ||
-          binding.selector?.database !== 'pubmed' ||
-          binding.selector?.identifier?.scheme !== 'pmid' ||
-          !this._isValidPmid(binding.selector?.identifier?.value) ||
-          binding.content?.relativeJsonPointer !== '/structuredData/literatureReferences/0/abstract' ||
-          binding.content?.canonicalization !== 'dgr.pubmed-abstract.v1' ||
+          (!isAbstractBinding && !isFullTextBinding) ||
           !/^[a-f0-9]{64}$/i.test(String(binding.content?.sha256 || '')) ||
           binding.content?.hashEncoding !== 'utf8' ||
           !Number.isSafeInteger(binding.content?.length) ||
@@ -2490,6 +2540,7 @@ class AnnotationChangeSetService {
       proposalSha256: attachment.proposalSha256,
       citationValidation: this._clone(attachment.citationValidation),
       currentAnnotationValidation: this._clone(currentAnnotationValidation),
+      summary: this._clone(attachment.summary || {}),
     };
   }
 

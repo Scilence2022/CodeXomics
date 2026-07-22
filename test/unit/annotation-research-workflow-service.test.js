@@ -325,6 +325,76 @@ describe('AnnotationResearchWorkflowService', () => {
     );
   });
 
+  it('uploads user PDFs, registers gene-scoped source attachments, and binds document IDs to DGR', async () => {
+    const documentId = `sha256:${'a'.repeat(64)}`;
+    const uploadDgrResearchDocument = vi.fn(async ({ filePath }) => ({
+      success: true,
+      approvedPath: filePath,
+      document: {
+        documentId,
+        name: 'lysC-study.pdf',
+        size: 2048,
+        sha256: 'a'.repeat(64),
+      },
+    }));
+    const Service = loadWorkflowService({ uploadDgrResearchDocument });
+    const target = {
+      workspaceId: 'ws-1',
+      genomeId: 'genome-1',
+      annotationRevision: 0,
+      featureId: 'feature-lysC',
+      featureHash: 'hash-lysC',
+      chromosome: 'chr1',
+      locusTag: 'b4024',
+      geneSymbol: 'lysC',
+      proteinId: 'NP_418448.1',
+      organism: 'Escherichia coli',
+      featureType: 'CDS',
+    };
+    const registerResearchSourceAttachment = vi.fn(async (_geneId, approvedPath, document) => ({
+      id: `research-source:${document.sha256}`,
+      filename: document.name,
+      storedPath: approvedPath,
+      size: document.size,
+    }));
+    const executeToolOnServer = vi.fn(async () => ({ taskId: 'task-user-pdf', status: 'queued' }));
+    const service = new Service(
+      {
+        currentChromosome: 'chr1',
+        currentAnnotations: { chr1: [{}] },
+        geneAttachmentsManager: {
+          ready: Promise.resolve(),
+          getAttachmentsForGene: vi.fn(() => []),
+          registerResearchSourceAttachment,
+        },
+      },
+      {
+        services: { annotation: { resolveAnnotationTarget: vi.fn(async () => ({ target })) } },
+        mcpServerManager: { ensureServerConnected: vi.fn(async () => true), executeToolOnServer },
+      }
+    );
+
+    const result = await service.startAnnotationResearch({
+      identifier: 'b4024',
+      researchDocumentPaths: ['/absolute/lysC-study.pdf'],
+    });
+
+    expect(uploadDgrResearchDocument).toHaveBeenCalledWith({ filePath: '/absolute/lysC-study.pdf' });
+    expect(registerResearchSourceAttachment).toHaveBeenCalledWith(
+      'b4024',
+      '/absolute/lysC-study.pdf',
+      expect.objectContaining({ documentId })
+    );
+    expect(executeToolOnServer).toHaveBeenCalledWith(
+      'deep-gene-research',
+      'deep-gene-research',
+      expect.objectContaining({ userDocumentIds: [documentId] })
+    );
+    expect(result.workflow.researchDocuments).toEqual([
+      expect.objectContaining({ documentId, attachmentId: `research-source:${'a'.repeat(64)}` }),
+    ]);
+  });
+
   it('starts research for a supported non-coding RNA target', async () => {
     const Service = loadWorkflowService();
     const target = {

@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-20T02:44:26.056Z",
-  "registryHash": "8051296540d39bea3ef29bb568d8643a19ad3fe9707ae987e07f76b133c3ef3c",
+  "generatedAt": "2026-07-22T16:53:12.832Z",
+  "registryHash": "f303e00c20fdf912286de74c38561c6a49ee004c815feba1ee596b20b29e285e",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -2567,6 +2567,24 @@
             "default": false,
             "description": "Bypass the DGR semantic result cache while preserving request idempotency."
           },
+          "researchDocumentPaths": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "description": "Explicit absolute paths to user-provided PDFs. CodeXomics imports them as gene-scoped attachments and uploads content-addressed copies to DGR before research starts."
+          },
+          "researchAttachmentIds": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "Existing PDF attachment IDs on the resolved gene to use as priority full-text sources."
+          },
           "repeatPolicy": {
             "type": "string",
             "enum": ["allow", "skip-covered"],
@@ -2598,7 +2616,7 @@
       "metadata": {
         "added_in": "autonomous_annotation_v2",
         "priority": "high",
-        "tags": ["annotation", "research", "dgr", "workflow"]
+        "tags": ["annotation", "research", "dgr", "workflow", "pdf", "full_text"]
       },
       "source": "app_registry",
       "sourceFile": "annotation/start_annotation_research.yaml",
@@ -25026,6 +25044,24 @@
             "default": false,
             "description": "Bypass the DGR semantic result cache while preserving request idempotency."
           },
+          "researchDocumentPaths": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "description": "Explicit absolute paths to user-provided PDFs. CodeXomics imports them as gene-scoped attachments and uploads content-addressed copies to DGR before research starts."
+          },
+          "researchAttachmentIds": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "Existing PDF attachment IDs on the resolved gene to use as priority full-text sources."
+          },
           "repeatPolicy": {
             "type": "string",
             "enum": ["allow", "skip-covered"],
@@ -25057,7 +25093,7 @@
       "metadata": {
         "added_in": "autonomous_annotation_v2",
         "priority": "high",
-        "tags": ["annotation", "research", "dgr", "workflow"]
+        "tags": ["annotation", "research", "dgr", "workflow", "pdf", "full_text"]
       },
       "source": "app_registry",
       "sourceFile": "annotation/start_annotation_research.yaml",

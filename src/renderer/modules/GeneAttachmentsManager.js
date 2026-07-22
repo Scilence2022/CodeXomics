@@ -301,6 +301,8 @@ class GeneAttachmentsManager {
             directLiteratureCount: summaryCount(descriptor.summary.directLiteratureCount),
             geneLinkedContextCount: summaryCount(descriptor.summary.geneLinkedContextCount),
             citationBoundFactCount: summaryCount(descriptor.summary.citationBoundFactCount),
+            fullTextSourceCount: summaryCount(descriptor.summary.fullTextSourceCount),
+            fullTextFindingCount: summaryCount(descriptor.summary.fullTextFindingCount),
           }
         : {
             title: '',
@@ -310,6 +312,8 @@ class GeneAttachmentsManager {
             directLiteratureCount: 0,
             geneLinkedContextCount: 0,
             citationBoundFactCount: 0,
+            fullTextSourceCount: 0,
+            fullTextFindingCount: 0,
           };
     const attachment = {
       id: attachmentId,
@@ -336,6 +340,8 @@ class GeneAttachmentsManager {
         factCount: summaryCount(descriptor.citationValidation.factCount),
         pubMedSourceCount: summaryCount(descriptor.citationValidation.pubMedSourceCount),
         verifiedPubMedSourceCount: summaryCount(descriptor.citationValidation.verifiedPubMedSourceCount),
+        fullTextSourceCount: summaryCount(descriptor.citationValidation.fullTextSourceCount),
+        verifiedFullTextSourceCount: summaryCount(descriptor.citationValidation.verifiedFullTextSourceCount),
       },
       currentAnnotationValidation: {
         schema: 'codexomics.dgr-current-annotation-validation.v1',
@@ -446,6 +452,83 @@ class GeneAttachmentsManager {
       this.showNotification(`Failed to add attachment: ${error.message}`, 'error');
       return null;
     }
+  }
+
+  /**
+   * Register a user PDF as a content-addressed input to Deep Gene Research.
+   * Repeated workflows reuse the same genome-scoped attachment by SHA-256.
+   */
+  async registerResearchSourceAttachment(geneId, sourcePath, document) {
+    await this.ready;
+    const sha256 = String(document?.sha256 || '').trim().toLowerCase();
+    const documentId = String(document?.documentId || '').trim();
+    if (!geneId || !/^[a-f0-9]{64}$/.test(sha256) || documentId !== `sha256:${sha256}`) {
+      throw new Error('DGR research source attachment requires verified document metadata');
+    }
+    const existing = (this.attachments.get(geneId) || []).find(
+      attachment => attachment.kind === 'dgr-research-source' && attachment.sha256 === sha256
+    );
+    if (existing) return existing;
+
+    const attachment = await this.processAndStoreFile(geneId, sourcePath);
+    if (!attachment) throw new Error(`Could not store research PDF ${document?.name || sourcePath}`);
+    Object.assign(attachment, {
+      kind: 'dgr-research-source',
+      sha256,
+      dgrDocumentId: documentId,
+      mimeType: 'application/pdf',
+      description: 'User-provided full-text source for Deep Gene Research',
+      researchSource: {
+        schema: 'codexomics.dgr-research-source.v1',
+        documentId,
+        uploadedAt: String(document.uploadedAt || new Date().toISOString()),
+        size: Number(document.size || attachment.size || 0),
+      },
+    });
+    try {
+      await this.saveAttachmentMetadata({ durable: true, throwOnError: true });
+    } catch (error) {
+      const geneAttachments = this.attachments.get(geneId) || [];
+      const index = geneAttachments.findIndex(item => item.id === attachment.id);
+      if (index >= 0) geneAttachments.splice(index, 1);
+      if (geneAttachments.length === 0) this.attachments.delete(geneId);
+      throw error;
+    }
+    return attachment;
+  }
+
+  async markResearchSourceAttachment(geneId, attachmentId, document) {
+    await this.ready;
+    const attachment = (this.attachments.get(geneId) || []).find(item => item.id === attachmentId);
+    if (!attachment || attachment.extension !== 'pdf') {
+      throw new Error(`Research source attachment ${attachmentId} is not a PDF for ${geneId}`);
+    }
+    const sha256 = String(document?.sha256 || '').trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(sha256) || document?.documentId !== `sha256:${sha256}`) {
+      throw new Error('Research source attachment metadata failed content-address verification');
+    }
+    const previous = { ...attachment };
+    Object.assign(attachment, {
+      kind: 'dgr-research-source',
+      sha256,
+      dgrDocumentId: document.documentId,
+      mimeType: 'application/pdf',
+      description: 'User-provided full-text source for Deep Gene Research',
+      researchSource: {
+        schema: 'codexomics.dgr-research-source.v1',
+        documentId: document.documentId,
+        uploadedAt: String(document.uploadedAt || new Date().toISOString()),
+        size: Number(document.size || attachment.size || 0),
+      },
+    });
+    try {
+      await this.saveAttachmentMetadata({ durable: true, throwOnError: true });
+    } catch (error) {
+      for (const key of Object.keys(attachment)) delete attachment[key];
+      Object.assign(attachment, previous);
+      throw error;
+    }
+    return attachment;
   }
 
   /**
@@ -779,7 +862,9 @@ class GeneAttachmentsManager {
         const reportBadge =
           attachment.kind === 'dgr-research-report'
             ? '<span class="gene-attachment-generated-badge">DGR full report</span>'
-            : '';
+            : attachment.kind === 'dgr-research-source'
+              ? '<span class="gene-attachment-generated-badge">DGR source PDF</span>'
+              : '';
         const sourceCount =
           attachment.kind === 'dgr-research-report' && attachment.summary?.sourceCount
             ? ` • ${this.escapeHtml(attachment.summary.sourceCount)} sources`
@@ -792,6 +877,10 @@ class GeneAttachmentsManager {
           attachment.kind === 'dgr-research-report' && attachment.summary?.citationBoundFactCount
             ? ` • ${this.escapeHtml(attachment.summary.citationBoundFactCount)} cited findings`
             : '';
+        const fullTextCount =
+          attachment.kind === 'dgr-research-report' && attachment.summary?.fullTextSourceCount
+            ? ` • ${this.escapeHtml(attachment.summary.fullTextSourceCount)} full texts`
+            : '';
         return `
                     <div class="gene-attachment-item" data-attachment-id="${this.escapeHtml(attachment.id)}">
                         <div class="gene-attachment-icon">
@@ -802,7 +891,7 @@ class GeneAttachmentsManager {
                                 ${filename} ${reportBadge}
                             </div>
                             <div class="gene-attachment-meta">
-                                ${this.escapeHtml(attachment.sizeFormatted)} • ${this.escapeHtml(this.formatDate(attachment.addedDate))}${sourceCount}${literatureCount}${findingCount}
+                                ${this.escapeHtml(attachment.sizeFormatted)} • ${this.escapeHtml(this.formatDate(attachment.addedDate))}${sourceCount}${literatureCount}${findingCount}${fullTextCount}
                             </div>
                         </div>
                         <div class="gene-attachment-actions">

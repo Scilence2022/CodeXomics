@@ -164,6 +164,91 @@ const createMcpResponse = task => ({
   }),
 });
 
+const addFullTextEvidence = task => {
+  const text = 'Methods and background. The Escherichia coli lysC target is inhibited by lysine in vivo. Discussion.';
+  const excerpt = 'The Escherichia coli lysC target is inhibited by lysine in vivo.';
+  const excerptStart = text.indexOf(excerpt);
+  const documentSha256 = crypto.createHash('sha256').update('original-pdf-bytes').digest('hex');
+  const textSha256 = crypto.createHash('sha256').update(text).digest('hex');
+  const excerptSha256 = crypto.createHash('sha256').update(excerpt).digest('hex');
+  task.result.sources.push({
+    id: `user-document:${documentSha256}`,
+    sourceId: `sha256:${documentSha256}`,
+    database: 'user_document',
+    pmid: '7654321',
+    doi: '10.1000/lysc.fulltext',
+    evidenceRole: 'reference',
+    structuredData: {
+      targetRelevance: { accepted: true, directness: 'direct' },
+      literatureReferences: [{ pmid: '7654321', doi: '10.1000/lysc.fulltext' }],
+    },
+    fullText: {
+      schema: 'dgr.full-text-document.v1',
+      canonicalization: 'dgr.full-text.v1',
+      offsetEncoding: 'utf16_code_units',
+      origin: 'user_upload',
+      name: 'lysC-study.pdf',
+      documentSha256,
+      textSha256,
+      textLength: text.length,
+      text,
+      identifiers: { pmid: '7654321', doi: '10.1000/lysc.fulltext' },
+    },
+  });
+  task.result.annotationProposal.evidenceManifest.sourceRecords.push({
+    id: 'evidence-fulltext-7654321',
+    database: 'user_document',
+    supporting: false,
+    identifiers: [
+      { scheme: 'pmid', value: '7654321' },
+      { scheme: 'doi', value: '10.1000/lysc.fulltext' },
+    ],
+    sourceBinding: {
+      schema: 'dgr.evidence-source-binding.v1',
+      sourceCollection: 'sources',
+      selector: { database: 'user_document', identifier: { scheme: 'pmid', value: '7654321' } },
+      content: {
+        relativeJsonPointer: '/fullText/text',
+        canonicalization: 'dgr.full-text.v1',
+        sha256: textSha256,
+        hashEncoding: 'utf8',
+        length: text.length,
+        lengthEncoding: 'utf16_code_units',
+      },
+    },
+  });
+  task.result.annotationProposal.researchSummary.facts.push({
+    id: 'fact-fulltext-1',
+    evidenceLevel: 'target_literature',
+    evidenceIds: ['evidence-fulltext-7654321'],
+    statement: excerpt,
+    citation: {
+      id: '7654321',
+      doi: '10.1000/lysc.fulltext',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/7654321/',
+    },
+    literatureBasis: {
+      kind: 'full_text_span',
+      evidenceId: 'evidence-fulltext-7654321',
+      pmid: '7654321',
+      doi: '10.1000/lysc.fulltext',
+      documentSha256,
+      sourceOrigin: 'user_upload',
+      excerpt,
+      excerptSha256,
+      hashEncoding: 'utf8',
+      excerptStart,
+      excerptEnd: excerptStart + excerpt.length,
+      textSha256,
+      textLength: text.length,
+      pageNumber: 1,
+      canonicalization: 'dgr.full-text.v1',
+      offsetEncoding: 'utf16_code_units',
+    },
+  });
+  return { text, excerpt, documentSha256 };
+};
+
 describe('DGR artifact storage', () => {
   let userDataPath;
 
@@ -279,6 +364,38 @@ describe('DGR artifact storage', () => {
         proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
       })
     ).resolves.toMatchObject({ citationValidation: { verified: true, verifiedPubMedSourceCount: 1 } });
+  });
+
+  it('archives exact full-text spans and reports verified full-text coverage', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    const fullText = addFullTextEvidence(task);
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    expect(descriptor.summary).toMatchObject({ fullTextSourceCount: 1, fullTextFindingCount: 1 });
+    expect(descriptor.citationValidation).toMatchObject({
+      verified: true,
+      factCount: 2,
+      fullTextSourceCount: 1,
+      verifiedFullTextSourceCount: 1,
+    });
+
+    task.result.annotationProposal.researchSummary.facts[2].literatureBasis.excerptStart += 1;
+    await expect(
+      archiveDgrTaskResult({
+        userDataPath,
+        taskId: task.id,
+        target,
+        proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+      })
+    ).rejects.toThrow(/full-text offsets do not match/);
+    expect(fullText.documentSha256).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('requires the DGR task snapshot when external archival requests live current-annotation binding', async () => {

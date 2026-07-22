@@ -648,6 +648,7 @@ class AnnotationResearchWorkflowService {
       proposalSha256: String(response.artifact.proposalSha256 || ''),
       citationValidation: this._clone(response.artifact.citationValidation || null),
       currentAnnotationValidation,
+      summary: this._clone(response.artifact.summary || {}),
       storedAt: response.artifact.storedAt || new Date().toISOString(),
     };
     workflow.currentAnnotationValidation = this._clone(currentAnnotationValidation);
@@ -665,6 +666,68 @@ class AnnotationResearchWorkflowService {
       throw new Error(`Annotation research workflow ${workflow.taskId} failed target-binding verification`);
     }
     return computedHash;
+  }
+
+  async _prepareResearchDocuments(params, target) {
+    const paths = Array.isArray(params.researchDocumentPaths) ? params.researchDocumentPaths : [];
+    const requestedAttachmentIds = Array.isArray(params.researchAttachmentIds) ? params.researchAttachmentIds : [];
+    if (paths.length > 8 || requestedAttachmentIds.length > 8 || paths.length + requestedAttachmentIds.length > 8) {
+      throw new Error('Annotation research accepts at most 8 user PDF documents');
+    }
+    for (const [index, filePath] of paths.entries()) {
+      if (typeof filePath !== 'string' || !filePath.trim() || filePath.length > 4096) {
+        throw new Error(`researchDocumentPaths[${index}] must be a non-empty absolute PDF path`);
+      }
+    }
+    for (const [index, attachmentId] of requestedAttachmentIds.entries()) {
+      if (typeof attachmentId !== 'string' || !attachmentId.trim() || attachmentId.length > 256) {
+        throw new Error(`researchAttachmentIds[${index}] must be a valid attachment identifier`);
+      }
+    }
+    if (paths.length === 0 && requestedAttachmentIds.length === 0) return [];
+
+    const electronApi = typeof window !== 'undefined' ? window.electronAPI : null;
+    if (typeof electronApi?.uploadDgrResearchDocument !== 'function') {
+      throw new Error('The secure DGR research document upload API is unavailable');
+    }
+    const attachments = this.app?.geneAttachmentsManager;
+    if (attachments?.ready) await attachments.ready;
+    if (!attachments || typeof attachments.getAttachmentsForGene !== 'function') {
+      throw new Error('Gene attachments are required to integrate user PDFs into annotation research');
+    }
+    const geneId = String(target.locusTag || target.geneSymbol || target.proteinId || target.featureId);
+    const existingAttachments = attachments.getAttachmentsForGene(geneId);
+    const selections = [
+      ...paths.map(filePath => ({ filePath: filePath.trim(), attachment: null })),
+      ...requestedAttachmentIds.map(attachmentId => {
+        const attachment = existingAttachments.find(item => item.id === attachmentId);
+        if (!attachment) throw new Error(`Research attachment ${attachmentId} was not found for ${geneId}`);
+        if (attachment.extension !== 'pdf' || !attachment.storedPath) {
+          throw new Error(`Research attachment ${attachmentId} is not a stored PDF`);
+        }
+        return { filePath: attachment.storedPath, attachment };
+      }),
+    ];
+
+    const prepared = [];
+    for (const selection of selections) {
+      const response = await electronApi.uploadDgrResearchDocument({ filePath: selection.filePath });
+      if (!response?.success || !this._isPlainRecord(response.document)) {
+        throw new Error(response?.error || `Could not upload research PDF ${selection.filePath}`);
+      }
+      const document = response.document;
+      const attachment = selection.attachment
+        ? await attachments.markResearchSourceAttachment(geneId, selection.attachment.id, document)
+        : await attachments.registerResearchSourceAttachment(geneId, response.approvedPath, document);
+      prepared.push({
+        documentId: String(document.documentId),
+        attachmentId: String(attachment.id),
+        fileName: String(attachment.filename || document.name || ''),
+        sha256: String(document.sha256 || ''),
+        size: Number(document.size || attachment.size || 0),
+      });
+    }
+    return Array.from(new Map(prepared.map(document => [document.documentId, document])).values());
   }
 
   async startAnnotationResearch(params = {}) {
@@ -786,6 +849,9 @@ class AnnotationResearchWorkflowService {
       }
       this._assertWorkspace(workspace);
 
+      const researchDocuments = await this._prepareResearchDocuments(params, target);
+      this._assertWorkspace(workspace);
+
       const intentHash = await this._hash({
         organism: this._normaliseOrganism(organism),
         geneSymbol: String(geneSymbol).trim().toLowerCase(),
@@ -797,6 +863,7 @@ class AnnotationResearchWorkflowService {
         language: params.language || null,
         maxResult: params.maxResult ?? null,
         forceRefresh: params.forceRefresh === true,
+        researchDocumentIds: researchDocuments.map(document => document.documentId),
         currentAnnotation,
       });
       this._assertWorkspace(workspace);
@@ -831,6 +898,13 @@ class AnnotationResearchWorkflowService {
         currentAnnotationSnapshot: this._clone(currentAnnotation),
         currentAnnotationRequestSha256,
         currentAnnotationBindingRequired: true,
+        researchDocuments: researchDocuments.map(document => ({
+          documentId: document.documentId,
+          attachmentId: document.attachmentId,
+          fileName: document.fileName,
+          sha256: document.sha256,
+          size: document.size,
+        })),
         createdAt: new Date().toISOString(),
         changeSetId: null,
       };
@@ -846,6 +920,7 @@ class AnnotationResearchWorkflowService {
         language: params.language,
         maxResult: params.maxResult,
         forceRefresh: params.forceRefresh === true,
+        userDocumentIds: researchDocuments.map(document => document.documentId),
         enableCitationImage: false,
         includeCodeXomicsAnnotationProposal: true,
         target,
