@@ -4,6 +4,13 @@
 class UIManager {
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
+
+    // UIManager is also instantiated by headless/unit-test consumers. Avoid
+    // touching the DOM when the renderer document is not available.
+    if (typeof document === 'undefined') {
+      return;
+    }
+
     this.initializeDropdownHandlers();
 
     // Initialize the sidebar splitter and navigation drag when DOM is ready
@@ -15,7 +22,11 @@ class UIManager {
       });
     } else {
       // DOM is already loaded
-      setTimeout(() => {
+      this._uiInitializationTimer = setTimeout(() => {
+        // The test/browser context may be torn down before the deferred
+        // callback fires. Treat that as a no-op instead of dereferencing a
+        // detached global document.
+        if (typeof document === 'undefined') return;
         this.initializeSidebarSplitter();
         this.initializeNavigationDrag();
         this.initializeSplitterToggleDrag();
