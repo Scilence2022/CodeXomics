@@ -752,6 +752,11 @@
   border-left: 4px solid var(--primary-color);
   border-radius: var(--radius-md);
   padding: 12px;
+  margin-top: 12px;
+}
+
+.gene-tab-content > .gene-annotation-note-section:first-child {
+  margin-top: 0;
 }
 
 .gene-annotation-note-header {
@@ -814,6 +819,10 @@
   transition: all 0.3s ease;
 }
 
+.gene-user-notes-section {
+  margin-top: 0;
+}
+
 .gene-notes-section.expanded {
   border-color: var(--primary-color);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
@@ -844,6 +853,24 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.gene-user-notes-badge {
+  padding: 2px 7px;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.gene-notes-help {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .gene-notes-updated {

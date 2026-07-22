@@ -6262,6 +6262,14 @@ class GenomeBrowser {
         }
 
         valuesToDisplay.forEach((val, index) => {
+          const lowerKey = key.toLowerCase();
+          const normalizedKey = lowerKey.replace(/[\s-]+/g, '_');
+
+          // The GenBank /note qualifier gets a dedicated, clearly labelled
+          // presentation in General. Do not also render it as a generic
+          // attribute, which makes it look like the app-only user notes.
+          if (normalizedKey === 'note') return;
+
           const displayLabel = index === 0 ? key.replace(/_/g, ' ') : '';
           const attrHtml = `
                         <div class="gene-attribute">
@@ -6269,8 +6277,6 @@ class GenomeBrowser {
                             <div class="gene-attribute-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(val)))}</div>
                         </div>
                     `;
-          const lowerKey = key.toLowerCase();
-          const normalizedKey = lowerKey.replace(/[\s-]+/g, '_');
           const looksLikeEcValue = /\b(?:EC[:\s]*)?\d{1,2}\.\d{1,3}\.\d{1,3}\.(?:\d{1,3}|-)\b/i.test(String(val));
           const isEcQualifier =
             normalizedKey === 'ec' ||
@@ -6375,9 +6381,33 @@ class GenomeBrowser {
 
     const renderTabEmptyState = message => `<div class="gene-tab-empty">${message}</div>`;
 
+    const annotationNoteValues = this.getAllQualifierValues(gene.qualifiers, 'note').filter(
+      value => value != null && String(value).trim()
+    );
+    const annotationNoteHtml = `
+      <div class="gene-annotation-note-section">
+        <div class="gene-annotation-note-header">
+          <h4><i class="fas fa-file-signature"></i> Genome Annotation Note</h4>
+          <span class="gene-annotation-note-badge">GenBank /note</span>
+        </div>
+        <p class="gene-annotation-note-help">Part of the genome annotation and included in GenBank exports. Use <strong>Edit Annotation</strong> to change it.</p>
+        <div class="gene-annotation-note-content">
+          ${
+            annotationNoteValues.length > 0
+              ? annotationNoteValues
+                  .map(
+                    value =>
+                      `<div class="gene-annotation-note-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(value)))}</div>`
+                  )
+                  .join('')
+              : '<div class="gene-tab-empty">No genome annotation note has been applied.</div>'
+          }
+        </div>
+      </div>`;
+
     // ---------------- General Tab ----------------
     const citationList = this.generateUnifiedCitationList();
-    let generalTabHtml = generalAttributesHtml;
+    let generalTabHtml = generalAttributesHtml + annotationNoteHtml;
     if (citationList) {
       generalTabHtml += citationList;
     }
@@ -6416,40 +6446,18 @@ class GenomeBrowser {
     }
     sequenceTabHtml += `</div>`;
 
-    // ---------------- Notes Tab ----------------
-    const annotationNoteValues = this.getAllQualifierValues(gene.qualifiers, 'note').filter(
-      value => value != null && String(value).trim()
-    );
-    let notesTabHtml = `
-      <div class="gene-annotation-note-section">
-        <div class="gene-annotation-note-header">
-          <h4><i class="fas fa-file-signature"></i> Annotation Note</h4>
-          <span class="gene-annotation-note-badge">CDS /note</span>
-        </div>
-        <p class="gene-annotation-note-help">Reviewed annotation text stored with this CDS and included in GenBank exports.</p>
-        <div class="gene-annotation-note-content">
-          ${
-            annotationNoteValues.length > 0
-              ? annotationNoteValues
-                  .map(
-                    value =>
-                      `<div class="gene-annotation-note-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(value)))}</div>`
-                  )
-                  .join('')
-              : '<div class="gene-tab-empty">No formal CDS annotation note has been applied.</div>'
-          }
-        </div>
-      </div>`;
+    // ---------------- User Notes Tab ----------------
+    let userNotesTabHtml = '';
     if (this.geneNotesManager) {
-      notesTabHtml += this.geneNotesManager.renderNotesSection(geneId);
+      userNotesTabHtml = this.geneNotesManager.renderNotesSection(geneId);
     } else {
-      notesTabHtml += `
-                <div class="gene-notes-section">
+      userNotesTabHtml = `
+                <div class="gene-notes-section gene-user-notes-section">
                     <div class="gene-notes-header">
-                        <h4><i class="fas fa-sticky-note"></i> Curator Notes</h4>
+                        <h4><i class="fas fa-sticky-note"></i> User Notes</h4>
                     </div>
                     <div class="gene-notes-content">
-                        <p style="color: var(--text-muted);">Notes system initializing...</p>
+                        <p style="color: var(--text-muted);">User notes are initializing...</p>
                     </div>
                 </div>
             `;
@@ -6488,7 +6496,7 @@ class GenomeBrowser {
       { id: 'ec', label: 'EC', content: ecTabHtml },
       { id: 'pathways', label: 'Pathways', content: pathwaysTabHtml },
       { id: 'sequence', label: 'Sequence', content: sequenceTabHtml },
-      { id: 'notes', label: 'Notes', content: notesTabHtml },
+      { id: 'user-notes', label: 'User Notes', content: userNotesTabHtml },
       { id: 'resources', label: 'Resources', content: resourcesTabHtml },
       { id: 'review', label: 'Review', content: reviewTabHtml },
     ];
@@ -6690,6 +6698,14 @@ class GenomeBrowser {
   setupGeneDetailsTabs() {
     const tabBtns = document.querySelectorAll('#geneDetailsContent .gene-tab-btn');
     const tabContents = document.querySelectorAll('#geneDetailsContent .gene-tab-content');
+    const notesBtn = document.getElementById('geneNotesBtn');
+    const syncNotesShortcut = activeTab => {
+      if (notesBtn) {
+        notesBtn.classList.toggle('active', activeTab?.dataset.tab === 'user-notes');
+      }
+    };
+
+    syncNotesShortcut(document.querySelector('#geneDetailsContent .gene-tab-btn.active'));
 
     tabBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -6706,6 +6722,8 @@ class GenomeBrowser {
         if (targetContent) {
           targetContent.classList.add('active');
         }
+
+        syncNotesShortcut(btn);
       });
     });
   }
@@ -6780,30 +6798,20 @@ class GenomeBrowser {
   }
 
   /**
-   * Toggle gene notes visibility (for the notes button in header)
+   * Open User Notes from the shortcut button in the Gene Details header.
    */
   toggleGeneNotes() {
-    const notesSection = document.querySelector('.gene-notes-section');
-    if (!notesSection) {
-      this.showNotification('Notes section not found. Please select a gene first.', 'warning');
+    const userNotesTab = document.querySelector('#geneDetailsContent .gene-tab-btn[data-tab="user-notes"]');
+    const notesSection = document.querySelector('#tab-user-notes .gene-notes-section');
+    if (!userNotesTab || !notesSection) {
+      this.showNotification('User Notes are not available. Please select a gene first.', 'warning');
       return;
     }
 
-    // Toggle expanded state
-    notesSection.classList.toggle('expanded');
-
-    // Focus textarea when expanding
-    if (notesSection.classList.contains('expanded')) {
-      const textarea = notesSection.querySelector('.gene-notes-textarea');
-      if (textarea) {
-        textarea.focus();
-      }
-    }
-
-    // Update button state
-    const notesBtn = document.getElementById('geneNotesBtn');
-    if (notesBtn) {
-      notesBtn.classList.toggle('active', notesSection.classList.contains('expanded'));
+    userNotesTab.click();
+    const textarea = notesSection.querySelector('.gene-notes-textarea');
+    if (textarea) {
+      textarea.focus();
     }
   }
 
