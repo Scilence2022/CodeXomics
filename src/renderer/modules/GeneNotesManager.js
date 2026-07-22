@@ -72,11 +72,11 @@ class GeneNotesManager {
       }
 
       await this.persistNotes();
-      this.showNotification('Note saved', 'success');
+      this.showNotification('User note saved', 'success');
       return true;
     } catch (error) {
       console.error('Error saving note:', error);
-      this.showNotification('Failed to save note', 'error');
+      this.showNotification('Failed to save user note', 'error');
       return false;
     }
   }
@@ -90,11 +90,11 @@ class GeneNotesManager {
     try {
       this.notes.delete(geneId);
       await this.persistNotes();
-      this.showNotification('Note deleted', 'success');
+      this.showNotification('User note deleted', 'success');
       return true;
     } catch (error) {
       console.error('Error deleting note:', error);
-      this.showNotification('Failed to delete note', 'error');
+      this.showNotification('Failed to delete user note', 'error');
       return false;
     }
   }
@@ -172,10 +172,11 @@ class GeneNotesManager {
     const escapedGeneId = geneId.replace(/'/g, "\\'");
 
     return `
-            <div class="gene-notes-section">
+            <div class="gene-notes-section gene-user-notes-section">
                 <div class="gene-notes-header">
-                    <h4><i class="fas fa-sticky-note"></i> Curator Notes</h4>
+                    <h4><i class="fas fa-sticky-note"></i> User Notes</h4>
                     <div class="gene-notes-header-actions">
+                        <span class="gene-user-notes-badge">Not exported</span>
                         ${
                           hasNote
                             ? `
@@ -187,11 +188,12 @@ class GeneNotesManager {
                         }
                     </div>
                 </div>
+                <p class="gene-notes-help">Your own notes, saved separately by CodeXomics. They do not change the genome annotation and are not included in GenBank exports.</p>
                 <div class="gene-notes-content">
                     <textarea 
                         id="geneNoteTextarea" 
                         class="gene-notes-textarea" 
-                        placeholder="Add private curator notes about this gene..."
+                        placeholder="Add your own notes about this gene..."
                         onblur="window.genomeBrowser.saveGeneNote('${escapedGeneId}')"
                     >${this.escapeHtml(content)}</textarea>
                 </div>

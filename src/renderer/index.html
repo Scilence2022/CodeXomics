@@ -876,7 +876,7 @@
                                 <span class="annotation-review-badge" hidden>0</span>
                             </button>
                             <button class="notes-panel-btn" onclick="window.genomeBrowser.toggleGeneNotes()"
-                                title="Gene Notes" id="geneNotesBtn">
+                                title="Open User Notes (saved separately, not exported)" id="geneNotesBtn">
                                 <i class="fas fa-sticky-note"></i>
                             </button>
                             <button class="settings-panel-btn" onclick="window.genomeBrowser.showGeneDetailSettings()"
@@ -4463,9 +4463,9 @@ Supported formats:
                         <input type="text" id="editGeneLocusTag" class="input-full" placeholder="Enter locus tag">
                     </div>
                     <div class="form-group">
-                        <label for="editGeneNote">Note/Description:</label>
+                        <label for="editGeneNote">Genome Annotation Note (GenBank /note):</label>
                         <textarea id="editGeneNote" class="input-full" rows="3"
-                            placeholder="Enter additional notes or description"></textarea>
+                            placeholder="Enter an annotation note to include in GenBank exports"></textarea>
                     </div>
                     <div class="form-group">
                         <label>Additional Qualifiers:</label>
