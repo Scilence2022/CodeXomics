@@ -15,7 +15,7 @@ function loadManager(mockWindow) {
 function reviewDom() {
   document.body.innerHTML = `
     <div id="annotationReviewModal"></div>
-    <button id="annotationReviewToolbarBtn"></button>
+    <button id="annotationReviewHeaderBtn"></button>
     <input id="annotationReviewSearch" value="">
     <select id="annotationReviewFilter"><option value="active" selected>active</option></select>
     <select id="annotationReviewRiskFilter"><option value="" selected>all</option></select>
@@ -59,22 +59,28 @@ describe('AnnotationReviewManager', () => {
     reviewDom();
   });
 
-  it('opens the review center from the global toolbar entry', () => {
+  it('opens the review center from the global header entry', () => {
     const mockWindow = { confirm: vi.fn(), prompt: vi.fn(), alert: vi.fn() };
     const Manager = loadManager(mockWindow);
     const manager = new Manager({ configManager: null });
     const showReviewCenter = vi.spyOn(manager, 'showReviewCenter').mockImplementation(() => {});
 
-    document.getElementById('annotationReviewToolbarBtn').click();
+    document.getElementById('annotationReviewHeaderBtn').click();
 
     expect(showReviewCenter).toHaveBeenCalledOnce();
   });
 
-  it('keeps a labeled global Review entry in the renderer toolbar', () => {
+  it('keeps one labeled global Review entry beside Options in the header', () => {
     const html = fs.readFileSync(RENDERER_INDEX_PATH, 'utf8');
+    const headerRightIndex = html.indexOf('<div class="header-right">');
+    const reviewIndex = html.indexOf('id="annotationReviewHeaderBtn"');
+    const optionsIndex = html.indexOf('id="optionsBtn"');
 
-    expect(html).toContain('id="annotationReviewToolbarBtn"');
-    expect(html).toMatch(/id="annotationReviewToolbarBtn"[\s\S]*?<span>Review<\/span>/);
+    expect(reviewIndex).toBeGreaterThan(headerRightIndex);
+    expect(reviewIndex).toBeLessThan(optionsIndex);
+    expect(html).toMatch(/id="annotationReviewHeaderBtn"[\s\S]*?<span>Review<\/span>/);
+    expect(html).not.toContain('id="annotationReviewToolbarBtn"');
+    expect(html).not.toContain('id="annotationReviewBtn"');
   });
 
   it('uses one explicit batch confirmation while issuing independent approvals and commits', async () => {
