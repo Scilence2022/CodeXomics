@@ -129,4 +129,41 @@ describe('AnnotationService quality prioritization', () => {
     expect(result.ambiguousLoci[0].featureIds).toEqual(['cds-b0001', 'cds-b0001-duplicate']);
     expect(result.candidates.some(candidate => candidate.feature.locusTag === 'b0001')).toBe(false);
   });
+
+  it('uses the CodeXomics research ledger to exclude active and completed targets', async () => {
+    const service = createService();
+    service.chatManager.services = {
+      annotationWorkflow: {
+        getAnnotationResearchCoverageIndex: vi.fn(async () => ({
+          refreshDays: null,
+          entries: [
+            {
+              coverageState: 'completed',
+              effectiveCovered: true,
+              target: { chromosome: 'chr1', locusTag: 'b0001' },
+            },
+            {
+              coverageState: 'active',
+              effectiveCovered: true,
+              target: { chromosome: 'chr1', locusTag: 'b0003' },
+            },
+          ],
+        })),
+        _researchTargetsOverlap(left, right) {
+          return (
+            String(left.chromosome).toLowerCase() === String(right.chromosome).toLowerCase() &&
+            String(left.locusTag).toLowerCase() === String(right.locusTag).toLowerCase()
+          );
+        },
+      },
+    };
+
+    const result = await service.listAnnotationQualityCandidates({
+      researchHistoryPolicy: 'exclude-covered',
+      limit: 0,
+    });
+
+    expect(result.excludedByResearchHistory).toBe(2);
+    expect(result.candidates.map(candidate => candidate.feature.locusTag)).toEqual(['b0002']);
+  });
 });

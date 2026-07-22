@@ -113,6 +113,7 @@ class DataAgent extends AgentBase {
     this.toolMapping.set('list_annotations', this.listAnnotations.bind(this));
     this.toolMapping.set('assess_annotation_quality', this.assessAnnotationQuality.bind(this));
     this.toolMapping.set('list_annotation_quality_candidates', this.listAnnotationQualityCandidates.bind(this));
+    this.toolMapping.set('list_annotation_research_history', this.listAnnotationResearchHistory.bind(this));
 
     // Data statistics tools
     this.toolMapping.set('get_data_statistics', this.getDataStatistics.bind(this));
@@ -731,6 +732,14 @@ class DataAgent extends AgentBase {
       return await service.listAnnotationQualityCandidates(parameters);
     }
     return { success: false, error: 'Annotation quality candidate service is unavailable' };
+  }
+
+  async listAnnotationResearchHistory(parameters) {
+    const service = this.multiAgentSystem.chatManager?.services?.annotationWorkflow;
+    if (service?.listAnnotationResearchHistory) {
+      return await service.listAnnotationResearchHistory(parameters);
+    }
+    return { success: false, error: 'Annotation research history service is unavailable' };
   }
 
   /**

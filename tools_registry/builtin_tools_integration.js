@@ -862,6 +862,7 @@ class BuiltInToolsIntegration {
       start_annotation_research: 'startAnnotationResearch',
       archive_annotation_research: 'archiveAnnotationResearch',
       get_annotation_research_workflow: 'getAnnotationResearchWorkflow',
+      list_annotation_research_history: 'listAnnotationResearchHistory',
       cancel_annotation_research: 'cancelAnnotationResearch',
     })) {
       this.builtInToolsMap.set(name, {
@@ -2512,6 +2513,21 @@ class BuiltInToolsIntegration {
         name: 'archive_annotation_research',
         confidence: 0.98,
         reason: 'Durable DGR report archival keywords detected',
+      });
+    }
+
+    if (
+      /\b(list|show|view|check|audit)\s+.*?\b(research(?:ed)?\s+genes?|annotation\s+research\s+history|dgr\s+(?:history|runs?)|research\s+coverage)\b/i.test(
+        query
+      ) ||
+      /\b(already|previously)\s+.*?\b(researched|investigated|curated)\s+.*?\b(genes?|annotations?|features?)\b/i.test(
+        query
+      )
+    ) {
+      relevantTools.push({
+        name: 'list_annotation_research_history',
+        confidence: 0.98,
+        reason: 'Durable annotation research history keywords detected',
       });
     }
 

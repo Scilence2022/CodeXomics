@@ -113,6 +113,19 @@ class AnnotationTools {
               default: 'quality',
               description: 'Rank lowest quality first or preserve deterministic coordinate coverage order.',
             },
+            researchHistoryPolicy: {
+              type: 'string',
+              enum: ['include', 'exclude-active', 'exclude-completed', 'exclude-covered'],
+              default: 'include',
+              description: 'Optionally exclude targets with active or durably archived completed DGR research.',
+            },
+            researchRefreshDays: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 3650,
+              description:
+                'With history exclusion, allow completed research older than this many days to become eligible again.',
+            },
             limit: {
               type: 'number',
               minimum: 0,
@@ -457,6 +470,19 @@ class AnnotationTools {
               default: false,
               description: 'Bypass the DGR semantic result cache while preserving request idempotency.',
             },
+            repeatPolicy: {
+              type: 'string',
+              enum: ['allow', 'skip-covered'],
+              default: 'allow',
+              description:
+                'Use skip-covered for automation to resume active work and skip durably archived completed research.',
+            },
+            researchRefreshDays: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 3650,
+              description: 'With skip-covered, rerun completed research after this many days.',
+            },
             idempotencyKey: { type: 'string', minLength: 1, maxLength: 256 },
             correlationId: { type: 'string', minLength: 1, maxLength: 256 },
             clientId: { type: 'string' },
@@ -493,6 +519,35 @@ class AnnotationTools {
           type: 'object',
           properties: { taskId: { type: 'string' }, clientId: { type: 'string' } },
           required: ['taskId'],
+        },
+      },
+
+      list_annotation_research_history: {
+        name: 'list_annotation_research_history',
+        description:
+          'List durable per-genome DGR research history, including active, archived completed, incomplete archival, failed, and cancelled runs. Use this as the authoritative cross-agent research coverage ledger.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            identifier: {
+              type: 'string',
+              description: 'Optional task ID, feature ID, locus tag, protein ID, or gene-symbol filter.',
+            },
+            coverageStates: {
+              type: 'array',
+              items: {
+                type: 'string',
+                enum: ['active', 'completed', 'completed_unarchived', 'failed', 'cancelled'],
+              },
+            },
+            coveredOnly: { type: 'boolean', default: false },
+            latestPerTarget: { type: 'boolean', default: false },
+            researchRefreshDays: { type: 'integer', minimum: 1, maximum: 3650 },
+            limit: { type: 'integer', minimum: 0, maximum: 2000, default: 100 },
+            offset: { type: 'integer', minimum: 0, default: 0 },
+            clientId: { type: 'string' },
+          },
+          required: [],
         },
       },
 

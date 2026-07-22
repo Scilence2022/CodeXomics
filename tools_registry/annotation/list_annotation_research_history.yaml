@@ -1,0 +1,57 @@
+name: list_annotation_research_history
+version: 1.0.0
+description: List the durable, per-genome Deep Gene Research history used to prevent repeated annotation research across agents and automation runs.
+category: annotation
+subcategory: autonomous_curation
+keywords:
+  - annotation research history
+  - researched genes
+  - completed gene research
+  - research coverage
+  - previous DGR runs
+execution:
+  type: client-side
+  requires_data: true
+parameters:
+  type: object
+  properties:
+    identifier:
+      type: string
+      description: Optional task ID, feature ID, locus tag, protein ID, or gene-symbol filter.
+    coverageStates:
+      type: array
+      items:
+        type: string
+        enum: [active, completed, completed_unarchived, failed, cancelled]
+      description: Optional coverage-state filter.
+    coveredOnly:
+      type: boolean
+      default: false
+      description: Return only active or durably archived completed research.
+    latestPerTarget:
+      type: boolean
+      default: false
+      description: Return only the newest record for each stable target identity.
+    researchRefreshDays:
+      type: integer
+      minimum: 1
+      maximum: 3650
+      description: Treat completed research older than this many days as due for refresh.
+    limit: { type: integer, minimum: 0, maximum: 2000, default: 100 }
+    offset: { type: integer, minimum: 0, default: 0 }
+    clientId: { type: string }
+  required: []
+returns:
+  type: object
+  properties:
+    success: { type: boolean }
+    schema: { type: string }
+    total: { type: integer }
+    coveredCount: { type: integer }
+    history:
+      type: array
+      items: { type: object }
+metadata:
+  added_in: 0.722.0
+  priority: high
+  tags: [annotation, research, dgr, history, audit]
