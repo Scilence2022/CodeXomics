@@ -15,6 +15,7 @@ class AnnotationReviewManager {
     this.duplicateTargetCounts = new Map();
     this.approvalTokens = new Map();
     this.activeDecisionSession = null;
+    this.activeChangeSetId = null;
     this.isLoading = false;
     this.defaults = Object.freeze({
       curatorIdentity: 'local-curator',
@@ -75,6 +76,7 @@ class AnnotationReviewManager {
     bind('annotationReviewRejectBtn', 'click', () => this.rejectSelected());
     bind('annotationGovernanceSaveBtn', 'click', () => this.saveGovernanceSettings());
     bind('annotationReviewQueue', 'click', event => this._handleQueueClick(event));
+    bind('annotationReviewQueue', 'keydown', event => this._handleQueueKeydown(event));
     bind('annotationReviewQueue', 'change', event => this._handleQueueChange(event));
     bind('annotationReviewDetail', 'click', event => this._handleQueueClick(event));
 
@@ -213,7 +215,8 @@ class AnnotationReviewManager {
       )
       .join('');
     return `
-      <article class="annotation-review-item" data-changeset-id="${this._escape(changeSet.id)}">
+      <article class="annotation-review-item${this.activeChangeSetId === changeSet.id ? ' is-active' : ''}"
+        data-changeset-id="${this._escape(changeSet.id)}">
         ${
           eligible
             ? `<label class="annotation-review-select" title="Select this ChangeSet for batch review">
@@ -225,7 +228,10 @@ class AnnotationReviewManager {
                 <i class="fas fa-lock" aria-hidden="true"></i>
               </span>`
         }
-        <div class="annotation-review-item-main">
+        <div class="annotation-review-item-main" role="button" tabindex="0"
+          aria-label="Review details for ${this._escape(label)}"
+          aria-controls="annotationReviewDetail"
+          aria-expanded="${this.activeChangeSetId === changeSet.id ? 'true' : 'false'}">
           <div class="annotation-review-item-heading">
             <div>
               <strong>${this._escape(label)}</strong>
@@ -269,6 +275,7 @@ class AnnotationReviewManager {
   async viewChangeSet(changeSetId) {
     const detail = document.getElementById('annotationReviewDetail');
     if (!detail) return;
+    this._setActiveChangeSet(changeSetId);
     detail.innerHTML =
       '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading full proposal…</div>';
     try {
@@ -276,7 +283,7 @@ class AnnotationReviewManager {
       const changeSet = result.changeSet;
       const summary = this.changeSets.get(changeSetId) || {};
       detail.innerHTML = this._renderChangeSetDetail(changeSet, summary);
-      detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      detail.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
     } catch (error) {
       detail.innerHTML = `<div class="annotation-review-empty error"><p>${this._escape(error.message)}</p></div>`;
     }
@@ -335,12 +342,43 @@ class AnnotationReviewManager {
 
   _handleQueueClick(event) {
     const button = event.target.closest('[data-action]');
-    if (!button) return;
-    if (button.dataset.action === 'details') void this.viewChangeSet(button.dataset.id);
-    if (button.dataset.action === 'close-details') {
+    if (button?.dataset.action === 'details') {
+      void this.viewChangeSet(button.dataset.id);
+      return;
+    }
+    if (button?.dataset.action === 'close-details') {
+      const activeItem = document.querySelector(
+        '#annotationReviewQueue .annotation-review-item.is-active .annotation-review-item-main'
+      );
       const detail = document.getElementById('annotationReviewDetail');
       if (detail) detail.innerHTML = '';
+      this._setActiveChangeSet(null);
+      activeItem?.focus();
+      return;
     }
+
+    const item = event.target.closest('.annotation-review-item[data-changeset-id]');
+    const interactiveControl = event.target.closest('input, label, button, a, select, textarea, summary');
+    if (item && !interactiveControl) void this.viewChangeSet(item.dataset.changesetId);
+  }
+
+  _handleQueueKeydown(event) {
+    if (!['Enter', ' '].includes(event.key)) return;
+    const itemMain = event.target.closest('.annotation-review-item-main[role="button"]');
+    if (!itemMain || event.target !== itemMain) return;
+    const item = itemMain.closest('.annotation-review-item[data-changeset-id]');
+    if (!item) return;
+    event.preventDefault();
+    void this.viewChangeSet(item.dataset.changesetId);
+  }
+
+  _setActiveChangeSet(changeSetId) {
+    this.activeChangeSetId = changeSetId || null;
+    document.querySelectorAll('#annotationReviewQueue .annotation-review-item').forEach(item => {
+      const isActive = item.dataset.changesetId === this.activeChangeSetId;
+      item.classList.toggle('is-active', isActive);
+      item.querySelector('.annotation-review-item-main')?.setAttribute('aria-expanded', String(isActive));
+    });
   }
 
   _handleQueueChange(event) {

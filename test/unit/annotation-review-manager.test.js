@@ -259,4 +259,61 @@ describe('AnnotationReviewManager', () => {
     expect(document.getElementById('annotationReviewSelectedCount').textContent).toBe('1 selected');
     expect(document.getElementById('annotationReviewEligibleLabel').textContent).toBe('1 eligible');
   });
+
+  it('opens a ChangeSet detail view when its queue item is clicked or keyboard-activated', async () => {
+    const mockWindow = { confirm: vi.fn(), prompt: vi.fn(), alert: vi.fn() };
+    const pending = summary('cs-details', 'thrB', 'hash-details');
+    const getAnnotationChangeset = vi.fn(async () => ({
+      changeSet: {
+        ...pending,
+        baseRevision: 'revision-1',
+        operations: [{ op: 'addQualifier', field: 'note', value: 'Reviewed note', claimIds: [] }],
+        evidence: ['curated evidence'],
+      },
+    }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { getAnnotationChangeset } } },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(mockWindow);
+    const manager = new Manager(app);
+    manager.changeSets = new Map([[pending.id, pending]]);
+    manager._renderQueue({ total: 1, changeSets: [pending] });
+
+    const item = document.querySelector('.annotation-review-item');
+    const itemMain = item.querySelector('.annotation-review-item-main');
+    expect(itemMain.getAttribute('role')).toBe('button');
+    expect(itemMain.getAttribute('tabindex')).toBe('0');
+
+    itemMain.click();
+    await vi.waitFor(() => expect(getAnnotationChangeset).toHaveBeenCalledWith({ changeSetId: pending.id }));
+    expect(document.getElementById('annotationReviewDetail').textContent).toContain('Reviewed note');
+    expect(item.classList.contains('is-active')).toBe(true);
+    expect(itemMain.getAttribute('aria-expanded')).toBe('true');
+
+    getAnnotationChangeset.mockClear();
+    itemMain.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await vi.waitFor(() => expect(getAnnotationChangeset).toHaveBeenCalledWith({ changeSetId: pending.id }));
+  });
+
+  it('keeps queue selection separate from opening ChangeSet details', () => {
+    const mockWindow = { confirm: vi.fn(), prompt: vi.fn(), alert: vi.fn() };
+    const pending = summary('cs-select-only', 'thrB', 'hash-select-only');
+    const getAnnotationChangeset = vi.fn();
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { getAnnotationChangeset } } },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(mockWindow);
+    const manager = new Manager(app);
+    manager.changeSets = new Map([[pending.id, pending]]);
+    manager._renderQueue({ total: 1, changeSets: [pending] });
+
+    document.querySelector('.annotation-review-checkbox').click();
+
+    expect(getAnnotationChangeset).not.toHaveBeenCalled();
+    expect(document.getElementById('annotationReviewSelectedCount').textContent).toBe('1 selected');
+  });
 });
