@@ -2691,6 +2691,23 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         timeout: 15000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
+      {
+        id: 'annot_auto_11',
+        name: 'List Annotation Research History',
+        type: 'function_call',
+        category: 'annotation',
+        complexity: 'simple',
+        evaluation: 'automatic',
+        instruction: 'List the latest durable annotation research record for each target.',
+        expectedResult: {
+          tool_name: 'list_annotation_research_history',
+          parameters: { latestPerTarget: true, limit: 100 },
+        },
+        maxScore: 5,
+        bonusScore: 1,
+        timeout: 15000,
+        evaluator: this.evaluateBasicFunctionCall.bind(this),
+      },
 
       // DATABASE AND PROTEIN TASKS - Automatic + Simple
       {

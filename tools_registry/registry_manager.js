@@ -477,6 +477,9 @@ class ToolsRegistryManager {
         'features',
         'low quality annotation',
         'incomplete annotation',
+        'annotation research history',
+        'researched genes',
+        'research coverage',
       ],
       analysis: [
         'analyze',
@@ -488,6 +491,7 @@ class ToolsRegistryManager {
         'annotation quality',
         'quality score',
         'prioritize genes',
+        'previous DGR runs',
       ],
       sequence: [
         'sequence',
@@ -996,6 +1000,9 @@ class ToolsRegistryManager {
         'features',
         'low quality annotation',
         'incomplete annotation',
+        'annotation research history',
+        'researched genes',
+        'research coverage',
       ],
       analysis: [
         'analyze',
@@ -1005,6 +1012,7 @@ class ToolsRegistryManager {
         'annotation quality',
         'quality score',
         'prioritize genes',
+        'previous DGR runs',
       ],
       sequence: [
         'sequence',

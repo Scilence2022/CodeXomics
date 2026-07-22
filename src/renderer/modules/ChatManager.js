@@ -9352,6 +9352,7 @@ ${coreTools}
       list_annotations: () => this.listAnnotations(parameters),
       assess_annotation_quality: () => this.assessAnnotationQuality(parameters),
       list_annotation_quality_candidates: () => this.listAnnotationQualityCandidates(parameters),
+      list_annotation_research_history: () => this.listAnnotationResearchHistory(parameters),
       get_annotation: () => this.getAnnotation(parameters),
       update_annotation: () => this.updateAnnotation(parameters),
       merge_gene_research_report: () => this.mergeGeneResearchReport(parameters),
@@ -13553,6 +13554,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   async listAnnotationQualityCandidates(params) {
     return this.services.annotation.listAnnotationQualityCandidates(params);
+  }
+
+  async listAnnotationResearchHistory(params) {
+    return this.services.annotationWorkflow.listAnnotationResearchHistory(params);
   }
 
   /**

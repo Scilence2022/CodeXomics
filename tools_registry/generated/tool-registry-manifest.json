@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-16T09:35:00.917Z",
-  "registryHash": "94db53a7f7f37ea26146d0ef6a717ac211e58b628b6dbc148d30772be6485ea9",
+  "generatedAt": "2026-07-20T02:44:26.056Z",
+  "registryHash": "8051296540d39bea3ef29bb568d8643a19ad3fe9707ae987e07f76b133c3ef3c",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 213,
-    "appTools": 213,
+    "tools": 214,
+    "appTools": 214,
     "userTools": 0,
-    "uniqueTools": 207,
+    "uniqueTools": 208,
     "categories": 18,
-    "builtInTools": 175,
+    "builtInTools": 176,
     "diagnostics": 12
   },
   "categories": {
@@ -1679,6 +1679,18 @@
             "default": "quality",
             "description": "Sort lowest-quality first or use deterministic genomic coordinate order."
           },
+          "researchHistoryPolicy": {
+            "type": "string",
+            "enum": ["include", "exclude-active", "exclude-completed", "exclude-covered"],
+            "default": "include",
+            "description": "Optionally exclude targets with active or durably archived completed DGR research."
+          },
+          "researchRefreshDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "description": "With history exclusion, allow completed research older than this many days to become eligible again."
+          },
           "limit": {
             "type": "number",
             "minimum": 0,
@@ -1724,6 +1736,9 @@
           "excludedAmbiguousLoci": {
             "type": "number"
           },
+          "excludedByResearchHistory": {
+            "type": "number"
+          },
           "ambiguousLoci": {
             "type": "array",
             "items": {
@@ -1766,6 +1781,121 @@
       "builtin": {
         "name": "list_annotation_quality_candidates",
         "method": "listAnnotationQualityCandidates",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "list_annotation_research_history",
+      "version": "1.0.0",
+      "description": "List the durable, per-genome Deep Gene Research history used to prevent repeated annotation research across agents and automation runs.",
+      "category": "annotation",
+      "subcategory": "autonomous_curation",
+      "keywords": [
+        "annotation research history",
+        "researched genes",
+        "completed gene research",
+        "research coverage",
+        "previous DGR runs"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Optional task ID, feature ID, locus tag, protein ID, or gene-symbol filter."
+          },
+          "coverageStates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["active", "completed", "completed_unarchived", "failed", "cancelled"]
+            },
+            "description": "Optional coverage-state filter."
+          },
+          "coveredOnly": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return only active or durably archived completed research."
+          },
+          "latestPerTarget": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return only the newest record for each stable target identity."
+          },
+          "researchRefreshDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "description": "Treat completed research older than this many days as due for refresh."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2000,
+            "default": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "coveredCount": {
+            "type": "integer"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "metadata": {
+        "added_in": "0.722.0",
+        "priority": "high",
+        "tags": ["annotation", "research", "dgr", "history", "audit"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/list_annotation_research_history.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listAnnotationResearchHistory"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "list_annotation_research_history",
+        "method": "listAnnotationResearchHistory",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -2436,6 +2566,18 @@
             "type": "boolean",
             "default": false,
             "description": "Bypass the DGR semantic result cache while preserving request idempotency."
+          },
+          "repeatPolicy": {
+            "type": "string",
+            "enum": ["allow", "skip-covered"],
+            "default": "allow",
+            "description": "Use skip-covered for automation to reuse active work and skip targets with durably archived completed research."
+          },
+          "researchRefreshDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "description": "With skip-covered, allow completed research older than this many days to run again."
           },
           "idempotencyKey": {
             "type": "string",
@@ -23996,6 +24138,18 @@
             "default": "quality",
             "description": "Sort lowest-quality first or use deterministic genomic coordinate order."
           },
+          "researchHistoryPolicy": {
+            "type": "string",
+            "enum": ["include", "exclude-active", "exclude-completed", "exclude-covered"],
+            "default": "include",
+            "description": "Optionally exclude targets with active or durably archived completed DGR research."
+          },
+          "researchRefreshDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "description": "With history exclusion, allow completed research older than this many days to become eligible again."
+          },
           "limit": {
             "type": "number",
             "minimum": 0,
@@ -24041,6 +24195,9 @@
           "excludedAmbiguousLoci": {
             "type": "number"
           },
+          "excludedByResearchHistory": {
+            "type": "number"
+          },
           "ambiguousLoci": {
             "type": "array",
             "items": {
@@ -24083,6 +24240,121 @@
       "builtin": {
         "name": "list_annotation_quality_candidates",
         "method": "listAnnotationQualityCandidates",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "list_annotation_research_history": {
+      "name": "list_annotation_research_history",
+      "version": "1.0.0",
+      "description": "List the durable, per-genome Deep Gene Research history used to prevent repeated annotation research across agents and automation runs.",
+      "category": "annotation",
+      "subcategory": "autonomous_curation",
+      "keywords": [
+        "annotation research history",
+        "researched genes",
+        "completed gene research",
+        "research coverage",
+        "previous DGR runs"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Optional task ID, feature ID, locus tag, protein ID, or gene-symbol filter."
+          },
+          "coverageStates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["active", "completed", "completed_unarchived", "failed", "cancelled"]
+            },
+            "description": "Optional coverage-state filter."
+          },
+          "coveredOnly": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return only active or durably archived completed research."
+          },
+          "latestPerTarget": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return only the newest record for each stable target identity."
+          },
+          "researchRefreshDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "description": "Treat completed research older than this many days as due for refresh."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2000,
+            "default": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "coveredCount": {
+            "type": "integer"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "metadata": {
+        "added_in": "0.722.0",
+        "priority": "high",
+        "tags": ["annotation", "research", "dgr", "history", "audit"]
+      },
+      "source": "app_registry",
+      "sourceFile": "annotation/list_annotation_research_history.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listAnnotationResearchHistory"
+      },
+      "priority": 1,
+      "sample_usages": [],
+      "builtin": {
+        "name": "list_annotation_research_history",
+        "method": "listAnnotationResearchHistory",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -24753,6 +25025,18 @@
             "type": "boolean",
             "default": false,
             "description": "Bypass the DGR semantic result cache while preserving request idempotency."
+          },
+          "repeatPolicy": {
+            "type": "string",
+            "enum": ["allow", "skip-covered"],
+            "default": "allow",
+            "description": "Use skip-covered for automation to reuse active work and skip targets with durably archived completed research."
+          },
+          "researchRefreshDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650,
+            "description": "With skip-covered, allow completed research older than this many days to run again."
           },
           "idempotencyKey": {
             "type": "string",
@@ -45656,6 +45940,16 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "list_annotation_research_history",
+      "method": "listAnnotationResearchHistory",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "cancel_annotation_research",
       "method": "cancelAnnotationResearch",
       "category": "annotation",
@@ -47401,6 +47695,16 @@
     "get_annotation_research_workflow": {
       "name": "get_annotation_research_workflow",
       "method": "getAnnotationResearchWorkflow",
+      "category": "annotation",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "list_annotation_research_history": {
+      "name": "list_annotation_research_history",
+      "method": "listAnnotationResearchHistory",
       "category": "annotation",
       "type": "built-in",
       "priority": 1,

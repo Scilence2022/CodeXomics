@@ -38,6 +38,16 @@ parameters:
         - coordinate
       default: quality
       description: Sort lowest-quality first or use deterministic genomic coordinate order.
+    researchHistoryPolicy:
+      type: string
+      enum: [include, exclude-active, exclude-completed, exclude-covered]
+      default: include
+      description: Optionally exclude targets with active or durably archived completed DGR research.
+    researchRefreshDays:
+      type: integer
+      minimum: 1
+      maximum: 3650
+      description: With history exclusion, allow completed research older than this many days to become eligible again.
     limit:
       type: number
       minimum: 0
@@ -70,6 +80,8 @@ returns:
     count:
       type: number
     excludedAmbiguousLoci:
+      type: number
+    excludedByResearchHistory:
       type: number
     ambiguousLoci:
       type: array

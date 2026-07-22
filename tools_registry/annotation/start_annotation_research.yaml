@@ -30,6 +30,16 @@ parameters:
       type: boolean
       default: false
       description: Bypass the DGR semantic result cache while preserving request idempotency.
+    repeatPolicy:
+      type: string
+      enum: [allow, skip-covered]
+      default: allow
+      description: Use skip-covered for automation to reuse active work and skip targets with durably archived completed research.
+    researchRefreshDays:
+      type: integer
+      minimum: 1
+      maximum: 3650
+      description: With skip-covered, allow completed research older than this many days to run again.
     idempotencyKey: { type: string, minLength: 1, maxLength: 256 }
     correlationId: { type: string, minLength: 1, maxLength: 256 }
     clientId: { type: string }

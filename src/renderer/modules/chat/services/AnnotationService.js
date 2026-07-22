@@ -566,6 +566,22 @@ class AnnotationService {
     if (!['quality', 'coordinate'].includes(sortBy)) {
       throw new Error('sortBy must be either "quality" or "coordinate"');
     }
+    const researchHistoryPolicy = String(params.researchHistoryPolicy || 'include').toLowerCase();
+    if (!['include', 'exclude-active', 'exclude-completed', 'exclude-covered'].includes(researchHistoryPolicy)) {
+      throw new Error(
+        'researchHistoryPolicy must be "include", "exclude-active", "exclude-completed", or "exclude-covered"'
+      );
+    }
+    const researchRefreshDays =
+      params.researchRefreshDays === undefined || params.researchRefreshDays === null
+        ? null
+        : Number(params.researchRefreshDays);
+    if (
+      researchRefreshDays !== null &&
+      (!Number.isInteger(researchRefreshDays) || researchRefreshDays < 1 || researchRefreshDays > 3650)
+    ) {
+      throw new Error('researchRefreshDays must be an integer from 1 to 3650 when provided');
+    }
     const requestedLimit = params.limit === undefined ? 100 : Number(params.limit);
     const limit = Math.max(0, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 100, 100000));
     const offset = Math.max(0, Number(params.offset) || 0);
@@ -590,7 +606,7 @@ class AnnotationService {
     }
 
     const ambiguousLoci = [];
-    const candidates = groups
+    let candidates = groups
       .map(group => {
         const ranked = [...group.features].sort((left, right) => {
           const typeDifference = this._qualityTypePriority(right.type) - this._qualityTypePriority(left.type);
@@ -632,6 +648,45 @@ class AnnotationService {
       .filter(Boolean)
       .filter(candidate => candidate.qualityScore <= maximumQualityScore);
 
+    let excludedByResearchHistory = 0;
+    if (researchHistoryPolicy !== 'include') {
+      const workflowService = this.chatManager?.services?.annotationWorkflow;
+      if (
+        !workflowService ||
+        typeof workflowService.getAnnotationResearchCoverageIndex !== 'function' ||
+        typeof workflowService._researchTargetsOverlap !== 'function'
+      ) {
+        throw new Error('Annotation research history is unavailable; refusing to select repeat-research candidates');
+      }
+      const coverage = await workflowService.getAnnotationResearchCoverageIndex({
+        researchRefreshDays,
+      });
+      candidates = candidates.filter(candidate => {
+        const target = {
+          chromosome: candidate.chromosome,
+          featureId: candidate.feature.id,
+          locusTag: candidate.feature.locusTag,
+          proteinId: candidate.feature.proteinId,
+          geneSymbol: candidate.feature.gene,
+          start: candidate.feature.start,
+          end: candidate.feature.end,
+          strand: candidate.feature.strand,
+        };
+        const matching = coverage.entries.filter(entry =>
+          workflowService._researchTargetsOverlap(entry.target, target)
+        );
+        const exclude = matching.some(entry => {
+          if (researchHistoryPolicy === 'exclude-active') return entry.coverageState === 'active';
+          if (researchHistoryPolicy === 'exclude-completed') {
+            return entry.coverageState === 'completed' && entry.effectiveCovered;
+          }
+          return entry.effectiveCovered;
+        });
+        if (exclude) excludedByResearchHistory += 1;
+        return !exclude;
+      });
+    }
+
     candidates.sort((left, right) => {
       if (sortBy === 'quality') {
         const scoreDifference = left.qualityScore - right.qualityScore;
@@ -652,6 +707,9 @@ class AnnotationService {
       schema: 'codexomics.annotation-quality-candidates.v1',
       policyVersion: 'codexomics.annotation-quality-policy.v1',
       selectionPolicy: sortBy === 'quality' ? 'low-quality' : 'coordinate',
+      researchHistoryPolicy,
+      researchRefreshDays,
+      excludedByResearchHistory,
       maximumQualityScore,
       featureTypes: requestedTypes,
       total,

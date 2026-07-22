@@ -42,6 +42,158 @@ function currentAnnotationValidation(options) {
 }
 
 describe('AnnotationResearchWorkflowService', () => {
+  it('exposes durable per-genome research coverage without treating failed or unarchived runs as covered', async () => {
+    const Service = loadWorkflowService();
+    const service = new Service(
+      { currentChromosome: 'chr1', currentAnnotations: { chr1: [{}] } },
+      { services: {}, mcpServerManager: {} }
+    );
+    service.memoryRuns.set('chr1', {
+      completed: {
+        taskId: 'completed',
+        status: 'completed',
+        target: { chromosome: 'chr1', featureId: 'cds-1', locusTag: 'b0001' },
+        createdAt: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-07-02T00:00:00.000Z',
+        reportAttachment: { attachmentId: 'dgr:completed', sha256: 'abc', storedAt: '2026-07-02T00:00:00.000Z' },
+      },
+      unarchived: {
+        taskId: 'unarchived',
+        status: 'completed',
+        target: { chromosome: 'chr1', featureId: 'cds-2', locusTag: 'b0002' },
+        createdAt: '2026-07-03T00:00:00.000Z',
+      },
+      failed: {
+        taskId: 'failed',
+        status: 'failed',
+        target: { chromosome: 'chr1', featureId: 'cds-3', locusTag: 'b0003' },
+        createdAt: '2026-07-04T00:00:00.000Z',
+      },
+    });
+
+    const result = await service.listAnnotationResearchHistory({ latestPerTarget: true, limit: 0 });
+
+    expect(result.schema).toBe('codexomics.annotation-research-history.v1');
+    expect(result.coveredCount).toBe(1);
+    expect(result.history.find(item => item.taskId === 'completed')).toMatchObject({
+      coverageState: 'completed',
+      covered: true,
+      retryRecommended: false,
+    });
+    expect(result.history.find(item => item.taskId === 'unarchived')).toMatchObject({
+      coverageState: 'completed_unarchived',
+      covered: false,
+      retryRecommended: true,
+    });
+    expect(result.history.find(item => item.taskId === 'failed')).toMatchObject({
+      coverageState: 'failed',
+      covered: false,
+      retryRecommended: true,
+    });
+  });
+
+  it('skips durably covered targets and resumes active work before contacting DGR', async () => {
+    const Service = loadWorkflowService();
+    const target = {
+      workspaceId: 'ws-1',
+      genomeId: 'genome-1',
+      annotationRevision: 1,
+      featureId: 'feature-1',
+      featureHash: 'current-hash',
+      chromosome: 'chr1',
+      locusTag: 'b0001',
+      geneSymbol: 'thrL',
+      organism: 'Escherichia coli',
+      featureType: 'CDS',
+    };
+    const ensureServerConnected = vi.fn();
+    const executeToolOnServer = vi.fn();
+    const service = new Service(
+      { currentChromosome: 'chr1', currentAnnotations: { chr1: [{}] } },
+      {
+        services: { annotation: { resolveAnnotationTarget: vi.fn(async () => ({ target })) } },
+        mcpServerManager: { ensureServerConnected, executeToolOnServer },
+      }
+    );
+    service.memoryRuns.set('chr1', {
+      previous: {
+        taskId: 'previous',
+        status: 'completed',
+        target: { ...target, annotationRevision: 0, featureHash: 'previous-hash' },
+        createdAt: '2026-07-01T00:00:00.000Z',
+        reportAttachment: {
+          attachmentId: 'dgr:previous',
+          sha256: 'archived-report-hash',
+          storedAt: '2026-07-02T00:00:00.000Z',
+        },
+      },
+    });
+
+    const skipped = await service.startAnnotationResearch({
+      identifier: 'b0001',
+      repeatPolicy: 'skip-covered',
+    });
+
+    expect(skipped).toMatchObject({ skipped: true, researchDisposition: 'already_covered' });
+    expect(ensureServerConnected).not.toHaveBeenCalled();
+    expect(executeToolOnServer).not.toHaveBeenCalled();
+
+    service.memoryRuns.set('chr1', {
+      active: {
+        taskId: 'active',
+        status: 'processing',
+        target,
+        createdAt: '2026-07-20T00:00:00.000Z',
+      },
+    });
+    const resumed = await service.startAnnotationResearch({ identifier: 'b0001', repeatPolicy: 'skip-covered' });
+    expect(resumed).toMatchObject({ resumed: true, researchDisposition: 'resume_active' });
+    expect(resumed.workflow.taskId).toBe('active');
+    expect(ensureServerConnected).not.toHaveBeenCalled();
+
+    service.memoryRuns.set('chr1', {
+      incomplete: {
+        taskId: 'incomplete',
+        status: 'completed',
+        target,
+        createdAt: '2026-07-19T00:00:00.000Z',
+      },
+    });
+    const incomplete = await service.startAnnotationResearch({
+      identifier: 'b0001',
+      repeatPolicy: 'skip-covered',
+    });
+    expect(incomplete).toMatchObject({
+      resumed: true,
+      researchDisposition: 'resume_incomplete_archive',
+    });
+    expect(incomplete.workflow.taskId).toBe('incomplete');
+    expect(ensureServerConnected).not.toHaveBeenCalled();
+
+    ensureServerConnected.mockResolvedValue(true);
+    executeToolOnServer.mockResolvedValue({ taskId: 'refreshed', status: 'queued' });
+    service.memoryRuns.set('chr1', {
+      old: {
+        taskId: 'old',
+        status: 'completed',
+        target,
+        createdAt: '2000-01-01T00:00:00.000Z',
+        reportAttachment: {
+          attachmentId: 'dgr:old',
+          sha256: 'old-archived-report-hash',
+          storedAt: '2000-01-02T00:00:00.000Z',
+        },
+      },
+    });
+    const refreshed = await service.startAnnotationResearch({
+      identifier: 'b0001',
+      repeatPolicy: 'skip-covered',
+      researchRefreshDays: 365,
+    });
+    expect(refreshed.workflow.taskId).toBe('refreshed');
+    expect(executeToolOnServer).toHaveBeenCalledTimes(1);
+  });
+
   it('derives organism metadata, forwards bounded research options, and records the authenticated initiator', async () => {
     const AnnotationResearchWorkflowService = loadWorkflowService();
     const target = {

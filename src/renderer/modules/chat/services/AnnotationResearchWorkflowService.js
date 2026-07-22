@@ -280,6 +280,170 @@ class AnnotationResearchWorkflowService {
     return manager;
   }
 
+  _normaliseResearchIdentity(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase();
+  }
+
+  _researchTargetKeys(target = {}) {
+    const keys = new Set();
+    const chromosome = this._normaliseResearchIdentity(target.chromosome);
+    const scoped = value => `${chromosome || '*'}:${this._normaliseResearchIdentity(value)}`;
+    if (target.locusTag) keys.add(`locus:${scoped(target.locusTag)}`);
+    if (target.proteinId) keys.add(`protein:${scoped(target.proteinId)}`);
+    if (target.featureId) keys.add(`feature:${this._normaliseResearchIdentity(target.featureId)}`);
+    if (target.geneSymbol || target.gene) keys.add(`gene:${scoped(target.geneSymbol || target.gene)}`);
+    const coordinates = target.coordinates || target;
+    if (coordinates.start !== undefined && coordinates.end !== undefined) {
+      keys.add(
+        `location:${chromosome || '*'}:${Number(coordinates.start)}:${Number(coordinates.end)}:${Number(
+          coordinates.strand ?? target.strand ?? 0
+        )}`
+      );
+    }
+    return Array.from(keys);
+  }
+
+  _researchTargetsOverlap(left, right) {
+    const leftKeys = new Set(this._researchTargetKeys(left));
+    return this._researchTargetKeys(right).some(key => leftKeys.has(key));
+  }
+
+  _workflowCoverageState(workflow) {
+    const status = String(workflow?.status || 'unknown').toLowerCase();
+    if (!this.terminalStatuses.has(status)) return 'active';
+    if (status === 'completed') {
+      return workflow?.reportAttachment?.attachmentId && workflow?.reportAttachment?.sha256
+        ? 'completed'
+        : 'completed_unarchived';
+    }
+    if (status === 'failed') return 'failed';
+    return 'cancelled';
+  }
+
+  _workflowCoverageSummary(workflow) {
+    const coverageState = this._workflowCoverageState(workflow);
+    const attachment = workflow?.reportAttachment;
+    const completedAt =
+      workflow?.reportArchivedAt ||
+      attachment?.storedAt ||
+      (coverageState === 'completed' ? workflow?.updatedAt : null);
+    return {
+      taskId: workflow?.taskId || null,
+      status: workflow?.status || 'unknown',
+      coverageState,
+      covered: coverageState === 'active' || coverageState === 'completed',
+      retryRecommended: ['completed_unarchived', 'failed', 'cancelled'].includes(coverageState),
+      target: this._clone(workflow?.target || {}),
+      targetKeys: this._researchTargetKeys(workflow?.target || {}),
+      createdAt: workflow?.createdAt || null,
+      updatedAt: workflow?.updatedAt || null,
+      completedAt: completedAt || null,
+      initiatedBy: workflow?.initiatedBy || null,
+      changeSetId: workflow?.changeSetId || null,
+      changeSetStatus: workflow?.changeSetStatus || null,
+      reportAttachment: attachment
+        ? {
+            attachmentId: attachment.attachmentId || null,
+            geneId: attachment.geneId || null,
+            fileName: attachment.fileName || null,
+            sha256: attachment.sha256 || null,
+            storedAt: attachment.storedAt || null,
+          }
+        : null,
+    };
+  }
+
+  _normaliseResearchRefreshDays(value) {
+    if (value === undefined || value === null || value === '') return null;
+    const days = Number(value);
+    if (!Number.isInteger(days) || days < 1 || days > 3650) {
+      throw new Error('researchRefreshDays must be an integer from 1 to 3650 when provided');
+    }
+    return days;
+  }
+
+  _isFreshCompletedCoverage(summary, refreshDays, now = Date.now()) {
+    if (summary.coverageState !== 'completed' || refreshDays === null) return summary.coverageState === 'completed';
+    const completedAt = Date.parse(summary.completedAt || summary.updatedAt || summary.createdAt || '');
+    if (!Number.isFinite(completedAt)) return true;
+    return now - completedAt < refreshDays * 24 * 60 * 60 * 1000;
+  }
+
+  async getAnnotationResearchCoverageIndex(params = {}) {
+    const refreshDays = this._normaliseResearchRefreshDays(params.researchRefreshDays);
+    return this._withRunsLock(async workspace => {
+      const runs = await this._loadRuns(workspace);
+      const entries = Object.values(runs)
+        .filter(Boolean)
+        .map(workflow => {
+          const summary = this._workflowCoverageSummary(workflow);
+          return {
+            ...summary,
+            effectiveCovered:
+              summary.coverageState === 'active' || this._isFreshCompletedCoverage(summary, refreshDays),
+          };
+        });
+      return { refreshDays, entries };
+    });
+  }
+
+  async listAnnotationResearchHistory(params = {}) {
+    this._requireResearchPermission(params);
+    const coverage = await this.getAnnotationResearchCoverageIndex(params);
+    const requestedStates = new Set(
+      (Array.isArray(params.coverageStates)
+        ? params.coverageStates
+        : params.coverageState
+          ? [params.coverageState]
+          : []
+      )
+        .map(value => String(value || '').toLowerCase())
+        .filter(Boolean)
+    );
+    const query = this._normaliseResearchIdentity(params.identifier || params.query);
+    const limit = Math.max(0, Math.min(Number(params.limit ?? 100), this.runLimits.total));
+    const offset = Math.max(0, Number(params.offset) || 0);
+    let history = coverage.entries
+      .filter(entry => requestedStates.size === 0 || requestedStates.has(entry.coverageState))
+      .filter(entry => !params.coveredOnly || entry.effectiveCovered)
+      .filter(entry => {
+        if (!query) return true;
+        const target = entry.target || {};
+        return [entry.taskId, target.featureId, target.locusTag, target.proteinId, target.geneSymbol]
+          .filter(Boolean)
+          .some(value => this._normaliseResearchIdentity(value).includes(query));
+      })
+      .sort(
+        (left, right) =>
+          Date.parse(right.completedAt || right.updatedAt || right.createdAt || 0) -
+          Date.parse(left.completedAt || left.updatedAt || left.createdAt || 0)
+      );
+    if (params.latestPerTarget === true) {
+      const seen = new Set();
+      history = history.filter(entry => {
+        const key = entry.targetKeys[0] || `task:${entry.taskId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    const total = history.length;
+    const page = limit === 0 ? history.slice(offset) : history.slice(offset, offset + limit);
+    return {
+      success: true,
+      schema: 'codexomics.annotation-research-history.v1',
+      researchRefreshDays: coverage.refreshDays,
+      total,
+      offset,
+      limit,
+      count: page.length,
+      coveredCount: history.filter(entry => entry.effectiveCovered).length,
+      history: this._clone(page),
+    };
+  }
+
   _normaliseOrganism(value) {
     const text = String(value || '').trim();
     if (!text) return '';
@@ -557,6 +721,63 @@ class AnnotationResearchWorkflowService {
       const currentAnnotationRequestSha256 = await this._hash(currentAnnotation);
       this._assertWorkspace(workspace);
 
+      const targetBindingHash = await this._hash(target);
+      this._assertWorkspace(workspace);
+      const repeatPolicy = String(params.repeatPolicy || 'allow').toLowerCase();
+      if (!['allow', 'skip-covered'].includes(repeatPolicy)) {
+        throw new Error('repeatPolicy must be either "allow" or "skip-covered"');
+      }
+      const researchRefreshDays = this._normaliseResearchRefreshDays(params.researchRefreshDays);
+      const runs = await this._loadRuns(workspace);
+      if (repeatPolicy === 'skip-covered') {
+        const matchingCoverage = Object.values(runs)
+          .filter(workflow => workflow && this._researchTargetsOverlap(workflow.target, target))
+          .map(workflow => ({ workflow, summary: this._workflowCoverageSummary(workflow) }))
+          .filter(
+            item =>
+              item.summary.coverageState === 'active' ||
+              item.summary.coverageState === 'completed_unarchived' ||
+              this._isFreshCompletedCoverage(item.summary, researchRefreshDays)
+          )
+          .sort(
+            (left, right) =>
+              (({ completed: 3, active: 2, completed_unarchived: 1 })[right.summary.coverageState] || 0) -
+                ({ completed: 3, active: 2, completed_unarchived: 1 }[left.summary.coverageState] || 0) ||
+              Date.parse(right.summary.completedAt || right.summary.updatedAt || right.summary.createdAt || 0) -
+                Date.parse(left.summary.completedAt || left.summary.updatedAt || left.summary.createdAt || 0)
+          )[0];
+        if (matchingCoverage?.summary.coverageState === 'completed') {
+          return {
+            success: true,
+            duplicate: true,
+            skipped: true,
+            researchDisposition: 'already_covered',
+            coverage: matchingCoverage.summary,
+            workflow: this._clone(matchingCoverage.workflow),
+          };
+        }
+        if (matchingCoverage?.summary.coverageState === 'active') {
+          return {
+            success: true,
+            duplicate: true,
+            resumed: true,
+            researchDisposition: 'resume_active',
+            coverage: matchingCoverage.summary,
+            workflow: this._clone(matchingCoverage.workflow),
+          };
+        }
+        if (matchingCoverage?.summary.coverageState === 'completed_unarchived') {
+          return {
+            success: true,
+            duplicate: true,
+            resumed: true,
+            researchDisposition: 'resume_incomplete_archive',
+            coverage: matchingCoverage.summary,
+            workflow: this._clone(matchingCoverage.workflow),
+          };
+        }
+      }
+
       const manager = this._manager();
       if (typeof manager.ensureServerConnected === 'function') {
         await manager.ensureServerConnected('deep-gene-research');
@@ -579,8 +800,6 @@ class AnnotationResearchWorkflowService {
         currentAnnotation,
       });
       this._assertWorkspace(workspace);
-      const targetBindingHash = await this._hash(target);
-      this._assertWorkspace(workspace);
       const idempotencyKey = params.idempotencyKey || `research:${target.genomeId}:${targetBindingHash}:${intentHash}`;
       if (typeof idempotencyKey !== 'string' || !idempotencyKey.trim() || idempotencyKey.length > 256) {
         throw new Error('Research idempotencyKey must be a non-empty string of at most 256 characters');
@@ -591,7 +810,6 @@ class AnnotationResearchWorkflowService {
       const persistedInitiatedBy = this._boundedPersistedString(String(initiatedBy), 'Research initiator', 512);
       const correlationId = params.correlationId || `curation:${target.featureId}:${Date.now()}`;
       this._boundedPersistedString(correlationId, 'Research correlationId', 256);
-      const runs = await this._loadRuns(workspace);
       const existingForKey = Object.values(runs).find(workflow => workflow?.idempotencyKey === idempotencyKey);
       if (existingForKey) {
         const existingTargetBindingHash = await this._validatedWorkflowTargetBindingHash(existingForKey, workspace);

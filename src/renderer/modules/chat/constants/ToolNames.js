@@ -147,6 +147,7 @@ const TOOL_NAMES = {
     START_ANNOTATION_RESEARCH: 'start_annotation_research',
     ARCHIVE_ANNOTATION_RESEARCH: 'archive_annotation_research',
     GET_ANNOTATION_RESEARCH_WORKFLOW: 'get_annotation_research_workflow',
+    LIST_ANNOTATION_RESEARCH_HISTORY: 'list_annotation_research_history',
     CANCEL_ANNOTATION_RESEARCH: 'cancel_annotation_research',
     SEARCH_ANNOTATIONS: 'search_annotations',
     BULK_UPDATE_ANNOTATIONS: 'bulk_update_annotations',
