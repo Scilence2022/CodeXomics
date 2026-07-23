@@ -287,12 +287,12 @@ describe('AnnotationChangeSetService', () => {
     annotationService = new mockWindow.AnnotationService(app, chatManager);
   });
 
-  it('prefers the CDS when a GenBank gene/CDS pair shares a locus tag', async () => {
+  it('prefers the CDS when an overlapping GenBank gene/CDS pair shares a locus tag', async () => {
     annotationService.app.currentAnnotations['NC_000913.3'].unshift({
       id: 'gene-1',
       type: 'gene',
       start: 12,
-      end: 120,
+      end: 160,
       strand: 1,
       qualifiers: { locus_tag: 'b0001', gene: 'thrL' },
     });
