@@ -257,6 +257,34 @@ function pubMedSourceMetadata(source) {
   };
 }
 
+function fullTextSourceMetadata(source) {
+  const fullText = source?.fullText;
+  if (fullText?.schema !== 'dgr.full-text-document.v1') return null;
+  const reference = source?.structuredData?.literatureReferences?.[0] || {};
+  const pmid = String(source?.pmid || reference.pmid || fullText.identifiers?.pmid || '').trim();
+  const text = String(fullText.text || '');
+  const documentSha256 = String(fullText.documentSha256 || '').toLowerCase();
+  if (
+    !text || !/^[a-f0-9]{64}$/.test(documentSha256) ||
+    fullText.canonicalization !== 'dgr.full-text.v1' ||
+    fullText.offsetEncoding !== 'utf16_code_units'
+  ) {
+    return null;
+  }
+  return {
+    database: String(source?.database || '').toLowerCase(),
+    pmid: isValidPmid(pmid) ? pmid : '',
+    doi: normalizeDoi(source?.doi || reference.doi || fullText.identifiers?.doi),
+    documentSha256,
+    origin: String(fullText.origin || ''),
+    text,
+    textSha256: textSha256(text),
+    textLength: text.length,
+    accepted:
+      source?.evidenceRole !== 'excluded' && source?.structuredData?.targetRelevance?.accepted === true,
+  };
+}
+
 function evidenceIdentifier(record, scheme) {
   return (record?.identifiers || [])
     .filter(identifier => String(identifier?.scheme || '').toLowerCase() === scheme)
@@ -284,13 +312,110 @@ function validateCitationBoundFacts(task) {
   const pubMedSources = (Array.isArray(task?.result?.sources) ? task.result.sources : [])
     .map(pubMedSourceMetadata)
     .filter(Boolean);
+  const fullTextSources = (Array.isArray(task?.result?.sources) ? task.result.sources : [])
+    .map(fullTextSourceMetadata)
+    .filter(Boolean);
   const verifiedPmids = new Set();
+  const verifiedFullTextDocuments = new Set();
 
   for (const fact of facts) {
     const basis = fact?.literatureBasis;
     const citation = fact?.citation;
     const pmid = String(basis?.pmid || '').trim();
     const excerpt = String(basis?.excerpt || '');
+    if (basis?.kind === 'full_text_span') {
+      if (
+        basis.canonicalization !== 'dgr.full-text.v1' ||
+        basis.offsetEncoding !== 'utf16_code_units' ||
+        basis.hashEncoding !== 'utf8' ||
+        !isValidPmid(pmid) ||
+        !excerpt ||
+        !Number.isSafeInteger(basis.excerptStart) ||
+        !Number.isSafeInteger(basis.excerptEnd) ||
+        !Number.isSafeInteger(basis.textLength) ||
+        !/^[a-f0-9]{64}$/i.test(String(basis.documentSha256 || '')) ||
+        !/^[a-f0-9]{64}$/i.test(String(basis.textSha256 || '')) ||
+        !['user_upload', 'pmc_xml'].includes(String(basis.sourceOrigin || ''))
+      ) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} is missing an exact full-text span`);
+      }
+      if (textSha256(excerpt) !== String(basis.excerptSha256 || '').toLowerCase()) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} has an invalid full-text excerpt hash`);
+      }
+      if (String(fact?.statement || '') !== excerpt) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} statement does not equal its full-text excerpt`);
+      }
+      if (
+        String(citation?.id || '') !== pmid ||
+        String(citation?.url || '') !== `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`
+      ) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} has inconsistent full-text citation metadata`);
+      }
+      const matchingSources = fullTextSources.filter(
+        source => source.documentSha256 === String(basis.documentSha256).toLowerCase()
+      );
+      if (matchingSources.length !== 1) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} does not resolve to exactly one archived full-text source`);
+      }
+      const source = matchingSources[0];
+      if (!source.accepted || source.pmid !== pmid || source.origin !== basis.sourceOrigin) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} is not backed by accepted target full text`);
+      }
+      if (
+        source.textSha256 !== String(basis.textSha256).toLowerCase() ||
+        source.textLength !== basis.textLength
+      ) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} full-text hash does not match the archived source`);
+      }
+      if (
+        basis.excerptStart < 0 ||
+        basis.excerptEnd !== basis.excerptStart + excerpt.length ||
+        source.text.slice(basis.excerptStart, basis.excerptEnd) !== excerpt
+      ) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} full-text offsets do not match the archived source`);
+      }
+      const factEvidence = records.filter(record => (fact.evidenceIds || []).includes(record?.id));
+      const expectedSupporting = (fact?.evidenceIds || []).some(id => noteEvidenceIds.has(String(id)));
+      const matchingEvidence = factEvidence.filter(record =>
+        record?.supporting === expectedSupporting &&
+        evidenceIdentifier(record, 'pmid').includes(pmid) &&
+        record?.sourceBinding?.content?.canonicalization === 'dgr.full-text.v1'
+      );
+      if (matchingEvidence.length !== 1) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} must reference exactly one full-text evidence record`);
+      }
+      const evidence = matchingEvidence[0];
+      const binding = evidence.sourceBinding;
+      if (
+        basis.evidenceId !== evidence.id ||
+        binding?.schema !== 'dgr.evidence-source-binding.v1' ||
+        binding.sourceCollection !== 'sources' ||
+        String(binding.selector?.database || '').toLowerCase() !== source.database ||
+        binding.selector?.identifier?.scheme !== 'pmid' ||
+        String(binding.selector?.identifier?.value || '') !== pmid ||
+        binding.content?.relativeJsonPointer !== '/fullText/text' ||
+        binding.content?.canonicalization !== 'dgr.full-text.v1' ||
+        binding.content?.hashEncoding !== 'utf8' ||
+        binding.content?.lengthEncoding !== 'utf16_code_units' ||
+        binding.content?.sha256 !== basis.textSha256 ||
+        binding.content?.length !== basis.textLength
+      ) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} has an invalid full-text source binding`);
+      }
+      if (String(evidence?.database || '').toLowerCase() !== source.database) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} evidence database does not match its full-text source`);
+      }
+      const expectedDoi = normalizeDoi(basis.doi || citation?.doi);
+      if (expectedDoi && source.doi !== expectedDoi) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} DOI does not match the full-text source`);
+      }
+      if (expectedDoi && !evidenceIdentifier(evidence, 'doi').includes(expectedDoi)) {
+        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} DOI is missing from its full-text evidence record`);
+      }
+      verifiedPmids.add(pmid);
+      verifiedFullTextDocuments.add(source.documentSha256);
+      continue;
+    }
     if (
       basis?.kind !== 'pubmed_abstract_span' ||
       basis.canonicalization !== 'dgr.pubmed-abstract.v1' ||
@@ -399,6 +524,8 @@ function validateCitationBoundFacts(task) {
     factCount: facts.length,
     pubMedSourceCount: pubMedSources.length,
     verifiedPubMedSourceCount: verifiedPmids.size,
+    fullTextSourceCount: fullTextSources.length,
+    verifiedFullTextSourceCount: verifiedFullTextDocuments.size,
   };
 }
 
@@ -528,6 +655,14 @@ async function archiveDgrTaskResult({
     ? task.result.annotationProposal.researchSummary.facts.filter(fact => fact?.evidenceLevel === 'target_literature')
         .length
     : 0;
+  const fullTextSourceCount = Array.isArray(task.result?.sources)
+    ? task.result.sources.filter(source => source?.fullText?.schema === 'dgr.full-text-document.v1').length
+    : 0;
+  const fullTextFindingCount = Array.isArray(task.result?.annotationProposal?.researchSummary?.facts)
+    ? task.result.annotationProposal.researchSummary.facts.filter(
+        fact => fact?.literatureBasis?.kind === 'full_text_span'
+      ).length
+    : 0;
   return {
     fileName,
     storedPath,
@@ -548,6 +683,8 @@ async function archiveDgrTaskResult({
       directLiteratureCount,
       geneLinkedContextCount,
       citationBoundFactCount,
+      fullTextSourceCount,
+      fullTextFindingCount,
     },
   };
 }

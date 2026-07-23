@@ -30,6 +30,16 @@ parameters:
       type: boolean
       default: false
       description: Bypass the DGR semantic result cache while preserving request idempotency.
+    researchDocumentPaths:
+      type: array
+      maxItems: 8
+      items: { type: string, maxLength: 4096 }
+      description: Explicit absolute paths to user-provided PDFs. CodeXomics imports them as gene-scoped attachments and uploads content-addressed copies to DGR before research starts.
+    researchAttachmentIds:
+      type: array
+      maxItems: 8
+      items: { type: string, maxLength: 256 }
+      description: Existing PDF attachment IDs on the resolved gene to use as priority full-text sources.
     repeatPolicy:
       type: string
       enum: [allow, skip-covered]
@@ -47,4 +57,4 @@ parameters:
 metadata:
   added_in: autonomous_annotation_v2
   priority: high
-  tags: [annotation, research, dgr, workflow]
+  tags: [annotation, research, dgr, workflow, pdf, full_text]

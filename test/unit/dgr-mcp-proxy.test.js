@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const {
+  MAX_DOCUMENT_BYTES,
   MAX_RESPONSE_BYTES,
   proxyDgrMcpRequest,
+  resolveDgrDocumentEndpoint,
   resolveDgrMcpEndpoint,
+  uploadDgrResearchDocument,
   validateProxyRequest,
 } = require('../../src/main/dgr-mcp-proxy');
 
@@ -16,6 +19,55 @@ describe('DGR main-process MCP proxy', () => {
     expect(resolveDgrMcpEndpoint({ DGR_MCP_URL: 'https://research.example.org/api/mcp' })).toBe(
       'https://research.example.org/api/mcp'
     );
+    expect(resolveDgrDocumentEndpoint({ DGR_MCP_URL: 'https://research.example.org/api/mcp' })).toBe(
+      'https://research.example.org/api/mcp/documents'
+    );
+  });
+
+  it('uploads a bounded PDF through the authenticated document endpoint', async () => {
+    const bytes = Buffer.from('%PDF-1.4\nfull text\n%%EOF\n');
+    const fetchImpl = vi.fn(async (url, options) => {
+      expect(url).toBe('https://research.example.org/api/mcp/documents');
+      expect(options.method).toBe('POST');
+      expect(options.headers.Authorization).toBe('Bearer secret-token-1234');
+      expect(options.headers['Content-Type']).toBe('application/pdf');
+      expect(options.headers['X-DGR-Document-Name']).toBe('paper%20one.pdf');
+      expect(Buffer.from(options.body)).toEqual(bytes);
+      return new Response(
+        JSON.stringify({
+          document: {
+            documentId: `sha256:${'a'.repeat(64)}`,
+            name: 'paper one.pdf',
+            size: bytes.length,
+            sha256: 'a'.repeat(64),
+          },
+        }),
+        { status: 201, headers: { 'content-type': 'application/json' } }
+      );
+    });
+
+    await expect(
+      uploadDgrResearchDocument(
+        { name: 'paper one.pdf', bytes },
+        {
+          env: { DGR_MCP_URL: 'https://research.example.org/api/mcp', DGR_MCP_TOKEN: 'secret-token-1234' },
+          fetchImpl,
+        }
+      )
+    ).resolves.toMatchObject({ documentId: `sha256:${'a'.repeat(64)}`, size: bytes.length });
+  });
+
+  it('rejects invalid or oversized research documents before upload', async () => {
+    const fetchImpl = vi.fn();
+    await expect(uploadDgrResearchDocument({ name: 'paper.pdf', bytes: Buffer.from('not-pdf') }, { fetchImpl }))
+      .rejects.toThrow('is not a PDF');
+    await expect(
+      uploadDgrResearchDocument(
+        { name: 'paper.pdf', bytes: Buffer.concat([Buffer.from('%PDF-'), Buffer.alloc(MAX_DOCUMENT_BYTES)]) },
+        { fetchImpl }
+      )
+    ).rejects.toThrow('must be between');
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('rejects non-MCP methods and clamps the timeout', () => {

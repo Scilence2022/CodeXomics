@@ -470,6 +470,19 @@ class AnnotationTools {
               default: false,
               description: 'Bypass the DGR semantic result cache while preserving request idempotency.',
             },
+            researchDocumentPaths: {
+              type: 'array',
+              maxItems: 8,
+              items: { type: 'string', maxLength: 4096 },
+              description:
+                'Explicit absolute user PDF paths. CodeXomics stores them as gene-scoped attachments and gives DGR content-addressed document IDs.',
+            },
+            researchAttachmentIds: {
+              type: 'array',
+              maxItems: 8,
+              items: { type: 'string', maxLength: 256 },
+              description: 'Existing PDF attachment IDs on the resolved gene to prioritize as full-text evidence.',
+            },
             repeatPolicy: {
               type: 'string',
               enum: ['allow', 'skip-covered'],

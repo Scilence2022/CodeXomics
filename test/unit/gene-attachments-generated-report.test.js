@@ -41,6 +41,8 @@ function descriptor() {
       factCount: 18,
       pubMedSourceCount: 38,
       verifiedPubMedSourceCount: 14,
+      fullTextSourceCount: 6,
+      verifiedFullTextSourceCount: 4,
     },
     currentAnnotationValidation: {
       schema: 'codexomics.dgr-current-annotation-validation.v1',
@@ -57,6 +59,8 @@ function descriptor() {
       directLiteratureCount: 14,
       geneLinkedContextCount: 24,
       citationBoundFactCount: 18,
+      fullTextSourceCount: 6,
+      fullTextFindingCount: 11,
     },
   };
 }
@@ -104,7 +108,12 @@ describe('GeneAttachmentsManager generated DGR reports', () => {
       geneId: 'b4024',
       sha256: 'a'.repeat(64),
       proposalSha256: 'b'.repeat(64),
-      citationValidation: expect.objectContaining({ verified: true, factCount: 18 }),
+      citationValidation: expect.objectContaining({
+        verified: true,
+        factCount: 18,
+        fullTextSourceCount: 6,
+        verifiedFullTextSourceCount: 4,
+      }),
       currentAnnotationValidation: expect.objectContaining({
         verified: true,
         snapshotSha256: 'c'.repeat(64),
@@ -115,6 +124,8 @@ describe('GeneAttachmentsManager generated DGR reports', () => {
         directLiteratureCount: 14,
         geneLinkedContextCount: 24,
         citationBoundFactCount: 18,
+        fullTextSourceCount: 6,
+        fullTextFindingCount: 11,
       }),
     });
     expect(duplicate).toBe(first);
@@ -132,6 +143,48 @@ describe('GeneAttachmentsManager generated DGR reports', () => {
       expectedSha256: descriptor().sha256,
       title: 'lysC full research report',
     });
+  });
+
+  it('registers a content-addressed user PDF once as a durable gene research source', async () => {
+    const copyAttachmentFile = vi.fn(async (_sourcePath, storagePath, storedFilename) => ({
+      success: true,
+      targetPath: `${storagePath}/${storedFilename}`,
+      size: 2048,
+    }));
+    const setAndForceSave = vi.fn(async () => true);
+    const Manager = loadManager({
+      electronAPI: {
+        getSelectedFileInfo: vi.fn(async () => ({ success: true, info: { size: 2048 } })),
+        copyAttachmentFile,
+      },
+    });
+    const manager = new Manager(
+      { fileManager: { currentFile: { path: '/genomes/ecoli.gbk' } } },
+      null,
+      { get: vi.fn(async () => ({})), setAndForceSave }
+    );
+    const document = {
+      documentId: `sha256:${'d'.repeat(64)}`,
+      sha256: 'd'.repeat(64),
+      name: 'lysC-study.pdf',
+      size: 2048,
+      uploadedAt: '2026-07-23T00:00:00.000Z',
+    };
+
+    const first = await manager.registerResearchSourceAttachment('b4024', '/papers/lysC-study.pdf', document);
+    const duplicate = await manager.registerResearchSourceAttachment('b4024', '/papers/lysC-study.pdf', document);
+
+    expect(first).toMatchObject({
+      kind: 'dgr-research-source',
+      geneId: 'b4024',
+      filename: 'lysC-study.pdf',
+      sha256: 'd'.repeat(64),
+      dgrDocumentId: document.documentId,
+      researchSource: expect.objectContaining({ documentId: document.documentId, size: 2048 }),
+    });
+    expect(duplicate).toBe(first);
+    expect(copyAttachmentFile).toHaveBeenCalledTimes(1);
+    expect(setAndForceSave).toHaveBeenCalledTimes(1);
   });
 
   it('rolls back generated attachment metadata when durable sidecar persistence fails', async () => {

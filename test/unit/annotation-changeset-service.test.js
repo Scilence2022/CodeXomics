@@ -1468,6 +1468,10 @@ describe('AnnotationChangeSetService', () => {
     const resolved = await annotationService.resolveAnnotationTarget({ identifier: 'b0001' });
     const literatureExcerpt = 'The Escherichia coli thrL target controls transcriptional attenuation.';
     const literatureExcerptSha256 = await sha256Text(literatureExcerpt);
+    const fullText = `Introduction. ${literatureExcerpt} The attenuation response was measured experimentally.`;
+    const fullTextSha256 = await sha256Text(fullText);
+    const fullTextDocumentSha256 = await sha256Text('user-pdf-binary');
+    const fullTextExcerptStart = fullText.indexOf(literatureExcerpt);
     const proposal = {
       schema: 'codexomics.annotation-change-set.v2',
       status: 'ready_for_validation',
@@ -1513,6 +1517,34 @@ describe('AnnotationChangeSetService', () => {
               },
             },
             sourceHash: 'b'.repeat(64),
+            retrievedAt: '2026-01-01T00:00:00.000Z',
+            type: 'pmid',
+            supporting: false,
+          },
+          {
+            id: 'evidence_3',
+            label: 'PMID:123456 full text',
+            sourceId: `sha256:${fullTextDocumentSha256}`,
+            url: 'https://pubmed.ncbi.nlm.nih.gov/123456/',
+            database: 'user_document',
+            identifiers: [{ scheme: 'pmid', value: '123456' }],
+            sourceBinding: {
+              schema: 'dgr.evidence-source-binding.v1',
+              sourceCollection: 'sources',
+              selector: {
+                database: 'user_document',
+                identifier: { scheme: 'pmid', value: '123456' },
+              },
+              content: {
+                relativeJsonPointer: '/fullText/text',
+                canonicalization: 'dgr.full-text.v1',
+                sha256: fullTextSha256,
+                hashEncoding: 'utf8',
+                length: fullText.length,
+                lengthEncoding: 'utf16_code_units',
+              },
+            },
+            sourceHash: 'c'.repeat(64),
             retrievedAt: '2026-01-01T00:00:00.000Z',
             type: 'pmid',
             supporting: false,
@@ -1583,6 +1615,42 @@ describe('AnnotationChangeSetService', () => {
               offsetEncoding: 'utf16_code_units',
             },
           },
+          {
+            id: 'fact_3',
+            category: 'regulation',
+            field: 'literature_finding',
+            value: literatureExcerpt,
+            statement: literatureExcerpt,
+            evidenceIds: ['evidence_3'],
+            confidence: null,
+            directness: 'exact_target',
+            evidenceLevel: 'target_literature',
+            sourceDatabases: ['user_document'],
+            citation: {
+              type: 'pmid',
+              id: '123456',
+              label: 'PMID:123456',
+              url: 'https://pubmed.ncbi.nlm.nih.gov/123456/',
+              title: 'Exact-target full-text study',
+            },
+            literatureBasis: {
+              kind: 'full_text_span',
+              evidenceId: 'evidence_3',
+              pmid: '123456',
+              documentSha256: fullTextDocumentSha256,
+              sourceOrigin: 'user_upload',
+              excerpt: literatureExcerpt,
+              excerptSha256: literatureExcerptSha256,
+              hashEncoding: 'utf8',
+              excerptStart: fullTextExcerptStart,
+              excerptEnd: fullTextExcerptStart + literatureExcerpt.length,
+              textSha256: fullTextSha256,
+              textLength: fullText.length,
+              pageNumber: 2,
+              canonicalization: 'dgr.full-text.v1',
+              offsetEncoding: 'utf16_code_units',
+            },
+          },
         ],
         literature: [
           {
@@ -1616,6 +1684,7 @@ describe('AnnotationChangeSetService', () => {
         snapshotSha256: 'c'.repeat(64),
         targetFeatureHash: resolved.target.featureHash,
       },
+      summary: { fullTextSourceCount: 1, fullTextFindingCount: 1 },
       target: resolved.target,
     };
     annotationService.app.geneAttachmentsManager = {
@@ -1648,6 +1717,7 @@ describe('AnnotationChangeSetService', () => {
           verified: true,
           snapshotSha256: 'c'.repeat(64),
         }),
+        summary: { fullTextSourceCount: 1, fullTextFindingCount: 1 },
       }),
     });
 

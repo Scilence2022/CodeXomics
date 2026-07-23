@@ -33,7 +33,7 @@ const {
   sanitizePluginId,
 } = require('./security-utils');
 const { ToolRegistryService } = require('./tool-registry-service');
-const { proxyDgrMcpRequest } = require('./dgr-mcp-proxy');
+const { proxyDgrMcpRequest, uploadDgrResearchDocument, MAX_DOCUMENT_BYTES } = require('./dgr-mcp-proxy');
 const { archiveDgrTaskResult, readDgrArtifact } = require('./dgr-artifact-storage');
 const {
   assertSidecarContentSize,
@@ -3213,6 +3213,26 @@ function registerIpcHandlers(deps) {
       throw new Error('Deep Gene Research MCP requests are limited to registered genome windows');
     }
     return proxyDgrMcpRequest(request);
+  });
+
+  ipcMain.handle('dgr-upload-research-document', async (event, options = {}) => {
+    if (!isRegisteredGenomeSender(event)) {
+      throw new Error('DGR research document uploads are limited to registered genome windows');
+    }
+    if (typeof options.filePath !== 'string' || !path.isAbsolute(options.filePath)) {
+      throw new Error('DGR research document uploads require an absolute PDF path');
+    }
+    const approvedPath = grantReadOnlyFileLoadPath(options.filePath, {
+      source: 'annotation-research-tool',
+      reason: 'Explicit user PDF supplied to start_annotation_research',
+    });
+    const stats = await fs.promises.stat(approvedPath);
+    if (!stats.isFile() || stats.size <= 0 || stats.size > MAX_DOCUMENT_BYTES) {
+      throw new Error(`Research PDF must be a regular file no larger than ${MAX_DOCUMENT_BYTES} bytes`);
+    }
+    const bytes = await fs.promises.readFile(approvedPath);
+    const document = await uploadDgrResearchDocument({ bytes, name: path.basename(approvedPath) });
+    return { success: true, document, approvedPath };
   });
 
   ipcMain.handle('archive-dgr-task-result', async (event, options = {}) => {

@@ -312,10 +312,14 @@ class AnnotationReviewManager {
     const evidence = (changeSet.evidence || [])
       .map(item => `<li>${this._escape(typeof item === 'string' ? item : JSON.stringify(item))}</li>`)
       .join('');
-    const attachment =
-      changeSet.proposalMetadata?.archivedDgrReport?.attachmentId ||
-      changeSet.proposalMetadata?.reportAttachment?.attachmentId ||
-      summary.reportAttachment;
+    const reportMetadata =
+      changeSet.proposalMetadata?.archivedDgrReport || changeSet.proposalMetadata?.reportAttachment || null;
+    const attachment = reportMetadata?.attachmentId || summary.reportAttachment;
+    const fullTextSourceCount = Number(reportMetadata?.summary?.fullTextSourceCount || 0);
+    const fullTextFindingCount = Number(reportMetadata?.summary?.fullTextFindingCount || 0);
+    const verifiedFullTextSourceCount = Number(
+      reportMetadata?.citationValidation?.verifiedFullTextSourceCount || 0
+    );
     return `
       <div class="annotation-review-detail-header">
         <div>
@@ -331,7 +335,15 @@ class AnnotationReviewManager {
         <span>Risk: ${this._escape(changeSet.riskLevel || '')}</span>
         <span>Creator: ${this._escape(changeSet.createdBy || '')}</span>
       </div>
-      ${attachment ? `<div class="annotation-review-report-link"><i class="fas fa-paperclip"></i> Archived report: <code>${this._escape(attachment)}</code></div>` : ''}
+      ${
+        attachment
+          ? `<div class="annotation-review-report-link"><i class="fas fa-paperclip"></i> Archived report: <code>${this._escape(attachment)}</code>${
+              fullTextSourceCount > 0
+                ? ` <span>Full text: ${verifiedFullTextSourceCount}/${fullTextSourceCount} evidence-linked sources, ${fullTextFindingCount} findings</span>`
+                : ''
+            }</div>`
+          : ''
+      }
       <div class="annotation-review-operations">${operations}</div>
       <details class="annotation-review-evidence" ${evidence ? '' : 'hidden'}>
         <summary>Evidence (${changeSet.evidence?.length || 0})</summary>

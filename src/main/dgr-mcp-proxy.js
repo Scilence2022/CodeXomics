@@ -11,6 +11,7 @@
 
 const DEFAULT_DGR_MCP_URL = 'http://127.0.0.1:3000/api/mcp';
 const MAX_REQUEST_BYTES = 1024 * 1024;
+const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
 // A full task is serialized once into MCP text and again into the JSON-RPC/SSE
 // envelope. Keep the final artifact cap at 16 MiB, but allow bounded transport
 // escaping overhead so an otherwise valid artifact can reach the archiver.
@@ -55,6 +56,13 @@ function resolveDgrMcpEndpoint(env = process.env) {
   if (endpoint.protocol === 'http:' && !isLoopbackHostname(endpoint.hostname)) {
     throw new Error('Remote DGR MCP endpoints must use HTTPS');
   }
+  return endpoint.toString();
+}
+
+function resolveDgrDocumentEndpoint(env = process.env) {
+  const endpoint = new URL(resolveDgrMcpEndpoint(env));
+  endpoint.pathname = endpoint.pathname.replace(/\/?$/, '/documents');
+  endpoint.search = '';
   return endpoint.toString();
 }
 
@@ -177,14 +185,65 @@ async function proxyDgrMcpRequest(request, options = {}) {
   }
 }
 
+async function uploadDgrResearchDocument(document, options = {}) {
+  const env = options.env || process.env;
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  if (typeof fetchImpl !== 'function') throw new Error('Main-process fetch is unavailable');
+  const bytes = Buffer.from(document?.bytes || []);
+  const name = String(document?.name || '').trim();
+  if (!name || /[\0\r\n]/.test(name) || name.length > 255) throw new Error('DGR research document name is invalid');
+  if (bytes.length === 0 || bytes.length > MAX_DOCUMENT_BYTES) {
+    throw new Error(`DGR research PDF must be between 1 byte and ${MAX_DOCUMENT_BYTES} bytes`);
+  }
+  if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('DGR research document is not a PDF');
+  const token = String(env.DGR_MCP_TOKEN || env.DEEP_GENE_RESEARCH_MCP_TOKEN || '').trim();
+  if (token && token.length < 16) throw new Error('DGR_MCP_TOKEN must be at least 16 characters');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), MAX_TIMEOUT_MS);
+  try {
+    const response = await fetchImpl(resolveDgrDocumentEndpoint(env), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Length': String(bytes.length),
+        'X-DGR-Document-Name': encodeURIComponent(name),
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: bytes,
+      redirect: 'error',
+      signal: controller.signal,
+    });
+    const body = await readBoundedResponse(response);
+    let payload;
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      throw new Error(`DGR document upload returned invalid JSON (${response.status})`);
+    }
+    if (!response.ok || !payload?.document?.documentId) {
+      throw new Error(payload?.error || `DGR document upload failed with status ${response.status}`);
+    }
+    return payload.document;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error(`DGR document upload timed out after ${MAX_TIMEOUT_MS} ms`);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 module.exports = {
   ALLOWED_DGR_TOOL_NAMES,
   ALLOWED_JSON_RPC_METHODS,
   DEFAULT_DGR_MCP_URL,
   MAX_REQUEST_BYTES,
+  MAX_DOCUMENT_BYTES,
   MAX_RESPONSE_BYTES,
   isLoopbackHostname,
   proxyDgrMcpRequest,
+  uploadDgrResearchDocument,
+  resolveDgrDocumentEndpoint,
   resolveDgrMcpEndpoint,
   validateProxyRequest,
 };
