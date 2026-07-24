@@ -67,6 +67,23 @@
   resize: none; /* Disable browser default resize */
 }
 
+/* The gene editor needs its form area to grow and scroll with the window. */
+#editGeneModal .modal-content {
+  display: flex;
+  flex-direction: column;
+}
+
+#editGeneModal .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+#editGeneModal .modal-header,
+#editGeneModal .modal-footer {
+  flex-shrink: 0;
+}
+
 /* Resize Handles */
 .resize-handle {
   position: absolute;

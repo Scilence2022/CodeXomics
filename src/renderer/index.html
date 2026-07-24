@@ -4409,7 +4409,12 @@ Supported formats:
 
     <!-- Edit Gene Annotation Modal -->
     <div id="editGeneModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
+        <div
+            class="modal-content resizable"
+            data-min-width="440"
+            data-max-width="1000"
+            style="max-width: none; width: min(600px, calc(100vw - 32px));"
+        >
             <div class="modal-header">
                 <h3><i class="fas fa-edit"></i> Edit Gene Annotation</h3>
                 <button class="modal-close">&times;</button>
@@ -4484,6 +4489,14 @@ Supported formats:
                 </button>
                 <button class="btn modal-close">Cancel</button>
             </div>
+            <div class="resize-handle resize-handle-n"></div>
+            <div class="resize-handle resize-handle-s"></div>
+            <div class="resize-handle resize-handle-e"></div>
+            <div class="resize-handle resize-handle-w"></div>
+            <div class="resize-handle resize-handle-ne"></div>
+            <div class="resize-handle resize-handle-nw"></div>
+            <div class="resize-handle resize-handle-se"></div>
+            <div class="resize-handle resize-handle-sw"></div>
         </div>
     </div>
 
