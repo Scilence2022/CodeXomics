@@ -8989,8 +8989,21 @@ class GenomeBrowser {
     // Show the modal
     modal.classList.add('show');
 
+    // Enable movement and resizing after the modal becomes visible so the
+    // resize manager can preserve its current dimensions.
+    this.initializeEditModalBehavior();
+
     // Set up event listeners for the modal
     this.setupEditModalEventListeners();
+  }
+
+  initializeEditModalBehavior() {
+    if (window.modalDragManager) {
+      window.modalDragManager.makeDraggable('#editGeneModal');
+    }
+    if (window.resizableModalManager) {
+      window.resizableModalManager.makeResizable('#editGeneModal');
+    }
   }
 
   populateEditModal(gene) {
