@@ -9075,31 +9075,35 @@ class GenomeBrowser {
   }
 
   setupEditModalEventListeners() {
+    if (!this.editModalEventHandlers) {
+      this.editModalEventHandlers = {
+        addQualifier: this.handleAddQualifier.bind(this),
+        save: this.handleSaveGeneEdit.bind(this),
+        close: this.handleCloseEditModal.bind(this),
+      };
+    }
+
     // Add qualifier button
     const addQualifierBtn = document.getElementById('addQualifierBtn');
     if (addQualifierBtn) {
-      addQualifierBtn.removeEventListener('click', this.handleAddQualifier);
-      addQualifierBtn.addEventListener('click', this.handleAddQualifier.bind(this));
+      addQualifierBtn.removeEventListener('click', this.editModalEventHandlers.addQualifier);
+      addQualifierBtn.addEventListener('click', this.editModalEventHandlers.addQualifier);
     }
 
     // Save button
     const saveBtn = document.getElementById('saveGeneEditBtn');
     if (saveBtn) {
-      saveBtn.removeEventListener('click', this.handleSaveGeneEdit);
-      saveBtn.addEventListener('click', this.handleSaveGeneEdit.bind(this));
+      saveBtn.removeEventListener('click', this.editModalEventHandlers.save);
+      saveBtn.addEventListener('click', this.editModalEventHandlers.save);
     }
 
     // Modal close buttons
     const modal = document.getElementById('editGeneModal');
     const closeButtons = modal.querySelectorAll('.modal-close');
     closeButtons.forEach(btn => {
-      btn.removeEventListener('click', this.handleCloseEditModal);
-      btn.addEventListener('click', this.handleCloseEditModal.bind(this));
+      btn.removeEventListener('click', this.editModalEventHandlers.close);
+      btn.addEventListener('click', this.editModalEventHandlers.close);
     });
-
-    // Close on outside click
-    modal.removeEventListener('click', this.handleModalOutsideClick);
-    modal.addEventListener('click', this.handleModalOutsideClick.bind(this));
   }
 
   handleAddQualifier() {
@@ -9110,12 +9114,6 @@ class GenomeBrowser {
     const modal = document.getElementById('editGeneModal');
     if (modal) {
       modal.classList.remove('show');
-    }
-  }
-
-  handleModalOutsideClick(e) {
-    if (e.target === e.currentTarget) {
-      this.handleCloseEditModal();
     }
   }
 
