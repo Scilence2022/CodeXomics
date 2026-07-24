@@ -90,6 +90,22 @@ describe('AnnotationService quality prioritization', () => {
     expect(result.candidates.find(candidate => candidate.feature.id === 'ncrna-b0002').qualityScore).toBe(100);
   });
 
+  it('treats an overlapping gene/CDS pair with one locus tag as one CDS candidate', async () => {
+    const service = createService();
+    const gene = service.app.currentAnnotations.chr1.find(feature => feature.id === 'gene-b0001');
+    gene.end = 450;
+
+    const result = await service.listAnnotationQualityCandidates({ maximumQualityScore: 100, limit: 0 });
+    const matching = result.candidates.filter(candidate => candidate.feature.locusTag === 'b0001');
+
+    expect(matching).toHaveLength(1);
+    expect(matching[0]).toMatchObject({
+      feature: { id: 'cds-b0001', featureType: 'CDS' },
+      coLocatedFeatureTypes: ['CDS', 'gene'],
+      suppressedFeatureIds: ['gene-b0001'],
+    });
+  });
+
   it('filters by quality threshold and explains actionable defects', async () => {
     const service = createService();
     const result = await service.listAnnotationQualityCandidates({ maximumQualityScore: 30, limit: 0 });
@@ -112,13 +128,13 @@ describe('AnnotationService quality prioritization', () => {
     );
   });
 
-  it('excludes loci with multiple equally preferred feature records', async () => {
+  it('excludes a reused locus tag with multiple equally preferred CDS records', async () => {
     const service = createService();
     service.app.currentAnnotations.chr1.push({
       id: 'cds-b0001-duplicate',
       type: 'CDS',
-      start: 100,
-      end: 399,
+      start: 900,
+      end: 1199,
       strand: 1,
       qualifiers: { locus_tag: 'b0001', gene: 'poorA', product: 'hypothetical protein' },
     });
@@ -126,7 +142,25 @@ describe('AnnotationService quality prioritization', () => {
     const result = await service.listAnnotationQualityCandidates({ limit: 0 });
 
     expect(result.excludedAmbiguousLoci).toBe(1);
-    expect(result.ambiguousLoci[0].featureIds).toEqual(['cds-b0001', 'cds-b0001-duplicate']);
+    expect(result.ambiguousLoci[0].featureIds).toEqual(
+      expect.arrayContaining(['cds-b0001', 'cds-b0001-duplicate'])
+    );
+    expect(result.candidates.some(candidate => candidate.feature.locusTag === 'b0001')).toBe(false);
+  });
+
+  it('does not collapse non-overlapping gene/CDS records that reuse a locus tag', async () => {
+    const service = createService();
+    const gene = service.app.currentAnnotations.chr1.find(feature => feature.id === 'gene-b0001');
+    gene.start = 900;
+    gene.end = 1199;
+
+    const result = await service.listAnnotationQualityCandidates({ limit: 0 });
+
+    expect(result.excludedAmbiguousLoci).toBe(1);
+    expect(result.ambiguousLoci[0]).toMatchObject({
+      locusTag: 'b0001',
+      reason: 'The same locus tag is reused by non-overlapping feature records',
+    });
     expect(result.candidates.some(candidate => candidate.feature.locusTag === 'b0001')).toBe(false);
   });
 

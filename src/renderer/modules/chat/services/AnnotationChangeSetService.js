@@ -2786,9 +2786,10 @@ class AnnotationChangeSetService {
       throw new Error(`Annotation "${identifier}" not found${chromosome ? ` on chromosome "${chromosome}"` : ''}`);
     }
     // GenBank commonly stores a generic gene feature together with a more
-    // specific CDS or RNA feature. Collapse only exact co-located duplicates
-    // on one replicon, and prefer the biologically specific feature. CDS has
-    // the highest priority when it is present at that locus.
+    // specific CDS or RNA feature. A compound CDS can have a slightly smaller
+    // parsed envelope than its gene feature, so a shared locus_tag plus an
+    // overlapping interval also identifies one biological locus. Prefer the
+    // biologically specific feature; CDS has the highest priority.
     if (matches.length > 1) {
       const chromosomes = new Set(matches.map(match => match.chromosome));
       const locations = new Set(
@@ -2810,7 +2811,18 @@ class AnnotationChangeSetService {
         qualifierSets(['protein_id', 'proteinId']),
         qualifierSets(['gene', 'gene_name', 'Gene', 'Name']),
       ].some(values => values.size > 1);
-      if (chromosomes.size === 1 && locations.size === 1 && !hasIdentityConflict) {
+      const locusTags = matches.map(match =>
+        String(this._scalar(this._qualifierValue(match.annotation?.qualifiers || {}, ['locus_tag', 'locusTag'])) || '')
+          .trim()
+          .toLowerCase()
+      );
+      const sharesSingleLocusTag = locusTags.every(Boolean) && new Set(locusTags).size === 1;
+      const starts = matches.map(match => Number(match.annotation?.start));
+      const ends = matches.map(match => Number(match.annotation?.end));
+      const intervalsOverlap =
+        starts.every(Number.isFinite) && ends.every(Number.isFinite) && Math.max(...starts) <= Math.min(...ends);
+      const sameBiologicalLocus = locations.size === 1 || (sharesSingleLocusTag && intervalsOverlap);
+      if (chromosomes.size === 1 && sameBiologicalLocus && !hasIdentityConflict) {
         const ranked = [...matches].sort(
           (left, right) =>
             this._geneFeatureTypePriority(right.annotation?.type) -

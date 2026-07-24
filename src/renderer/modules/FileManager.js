@@ -1349,53 +1349,34 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
   }
 
   parseGenBankLocation(feature, location) {
-    // Enhanced location parsing - handles various GenBank location formats
-    let cleanLocation = location;
+    // Preserve the full genomic envelope of compound GenBank locations. A
+    // gene feature commonly spans the complete locus while its paired CDS is
+    // represented as join(...). Keeping only the first joined interval makes
+    // the normal gene/CDS pair appear to be two different loci.
+    const locationText = String(location || '').trim();
+    feature.strand = /\bcomplement\s*\(/i.test(locationText) ? -1 : 1;
 
-    // Handle complement locations
-    if (location.includes('complement')) {
-      feature.strand = -1;
-      cleanLocation = location.replace(/complement\(|\)/g, '');
-    }
+    // Remove remote accession prefixes before extracting coordinates so a
+    // location such as J00194.1:100..200 does not treat accession digits as
+    // genomic positions.
+    const localLocation = locationText.replace(/\b[A-Za-z][A-Za-z0-9_.]*:/g, '');
+    const segments = Array.from(localLocation.matchAll(/[<>]?(\d+)\s*(?:\.\.|\^)\s*[<>]?(\d+)/g), match => {
+      const left = Number.parseInt(match[1], 10);
+      const right = Number.parseInt(match[2], 10);
+      return { start: Math.min(left, right), end: Math.max(left, right) };
+    });
 
-    // Handle join locations (take first range for simplicity)
-    if (cleanLocation.includes('join')) {
-      const joinMatch = cleanLocation.match(/join\(([^)]+)\)/);
-      if (joinMatch) {
-        const ranges = joinMatch[1].split(',');
-        cleanLocation = ranges[0].trim();
+    if (segments.length === 0) {
+      for (const match of localLocation.matchAll(/[<>]?(\d+)/g)) {
+        const position = Number.parseInt(match[1], 10);
+        segments.push({ start: position, end: position });
       }
     }
 
-    // Handle order locations (take first range for simplicity)
-    if (cleanLocation.includes('order')) {
-      const orderMatch = cleanLocation.match(/order\(([^)]+)\)/);
-      if (orderMatch) {
-        const ranges = orderMatch[1].split(',');
-        cleanLocation = ranges[0].trim();
-      }
-    }
-
-    // Remove any remaining parentheses and angle brackets
-    cleanLocation = cleanLocation.replace(/[<>()]/g, '');
-
-    // Parse range (e.g., "123..456")
-    const rangeMatch = cleanLocation.match(/(\d+)\.\.(\d+)/);
-    if (rangeMatch) {
-      feature.start = parseInt(rangeMatch[1]);
-      feature.end = parseInt(rangeMatch[2]);
-    } else {
-      // Single position (e.g., "123")
-      const singleMatch = cleanLocation.match(/(\d+)/);
-      if (singleMatch) {
-        feature.start = parseInt(singleMatch[1]);
-        feature.end = feature.start;
-      }
-    }
-
-    // Ensure start is always less than or equal to end
-    if (feature.start && feature.end && feature.start > feature.end) {
-      [feature.start, feature.end] = [feature.end, feature.start];
+    if (segments.length > 0) {
+      feature.start = Math.min(...segments.map(segment => segment.start));
+      feature.end = Math.max(...segments.map(segment => segment.end));
+      if (segments.length > 1) feature.segments = segments;
     }
   }
 

@@ -346,6 +346,12 @@ class AnnotationService {
     ]).map(value => value.toLowerCase());
   }
 
+  _qualityLocusTags(annotation) {
+    return this._qualityValues(annotation?.qualifiers || {}, ['locus_tag', 'locusTag']).map(value =>
+      value.toLowerCase()
+    );
+  }
+
   _qualityTypePriority(type) {
     return GENE_ANNOTATION_TYPE_PRIORITY[this._qualityFeatureType(type)] || 0;
   }
@@ -594,7 +600,13 @@ class AnnotationService {
         if (!typeKeys.has(this._qualityFeatureType(annotation?.type))) continue;
         const location = `${chromosome}:${annotation.start}:${annotation.end}:${annotation.strand ?? ''}`;
         const identities = this._qualityIdentities(annotation);
-        const keys = identities.map(identity => `${location}:${identity}`);
+        const locusTagKeys = this._qualityLocusTags(annotation).map(locusTag => `${chromosome}:locus-tag:${locusTag}`);
+        // locus_tag identifies the biological locus, not an individual
+        // GenBank feature row. Group gene/CDS records by that stable identity
+        // even when a compound CDS location has multiple joined intervals.
+        // If a malformed file reuses the tag for multiple CDS records, they
+        // remain in one group and are rejected below as equally preferred.
+        const keys = locusTagKeys.length > 0 ? locusTagKeys : identities.map(identity => `${location}:${identity}`);
         let group = keys.map(key => groupByIdentity.get(key)).find(Boolean);
         if (!group) {
           group = { chromosome, features: [] };
@@ -608,6 +620,25 @@ class AnnotationService {
     const ambiguousLoci = [];
     let candidates = groups
       .map(group => {
+        const locusTags = group.features.map(feature => this._qualityLocusTags(feature)[0] || null);
+        const sharesSingleLocusTag = locusTags.every(Boolean) && new Set(locusTags).size === 1;
+        const starts = group.features.map(feature => Number(feature?.start));
+        const ends = group.features.map(feature => Number(feature?.end));
+        const intervalsOverlap =
+          starts.every(Number.isFinite) && ends.every(Number.isFinite) && Math.max(...starts) <= Math.min(...ends);
+        if (group.features.length > 1 && sharesSingleLocusTag && !intervalsOverlap) {
+          ambiguousLoci.push({
+            chromosome: group.chromosome,
+            start: Math.min(...starts),
+            end: Math.max(...ends),
+            strand: null,
+            featureType: null,
+            featureIds: group.features.map(feature => feature.id).filter(Boolean),
+            locusTag: locusTags[0],
+            reason: 'The same locus tag is reused by non-overlapping feature records',
+          });
+          return null;
+        }
         const ranked = [...group.features].sort((left, right) => {
           const typeDifference = this._qualityTypePriority(right.type) - this._qualityTypePriority(left.type);
           if (typeDifference) return typeDifference;
@@ -624,7 +655,7 @@ class AnnotationService {
             strand: representative?.strand ?? null,
             featureType: representative?.type || null,
             featureIds: equallyPreferred.map(feature => feature.id).filter(Boolean),
-            reason: 'Multiple equally preferred feature records occupy the same locus',
+            reason: 'Multiple equally preferred feature records share the same stable locus identity',
           });
           return null;
         }
