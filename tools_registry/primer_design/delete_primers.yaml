@@ -31,7 +31,7 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: 'Optional chromosome/replicon ID. If omitted, clears primer annotations from all chromosomes.'
+      description: 'Optional chromosome/replicon ID, named exactly as loaded (see the loaded names in the current context). If omitted, clears primer annotations from all chromosomes.'
     confirm:
       type: boolean
       description: 'Must be true to clear primer annotations.'
@@ -42,10 +42,10 @@ sample_usages:
     tool_call: 'delete_primers(confirm=true)'
     thought: 'User wants to remove all primers from the library'
     expected_result: 'All primers are removed from the library'
-  - user_query: 'Remove pinned primers on chr1'
-    tool_call: "delete_primers(chromosome='chr1', confirm=true)"
-    thought: 'User wants to remove pinned placements on one chromosome'
-    expected_result: 'Pinned primer placements on chr1 are removed'
+  - user_query: 'Remove pinned primers on U00096'
+    tool_call: "delete_primers(chromosome='U00096', confirm=true)"
+    thought: 'User wants to remove pinned placements on one chromosome, named verbatim'
+    expected_result: 'Pinned primer placements on U00096 are removed'
 relationships:
   depends_on: []
   conflicts_with: []

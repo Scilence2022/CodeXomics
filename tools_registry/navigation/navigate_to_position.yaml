@@ -1,7 +1,7 @@
 # navigate_to_position.yaml
 name: 'navigate_to_position'
-version: '1.2.0'
-description: 'Navigate to specific genomic coordinates in the genome browser to VISUALIZE the region. Use this when users ask to "show", "display", or "view" a genomic region by coordinates. For COORDINATE-BASED navigation when you have exact positions. For gene-based navigation, use jump_to_gene instead. For retrieving raw sequence data, use get_sequence instead.'
+version: '1.3.0'
+description: 'Navigate to specific genomic coordinates in the genome browser to VISUALIZE the region. Use this when users ask to "show", "display", or "view" a genomic region by coordinates. Coordinates are 1-based base pairs; the chromosome defaults to the one currently displayed, so pass chromosome only when the user names a sequence that is actually loaded. For gene-based navigation, use jump_to_gene instead. For retrieving raw sequence data, use get_sequence instead.'
 category: 'navigation'
 keywords: ['navigate', 'position', 'coordinates', 'jump', 'go to', 'genome browser', 'location', 'range']
 priority: 1
@@ -21,28 +21,26 @@ parameters:
   properties:
     chromosome:
       type: 'string'
-      description: "Chromosome name (e.g., 'chr1', 'NC_000913.3', 'U00096')"
-      examples: ['chr1', 'NC_000913.3', 'U00096', 'chromosome1']
+      description: "Name of a chromosome/contig in the LOADED genome, copied exactly as listed in the current context (e.g. 'U00096', 'NC_000913.3'). OMIT this parameter to stay on the chromosome that is currently displayed — that is the correct choice whenever the user did not name one. Never invent or normalize a name: 'chr1' is only valid if the loaded genome actually contains a sequence called 'chr1'."
     start:
       type: 'number'
-      description: 'Start position in base pairs (1-based). If provided without end, or if start=end, the view will center on this position with a ~2kb window (upstream 1kb, downstream 1kb).'
+      description: 'Start position in base pairs (1-based), as a plain number — expand shorthand before calling (2M/2Mb -> 2000000, 500k/500kb -> 500000). If provided without end, or if start=end, the view will center on this position with a ~2kb window (upstream 1kb, downstream 1kb).'
       minimum: 1
-      examples: [1000, 50000, 1000000]
+      examples: [1000, 50000, 2000000]
     end:
       type: 'number'
-      description: 'End position in base pairs (1-based). Optional — if omitted or equal to start, a 2kb centered window is used instead.'
+      description: 'End position in base pairs (1-based), as a plain number. Optional — if omitted or equal to start, a 2kb centered window is used instead.'
       minimum: 1
-      examples: [2000, 60000, 1002000]
+      examples: [2000, 60000, 2001000]
     position:
       type: 'number'
-      description: 'Center position for 2000bp range (alternative to start/end)'
+      description: 'Center position in base pairs (1-based) for a 2000bp window (alternative to start/end). Expand shorthand before calling (2M -> 2000000).'
       minimum: 1
-      examples: [1500, 55000, 1001000]
+      examples: [1500, 55000, 2000000]
     clientId:
       type: 'string'
       description: 'Browser client ID for multi-window support'
       default: 'default'
-  required: ['chromosome']
   anyOf:
     - required: ['start', 'end']
     - required: ['position']
@@ -50,35 +48,25 @@ parameters:
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: 'Go to position 1000-2000 on chromosome 1'
-    tool_call: "navigate_to_position(chromosome='chr1', start=1000, end=2000)"
-    thought: 'User wants to navigate to a specific genomic region with start and end coordinates'
-    expected_result: 'Browser view updates to show the specified region with genes and features'
-
-  - user_query: 'Jump to position 50000 on the current chromosome'
-    tool_call: "navigate_to_position(chromosome='NC_000913.3', position=50000)"
-    thought: 'User wants to center the view on position 50000, which will create a 2000bp window'
-    expected_result: 'Browser centers on position 50000 showing 1000bp on each side'
-
-  - user_query: 'Navigate to the E. coli chromosome at position 1000000'
-    tool_call: "navigate_to_position(chromosome='U00096', position=1000000)"
-    thought: 'User specifies E. coli chromosome (U00096) and wants to center on position 1000000'
-    expected_result: 'Browser shows the region around 1000000 on the E. coli chromosome'
+  - user_query: 'Navigate to 2M'
+    tool_call: 'navigate_to_position(start=2000000)'
+    thought: 'The user named no chromosome, so I omit it and the current one is used. "2M" means 2,000,000 bp, not 2 — and start alone centers the view with a ±1kb window.'
+    expected_result: 'Browser centers on 2000000 of the current chromosome, showing 1999000-2001000'
 
   - user_query: 'Show me the region from 50000 to 60000'
-    tool_call: "navigate_to_position(chromosome='chr1', start=50000, end=60000)"
-    thought: 'User wants to see a specific 10kb region, so I use start and end parameters'
+    tool_call: 'navigate_to_position(start=50000, end=60000)'
+    thought: 'A 10kb region on the chromosome already displayed — no chromosome argument is needed'
     expected_result: 'Browser displays the 10kb region with all contained features'
 
-  - user_query: 'Navigate to position 2000000 on U00096'
-    tool_call: "navigate_to_position(chromosome='U00096', start=2000000)"
-    thought: 'User provides start position only — the view will center on 2000000 with ±1kb window (1999000-2001000)'
-    expected_result: 'Browser centers on 2000000 showing 1999000-2001000'
+  - user_query: 'Go to 500kb on U00096'
+    tool_call: "navigate_to_position(chromosome='U00096', position=500000)"
+    thought: 'The user named the chromosome explicitly, so I copy it verbatim; "500kb" expands to 500000'
+    expected_result: 'Browser centers on position 500000 showing 1000bp on each side'
 
-  - user_query: 'Go to 2000000 on chromosome U00096'
-    tool_call: "navigate_to_position(chromosome='U00096', start=2000000, end=2000000)"
-    thought: 'User provides start=end — this is treated as a single-point request and will center with ±1kb window'
-    expected_result: 'Browser centers on 2000000 showing 1999000-2001000'
+  - user_query: 'Jump to position 1000-2000 of NC_000913.3'
+    tool_call: "navigate_to_position(chromosome='NC_000913.3', start=1000, end=2000)"
+    thought: 'Both coordinates are given, and the accession is used exactly as the user wrote it'
+    expected_result: 'Browser view updates to show the specified region with genes and features'
 
 # Tool relationships and dependencies
 relationships:
@@ -101,7 +89,7 @@ metadata:
 
 # Error handling
 error_handling:
-  invalid_chromosome: 'Returns error if chromosome not found in loaded genome'
+  invalid_chromosome: 'Returns an error listing the loaded chromosome names if the requested one is not found; retry with one of those names or omit the parameter'
   invalid_position: 'Returns error if position is outside genome bounds'
   missing_parameters: 'Returns error if required parameters are missing'
   client_error: 'Returns error if browser client is not available'

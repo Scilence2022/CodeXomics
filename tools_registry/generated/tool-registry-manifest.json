@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-22T16:53:12.832Z",
-  "registryHash": "f303e00c20fdf912286de74c38561c6a49ee004c815feba1ee596b20b29e285e",
+  "generatedAt": "2026-07-25T04:17:14.285Z",
+  "registryHash": "fb2ec4b5a894eb826d2f260eaa66e2bac6700905c3c2c06f043de39040e56d82",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -5269,7 +5269,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "The chromosome or contig where the feature is located"
+            "description": "The chromosome or contig where the feature is located, named exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "start": {
             "type": "integer",
@@ -5339,14 +5339,14 @@
       },
       "sample_usages": [
         {
-          "user_query": "Create a CDS feature named lacZ at chr1:1000..2000 on forward strand",
-          "tool_call": "create_annotation(type='CDS', name='lacZ', chromosome='chr1', start=1000, end=2000, strand=1, product='beta-galactosidase')",
+          "user_query": "Create a CDS feature named lacZ at U00096:1000..2000 on forward strand",
+          "tool_call": "create_annotation(type='CDS', name='lacZ', chromosome='U00096', start=1000, end=2000, strand=1, product='beta-galactosidase')",
           "thought": "The user wants to create a coding sequence (CDS) feature. We specify the type, name, genomic coordinates, strand, and product.",
           "expected_result": "Created CDS annotation lacZ with auto-calculated protein translation"
         },
         {
-          "user_query": "Add a promoter annotation named promoter_lac at chr1:900..950",
-          "tool_call": "create_annotation(type='promoter', name='promoter_lac', chromosome='chr1', start=900, end=950, strand=1, regulatoryClass='promoter')",
+          "user_query": "Add a promoter annotation named promoter_lac at U00096:900..950",
+          "tool_call": "create_annotation(type='promoter', name='promoter_lac', chromosome='U00096', start=900, end=950, strand=1, regulatoryClass='promoter')",
           "thought": "The user wants to add a promoter feature. We use promoter/regulatory class logic.",
           "expected_result": "Created regulatory promoter_lac annotation"
         }
@@ -5500,8 +5500,8 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Specific chromosome/contig to analyze (optional, analyzes all chromosomes if not specified)",
-            "examples": ["U00096", "chromosome", "chr1"]
+            "description": "Specific chromosome/contig to analyze, named exactly as loaded (see the loaded names in the current context). Optional — analyzes all chromosomes if omitted.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "featureType": {
             "type": "string",
@@ -6132,7 +6132,7 @@
     {
       "name": "blast_create_db_from_genome",
       "version": "1.0.0",
-      "description": "Create BLAST nucleotide database from a specific chromosome of the currently loaded genome. Use this ONLY when you want to index a single chromosome and have a specific chromosome name (e.g. chr1, chr2, etc.). Do not use this for the entire genome.",
+      "description": "Create BLAST nucleotide database from a specific chromosome of the currently loaded genome. Use this ONLY when you want to index a single chromosome and have its exact name from the loaded genome (e.g. U00096, NC_000913.3). Do not use this for the entire genome.",
       "category": "database",
       "keywords": ["blast", "database", "chromosome", "specific chromosome", "create database from chromosome"],
       "priority": 2,
@@ -6149,7 +6149,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome name from loaded genome"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "dbName": {
             "type": "string",
@@ -6167,7 +6167,7 @@
       "sample_usages": [
         {
           "user_query": "Create a BLAST database from the loaded chromosome",
-          "tool_call": "blast_create_db_from_genome(chromosome='chr1')",
+          "tool_call": "blast_create_db_from_genome(chromosome='U00096')",
           "thought": "User wants to create database from currently loaded genome data",
           "expected_result": "BLAST database created from genome chromosome"
         },
@@ -6236,7 +6236,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome name to translate"
+            "description": "Chromosome/contig to translate, named exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "dbName": {
             "type": "string",
@@ -6248,7 +6248,7 @@
       "sample_usages": [
         {
           "user_query": "Create protein database from genome using all reading frames",
-          "tool_call": "blast_create_protein_db_from_genome(chromosome='chr1')",
+          "tool_call": "blast_create_protein_db_from_genome(chromosome='U00096')",
           "thought": "User wants 6-frame translation protein database",
           "expected_result": "Protein database created with all reading frames"
         }
@@ -8172,8 +8172,8 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome, contig, or replicon identifier. Use the current chromosome from context when the user says current region.",
-            "examples": ["U00096", "NC_000913.3", "chr1"]
+            "description": "Chromosome, contig, or replicon identifier, exactly as loaded. Use the current chromosome from the context when the user says current region, and never invent a name such as chr1.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start": {
             "type": "integer",
@@ -10053,8 +10053,8 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Specific chromosome to export (when export_range is by_chromosome)",
-            "examples": ["chromosome", "chr1", "U00096"]
+            "description": "Specific chromosome to export (when export_range is by_chromosome), named exactly as loaded (see the loaded names in the current context)",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start_position": {
             "type": "integer",
@@ -10924,8 +10924,8 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Specific chromosome to export (when export_range is by_chromosome)",
-            "examples": ["chromosome", "chr1", "U00096"]
+            "description": "Specific chromosome to export (when export_range is by_chromosome), named exactly as loaded (see the loaded names in the current context)",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start_position": {
             "type": "integer",
@@ -12511,7 +12511,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Optional chromosome filter"
+            "description": "Optional filter — a chromosome/contig name exactly as loaded (see the loaded names in the current context). Omit to list bookmarks on every chromosome."
           },
           "clientId": {
             "type": "string",
@@ -12529,10 +12529,10 @@
           "expected_result": "All region bookmarks and saved view states are returned"
         },
         {
-          "user_query": "List bookmarks on chr1",
-          "tool_call": "get_bookmarks(chromosome='chr1')",
-          "thought": "User wants bookmarks filtered by chromosome",
-          "expected_result": "Only chr1 bookmarks and saved views are returned"
+          "user_query": "List bookmarks on U00096",
+          "tool_call": "get_bookmarks(chromosome='U00096')",
+          "thought": "User named a chromosome, so it is copied verbatim as the filter",
+          "expected_result": "Only U00096 bookmarks and saved views are returned"
         }
       ],
       "relationships": {
@@ -13477,8 +13477,8 @@
     },
     {
       "name": "navigate_to_position",
-      "version": "1.2.0",
-      "description": "Navigate to specific genomic coordinates in the genome browser to VISUALIZE the region. Use this when users ask to \"show\", \"display\", or \"view\" a genomic region by coordinates. For COORDINATE-BASED navigation when you have exact positions. For gene-based navigation, use jump_to_gene instead. For retrieving raw sequence data, use get_sequence instead.",
+      "version": "1.3.0",
+      "description": "Navigate to specific genomic coordinates in the genome browser to VISUALIZE the region. Use this when users ask to \"show\", \"display\", or \"view\" a genomic region by coordinates. Coordinates are 1-based base pairs; the chromosome defaults to the one currently displayed, so pass chromosome only when the user names a sequence that is actually loaded. For gene-based navigation, use jump_to_gene instead. For retrieving raw sequence data, use get_sequence instead.",
       "category": "navigation",
       "keywords": ["navigate", "position", "coordinates", "jump", "go to", "genome browser", "location", "range"],
       "priority": 1,
@@ -13495,26 +13495,25 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome name (e.g., 'chr1', 'NC_000913.3', 'U00096')",
-            "examples": ["chr1", "NC_000913.3", "U00096", "chromosome1"]
+            "description": "Name of a chromosome/contig in the LOADED genome, copied exactly as listed in the current context (e.g. 'U00096', 'NC_000913.3'). OMIT this parameter to stay on the chromosome that is currently displayed — that is the correct choice whenever the user did not name one. Never invent or normalize a name: 'chr1' is only valid if the loaded genome actually contains a sequence called 'chr1'."
           },
           "start": {
             "type": "number",
-            "description": "Start position in base pairs (1-based). If provided without end, or if start=end, the view will center on this position with a ~2kb window (upstream 1kb, downstream 1kb).",
+            "description": "Start position in base pairs (1-based), as a plain number — expand shorthand before calling (2M/2Mb -> 2000000, 500k/500kb -> 500000). If provided without end, or if start=end, the view will center on this position with a ~2kb window (upstream 1kb, downstream 1kb).",
             "minimum": 1,
-            "examples": [1000, 50000, 1000000]
+            "examples": [1000, 50000, 2000000]
           },
           "end": {
             "type": "number",
-            "description": "End position in base pairs (1-based). Optional — if omitted or equal to start, a 2kb centered window is used instead.",
+            "description": "End position in base pairs (1-based), as a plain number. Optional — if omitted or equal to start, a 2kb centered window is used instead.",
             "minimum": 1,
-            "examples": [2000, 60000, 1002000]
+            "examples": [2000, 60000, 2001000]
           },
           "position": {
             "type": "number",
-            "description": "Center position for 2000bp range (alternative to start/end)",
+            "description": "Center position in base pairs (1-based) for a 2000bp window (alternative to start/end). Expand shorthand before calling (2M -> 2000000).",
             "minimum": 1,
-            "examples": [1500, 55000, 1001000]
+            "examples": [1500, 55000, 2000000]
           },
           "clientId": {
             "type": "string",
@@ -13522,7 +13521,6 @@
             "default": "default"
           }
         },
-        "required": ["chromosome"],
         "anyOf": [
           {
             "required": ["start", "end"]
@@ -13537,40 +13535,28 @@
       },
       "sample_usages": [
         {
-          "user_query": "Go to position 1000-2000 on chromosome 1",
-          "tool_call": "navigate_to_position(chromosome='chr1', start=1000, end=2000)",
-          "thought": "User wants to navigate to a specific genomic region with start and end coordinates",
-          "expected_result": "Browser view updates to show the specified region with genes and features"
-        },
-        {
-          "user_query": "Jump to position 50000 on the current chromosome",
-          "tool_call": "navigate_to_position(chromosome='NC_000913.3', position=50000)",
-          "thought": "User wants to center the view on position 50000, which will create a 2000bp window",
-          "expected_result": "Browser centers on position 50000 showing 1000bp on each side"
-        },
-        {
-          "user_query": "Navigate to the E. coli chromosome at position 1000000",
-          "tool_call": "navigate_to_position(chromosome='U00096', position=1000000)",
-          "thought": "User specifies E. coli chromosome (U00096) and wants to center on position 1000000",
-          "expected_result": "Browser shows the region around 1000000 on the E. coli chromosome"
+          "user_query": "Navigate to 2M",
+          "tool_call": "navigate_to_position(start=2000000)",
+          "thought": "The user named no chromosome, so I omit it and the current one is used. \"2M\" means 2,000,000 bp, not 2 — and start alone centers the view with a ±1kb window.",
+          "expected_result": "Browser centers on 2000000 of the current chromosome, showing 1999000-2001000"
         },
         {
           "user_query": "Show me the region from 50000 to 60000",
-          "tool_call": "navigate_to_position(chromosome='chr1', start=50000, end=60000)",
-          "thought": "User wants to see a specific 10kb region, so I use start and end parameters",
+          "tool_call": "navigate_to_position(start=50000, end=60000)",
+          "thought": "A 10kb region on the chromosome already displayed — no chromosome argument is needed",
           "expected_result": "Browser displays the 10kb region with all contained features"
         },
         {
-          "user_query": "Navigate to position 2000000 on U00096",
-          "tool_call": "navigate_to_position(chromosome='U00096', start=2000000)",
-          "thought": "User provides start position only — the view will center on 2000000 with ±1kb window (1999000-2001000)",
-          "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
+          "user_query": "Go to 500kb on U00096",
+          "tool_call": "navigate_to_position(chromosome='U00096', position=500000)",
+          "thought": "The user named the chromosome explicitly, so I copy it verbatim; \"500kb\" expands to 500000",
+          "expected_result": "Browser centers on position 500000 showing 1000bp on each side"
         },
         {
-          "user_query": "Go to 2000000 on chromosome U00096",
-          "tool_call": "navigate_to_position(chromosome='U00096', start=2000000, end=2000000)",
-          "thought": "User provides start=end — this is treated as a single-point request and will center with ±1kb window",
-          "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
+          "user_query": "Jump to position 1000-2000 of NC_000913.3",
+          "tool_call": "navigate_to_position(chromosome='NC_000913.3', start=1000, end=2000)",
+          "thought": "Both coordinates are given, and the accession is used exactly as the user wrote it",
+          "expected_result": "Browser view updates to show the specified region with genes and features"
         }
       ],
       "relationships": {
@@ -13591,7 +13577,7 @@
         "usage_pattern": "frequent"
       },
       "error_handling": {
-        "invalid_chromosome": "Returns error if chromosome not found in loaded genome",
+        "invalid_chromosome": "Returns an error listing the loaded chromosome names if the requested one is not found; retry with one of those names or omit the parameter",
         "invalid_position": "Returns error if position is outside genome bounds",
         "missing_parameters": "Returns error if required parameters are missing",
         "client_error": "Returns error if browser client is not available"
@@ -16748,7 +16734,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Optional chromosome/replicon ID. If omitted, clears primer annotations from all chromosomes."
+            "description": "Optional chromosome/replicon ID, named exactly as loaded (see the loaded names in the current context). If omitted, clears primer annotations from all chromosomes."
           },
           "confirm": {
             "type": "boolean",
@@ -16765,10 +16751,10 @@
           "expected_result": "All primers are removed from the library"
         },
         {
-          "user_query": "Remove pinned primers on chr1",
-          "tool_call": "delete_primers(chromosome='chr1', confirm=true)",
-          "thought": "User wants to remove pinned placements on one chromosome",
-          "expected_result": "Pinned primer placements on chr1 are removed"
+          "user_query": "Remove pinned primers on U00096",
+          "tool_call": "delete_primers(chromosome='U00096', confirm=true)",
+          "thought": "User wants to remove pinned placements on one chromosome, named verbatim",
+          "expected_result": "Pinned primer placements on U00096 are removed"
         }
       ],
       "relationships": {
@@ -17132,7 +17118,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Optional chromosome/replicon ID to filter primers"
+            "description": "Optional chromosome/replicon ID to filter primers, named exactly as loaded (see the loaded names in the current context). Omit to use the current chromosome."
           },
           "start": {
             "type": "number",
@@ -17153,10 +17139,10 @@
           "expected_result": "Primers are returned with pinned + predicted binding sites"
         },
         {
-          "user_query": "Show primers on chr1 between 1000 and 2000",
-          "tool_call": "list_primers(chromosome='chr1', start=1000, end=2000)",
+          "user_query": "Show primers on U00096 between 1000 and 2000",
+          "tool_call": "list_primers(chromosome='U00096', start=1000, end=2000)",
           "thought": "User wants primers filtered to a region",
-          "expected_result": "Only primers with sites overlapping chr1:1000-2000 are returned"
+          "expected_result": "Only primers with sites overlapping U00096:1000-2000 are returned"
         }
       ],
       "relationships": {
@@ -18075,7 +18061,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome or contig name. If omitted, the current selected/browsed chromosome is used."
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed."
           },
           "start": {
             "type": "number",
@@ -18103,10 +18089,10 @@
           "expected_result": "GC content percentage for the current visible chromosome interval"
         },
         {
-          "user_query": "Calculate GC content for chr1 from 1000 to 2500",
-          "tool_call": "calc_region_gc(chromosome='chr1', start=1000, end=2500)",
-          "thought": "User provided chromosome coordinates, so calculate directly from the loaded genome region.",
-          "expected_result": "GC content percentage and nucleotide counts for chr1:1000-2500"
+          "user_query": "Calculate GC content for U00096 from 1000 to 2500",
+          "tool_call": "calc_region_gc(chromosome='U00096', start=1000, end=2500)",
+          "thought": "User named the chromosome, so it is copied verbatim; otherwise the parameter would be omitted.",
+          "expected_result": "GC content percentage and nucleotide counts for U00096:1000-2500"
         },
         {
           "user_query": "Calculate GC content of this DNA sequence ATGCGC",
@@ -18769,8 +18755,8 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome name (e.g., 'chr1', 'NC_000913.3', 'U00096')",
-            "examples": ["chr1", "NC_000913.3", "U00096", "chromosome1"]
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start": {
             "type": "number",
@@ -18813,13 +18799,13 @@
             "default": "default"
           }
         },
-        "required": ["chromosome", "start", "end"]
+        "required": ["start", "end"]
       },
       "sample_usages": [
         {
           "user_query": "Get the DNA sequence from position 1000 to 2000",
-          "tool_call": "get_sequence(chromosome='chr1', start=1000, end=2000)",
-          "thought": "User wants the raw DNA sequence for a specific genomic region",
+          "tool_call": "get_sequence(start=1000, end=2000)",
+          "thought": "The user named no chromosome, so it is omitted and the displayed one is used",
           "expected_result": "DNA sequence string (e.g., 'ATGCGCTATCG...') with length 1001 bp"
         },
         {
@@ -18830,7 +18816,7 @@
         },
         {
           "user_query": "Get both strands of the sequence from 50000 to 50100",
-          "tool_call": "get_sequence(chromosome='chr1', start=50000, end=50100, strand='both')",
+          "tool_call": "get_sequence(start=50000, end=50100, strand='both')",
           "thought": "User wants both forward and reverse complement sequences",
           "expected_result": "Object with both forward and reverse strand sequences"
         },
@@ -19229,7 +19215,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "The chromosome or sequence ID to search (defaults to current active chromosome)."
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed."
           },
           "start": {
             "type": "integer",
@@ -19249,7 +19235,7 @@
       "keywords": ["search sequence pattern", "find motif", "pattern match", "search motif regex", "motif search"],
       "sample_usages": [
         "Search for the pattern GAATTC in the active region.",
-        "Find matches of regex ATG[A-Z]{3} on chr1."
+        "Find matches of regex ATG[A-Z]{3} on U00096."
       ],
       "category": "sequence",
       "source": "app_registry",
@@ -19311,8 +19297,8 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome to search in (optional, searches current view if not specified)",
-            "examples": ["chr1", "NC_000913.3", "U00096"]
+            "description": "Chromosome/contig to search, named exactly as loaded (see the loaded names in the current context). Optional — searches the current view if omitted.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start": {
             "type": "number",
@@ -19352,8 +19338,8 @@
       "sample_usages": [
         {
           "user_query": "Find all TATA box sequences in this region",
-          "tool_call": "search_sequence_motif(motif='TATAAA', chromosome='chr1', start=1000, end=50000)",
-          "thought": "User wants to find TATA box promoter elements in a specific genomic region",
+          "tool_call": "search_sequence_motif(motif='TATAAA', start=1000, end=50000)",
+          "thought": "The region is on the displayed chromosome, so the chromosome parameter is omitted",
           "expected_result": "List of TATA box positions with exact coordinates, strand information, and match count per strand"
         },
         {
@@ -19917,8 +19903,8 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier (e.g., 'chr1', 'chromosome1', 'NC_000913.3')",
-            "examples": ["chr1", "chromosome1", "NC_000913.3", "U00096"]
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start": {
             "type": "number",
@@ -19959,7 +19945,7 @@
       "sample_usages": [
         {
           "user_query": "Copy the sequence from position 1000 to 2000",
-          "tool_call": "copy_sequence(chromosome='chr1', start=1000, end=2000, strand='+')",
+          "tool_call": "copy_sequence(chromosome='U00096', start=1000, end=2000, strand='+')",
           "thought": "User wants to copy a specific genomic region to the clipboard",
           "expected_result": "Sequence copied to clipboard, ready for paste operations"
         },
@@ -19971,7 +19957,7 @@
         },
         {
           "user_query": "Copy the reverse strand of this region",
-          "tool_call": "copy_sequence(chromosome='chr1', start=50000, end=50100, strand='-')",
+          "tool_call": "copy_sequence(chromosome='U00096', start=50000, end=50100, strand='-')",
           "thought": "User wants the reverse complement of the specified region",
           "expected_result": "Reverse complement sequence copied to clipboard"
         },
@@ -20063,7 +20049,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "start": {
             "type": "number",
@@ -20157,7 +20143,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "start": {
             "type": "number",
@@ -20552,7 +20538,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier (e.g., \"chr1\", \"chromosome1\")"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "position": {
             "type": "number",
@@ -20679,7 +20665,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "position": {
             "type": "number",
@@ -20790,7 +20776,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier (e.g., \"chr1\", \"chromosome1\")"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "start": {
             "type": "number",
@@ -27746,7 +27732,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "The chromosome or contig where the feature is located"
+            "description": "The chromosome or contig where the feature is located, named exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "start": {
             "type": "integer",
@@ -27816,14 +27802,14 @@
       },
       "sample_usages": [
         {
-          "user_query": "Create a CDS feature named lacZ at chr1:1000..2000 on forward strand",
-          "tool_call": "create_annotation(type='CDS', name='lacZ', chromosome='chr1', start=1000, end=2000, strand=1, product='beta-galactosidase')",
+          "user_query": "Create a CDS feature named lacZ at U00096:1000..2000 on forward strand",
+          "tool_call": "create_annotation(type='CDS', name='lacZ', chromosome='U00096', start=1000, end=2000, strand=1, product='beta-galactosidase')",
           "thought": "The user wants to create a coding sequence (CDS) feature. We specify the type, name, genomic coordinates, strand, and product.",
           "expected_result": "Created CDS annotation lacZ with auto-calculated protein translation"
         },
         {
-          "user_query": "Add a promoter annotation named promoter_lac at chr1:900..950",
-          "tool_call": "create_annotation(type='promoter', name='promoter_lac', chromosome='chr1', start=900, end=950, strand=1, regulatoryClass='promoter')",
+          "user_query": "Add a promoter annotation named promoter_lac at U00096:900..950",
+          "tool_call": "create_annotation(type='promoter', name='promoter_lac', chromosome='U00096', start=900, end=950, strand=1, regulatoryClass='promoter')",
           "thought": "The user wants to add a promoter feature. We use promoter/regulatory class logic.",
           "expected_result": "Created regulatory promoter_lac annotation"
         }
@@ -27977,8 +27963,8 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Specific chromosome/contig to analyze (optional, analyzes all chromosomes if not specified)",
-            "examples": ["U00096", "chromosome", "chr1"]
+            "description": "Specific chromosome/contig to analyze, named exactly as loaded (see the loaded names in the current context). Optional — analyzes all chromosomes if omitted.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "featureType": {
             "type": "string",
@@ -28609,7 +28595,7 @@
     "blast_create_db_from_genome": {
       "name": "blast_create_db_from_genome",
       "version": "1.0.0",
-      "description": "Create BLAST nucleotide database from a specific chromosome of the currently loaded genome. Use this ONLY when you want to index a single chromosome and have a specific chromosome name (e.g. chr1, chr2, etc.). Do not use this for the entire genome.",
+      "description": "Create BLAST nucleotide database from a specific chromosome of the currently loaded genome. Use this ONLY when you want to index a single chromosome and have its exact name from the loaded genome (e.g. U00096, NC_000913.3). Do not use this for the entire genome.",
       "category": "database",
       "keywords": ["blast", "database", "chromosome", "specific chromosome", "create database from chromosome"],
       "priority": 2,
@@ -28626,7 +28612,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome name from loaded genome"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "dbName": {
             "type": "string",
@@ -28644,7 +28630,7 @@
       "sample_usages": [
         {
           "user_query": "Create a BLAST database from the loaded chromosome",
-          "tool_call": "blast_create_db_from_genome(chromosome='chr1')",
+          "tool_call": "blast_create_db_from_genome(chromosome='U00096')",
           "thought": "User wants to create database from currently loaded genome data",
           "expected_result": "BLAST database created from genome chromosome"
         },
@@ -28713,7 +28699,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome name to translate"
+            "description": "Chromosome/contig to translate, named exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "dbName": {
             "type": "string",
@@ -28725,7 +28711,7 @@
       "sample_usages": [
         {
           "user_query": "Create protein database from genome using all reading frames",
-          "tool_call": "blast_create_protein_db_from_genome(chromosome='chr1')",
+          "tool_call": "blast_create_protein_db_from_genome(chromosome='U00096')",
           "thought": "User wants 6-frame translation protein database",
           "expected_result": "Protein database created with all reading frames"
         }
@@ -30649,8 +30635,8 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome, contig, or replicon identifier. Use the current chromosome from context when the user says current region.",
-            "examples": ["U00096", "NC_000913.3", "chr1"]
+            "description": "Chromosome, contig, or replicon identifier, exactly as loaded. Use the current chromosome from the context when the user says current region, and never invent a name such as chr1.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start": {
             "type": "integer",
@@ -32530,8 +32516,8 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Specific chromosome to export (when export_range is by_chromosome)",
-            "examples": ["chromosome", "chr1", "U00096"]
+            "description": "Specific chromosome to export (when export_range is by_chromosome), named exactly as loaded (see the loaded names in the current context)",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start_position": {
             "type": "integer",
@@ -33401,8 +33387,8 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Specific chromosome to export (when export_range is by_chromosome)",
-            "examples": ["chromosome", "chr1", "U00096"]
+            "description": "Specific chromosome to export (when export_range is by_chromosome), named exactly as loaded (see the loaded names in the current context)",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start_position": {
             "type": "integer",
@@ -34532,7 +34518,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Optional chromosome filter"
+            "description": "Optional filter — a chromosome/contig name exactly as loaded (see the loaded names in the current context). Omit to list bookmarks on every chromosome."
           },
           "clientId": {
             "type": "string",
@@ -34550,10 +34536,10 @@
           "expected_result": "All region bookmarks and saved view states are returned"
         },
         {
-          "user_query": "List bookmarks on chr1",
-          "tool_call": "get_bookmarks(chromosome='chr1')",
-          "thought": "User wants bookmarks filtered by chromosome",
-          "expected_result": "Only chr1 bookmarks and saved views are returned"
+          "user_query": "List bookmarks on U00096",
+          "tool_call": "get_bookmarks(chromosome='U00096')",
+          "thought": "User named a chromosome, so it is copied verbatim as the filter",
+          "expected_result": "Only U00096 bookmarks and saved views are returned"
         }
       ],
       "relationships": {
@@ -35498,8 +35484,8 @@
     },
     "navigate_to_position": {
       "name": "navigate_to_position",
-      "version": "1.2.0",
-      "description": "Navigate to specific genomic coordinates in the genome browser to VISUALIZE the region. Use this when users ask to \"show\", \"display\", or \"view\" a genomic region by coordinates. For COORDINATE-BASED navigation when you have exact positions. For gene-based navigation, use jump_to_gene instead. For retrieving raw sequence data, use get_sequence instead.",
+      "version": "1.3.0",
+      "description": "Navigate to specific genomic coordinates in the genome browser to VISUALIZE the region. Use this when users ask to \"show\", \"display\", or \"view\" a genomic region by coordinates. Coordinates are 1-based base pairs; the chromosome defaults to the one currently displayed, so pass chromosome only when the user names a sequence that is actually loaded. For gene-based navigation, use jump_to_gene instead. For retrieving raw sequence data, use get_sequence instead.",
       "category": "navigation",
       "keywords": ["navigate", "position", "coordinates", "jump", "go to", "genome browser", "location", "range"],
       "priority": 1,
@@ -35516,26 +35502,25 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome name (e.g., 'chr1', 'NC_000913.3', 'U00096')",
-            "examples": ["chr1", "NC_000913.3", "U00096", "chromosome1"]
+            "description": "Name of a chromosome/contig in the LOADED genome, copied exactly as listed in the current context (e.g. 'U00096', 'NC_000913.3'). OMIT this parameter to stay on the chromosome that is currently displayed — that is the correct choice whenever the user did not name one. Never invent or normalize a name: 'chr1' is only valid if the loaded genome actually contains a sequence called 'chr1'."
           },
           "start": {
             "type": "number",
-            "description": "Start position in base pairs (1-based). If provided without end, or if start=end, the view will center on this position with a ~2kb window (upstream 1kb, downstream 1kb).",
+            "description": "Start position in base pairs (1-based), as a plain number — expand shorthand before calling (2M/2Mb -> 2000000, 500k/500kb -> 500000). If provided without end, or if start=end, the view will center on this position with a ~2kb window (upstream 1kb, downstream 1kb).",
             "minimum": 1,
-            "examples": [1000, 50000, 1000000]
+            "examples": [1000, 50000, 2000000]
           },
           "end": {
             "type": "number",
-            "description": "End position in base pairs (1-based). Optional — if omitted or equal to start, a 2kb centered window is used instead.",
+            "description": "End position in base pairs (1-based), as a plain number. Optional — if omitted or equal to start, a 2kb centered window is used instead.",
             "minimum": 1,
-            "examples": [2000, 60000, 1002000]
+            "examples": [2000, 60000, 2001000]
           },
           "position": {
             "type": "number",
-            "description": "Center position for 2000bp range (alternative to start/end)",
+            "description": "Center position in base pairs (1-based) for a 2000bp window (alternative to start/end). Expand shorthand before calling (2M -> 2000000).",
             "minimum": 1,
-            "examples": [1500, 55000, 1001000]
+            "examples": [1500, 55000, 2000000]
           },
           "clientId": {
             "type": "string",
@@ -35543,7 +35528,6 @@
             "default": "default"
           }
         },
-        "required": ["chromosome"],
         "anyOf": [
           {
             "required": ["start", "end"]
@@ -35558,40 +35542,28 @@
       },
       "sample_usages": [
         {
-          "user_query": "Go to position 1000-2000 on chromosome 1",
-          "tool_call": "navigate_to_position(chromosome='chr1', start=1000, end=2000)",
-          "thought": "User wants to navigate to a specific genomic region with start and end coordinates",
-          "expected_result": "Browser view updates to show the specified region with genes and features"
-        },
-        {
-          "user_query": "Jump to position 50000 on the current chromosome",
-          "tool_call": "navigate_to_position(chromosome='NC_000913.3', position=50000)",
-          "thought": "User wants to center the view on position 50000, which will create a 2000bp window",
-          "expected_result": "Browser centers on position 50000 showing 1000bp on each side"
-        },
-        {
-          "user_query": "Navigate to the E. coli chromosome at position 1000000",
-          "tool_call": "navigate_to_position(chromosome='U00096', position=1000000)",
-          "thought": "User specifies E. coli chromosome (U00096) and wants to center on position 1000000",
-          "expected_result": "Browser shows the region around 1000000 on the E. coli chromosome"
+          "user_query": "Navigate to 2M",
+          "tool_call": "navigate_to_position(start=2000000)",
+          "thought": "The user named no chromosome, so I omit it and the current one is used. \"2M\" means 2,000,000 bp, not 2 — and start alone centers the view with a ±1kb window.",
+          "expected_result": "Browser centers on 2000000 of the current chromosome, showing 1999000-2001000"
         },
         {
           "user_query": "Show me the region from 50000 to 60000",
-          "tool_call": "navigate_to_position(chromosome='chr1', start=50000, end=60000)",
-          "thought": "User wants to see a specific 10kb region, so I use start and end parameters",
+          "tool_call": "navigate_to_position(start=50000, end=60000)",
+          "thought": "A 10kb region on the chromosome already displayed — no chromosome argument is needed",
           "expected_result": "Browser displays the 10kb region with all contained features"
         },
         {
-          "user_query": "Navigate to position 2000000 on U00096",
-          "tool_call": "navigate_to_position(chromosome='U00096', start=2000000)",
-          "thought": "User provides start position only — the view will center on 2000000 with ±1kb window (1999000-2001000)",
-          "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
+          "user_query": "Go to 500kb on U00096",
+          "tool_call": "navigate_to_position(chromosome='U00096', position=500000)",
+          "thought": "The user named the chromosome explicitly, so I copy it verbatim; \"500kb\" expands to 500000",
+          "expected_result": "Browser centers on position 500000 showing 1000bp on each side"
         },
         {
-          "user_query": "Go to 2000000 on chromosome U00096",
-          "tool_call": "navigate_to_position(chromosome='U00096', start=2000000, end=2000000)",
-          "thought": "User provides start=end — this is treated as a single-point request and will center with ±1kb window",
-          "expected_result": "Browser centers on 2000000 showing 1999000-2001000"
+          "user_query": "Jump to position 1000-2000 of NC_000913.3",
+          "tool_call": "navigate_to_position(chromosome='NC_000913.3', start=1000, end=2000)",
+          "thought": "Both coordinates are given, and the accession is used exactly as the user wrote it",
+          "expected_result": "Browser view updates to show the specified region with genes and features"
         }
       ],
       "relationships": {
@@ -35612,7 +35584,7 @@
         "usage_pattern": "frequent"
       },
       "error_handling": {
-        "invalid_chromosome": "Returns error if chromosome not found in loaded genome",
+        "invalid_chromosome": "Returns an error listing the loaded chromosome names if the requested one is not found; retry with one of those names or omit the parameter",
         "invalid_position": "Returns error if position is outside genome bounds",
         "missing_parameters": "Returns error if required parameters are missing",
         "client_error": "Returns error if browser client is not available"
@@ -38769,7 +38741,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Optional chromosome/replicon ID. If omitted, clears primer annotations from all chromosomes."
+            "description": "Optional chromosome/replicon ID, named exactly as loaded (see the loaded names in the current context). If omitted, clears primer annotations from all chromosomes."
           },
           "confirm": {
             "type": "boolean",
@@ -38786,10 +38758,10 @@
           "expected_result": "All primers are removed from the library"
         },
         {
-          "user_query": "Remove pinned primers on chr1",
-          "tool_call": "delete_primers(chromosome='chr1', confirm=true)",
-          "thought": "User wants to remove pinned placements on one chromosome",
-          "expected_result": "Pinned primer placements on chr1 are removed"
+          "user_query": "Remove pinned primers on U00096",
+          "tool_call": "delete_primers(chromosome='U00096', confirm=true)",
+          "thought": "User wants to remove pinned placements on one chromosome, named verbatim",
+          "expected_result": "Pinned primer placements on U00096 are removed"
         }
       ],
       "relationships": {
@@ -39153,7 +39125,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Optional chromosome/replicon ID to filter primers"
+            "description": "Optional chromosome/replicon ID to filter primers, named exactly as loaded (see the loaded names in the current context). Omit to use the current chromosome."
           },
           "start": {
             "type": "number",
@@ -39174,10 +39146,10 @@
           "expected_result": "Primers are returned with pinned + predicted binding sites"
         },
         {
-          "user_query": "Show primers on chr1 between 1000 and 2000",
-          "tool_call": "list_primers(chromosome='chr1', start=1000, end=2000)",
+          "user_query": "Show primers on U00096 between 1000 and 2000",
+          "tool_call": "list_primers(chromosome='U00096', start=1000, end=2000)",
           "thought": "User wants primers filtered to a region",
-          "expected_result": "Only primers with sites overlapping chr1:1000-2000 are returned"
+          "expected_result": "Only primers with sites overlapping U00096:1000-2000 are returned"
         }
       ],
       "relationships": {
@@ -40096,7 +40068,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome or contig name. If omitted, the current selected/browsed chromosome is used."
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed."
           },
           "start": {
             "type": "number",
@@ -40124,10 +40096,10 @@
           "expected_result": "GC content percentage for the current visible chromosome interval"
         },
         {
-          "user_query": "Calculate GC content for chr1 from 1000 to 2500",
-          "tool_call": "calc_region_gc(chromosome='chr1', start=1000, end=2500)",
-          "thought": "User provided chromosome coordinates, so calculate directly from the loaded genome region.",
-          "expected_result": "GC content percentage and nucleotide counts for chr1:1000-2500"
+          "user_query": "Calculate GC content for U00096 from 1000 to 2500",
+          "tool_call": "calc_region_gc(chromosome='U00096', start=1000, end=2500)",
+          "thought": "User named the chromosome, so it is copied verbatim; otherwise the parameter would be omitted.",
+          "expected_result": "GC content percentage and nucleotide counts for U00096:1000-2500"
         },
         {
           "user_query": "Calculate GC content of this DNA sequence ATGCGC",
@@ -40790,8 +40762,8 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome name (e.g., 'chr1', 'NC_000913.3', 'U00096')",
-            "examples": ["chr1", "NC_000913.3", "U00096", "chromosome1"]
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start": {
             "type": "number",
@@ -40834,13 +40806,13 @@
             "default": "default"
           }
         },
-        "required": ["chromosome", "start", "end"]
+        "required": ["start", "end"]
       },
       "sample_usages": [
         {
           "user_query": "Get the DNA sequence from position 1000 to 2000",
-          "tool_call": "get_sequence(chromosome='chr1', start=1000, end=2000)",
-          "thought": "User wants the raw DNA sequence for a specific genomic region",
+          "tool_call": "get_sequence(start=1000, end=2000)",
+          "thought": "The user named no chromosome, so it is omitted and the displayed one is used",
           "expected_result": "DNA sequence string (e.g., 'ATGCGCTATCG...') with length 1001 bp"
         },
         {
@@ -40851,7 +40823,7 @@
         },
         {
           "user_query": "Get both strands of the sequence from 50000 to 50100",
-          "tool_call": "get_sequence(chromosome='chr1', start=50000, end=50100, strand='both')",
+          "tool_call": "get_sequence(start=50000, end=50100, strand='both')",
           "thought": "User wants both forward and reverse complement sequences",
           "expected_result": "Object with both forward and reverse strand sequences"
         },
@@ -41250,7 +41222,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "The chromosome or sequence ID to search (defaults to current active chromosome)."
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed."
           },
           "start": {
             "type": "integer",
@@ -41270,7 +41242,7 @@
       "keywords": ["search sequence pattern", "find motif", "pattern match", "search motif regex", "motif search"],
       "sample_usages": [
         "Search for the pattern GAATTC in the active region.",
-        "Find matches of regex ATG[A-Z]{3} on chr1."
+        "Find matches of regex ATG[A-Z]{3} on U00096."
       ],
       "category": "sequence",
       "source": "app_registry",
@@ -41332,8 +41304,8 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome to search in (optional, searches current view if not specified)",
-            "examples": ["chr1", "NC_000913.3", "U00096"]
+            "description": "Chromosome/contig to search, named exactly as loaded (see the loaded names in the current context). Optional — searches the current view if omitted.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start": {
             "type": "number",
@@ -41373,8 +41345,8 @@
       "sample_usages": [
         {
           "user_query": "Find all TATA box sequences in this region",
-          "tool_call": "search_sequence_motif(motif='TATAAA', chromosome='chr1', start=1000, end=50000)",
-          "thought": "User wants to find TATA box promoter elements in a specific genomic region",
+          "tool_call": "search_sequence_motif(motif='TATAAA', start=1000, end=50000)",
+          "thought": "The region is on the displayed chromosome, so the chromosome parameter is omitted",
           "expected_result": "List of TATA box positions with exact coordinates, strand information, and match count per strand"
         },
         {
@@ -41938,8 +41910,8 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier (e.g., 'chr1', 'chromosome1', 'NC_000913.3')",
-            "examples": ["chr1", "chromosome1", "NC_000913.3", "U00096"]
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'.",
+            "examples": ["U00096", "NC_000913.3"]
           },
           "start": {
             "type": "number",
@@ -41980,7 +41952,7 @@
       "sample_usages": [
         {
           "user_query": "Copy the sequence from position 1000 to 2000",
-          "tool_call": "copy_sequence(chromosome='chr1', start=1000, end=2000, strand='+')",
+          "tool_call": "copy_sequence(chromosome='U00096', start=1000, end=2000, strand='+')",
           "thought": "User wants to copy a specific genomic region to the clipboard",
           "expected_result": "Sequence copied to clipboard, ready for paste operations"
         },
@@ -41992,7 +41964,7 @@
         },
         {
           "user_query": "Copy the reverse strand of this region",
-          "tool_call": "copy_sequence(chromosome='chr1', start=50000, end=50100, strand='-')",
+          "tool_call": "copy_sequence(chromosome='U00096', start=50000, end=50100, strand='-')",
           "thought": "User wants the reverse complement of the specified region",
           "expected_result": "Reverse complement sequence copied to clipboard"
         },
@@ -42084,7 +42056,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "start": {
             "type": "number",
@@ -42178,7 +42150,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "start": {
             "type": "number",
@@ -42573,7 +42545,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier (e.g., \"chr1\", \"chromosome1\")"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "position": {
             "type": "number",
@@ -42700,7 +42672,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "position": {
             "type": "number",
@@ -42811,7 +42783,7 @@
           },
           "chromosome": {
             "type": "string",
-            "description": "Chromosome identifier (e.g., \"chr1\", \"chromosome1\")"
+            "description": "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
           },
           "start": {
             "type": "number",

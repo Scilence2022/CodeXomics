@@ -645,6 +645,24 @@ class DynamicToolsSnapshotAdapter {
     return usages.length > 0 ? usages.join('\n') : '- Use JSON tool calls with the exact tool name and parameters.';
   }
 
+  /**
+   * Render the loaded sequence names for the prompt's Current Context.
+   *
+   * Without them the model has nothing to copy a `chromosome` argument from and
+   * falls back on whatever placeholder appears in the tool examples ("chr1"),
+   * which never matches a real assembly (E. coli K-12 is "U00096").
+   */
+  formatChromosomeNames(genomeContext = {}, limit = 25) {
+    const names = Array.isArray(genomeContext.availableChromosomes)
+      ? genomeContext.availableChromosomes.filter(Boolean)
+      : [];
+    if (names.length === 0) {
+      return genomeContext.currentChromosome || 'None (no genome loaded)';
+    }
+    const shown = names.slice(0, limit).join(', ');
+    return names.length > limit ? `${shown} (+${names.length - limit} more)` : shown;
+  }
+
   buildPrompt(tools, context = {}) {
     const builtInTools = tools.filter(tool => tool.isBuiltIn || this.builtInTools.builtInToolsMap.has(tool.name));
     const pluginTools = tools.filter(tool => tool.source === 'plugin');
@@ -698,6 +716,7 @@ class DynamicToolsSnapshotAdapter {
     const currentPosition = genomeContext.currentPosition
       ? `${genomeContext.currentPosition.start}-${genomeContext.currentPosition.end}`
       : 'None';
+    const availableChromosomes = this.formatChromosomeNames(genomeContext);
     const introLine = [
       'You are an advanced AI assistant for CodeXomics,',
       `equipped with ${tools.length} dynamically selected tools based on the user's query.`,
@@ -716,6 +735,7 @@ ${introLine}
 
 ## Current Context
 - Current Chromosome: ${genomeContext.currentChromosome || 'None'}
+- Loaded Chromosome/Contig Names: ${availableChromosomes}
 - Current Position: ${currentPosition}
 - Visible Tracks: ${visibleTracks}
 - Loaded Files: ${loadedFiles} files
@@ -723,6 +743,14 @@ ${introLine}
 - Network Status: ${context.hasNetwork ? 'Connected' : 'Offline'}
 - Authentication: ${context.hasAuth ? 'Authenticated' : 'Not authenticated'}
 - Active Tools: ${activeToolsLine}
+
+A \`chromosome\` argument must be copied verbatim from the loaded names above (or from an earlier tool
+result). Never invent, translate, or normalize a name: "chr1" is not a valid name unless it is listed,
+and names in tool examples are illustrations, not values to reuse. When the user names no chromosome,
+omit the parameter or reuse the current chromosome above.
+
+Coordinates are 1-based base pairs. Expand the user's shorthand before calling a tool: "2M"/"2Mb" is
+2000000, "500k"/"500kb" is 500000, "1,000,000" is 1000000. Never pass through the leading digits alone.
 
 ## Directly Available Tools
 
@@ -750,6 +778,9 @@ ${this.formatSampleUsages(tools)}
 4. For sequential or dependent steps, return only the next call, inspect its result, and then choose the following call.
 5. Consider current genome state, loaded data, network status, and authentication.
 6. Use MCP Server Tools when a connected MCP server exposes the requested external capability.
+7. Take chromosome/contig names from Current Context or a prior tool result — never from a tool example
+   and never invented. Omit the parameter to use whatever chromosome is currently displayed.
+8. Convert coordinate shorthand to base pairs before calling ("2M" -> 2000000, "500kb" -> 500000).
 
 ## Response Format
 

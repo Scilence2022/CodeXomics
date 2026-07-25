@@ -26,11 +26,10 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: 'Specific chromosome/contig to analyze (optional, analyzes all chromosomes if not specified)'
+      description: 'Specific chromosome/contig to analyze, named exactly as loaded (see the loaded names in the current context). Optional — analyzes all chromosomes if omitted.'
       examples:
         - 'U00096'
-        - 'chromosome'
-        - 'chr1'
+        - 'NC_000913.3'
     featureType:
       type: string
       description: 'Type of features to analyze (default CDS)'

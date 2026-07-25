@@ -23,7 +23,7 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: Optional chromosome filter
+      description: 'Optional filter — a chromosome/contig name exactly as loaded (see the loaded names in the current context). Omit to list bookmarks on every chromosome.'
     clientId:
       type: string
       description: Browser client ID for multi-window support
@@ -34,10 +34,10 @@ sample_usages:
     tool_call: get_bookmarks()
     thought: User wants to see saved bookmarks and saved views
     expected_result: All region bookmarks and saved view states are returned
-  - user_query: List bookmarks on chr1
-    tool_call: get_bookmarks(chromosome='chr1')
-    thought: User wants bookmarks filtered by chromosome
-    expected_result: Only chr1 bookmarks and saved views are returned
+  - user_query: List bookmarks on U00096
+    tool_call: get_bookmarks(chromosome='U00096')
+    thought: User named a chromosome, so it is copied verbatim as the filter
+    expected_result: Only U00096 bookmarks and saved views are returned
 relationships:
   depends_on: []
   conflicts_with: []

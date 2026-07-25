@@ -23,7 +23,7 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: Chromosome or contig name. If omitted, the current selected/browsed chromosome is used.
+      description: 'Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed.'
     start:
       type: number
       description: 1-based start coordinate. If omitted, the current visible region start is used.
@@ -42,10 +42,10 @@ sample_usages:
     tool_call: calc_region_gc()
     thought: User wants GC content for the current browser region, so use genomic coordinates from the active view.
     expected_result: GC content percentage for the current visible chromosome interval
-  - user_query: Calculate GC content for chr1 from 1000 to 2500
-    tool_call: calc_region_gc(chromosome='chr1', start=1000, end=2500)
-    thought: User provided chromosome coordinates, so calculate directly from the loaded genome region.
-    expected_result: GC content percentage and nucleotide counts for chr1:1000-2500
+  - user_query: Calculate GC content for U00096 from 1000 to 2500
+    tool_call: calc_region_gc(chromosome='U00096', start=1000, end=2500)
+    thought: User named the chromosome, so it is copied verbatim; otherwise the parameter would be omitted.
+    expected_result: GC content percentage and nucleotide counts for U00096:1000-2500
   - user_query: Calculate GC content of this DNA sequence ATGCGC
     tool_call: compute_gc(sequence='ATGCGC')
     thought: User provided the sequence string itself, so compute_gc is the appropriate sequence-based tool instead of calc_region_gc.
