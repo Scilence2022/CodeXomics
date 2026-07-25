@@ -47,7 +47,15 @@
     <link rel="stylesheet" href="css/themes/style-accents.css">
 
     <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Font Awesome is vendored locally (see vendor/fontawesome/): a remote
+         stylesheet blocks first paint on network latency and breaks all icons
+         when offline. Only .woff2 is shipped — Chromium loads the first
+         supported format in each src list and never requests the .ttf. -->
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+
+    <!-- Loaded first, before every other script, so that verbose console output
+         from module construction onward is gated. See DebugLogger.js. -->
+    <script src="modules/DebugLogger.js"></script>
 </head>
 
 <body>

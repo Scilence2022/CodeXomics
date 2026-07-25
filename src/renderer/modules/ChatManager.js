@@ -5004,15 +5004,17 @@ class ChatManager {
           throw new Error('AbortError');
         }
 
-        console.log('=== LLM Raw Response ===');
-        console.log('Response type:', typeof response);
-        console.log('Response length:', responseText.length);
-        console.log('Response is null:', response === null);
-        console.log('Response is undefined:', response === undefined);
-        console.log('Response is empty string:', response === '');
-        console.log('Full response:', response);
-        console.log('JSON.stringify response:', JSON.stringify(response));
-        console.log('========================');
+        // Logged as a single object: the console call is a no-op unless debug
+        // logging is on, and passing `response` directly avoids serializing the
+        // whole (growing) response on every round the way JSON.stringify did.
+        console.log('=== LLM Raw Response ===', {
+          type: typeof response,
+          length: responseText.length,
+          isNull: response === null,
+          isUndefined: response === undefined,
+          isEmptyString: response === '',
+          response,
+        });
 
         // Show the LLM's thinking process (if the response contains thinking tags)
         if (this.showThinkingProcess) {
@@ -16529,8 +16531,19 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
           wrapper.appendChild(message);
           thinkingContent.appendChild(wrapper);
         } else {
-          // Use innerHTML to properly render HTML tags and entities
-          thinkingContent.innerHTML += '\n' + message;
+          // Parse only the new fragment and append it, rather than
+          // `innerHTML +=`, which re-serializes and re-parses the entire
+          // accumulated thinking log on every step — quadratic over a round
+          // that appends dozens of times.
+          //
+          // Parsing into a detached holder keeps the previous security
+          // behaviour: script elements created by innerHTML never execute, and
+          // moving those nodes does not re-enable them.
+          const holder = document.createElement('div');
+          holder.innerHTML = '\n' + message;
+          while (holder.firstChild) {
+            thinkingContent.appendChild(holder.firstChild);
+          }
         }
       }
     } else {

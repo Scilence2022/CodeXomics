@@ -679,6 +679,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
 contextBridge.exposeInMainWorld('nodeAPI', {
   platform: process.platform,
   version: process.version,
+  // Forwarded from the main process via webPreferences.additionalArguments.
+  // Read synchronously by the renderer's debug-logging gate before any module
+  // script runs, so it cannot use async IPC.
+  isDevelopment: process.argv.includes('--codexomics-dev'),
 });
 
 contextBridge.exposeInMainWorld('ipcRenderer', safeIpcRenderer);

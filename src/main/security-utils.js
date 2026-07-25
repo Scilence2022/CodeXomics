@@ -79,6 +79,12 @@ function registerRendererContentSecurityPolicy(electronSession) {
 }
 
 function createSecureWebPreferences(overrides = {}) {
+  // Renderer processes do not inherit the main process argv, so the dev flag is
+  // forwarded explicitly. The renderer's debug-logging gate reads it to decide
+  // whether verbose console output is on by default. Mirrors the main-process
+  // convention in src/main/logging.js.
+  const isDevelopment = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
+
   const preferences = {
     nodeIntegration: false,
     contextIsolation: true,
@@ -88,6 +94,7 @@ function createSecureWebPreferences(overrides = {}) {
     sandbox: true,
     preload: path.join(__dirname, '..', 'preload.js'),
     ...overrides,
+    additionalArguments: [...(overrides.additionalArguments || []), ...(isDevelopment ? ['--codexomics-dev'] : [])],
   };
 
   preferences.nodeIntegration = false;

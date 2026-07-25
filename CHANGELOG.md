@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
+- Gate verbose renderer console output behind a debug flag. The renderer carried roughly 4,000 `console.log`/`debug`/`info` calls, many inside per-frame render loops and per-read draw loops; in Electron each one marshals its arguments to the DevTools protocol even with DevTools closed. Verbose channels are now no-ops unless debug logging is enabled — `warn` and `error` are never suppressed. Enabled automatically in development, and toggleable at runtime with `CodeXomicsDebug.enable()` / `.disable()`.
+- Stop serializing LLM request payloads and responses for logging. 21 `JSON.stringify(payload, null, 2)` calls ran on every LLM round, serializing the whole growing conversation on the UI thread; because they are call arguments, gating the console alone would not have removed them. Objects are now passed directly to the console, which DevTools renders lazily.
+- Coalesce wheel-zoom rendering into one commit per animation frame. A trackpad emits wheel events far faster than the display refreshes, and each one previously triggered a full synchronous track re-render, stacking several rebuilds into a single frame.
+- Append to the AI thinking log instead of rebuilding it. `updateThinkingMessage` used `innerHTML +=`, which re-serialized and re-parsed the entire accumulated log on every step — quadratic over a round that appends dozens of times.
+- Vendor Font Awesome locally instead of loading it from a CDN. The remote stylesheet blocked first paint on network latency and left every icon broken offline. Applied across all 15 application windows.
+
 - Stream LLM responses token-by-token in the AI ChatBox. Replies now render as they are generated instead of appearing only after the entire multi-round agent loop resolves, which was the single largest source of perceived latency in the chat. Supported for all providers: OpenAI, Anthropic, Google Gemini, DeepSeek, SiliconFlow, OpenRouter, MiniMax (global and CN), and local OpenAI-compatible runtimes.
 - Coalesce streamed tokens into one DOM write per animation frame and append them through a single text node, avoiding the quadratic re-parse cost of growing `innerHTML`.
 
