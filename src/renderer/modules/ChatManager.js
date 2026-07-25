@@ -48,6 +48,9 @@ class ChatManager {
     this.showDetailedToolData = true;
     this.detailedLogging = true;
 
+    // Live token-streaming render state (null when no stream is in flight)
+    this.streamingState = null;
+
     // Use app's LLM configuration manager if available, otherwise create one
     // Ensure we pass arguments correctly: (genomeBrowser, configManager)
     this.llmConfigManager = this.app?.llmConfigManager || new LLMConfigManager(this.app, this.configManager);
@@ -4976,13 +4979,23 @@ class ChatManager {
           this.updateThinkingMessage(`📚 Conversation history: ${conversationHistory.length} messages`);
         }
 
-        // Send conversation history to configured LLM
+        // Send conversation history to configured LLM.
+        // Tokens stream into a live bubble so the user sees the answer forming
+        // instead of waiting for the whole round to resolve.
         console.log('Sending to LLM...');
-        const response = await this.llmConfigManager.sendMessageWithHistory(
-          conversationHistory,
-          context,
-          memoryContext
-        );
+        this.beginStreamingResponse();
+        let response;
+        try {
+          response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context, memoryContext, {
+            onToken: token => this.appendStreamingToken(token),
+            onStreamReset: () => this.resetStreamingResponse(),
+            signal: this.conversationState.abortController?.signal,
+          });
+        } finally {
+          // The completed message is rendered by the normal path below, so the
+          // preview bubble is always retired here — including on error/abort.
+          this.endStreamingResponse();
+        }
         const responseAnalysis = this.analyzeLLMResponse(response, message);
         const responseText = responseAnalysis.text;
 
@@ -15948,6 +15961,133 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         toggleChatBtn.classList.remove('ai-processing');
       }
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Live token streaming
+  //
+  // Tokens arrive faster than the display refreshes, so writes are coalesced
+  // into one DOM update per animation frame. Text lands in a single Text node
+  // via appendData(), which appends in place rather than re-parsing the whole
+  // message the way `innerHTML +=` would.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Create (or reuse) the live response bubble for the current request.
+   * The bubble is a preview only — the final message is still rendered by the
+   * normal path once the round completes.
+   */
+  beginStreamingResponse() {
+    const messagesContainer = document.getElementById('chatMessages');
+    if (!messagesContainer) return;
+
+    if (this.streamingState?.container?.isConnected) return;
+
+    const streamingId = `streamingResponse_${this.conversationState.currentRequestId || Date.now()}`;
+    document.getElementById(streamingId)?.remove();
+
+    const streamingDiv = document.createElement('div');
+    streamingDiv.className = 'message assistant-message streaming-message';
+    streamingDiv.id = streamingId;
+
+    const content = document.createElement('div');
+    content.className = 'message-content';
+
+    const icon = document.createElement('div');
+    icon.className = 'message-icon';
+    icon.innerHTML = '<i class="fas fa-robot"></i>';
+
+    const text = document.createElement('div');
+    text.className = 'message-text streaming-text';
+
+    const textNode = document.createTextNode('');
+    text.appendChild(textNode);
+
+    const cursor = document.createElement('span');
+    cursor.className = 'streaming-cursor';
+    text.appendChild(cursor);
+
+    content.appendChild(icon);
+    content.appendChild(text);
+    streamingDiv.appendChild(content);
+    messagesContainer.appendChild(streamingDiv);
+
+    this.streamingState = {
+      container: streamingDiv,
+      textNode,
+      pending: '',
+      frameHandle: null,
+      hasContent: false,
+    };
+  }
+
+  /** Buffer a token and schedule a single coalesced DOM write for this frame. */
+  appendStreamingToken(token) {
+    if (!token || !this.streamingState?.textNode) return;
+
+    this.streamingState.pending += token;
+    this.streamingState.hasContent = true;
+
+    if (this.streamingState.frameHandle !== null) return;
+
+    const schedule =
+      typeof requestAnimationFrame === 'function' ? requestAnimationFrame : callback => setTimeout(callback, 16);
+
+    this.streamingState.frameHandle = schedule(() => {
+      this.flushStreamingTokens();
+    });
+  }
+
+  /** Write all buffered tokens in one operation. */
+  flushStreamingTokens() {
+    const state = this.streamingState;
+    if (!state) return;
+
+    state.frameHandle = null;
+    if (!state.pending || !state.textNode) return;
+
+    // appendData mutates the existing text node in place — no markup re-parse.
+    state.textNode.appendData(state.pending);
+    state.pending = '';
+
+    if (this.autoScrollToBottom) {
+      const messagesContainer = document.getElementById('chatMessages');
+      if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }
+
+  /**
+   * Discard streamed text without removing the bubble. Used when a provider
+   * stream fails partway and the request is retried, so partial text is not
+   * duplicated by the retry.
+   */
+  resetStreamingResponse() {
+    const state = this.streamingState;
+    if (!state) return;
+
+    if (state.frameHandle !== null) {
+      const cancel = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
+      cancel(state.frameHandle);
+      state.frameHandle = null;
+    }
+
+    state.pending = '';
+    state.hasContent = false;
+    if (state.textNode) state.textNode.data = '';
+  }
+
+  /** Tear down the live bubble; the completed message renders through the normal path. */
+  endStreamingResponse() {
+    const state = this.streamingState;
+    if (!state) return;
+
+    if (state.frameHandle !== null) {
+      const cancel = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
+      cancel(state.frameHandle);
+    }
+
+    state.container?.remove();
+    this.streamingState = null;
   }
 
   /**

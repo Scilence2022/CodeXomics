@@ -1813,7 +1813,13 @@ class LLMConfigManager {
     }
   }
 
-  async sendMessageWithHistory(conversationHistory, context = null, memoryContext = null) {
+  /**
+   * @param {object} [options] Streaming hooks. `onToken(text)` receives visible
+   *   text as it arrives; `onStreamReset()` is invoked if a stream fails partway
+   *   so the caller can discard partial text before the non-streaming retry;
+   *   `signal` aborts an in-flight stream.
+   */
+  async sendMessageWithHistory(conversationHistory, context = null, memoryContext = null, options = {}) {
     // Get the best available provider for task model type
     const primaryProvider = this.getProviderForModelType('task');
     if (!primaryProvider) {
@@ -1824,7 +1830,7 @@ class LLMConfigManager {
 
     // Try primary provider first
     try {
-      return await this.sendMessageWithProvider(primaryProvider, conversationHistory, context, memoryContext);
+      return await this.sendMessageWithProvider(primaryProvider, conversationHistory, context, memoryContext, options);
     } catch (error) {
       lastError = error;
       console.warn(`Primary provider ${primaryProvider} failed:`, error.message);
@@ -1844,11 +1850,16 @@ class LLMConfigManager {
           }
 
           try {
+            // Switching providers restarts generation, so drop any text the
+            // failed provider already streamed into the view.
+            options?.onStreamReset?.();
+
             const result = await this.sendMessageWithProvider(
               fallbackProvider,
               conversationHistory,
               context,
-              memoryContext
+              memoryContext,
+              options
             );
 
             // Notify user of successful fallback
@@ -1875,7 +1886,7 @@ class LLMConfigManager {
   /**
    * Send message using a specific provider
    */
-  async sendMessageWithProvider(providerKey, conversationHistory, context, memoryContext = null) {
+  async sendMessageWithProvider(providerKey, conversationHistory, context, memoryContext = null, options = {}) {
     const provider = this.providers[providerKey];
 
     if (!provider || !provider.enabled) {
@@ -1884,23 +1895,53 @@ class LLMConfigManager {
 
     switch (providerKey) {
       case 'openai':
-        return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
       case 'anthropic':
-        return await this.sendAnthropicMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendAnthropicMessageWithHistory(
+          provider,
+          conversationHistory,
+          context,
+          memoryContext,
+          options
+        );
       case 'google':
-        return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
       case 'deepseek':
-        return await this.sendDeepSeekMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendDeepSeekMessageWithHistory(
+          provider,
+          conversationHistory,
+          context,
+          memoryContext,
+          options
+        );
       case 'siliconflow':
-        return await this.sendSiliconFlowMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendSiliconFlowMessageWithHistory(
+          provider,
+          conversationHistory,
+          context,
+          memoryContext,
+          options
+        );
       case 'openrouter':
-        return await this.sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendOpenRouterMessageWithHistory(
+          provider,
+          conversationHistory,
+          context,
+          memoryContext,
+          options
+        );
       case 'minimax':
-        return await this.sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
       case 'minimax_cn':
-        return await this.sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendMinimax_cnMessageWithHistory(
+          provider,
+          conversationHistory,
+          context,
+          memoryContext,
+          options
+        );
       case 'local':
-        return await this.sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext);
+        return await this.sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
       default:
         throw new Error('Unknown provider type');
     }
@@ -2119,6 +2160,219 @@ class LLMConfigManager {
     return this.formatProviderText(visibleText, reasoningText);
   }
 
+  // ---------------------------------------------------------------------------
+  // Token streaming
+  //
+  // Streaming is an additive fast path: each provider first attempts an SSE
+  // request and, if anything about it is unsupported or fails, returns null so
+  // the original non-streaming request runs unchanged. That keeps one response
+  // contract (the normalize*Response methods) and preserves existing error,
+  // retry, and tool-call behaviour.
+  // ---------------------------------------------------------------------------
+
+  /** Streaming is opt-out; it only engages when a caller supplies an onToken sink. */
+  isStreamingEnabled() {
+    try {
+      // The owning app instance is stored as `genomeBrowser` (both construction
+      // sites pass the app in as the first constructor argument); `app` is only
+      // a defensive fallback.
+      const host = this.genomeBrowser || this.app;
+      const settings = host?.chatManager?.chatBoxSettingsManager;
+      if (settings && typeof settings.getSetting === 'function') {
+        return settings.getSetting('enableStreaming', true) !== false;
+      }
+    } catch (error) {
+      console.warn('Could not read streaming setting, defaulting to enabled:', error);
+    }
+    return true;
+  }
+
+  getStreamClient() {
+    return typeof LLMStreamClient !== 'undefined' ? LLMStreamClient : null;
+  }
+
+  /**
+   * True when a streaming attempt is worth making. Without an onToken sink there
+   * is no user-visible benefit, so the simpler non-streaming path is used.
+   */
+  shouldAttemptStream(options) {
+    return Boolean(options?.onToken) && this.isStreamingEnabled() && Boolean(this.getStreamClient());
+  }
+
+  /**
+   * Shared failure handling for a streaming attempt.
+   * Aborts propagate; anything else discards partial text and falls through.
+   */
+  handleStreamFailure(error, providerLabel, options) {
+    if (error?.name === 'AbortError' || options?.signal?.aborted) {
+      throw error;
+    }
+    console.warn(`[${providerLabel}] Streaming attempt failed, falling back to non-streaming:`, error.message);
+    // Partial text may already be on screen; clear it so the retry cannot duplicate it.
+    options?.onStreamReset?.();
+    return null;
+  }
+
+  /** Headers for the OpenAI-compatible /chat/completions family. */
+  buildChatCompletionsHeaders(providerKey, provider) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (provider.apiKey) {
+      headers.Authorization = `Bearer ${provider.apiKey}`;
+    }
+    if (providerKey === 'openrouter') {
+      headers['HTTP-Referer'] = typeof window !== 'undefined' ? window.location.origin : '';
+      headers['X-Title'] = 'GenomeExplorer';
+    }
+    return headers;
+  }
+
+  /**
+   * Streaming fast path for every OpenAI-compatible provider.
+   * @returns normalized response, or null to fall back to non-streaming.
+   */
+  async tryStreamChatCompletions(providerKey, provider, conversationHistory, options = {}, normalizeFn = null) {
+    if (!this.shouldAttemptStream(options)) return null;
+
+    const streamClient = this.getStreamClient();
+    const providerLabel = provider?.name || providerKey;
+
+    try {
+      const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: this.buildChatCompletionsHeaders(providerKey, provider),
+        body: JSON.stringify({
+          model: provider.model,
+          messages: conversationHistory,
+          max_tokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
+          stream: true,
+        }),
+        signal: options.signal || undefined,
+      });
+
+      // Let the established non-streaming path own error classification, retry
+      // scheduling, and provider fallback rather than duplicating it here.
+      if (!response.ok || !streamClient.isEventStream(response)) {
+        console.warn(
+          `[${providerLabel}] Streaming unavailable (status ${response.status}); using non-streaming request.`
+        );
+        return null;
+      }
+
+      const data = await streamClient.streamOpenAICompatible(response, {
+        onToken: options.onToken,
+        signal: options.signal,
+      });
+
+      return normalizeFn ? normalizeFn.call(this, data) : this.normalizeOpenAICompatibleResponse(data, providerKey);
+    } catch (error) {
+      return this.handleStreamFailure(error, providerLabel, options);
+    }
+  }
+
+  /** Streaming fast path for Anthropic Messages. */
+  async tryStreamAnthropic(provider, conversationHistory, options = {}) {
+    if (!this.shouldAttemptStream(options)) return null;
+
+    const streamClient = this.getStreamClient();
+    const providerLabel = provider?.name || 'Anthropic';
+
+    try {
+      const systemMessage = conversationHistory.find(msg => msg.role === 'system');
+      const payload = {
+        model: provider.model,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
+        messages: conversationHistory.filter(msg => msg.role !== 'system'),
+        stream: true,
+      };
+      if (systemMessage) payload.system = systemMessage.content;
+
+      const response = await fetch(`${provider.baseUrl}/v1/messages`, {
+        method: 'POST',
+        headers: {
+          'x-api-key': provider.apiKey,
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify(payload),
+        signal: options.signal || undefined,
+      });
+
+      if (!response.ok || !streamClient.isEventStream(response)) {
+        console.warn(
+          `[${providerLabel}] Streaming unavailable (status ${response.status}); using non-streaming request.`
+        );
+        return null;
+      }
+
+      const data = await streamClient.streamAnthropic(response, {
+        onToken: options.onToken,
+        signal: options.signal,
+      });
+
+      return this.normalizeAnthropicResponse(data);
+    } catch (error) {
+      return this.handleStreamFailure(error, providerLabel, options);
+    }
+  }
+
+  /** Streaming fast path for Gemini streamGenerateContent. */
+  async tryStreamGoogle(provider, conversationHistory, options = {}) {
+    if (!this.shouldAttemptStream(options)) return null;
+
+    const streamClient = this.getStreamClient();
+    const providerLabel = provider?.name || 'Google';
+
+    try {
+      const systemMessage = conversationHistory.find(msg => msg.role === 'system');
+      const contents = conversationHistory
+        .filter(msg => msg.role !== 'system')
+        .map(msg => ({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }],
+        }));
+
+      const payload = {
+        contents,
+        generationConfig: {
+          maxOutputTokens: this.getMaxTokens(provider),
+          temperature: this.getTemperature(),
+        },
+      };
+      if (systemMessage?.content) {
+        payload.systemInstruction = { parts: [{ text: systemMessage.content }] };
+      }
+
+      const apiUrl =
+        `${provider.baseUrl}/v1beta/models/${provider.model}:streamGenerateContent` + `?alt=sse&key=${provider.apiKey}`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: options.signal || undefined,
+      });
+
+      if (!response.ok || !streamClient.isEventStream(response)) {
+        console.warn(
+          `[${providerLabel}] Streaming unavailable (status ${response.status}); using non-streaming request.`
+        );
+        return null;
+      }
+
+      const data = await streamClient.streamGoogle(response, {
+        onToken: options.onToken,
+        signal: options.signal,
+      });
+
+      return this.normalizeGoogleResponse(data);
+    } catch (error) {
+      return this.handleStreamFailure(error, providerLabel, options);
+    }
+  }
+
   async sendOpenAIMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
     console.log(
@@ -2157,7 +2411,10 @@ class LLMConfigManager {
     return this.normalizeOpenAICompatibleResponse(data, 'openai');
   }
 
-  async sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamChatCompletions('openai', provider, conversationHistory, options);
+    if (streamed !== null) return streamed;
+
     console.log(
       'Sending to OpenAI - Request Payload:',
       JSON.stringify(
@@ -2248,7 +2505,10 @@ class LLMConfigManager {
     return this.normalizeAnthropicResponse(data);
   }
 
-  async sendAnthropicMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendAnthropicMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamAnthropic(provider, conversationHistory, options);
+    if (streamed !== null) return streamed;
+
     // Anthropic requires separate system message
     const systemMessage = conversationHistory.find(msg => msg.role === 'system');
     const messages = conversationHistory.filter(msg => msg.role !== 'system');
@@ -2332,7 +2592,10 @@ class LLMConfigManager {
     return this.normalizeGoogleResponse(data);
   }
 
-  async sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamGoogle(provider, conversationHistory, options);
+    if (streamed !== null) return streamed;
+
     // Google uses systemInstruction for system messages (not in contents array)
     const systemMessage = conversationHistory.find(msg => msg.role === 'system');
     const contents = [];
@@ -2432,7 +2695,10 @@ class LLMConfigManager {
     return this.normalizeOpenAICompatibleResponse(data, 'deepseek');
   }
 
-  async sendDeepSeekMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendDeepSeekMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamChatCompletions('deepseek', provider, conversationHistory, options);
+    if (streamed !== null) return streamed;
+
     console.log(
       'Sending to DeepSeek - Request Payload:',
       JSON.stringify(
@@ -2594,7 +2860,10 @@ class LLMConfigManager {
     throw lastError;
   }
 
-  async sendSiliconFlowMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendSiliconFlowMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamChatCompletions('siliconflow', provider, conversationHistory, options);
+    if (streamed !== null) return streamed;
+
     console.log(
       'Sending to SiliconFlow - Request Payload:',
       JSON.stringify(
@@ -2751,7 +3020,10 @@ class LLMConfigManager {
     return this.normalizeOpenAICompatibleResponse(data, 'openrouter');
   }
 
-  async sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamChatCompletions('openrouter', provider, conversationHistory, options);
+    if (streamed !== null) return streamed;
+
     console.log(
       'Sending to OpenRouter - Request Payload:',
       JSON.stringify(
@@ -2909,7 +3181,10 @@ class LLMConfigManager {
     return this.normalizeOpenAICompatibleResponse(data, 'minimax');
   }
 
-  async sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamChatCompletions('minimax', provider, conversationHistory, options);
+    if (streamed !== null) return streamed;
+
     console.log(
       'Sending to MiniMax (Global) - Request Payload:',
       JSON.stringify(
@@ -2986,7 +3261,10 @@ class LLMConfigManager {
     return this.normalizeOpenAICompatibleResponse(data, 'minimax_cn');
   }
 
-  async sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamChatCompletions('minimax_cn', provider, conversationHistory, options);
+    if (streamed !== null) return streamed;
+
     console.log(
       'Sending to MiniMax CN - Request Payload:',
       JSON.stringify(
@@ -3070,7 +3348,16 @@ class LLMConfigManager {
     return this.normalizeLocalResponse(data);
   }
 
-  async sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext = null) {
+  async sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    const streamed = await this.tryStreamChatCompletions(
+      'local',
+      provider,
+      conversationHistory,
+      options,
+      this.normalizeLocalResponse
+    );
+    if (streamed !== null) return streamed;
+
     const apiUrl = `${provider.baseUrl}/chat/completions`;
 
     // Modify "system" role to "SystemInstruction" to support model providers that don't allow "system"
