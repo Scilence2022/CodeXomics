@@ -18,6 +18,7 @@ class ChatBoxSettingsManager {
       // Behavior settings
       autoScrollToBottom: true,
       showTimestamps: false,
+      enableStreaming: true, // Render LLM tokens as they arrive instead of after the full response
 
       // History settings
       maxHistoryMessages: 1000,
@@ -262,6 +263,7 @@ class ChatBoxSettingsManager {
       // Behavior settings
       autoScrollToBottom: true,
       showTimestamps: false,
+      enableStreaming: true, // Render LLM tokens as they arrive instead of after the full response
 
       // History settings
       maxHistoryMessages: 1000,
@@ -759,7 +761,15 @@ class ChatBoxSettingsManager {
                                     </label>
                                     <small class="help-text">Automatically scroll to show new messages</small>
                                 </div>
-                                
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableStreaming" class="setting-checkbox">
+                                        Stream responses
+                                    </label>
+                                    <small class="help-text">Show the AI's reply as it is generated instead of waiting for the full response</small>
+                                </div>
+
                                 <div class="form-group">
                                     <label>
                                         <input type="checkbox" id="enableAbortButton" class="setting-checkbox">
@@ -2253,6 +2263,7 @@ class ChatBoxSettingsManager {
       showDetailedToolData: 'Detailed Tool Data',
       responseTimeout: 'Response Timeout',
       autoScrollToBottom: 'Auto Scroll to Bottom',
+      enableStreaming: 'Stream Responses',
       showTimestamps: 'Show Timestamps',
       maxHistoryMessages: 'Max History Messages',
       animateThinking: 'Animate Thinking',

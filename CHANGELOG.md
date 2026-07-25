@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+
+- Stream LLM responses token-by-token in the AI ChatBox. Replies now render as they are generated instead of appearing only after the entire multi-round agent loop resolves, which was the single largest source of perceived latency in the chat. Supported for all providers: OpenAI, Anthropic, Google Gemini, DeepSeek, SiliconFlow, OpenRouter, MiniMax (global and CN), and local OpenAI-compatible runtimes.
+- Coalesce streamed tokens into one DOM write per animation frame and append them through a single text node, avoiding the quadratic re-parse cost of growing `innerHTML`.
+
+### Added
+
+- New `enableStreaming` ChatBox setting (Behavior tab, on by default) to toggle streamed responses.
+
 ### Documentation
 
 - Synchronize the canonical repository documents and MkDocs site with version `0.722.0`.

@@ -1132,3 +1132,41 @@
     transform: rotate(360deg);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Live token streaming
+   The streaming bubble is a transient preview shown while tokens arrive; the
+   finished message is re-rendered through the normal message path.
+   --------------------------------------------------------------------------- */
+.streaming-message .streaming-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background-color: var(--primary-color, #4a9eff);
+  opacity: 0.85;
+  animation: streaming-cursor-blink 1s steps(2, start) infinite;
+}
+
+@keyframes streaming-cursor-blink {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming-cursor {
+    animation: none;
+    opacity: 0.85;
+  }
+}

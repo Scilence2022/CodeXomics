@@ -52,6 +52,7 @@
     "GeneShapeCreators": "readonly",
     "LLMBenchmarkFramework": "readonly",
     "LLMConfigManager": "readonly",
+    "LLMStreamClient": "readonly",
     "LiteratureAPIService": "readonly",
     "MCPServerManager": "readonly",
     "ManifestBuilder": "readonly",
