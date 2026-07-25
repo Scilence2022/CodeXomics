@@ -23,8 +23,8 @@ parameters:
       description: 'Alternative to motif - regex pattern or IUPAC motif string. If both motif and pattern are provided, motif takes priority.'
     chromosome:
       type: string
-      description: 'Chromosome to search in (optional, searches current view if not specified)'
-      examples: ['chr1', 'NC_000913.3', 'U00096']
+      description: 'Chromosome/contig to search, named exactly as loaded (see the loaded names in the current context). Optional — searches the current view if omitted.'
+      examples: ['U00096', 'NC_000913.3']
     start:
       type: number
       description: 'Start position for search region, 1-based (optional, defaults to current view start)'
@@ -54,8 +54,8 @@ parameters:
   required: ['motif']
 sample_usages:
   - user_query: 'Find all TATA box sequences in this region'
-    tool_call: "search_sequence_motif(motif='TATAAA', chromosome='chr1', start=1000, end=50000)"
-    thought: 'User wants to find TATA box promoter elements in a specific genomic region'
+    tool_call: "search_sequence_motif(motif='TATAAA', start=1000, end=50000)"
+    thought: 'The region is on the displayed chromosome, so the chromosome parameter is omitted'
     expected_result: 'List of TATA box positions with exact coordinates, strand information, and match count per strand'
 
   - user_query: 'Search for EcoRI restriction sites'

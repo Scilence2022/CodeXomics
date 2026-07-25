@@ -24,7 +24,7 @@ parameters:
       default: default
     chromosome:
       type: string
-      description: Chromosome identifier
+      description: "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
     start:
       type: number
       description: Start position (1-based coordinate)

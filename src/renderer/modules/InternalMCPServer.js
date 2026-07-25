@@ -357,12 +357,27 @@ class InternalMCPServer {
 
     const result = this.genomeStudio.navigationManager.navigateToPosition(chromosome, start, end);
 
+    // Surface the navigation error itself; reporting "Navigated to ..." on a
+    // failed call leaves the caller with no idea what went wrong.
+    if (!result || result.success === false) {
+      const error = result?.error || `Navigation to ${chromosome}:${start}-${end} failed`;
+      return {
+        success: false,
+        chromosome,
+        start,
+        end,
+        error,
+        message: error,
+        ...(result?.availableChromosomes ? { availableChromosomes: result.availableChromosomes } : {}),
+      };
+    }
+
     return {
-      success: result.success,
-      chromosome,
+      success: true,
+      chromosome: result.chromosome || chromosome,
       start,
       end,
-      message: `Navigated to ${chromosome}:${start}-${end}`,
+      message: `Navigated to ${result.chromosome || chromosome}:${start}-${end}`,
     };
   }
 

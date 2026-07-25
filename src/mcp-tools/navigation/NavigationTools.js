@@ -13,20 +13,26 @@ class NavigationTools {
       navigate_to_position: {
         name: 'navigate_to_position',
         description:
-          'Navigate to a specific genomic position. If only position is provided, defaults to 2000bp range centered on that position.',
+          'Navigate to a specific genomic position. If only position is provided, defaults to 2000bp range centered on that position. Coordinates are 1-based base pairs.',
         parameters: {
           type: 'object',
           properties: {
-            chromosome: { type: 'string', description: 'Chromosome name' },
-            start: { type: 'number', description: 'Start position (optional if position provided)' },
-            end: { type: 'number', description: 'End position (optional if position provided)' },
+            chromosome: {
+              type: 'string',
+              description:
+                'Name of a chromosome/contig in the loaded genome, exactly as reported by get_chromosome_list or get_current_state. Omit to use the chromosome currently displayed. Do not invent names such as "chr1" — assemblies commonly use accessions like U00096.',
+            },
+            start: {
+              type: 'number',
+              description: 'Start position in bp (optional if position provided); expand shorthand, e.g. 2M -> 2000000',
+            },
+            end: { type: 'number', description: 'End position in bp (optional if position provided)' },
             position: {
               type: 'number',
-              description: 'Center position (creates 2000bp range if start/end not provided)',
+              description: 'Center position in bp (creates 2000bp range if start/end not provided)',
             },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['chromosome'],
         },
       },
 

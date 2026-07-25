@@ -11,7 +11,9 @@ class NavigationAgent extends AgentBase {
         priority: 'high',
         estimatedTime: 100,
         validateParameters: params => {
-          if (!params.chromosome) throw new Error('chromosome parameter required');
+          // chromosome is optional: the executor falls back to the displayed
+          // chromosome, and the tool schema tells the model to omit it rather
+          // than guess a name.
           if (!params.start && !params.position) throw new Error('start or position parameter required');
         },
       },
@@ -285,7 +287,8 @@ class NavigationAgent extends AgentBase {
         priority: 'high',
         estimatedTime: 100,
         validateParameters: params => {
-          if (!params.chromosome) throw new Error('chromosome parameter required');
+          // chromosome is optional here too — selectSequenceRegion() defaults to
+          // the current chromosome, as select_sequence_region.yaml documents.
           if (params.start === undefined) throw new Error('start parameter required');
           if (params.end === undefined) throw new Error('end parameter required');
         },

@@ -40,7 +40,7 @@ parameters:
       description: 'The name or identifier of the feature (e.g., gene name like lacZ, primer name, etc.)'
     chromosome:
       type: string
-      description: 'The chromosome or contig where the feature is located'
+      description: "The chromosome or contig where the feature is located, named exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
     start:
       type: integer
       description: 'The 1-based start genomic position of the feature'
@@ -92,12 +92,12 @@ parameters:
       default: default
   required: ['type', 'name', 'chromosome', 'start', 'end']
 sample_usages:
-  - user_query: 'Create a CDS feature named lacZ at chr1:1000..2000 on forward strand'
-    tool_call: create_annotation(type='CDS', name='lacZ', chromosome='chr1', start=1000, end=2000, strand=1, product='beta-galactosidase')
+  - user_query: 'Create a CDS feature named lacZ at U00096:1000..2000 on forward strand'
+    tool_call: create_annotation(type='CDS', name='lacZ', chromosome='U00096', start=1000, end=2000, strand=1, product='beta-galactosidase')
     thought: 'The user wants to create a coding sequence (CDS) feature. We specify the type, name, genomic coordinates, strand, and product.'
     expected_result: 'Created CDS annotation lacZ with auto-calculated protein translation'
-  - user_query: 'Add a promoter annotation named promoter_lac at chr1:900..950'
-    tool_call: create_annotation(type='promoter', name='promoter_lac', chromosome='chr1', start=900, end=950, strand=1, regulatoryClass='promoter')
+  - user_query: 'Add a promoter annotation named promoter_lac at U00096:900..950'
+    tool_call: create_annotation(type='promoter', name='promoter_lac', chromosome='U00096', start=900, end=950, strand=1, regulatoryClass='promoter')
     thought: 'The user wants to add a promoter feature. We use promoter/regulatory class logic.'
     expected_result: 'Created regulatory promoter_lac annotation'
 relationships:

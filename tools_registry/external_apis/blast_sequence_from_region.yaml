@@ -27,11 +27,10 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: Chromosome, contig, or replicon identifier. Use the current chromosome from context when the user says current region.
+      description: Chromosome, contig, or replicon identifier, exactly as loaded. Use the current chromosome from the context when the user says current region, and never invent a name such as chr1.
       examples:
         - U00096
         - NC_000913.3
-        - chr1
     start:
       type: integer
       description: One-based start coordinate of the genomic region to extract.

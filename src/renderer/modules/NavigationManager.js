@@ -220,8 +220,75 @@ class NavigationManager {
     };
   }
 
-  navigateToPosition(chromosome, start, end) {
+  getAvailableChromosomes() {
+    const sequences = this.genomeBrowser.currentSequence;
+    return sequences && typeof sequences === 'object' ? Object.keys(sequences) : [];
+  }
+
+  /**
+   * Resolve a caller-supplied chromosome name against the loaded genome.
+   *
+   * Agent-driven callers routinely vary the casing or the chr/chromosome prefix
+   * of a real accession, and an exact key lookup alone turns those otherwise
+   * valid requests into dead ends. Candidates are tried in decreasing order of
+   * confidence and an ambiguous match (more than one candidate) is rejected
+   * rather than guessed — navigating to the wrong contig is worse than failing.
+   *
+   * @param {string} chromosome Requested name
+   * @returns {{name: string, matchedBy: 'exact'|'case'|'prefix'|'accession'}|null}
+   */
+  resolveChromosomeName(chromosome) {
+    const sequences = this.genomeBrowser.currentSequence;
+    const names = this.getAvailableChromosomes();
+    if (!sequences || names.length === 0) return null;
+
+    const requested = String(chromosome ?? '').trim();
+    if (!requested) return null;
+    // hasOwnProperty, not truthiness: "constructor" and friends are truthy on
+    // any plain object and would otherwise pass as a real sequence name.
+    if (Object.prototype.hasOwnProperty.call(sequences, requested)) return { name: requested, matchedBy: 'exact' };
+
+    const onlyMatch = (predicate, matchedBy) => {
+      const matches = names.filter(predicate);
+      return matches.length === 1 ? { name: matches[0], matchedBy } : null;
+    };
+    // "chr1"/"chromosome 1" and "1" address the same sequence in different tools.
+    const stripPrefix = value =>
+      String(value)
+        .trim()
+        .toLowerCase()
+        .replace(/^(chr|chrom|chromosome)[\s_-]*/, '');
+    const stripVersion = value => stripPrefix(value).replace(/\.\d+$/, '');
+
+    return (
+      onlyMatch(name => name.toLowerCase() === requested.toLowerCase(), 'case') ||
+      onlyMatch(name => stripPrefix(name) === stripPrefix(requested), 'prefix') ||
+      // Accessions are commonly cited with or without their version suffix
+      // (U00096 vs U00096.3).
+      onlyMatch(name => stripVersion(name) === stripVersion(requested), 'accession')
+    );
+  }
+
+  navigateToPosition(requestedChromosome, start, end) {
     const gb = this.genomeBrowser;
+    const available = this.getAvailableChromosomes();
+    const resolved = this.resolveChromosomeName(requestedChromosome);
+
+    // Validate before touching the view: an unknown name must not leave the
+    // browser half-switched, and the caller needs the real names to retry with.
+    if (!resolved) {
+      return {
+        success: false,
+        error: available.length
+          ? `Chromosome "${requestedChromosome}" not found in loaded genome data. ` +
+            `Available chromosomes: ${available.join(', ')}`
+          : `Chromosome "${requestedChromosome}" not found: no genome sequence is loaded`,
+        requestedChromosome,
+        availableChromosomes: available,
+      };
+    }
+
+    const chromosome = resolved.name;
     const currentChr = document.getElementById('chromosomeSelect').value;
 
     if (currentChr !== chromosome) {
@@ -233,16 +300,28 @@ class NavigationManager {
       }
     }
 
-    const sequence = gb.currentSequence && gb.currentSequence[chromosome];
+    const sequence = gb.currentSequence[chromosome];
     if (!sequence) {
-      return { success: false, error: `Chromosome ${chromosome} not found in loaded genome data` };
+      return {
+        success: false,
+        error: `Chromosome "${chromosome}" has no sequence data loaded`,
+        availableChromosomes: available,
+      };
     }
 
     const validatedStart = Math.max(0, start - 1);
     const validatedEnd = Math.min(sequence.length, end);
 
     if (validatedStart >= validatedEnd) {
-      return { success: false, error: `Invalid position range: ${start}-${end}` };
+      const outOfBounds = start > sequence.length;
+      return {
+        success: false,
+        error: outOfBounds
+          ? `Position ${start} is past the end of ${chromosome} (length ${sequence.length} bp)`
+          : `Invalid position range: ${start}-${end}`,
+        chromosome,
+        sequenceLength: sequence.length,
+      };
     }
 
     gb.currentPosition = { start: validatedStart, end: validatedEnd };
@@ -255,7 +334,14 @@ class NavigationManager {
       gb.tabManager.updateCurrentTabPosition(chromosome, validatedStart + 1, validatedEnd, { source: 'navigation' });
     }
 
-    return { success: true, chromosome, start: validatedStart, end: validatedEnd };
+    return {
+      success: true,
+      chromosome,
+      start: validatedStart,
+      end: validatedEnd,
+      // Surfaced so callers can report that the requested name was interpreted.
+      ...(resolved.matchedBy === 'exact' ? {} : { requestedChromosome, chromosomeMatch: resolved.matchedBy }),
+    };
   }
 
   jumpToGene(geneName) {

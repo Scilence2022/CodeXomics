@@ -21,8 +21,8 @@ parameters:
   properties:
     chromosome:
       type: 'string'
-      description: "Chromosome name (e.g., 'chr1', 'NC_000913.3', 'U00096')"
-      examples: ['chr1', 'NC_000913.3', 'U00096', 'chromosome1']
+      description: 'Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed.'
+      examples: ['U00096', 'NC_000913.3']
     start:
       type: 'number'
       description: 'Start position in base pairs (1-based coordinate)'
@@ -56,13 +56,13 @@ parameters:
       type: 'string'
       description: 'Browser client ID for multi-window support'
       default: 'default'
-  required: ['chromosome', 'start', 'end']
+  required: ['start', 'end']
 
 # High-quality examples for few-shot learning
 sample_usages:
   - user_query: 'Get the DNA sequence from position 1000 to 2000'
-    tool_call: "get_sequence(chromosome='chr1', start=1000, end=2000)"
-    thought: 'User wants the raw DNA sequence for a specific genomic region'
+    tool_call: 'get_sequence(start=1000, end=2000)'
+    thought: 'The user named no chromosome, so it is omitted and the displayed one is used'
     expected_result: "DNA sequence string (e.g., 'ATGCGCTATCG...') with length 1001 bp"
 
   - user_query: 'Extract the sequence around gene lacZ'
@@ -71,7 +71,7 @@ sample_usages:
     expected_result: 'DNA sequence with gene annotations showing lacZ boundaries and features'
 
   - user_query: 'Get both strands of the sequence from 50000 to 50100'
-    tool_call: "get_sequence(chromosome='chr1', start=50000, end=50100, strand='both')"
+    tool_call: "get_sequence(start=50000, end=50100, strand='both')"
     thought: 'User wants both forward and reverse complement sequences'
     expected_result: 'Object with both forward and reverse strand sequences'
 

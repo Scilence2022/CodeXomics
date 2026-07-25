@@ -16,12 +16,16 @@ class SequenceTools {
         parameters: {
           type: 'object',
           properties: {
-            chromosome: { type: 'string', description: 'Chromosome name' },
-            start: { type: 'number', description: 'Start position' },
-            end: { type: 'number', description: 'End position' },
+            chromosome: {
+              type: 'string',
+              description:
+                'Chromosome/contig name exactly as loaded (see get_chromosome_list or get_current_state). Omit to use the chromosome currently displayed; do not invent names such as "chr1".',
+            },
+            start: { type: 'number', description: 'Start position (1-based)' },
+            end: { type: 'number', description: 'End position (1-based)' },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['chromosome', 'start', 'end'],
+          required: ['start', 'end'],
         },
       },
 

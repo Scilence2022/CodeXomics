@@ -60,11 +60,10 @@ parameters:
       default: 'all'
     chromosome:
       type: string
-      description: Specific chromosome to export (when export_range is by_chromosome)
+      description: 'Specific chromosome to export (when export_range is by_chromosome), named exactly as loaded (see the loaded names in the current context)'
       examples:
-        - 'chromosome'
-        - 'chr1'
         - 'U00096'
+        - 'NC_000913.3'
     start_position:
       type: integer
       description: Start position for custom range export (1-based inclusive)

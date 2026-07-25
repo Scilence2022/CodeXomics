@@ -1729,6 +1729,9 @@ class ChatManager {
       // Detailed genome browser state
       genomeBrowser: {
         currentChromosome: genomeState.currentChromosome,
+        // The exact names loaded, so the prompt can constrain chromosome
+        // parameters to real sequences instead of inviting a guess.
+        availableChromosomes: genomeState.availableChromosomes || [],
         currentPosition: externalCurrentPosition,
         visibleTracks: genomeState.visibleTracks || [],
         loadedFiles: genomeState.loadedFiles,
@@ -2429,13 +2432,55 @@ class ChatManager {
     }
   }
 
+  /**
+   * Normalize a coordinate supplied by an LLM tool call into base pairs.
+   *
+   * Models echo the user's own shorthand into numeric parameters — "2M",
+   * "1.5 kb", "1,000,000" — and a plain Number()/parseInt() either yields NaN
+   * or, worse, silently keeps the leading digits ("2M" -> 2), which navigates
+   * to the wrong end of the genome without any visible error.
+   *
+   * @param {number|string|undefined|null} value
+   * @returns {number|undefined} Position in base pairs, or undefined if unparsable
+   */
+  parseGenomicCoordinate(value) {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'number') return Number.isFinite(value) ? Math.round(value) : undefined;
+
+    const text = String(value)
+      .trim()
+      .replace(/[,_\s]/g, '');
+    const match = text.match(/^([+-]?\d*\.?\d+)(bp|b|kb|k|mb|m|gb|g)?$/i);
+    if (!match) return undefined;
+
+    const scale = { '': 1, b: 1, bp: 1, k: 1e3, kb: 1e3, m: 1e6, mb: 1e6, g: 1e9, gb: 1e9 };
+    const scaled = parseFloat(match[1]) * scale[(match[2] || '').toLowerCase()];
+    return Number.isFinite(scaled) ? Math.round(scaled) : undefined;
+  }
+
   // Tool implementations
   async navigateToPosition(params) {
-    let { chromosome, start, end, position } = params;
+    let { chromosome } = params;
 
     if (!this.app || !this.app.navigationManager) {
       throw new Error('NavigationManager not available');
     }
+
+    // Coordinates arrive as numbers, shorthand strings ("2M"), or grouped
+    // digits ("2,000,000") depending on the model and the user's phrasing.
+    const coordinate = (name, raw) => {
+      const parsed = this.parseGenomicCoordinate(raw);
+      if (parsed === undefined && raw !== undefined && raw !== null && raw !== '') {
+        throw new Error(
+          `Invalid ${name} coordinate "${raw}". Use base pairs (2000000) or shorthand such as 2M, 2Mb, 500kb.`
+        );
+      }
+      return parsed;
+    };
+
+    let start = coordinate('start', params.start);
+    let end = coordinate('end', params.end);
+    const position = coordinate('position', params.position);
 
     if (!chromosome) {
       const chromosomeSelect = document.getElementById('chromosomeSelect');
@@ -2466,19 +2511,40 @@ class ChatManager {
       end = start + 2 * halfRange;
     }
 
-    if (!chromosome || start === undefined || end === undefined) {
-      throw new Error('Missing required parameters: chromosome and either (start, end) or position');
+    if (start === undefined || end === undefined) {
+      throw new Error('Missing required parameters: either (start, end) or position');
     }
 
     const result = this.app.navigationManager.navigateToPosition(chromosome, start, end);
 
+    // NavigationManager rejects unknown chromosomes and out-of-range positions.
+    // Report its error verbatim: a failure described as "Navigated to ..." tells
+    // the agent nothing it can correct on the next round.
+    if (!result || result.success === false) {
+      const error = result?.error || `Navigation to ${chromosome}:${start}-${end} failed`;
+      return {
+        success: false,
+        chromosome,
+        start,
+        end,
+        error,
+        message: error,
+        ...(result?.availableChromosomes ? { availableChromosomes: result.availableChromosomes } : {}),
+      };
+    }
+
+    const resolvedChromosome = result.chromosome || chromosome;
+
     return {
-      success: result.success,
-      chromosome,
+      success: true,
+      chromosome: resolvedChromosome,
       start,
       end,
-      message: `Navigated to ${chromosome}:${start}-${end}`,
+      message: `Navigated to ${resolvedChromosome}:${start}-${end}`,
       usedDefaultRange: position !== undefined && (params.start === undefined || params.end === undefined),
+      ...(result.requestedChromosome && result.requestedChromosome !== resolvedChromosome
+        ? { requestedChromosome: result.requestedChromosome }
+        : {}),
     };
   }
 
@@ -3173,6 +3239,29 @@ class ChatManager {
     return maxLength === 0 ? 1 : (maxLength - matrix[str2.length][str1.length]) / maxLength;
   }
 
+  /**
+   * Names of every sequence in the loaded genome, exactly as keyed internally.
+   * These are the only valid values for a `chromosome` tool parameter.
+   */
+  getAvailableChromosomeNames() {
+    const sequences = this.app?.currentSequence;
+    return sequences && typeof sequences === 'object' ? Object.keys(sequences) : [];
+  }
+
+  /**
+   * Render the loaded sequence names for a system prompt. Fragmented assemblies
+   * can carry thousands of contigs, so the list is capped — get_chromosome_list
+   * remains the complete, paginated source.
+   */
+  formatAvailableChromosomesForPrompt(names, limit = 25) {
+    const list = Array.isArray(names) ? names.filter(Boolean) : [];
+    if (list.length === 0) return 'None loaded';
+    const shown = list.slice(0, limit).join(', ');
+    return list.length > limit
+      ? `${shown} (+${list.length - limit} more, use get_chromosome_list for the full list)`
+      : shown;
+  }
+
   getCurrentState() {
     if (!this.app) {
       throw new Error('Genome browser not initialized');
@@ -3184,10 +3273,16 @@ class ChatManager {
     // console.log('ChatManager getCurrentState - this.app.currentAnnotations:', this.app.currentAnnotations);
     // console.log('ChatManager getCurrentState - this.app.currentPosition:', this.app.currentPosition);
 
+    const chromosomeNames = this.getAvailableChromosomeNames();
+
     const state = {
       // Multi-window support: include window identifier
       windowId: this.app.windowId || null,
       currentChromosome: this.app.currentChromosome,
+      // Capped: a fragmented assembly can hold thousands of contigs, and this
+      // state object is serialized into prompts and tool results.
+      availableChromosomes: chromosomeNames.slice(0, 50),
+      availableChromosomeCount: chromosomeNames.length,
       currentPosition: this.app.currentPosition,
       visibleTracks: this.getVisibleTracks(),
       loadedFiles: this.app.loadedFiles || [],
@@ -9220,6 +9315,9 @@ TOOL AVAILABILITY:
     return `
 CURRENT GENOME STATE:
 - Chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None loaded'}
+- Loaded chromosome/contig names (the only valid "chromosome" values): ${this.formatAvailableChromosomesForPrompt(
+      context.genomeBrowser.currentState.availableChromosomes
+    )}
 - Position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
 - Selected Gene: ${
       context.genomeBrowser.currentState.selectedGene
@@ -9235,6 +9333,12 @@ CURRENT GENOME STATE:
 - Loaded Files: ${context.genomeBrowser.currentState.loadedFiles.length} files
 - Sequence Length: ${context.genomeBrowser.currentState.sequenceLength?.toLocaleString() || 'Unknown'}
 ${genomeInfo ? `- Genome: ${genomeInfo}` : ''}
+
+COORDINATE & NAMING RULES:
+- Copy any "chromosome" argument verbatim from the loaded names above or from an earlier tool result.
+  Names shown in tool examples (e.g. "chr1") are illustrations — never send one that is not loaded.
+- Omit "chromosome" entirely to act on the chromosome currently displayed.
+- Coordinates are 1-based base pairs; expand shorthand first ("2M" -> 2000000, "500kb" -> 500000).
 
 AVAILABLE TOOLS: ${context.genomeBrowser.toolSources.total} total
 - Local: ${context.genomeBrowser.toolSources.local}

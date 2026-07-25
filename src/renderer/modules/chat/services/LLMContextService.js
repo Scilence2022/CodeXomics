@@ -2153,6 +2153,9 @@ ${examples
     return `
 Current CodeXomics State:
 - Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}
+- Loaded chromosome/contig names (the only valid "chromosome" values): ${this.chatManager.formatAvailableChromosomesForPrompt(
+      context.genomeBrowser.currentState.availableChromosomes
+    )}
 - Current position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
 - Visible tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
 - Loaded files: ${context.genomeBrowser.currentState.loadedFiles.length} files
@@ -2194,7 +2197,9 @@ Tool Selection Priority:
 3. Fall back to built-in local tools
 4. Use the most appropriate tool for the task regardless of source
 
-Basic Tool Examples:
+Basic Tool Examples (chromosome names below are placeholders — substitute a name from "Loaded
+chromosome/contig names" above, or omit the parameter to use the current chromosome; coordinates are
+1-based base pairs, so expand shorthand first: "2M" -> 2000000, "500kb" -> 500000):
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
 - Navigate to position: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
 - Open new tab: {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
@@ -2385,6 +2390,9 @@ When you believe you have completed the user's task or fully answered their ques
 
 Current CodeXomics State:
 - Current chromosome: ${context.genomeBrowser.currentState.currentChromosome || 'None'}
+- Loaded chromosome/contig names (the only valid "chromosome" values): ${this.chatManager.formatAvailableChromosomesForPrompt(
+      context.genomeBrowser.currentState.availableChromosomes
+    )}
 - Current position: ${JSON.stringify(context.genomeBrowser.currentState.currentPosition) || 'None'}
 - Visible tracks: ${context.genomeBrowser.currentState.visibleTracks.join(', ') || 'None'}
 - Loaded files: ${context.genomeBrowser.currentState.loadedFiles.length} files
@@ -2427,7 +2435,9 @@ Tool Selection Priority:
 5. Use the most appropriate tool for the task regardless of source
 
 
-Basic Tool Examples:
+Basic Tool Examples (chromosome names below are placeholders — substitute a name from "Loaded
+chromosome/contig names" above, or omit the parameter to use the current chromosome; coordinates are
+1-based base pairs, so expand shorthand first: "2M" -> 2000000, "500kb" -> 500000):
 - Navigate: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}
 - Navigate to position: {"tool_name": "navigate_to_position", "parameters": {"chromosome": "COLI-K12", "position": 2000000}}
 - Open new tab: {"tool_name": "open_new_tab", "parameters": {"chromosome": "chr1", "start": 1000, "end": 2000}}

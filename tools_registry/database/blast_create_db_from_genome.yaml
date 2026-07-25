@@ -1,6 +1,6 @@
 name: blast_create_db_from_genome
 version: 1.0.0
-description: Create BLAST nucleotide database from a specific chromosome of the currently loaded genome. Use this ONLY when you want to index a single chromosome and have a specific chromosome name (e.g. chr1, chr2, etc.). Do not use this for the entire genome.
+description: Create BLAST nucleotide database from a specific chromosome of the currently loaded genome. Use this ONLY when you want to index a single chromosome and have its exact name from the loaded genome (e.g. U00096, NC_000913.3). Do not use this for the entire genome.
 category: database
 keywords:
   - blast
@@ -21,7 +21,7 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: Chromosome name from loaded genome
+      description: "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
     dbName:
       type: string
       description: Name for new database (auto-generated if not provided)
@@ -35,7 +35,7 @@ parameters:
     - chromosome
 sample_usages:
   - user_query: 'Create a BLAST database from the loaded chromosome'
-    tool_call: "blast_create_db_from_genome(chromosome='chr1')"
+    tool_call: "blast_create_db_from_genome(chromosome='U00096')"
     thought: 'User wants to create database from currently loaded genome data'
     expected_result: 'BLAST database created from genome chromosome'
   - user_query: 'Make a searchable database for E. coli K-12 genome'

@@ -21,7 +21,7 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: Chromosome name to translate
+      description: "Chromosome/contig to translate, named exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
     dbName:
       type: string
       description: Name for protein database (auto-generated if not provided)
@@ -29,7 +29,7 @@ parameters:
     - chromosome
 sample_usages:
   - user_query: 'Create protein database from genome using all reading frames'
-    tool_call: "blast_create_protein_db_from_genome(chromosome='chr1')"
+    tool_call: "blast_create_protein_db_from_genome(chromosome='U00096')"
     thought: 'User wants 6-frame translation protein database'
     expected_result: 'Protein database created with all reading frames'
 relationships:

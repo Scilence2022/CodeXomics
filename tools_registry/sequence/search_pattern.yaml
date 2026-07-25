@@ -8,7 +8,7 @@ parameters:
       description: 'The regular expression or sequence motif pattern to search for (e.g., GAATTC).'
     chromosome:
       type: 'string'
-      description: 'The chromosome or sequence ID to search (defaults to current active chromosome).'
+      description: 'Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list). Omit to use the chromosome currently displayed.'
     start:
       type: 'integer'
       description: 'Start coordinate of the search window (1-based, defaults to 0 or current start).'
@@ -28,4 +28,4 @@ keywords:
   - 'motif search'
 sample_usages:
   - 'Search for the pattern GAATTC in the active region.'
-  - 'Find matches of regex ATG[A-Z]{3} on chr1.'
+  - 'Find matches of regex ATG[A-Z]{3} on U00096.'

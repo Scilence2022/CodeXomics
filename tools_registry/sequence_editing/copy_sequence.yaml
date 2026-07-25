@@ -22,8 +22,8 @@ parameters:
   properties:
     chromosome:
       type: 'string'
-      description: "Chromosome identifier (e.g., 'chr1', 'chromosome1', 'NC_000913.3')"
-      examples: ['chr1', 'chromosome1', 'NC_000913.3', 'U00096']
+      description: "Chromosome/contig name exactly as loaded (see the loaded names in the current context, or call get_chromosome_list, e.g. 'U00096'). Never invent a name such as 'chr1'."
+      examples: ['U00096', 'NC_000913.3']
     start:
       type: 'number'
       description: 'Start position (1-based genomic coordinate)'
@@ -56,7 +56,7 @@ parameters:
 # High-quality examples for few-shot learning
 sample_usages:
   - user_query: 'Copy the sequence from position 1000 to 2000'
-    tool_call: "copy_sequence(chromosome='chr1', start=1000, end=2000, strand='+')"
+    tool_call: "copy_sequence(chromosome='U00096', start=1000, end=2000, strand='+')"
     thought: 'User wants to copy a specific genomic region to the clipboard'
     expected_result: 'Sequence copied to clipboard, ready for paste operations'
 
@@ -66,7 +66,7 @@ sample_usages:
     expected_result: 'Gene sequence with annotations copied to clipboard'
 
   - user_query: 'Copy the reverse strand of this region'
-    tool_call: "copy_sequence(chromosome='chr1', start=50000, end=50100, strand='-')"
+    tool_call: "copy_sequence(chromosome='U00096', start=50000, end=50100, strand='-')"
     thought: 'User wants the reverse complement of the specified region'
     expected_result: 'Reverse complement sequence copied to clipboard'
 
