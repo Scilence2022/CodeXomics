@@ -104,6 +104,59 @@ class BenchmarkEvaluatorBase {
     return false;
   }
 
+  // ─── Schema-default Expectations ─────────────────────────────────────────
+
+  /**
+   * Wrap an expected parameter value that is identical to the tool schema's default.
+   *
+   * Models routinely omit such parameters: the tool applies the same value either way,
+   * so the resulting behaviour is indistinguishable. Scoring the omission as a wrong
+   * parameter produced false failures, so a wrapped expectation is satisfied when the
+   * parameter is absent, and still compared normally when the model does send it.
+   *
+   *   parameters: { blastType: this.schemaDefault('blastn'), database: 'nt' }
+   */
+  schemaDefault(value) {
+    return { benchmarkDefaultValue: value };
+  }
+
+  isSchemaDefaultExpectation(value) {
+    return (
+      !!value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === 1 &&
+      Object.prototype.hasOwnProperty.call(value, 'benchmarkDefaultValue')
+    );
+  }
+
+  unwrapExpectedValue(value) {
+    return this.isSchemaDefaultExpectation(value) ? value.benchmarkDefaultValue : value;
+  }
+
+  // ─── Organism Name Normalization ─────────────────────────────────────────
+
+  /**
+   * Normalize organism names so that the abbreviations models actually emit
+   * ("E. coli", "E.coli") compare equal to the full binomial name.
+   */
+  normalizeOrganismValue(value) {
+    if (value === undefined || value === null) return '';
+    const text = String(value).toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
+    const abbreviations = {
+      e: 'escherichia',
+      b: 'bacillus',
+      s: 'saccharomyces',
+      h: 'homo',
+      m: 'mus',
+    };
+    const [genus, ...rest] = text.split(' ');
+    if (rest.length > 0 && abbreviations[genus]) {
+      return [abbreviations[genus], ...rest].join(' ');
+    }
+    return text;
+  }
+
   // ─── String Similarity (Levenshtein) ─────────────────────────────────────
 
   /**
@@ -168,10 +221,16 @@ class BenchmarkEvaluatorBase {
     });
 
     for (const key of expectedKeys) {
-      const expectedValue = expected[key];
+      const rawExpectedValue = expected[key];
+      const expectedValue = this.unwrapExpectedValue(rawExpectedValue);
       const actualValue = actual[key];
 
       if (actualValue === undefined) {
+        if (this.isSchemaDefaultExpectation(rawExpectedValue)) {
+          score += 50;
+          console.log(`✅ Omitted parameter ${key} matches the tool default (${JSON.stringify(expectedValue)})`);
+          continue;
+        }
         console.log(`❌ Missing parameter: ${key}`);
         continue;
       }
@@ -261,9 +320,10 @@ class BenchmarkEvaluatorBase {
     if (criticalKeys.length === 0) return true; // All placeholders → no critical params to check
 
     const matchedCritical = criticalKeys.filter(key => {
-      if (!(key in actualParams)) return false;
+      // Parameters whose expected value is the tool's own default stay satisfied when omitted.
+      if (!(key in actualParams)) return this.isSchemaDefaultExpectation(expectedParams[key]);
       const actual = actualParams[key];
-      const expected = expectedParams[key];
+      const expected = this.unwrapExpectedValue(expectedParams[key]);
       if (typeof expected === 'string' && typeof actual === 'string') {
         return (
           actual.toLowerCase() === expected.toLowerCase() || this.calculateStringSimilarity(actual, expected) >= 0.8
@@ -371,10 +431,28 @@ class BenchmarkEvaluatorBase {
    */
   getTrackedExecutions() {
     const tracker = window.chatManager && window.chatManager.toolExecutionTracker;
-    if (tracker && typeof tracker.getSessionExecutions === 'function') {
-      const sessionExecutions = tracker.getSessionExecutions();
-      if (Array.isArray(sessionExecutions) && sessionExecutions.length > 0) {
-        return sessionExecutions;
+    if (tracker) {
+      // The tracker session spans the whole benchmark run, so session-wide records leak
+      // earlier tests' tool calls into the current evaluation — that both fakes matches
+      // and, worse, lets a stale same-named call be matched with the wrong parameters.
+      // Prefer the records stamped with the test currently under evaluation.
+      if (typeof tracker.getTestExecutions === 'function' && tracker.currentTestId) {
+        const testExecutions = tracker.getTestExecutions(tracker.currentTestId);
+        if (Array.isArray(testExecutions) && testExecutions.length > 0) {
+          return testExecutions;
+        }
+      }
+      if (typeof tracker.getSessionExecutions === 'function') {
+        const sessionExecutions = tracker.getSessionExecutions();
+        if (Array.isArray(sessionExecutions) && sessionExecutions.length > 0) {
+          // Records from earlier tests carry a different testId; drop them whenever the
+          // tracker stamps test ids, even if nothing is left for the current test.
+          const currentTestId = tracker.currentTestId;
+          if (currentTestId && sessionExecutions.some(exec => exec && exec.testId)) {
+            return sessionExecutions.filter(exec => !exec.testId || exec.testId === currentTestId);
+          }
+          return sessionExecutions;
+        }
       }
     }
     return this.deriveExecutionsFromExecutionData();
@@ -742,6 +820,10 @@ class BenchmarkEvaluatorBase {
       const expectedKeys = Object.keys(expectedResult.parameters);
       const matchingKeys = expectedKeys.filter(key => {
         if (!(key in actualParams)) {
+          // Omitting a parameter whose expected value is the tool default is equivalent
+          // to sending it, so it must not be scored as a missing parameter.
+          if (this.isSchemaDefaultExpectation(expectedResult.parameters[key])) return true;
+
           // Position ↔ Range conversion support
           if (usePositionRangeConversion) {
             if (key === 'position' && 'start' in actualParams && 'end' in actualParams) {
@@ -767,7 +849,7 @@ class BenchmarkEvaluatorBase {
         }
 
         const actualValue = actualParams[key];
-        const expectedValue = expectedResult.parameters[key];
+        const expectedValue = this.unwrapExpectedValue(expectedResult.parameters[key]);
 
         // Placeholder matches
         const isPlaceholder =

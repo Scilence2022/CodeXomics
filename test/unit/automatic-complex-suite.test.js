@@ -148,11 +148,12 @@ describe('AutomaticComplexSuite', () => {
       });
 
       const chainedSequenceTest = tests.find(t => t.id === 'analysis_auto_complex_05');
-      expect(chainedSequenceTest.expectedResult.tool_sequence[0]).toEqual(['navigate_to_position', 'navigate_to']);
+      expect(chainedSequenceTest.expectedResult.tool_sequence[0]).toBe('navigate_to_position');
       expect(chainedSequenceTest.expectedResult.parameters[2].sequence).toBe('{get_sequence.sequence}');
       expect(chainedSequenceTest.expectedResult.parameters[4]).toEqual({
         dna: '{get_sequence.sequence}',
-        readingFrame: 1,
+        // readingFrame 1 is the tool default, so omitting it must not count against the run.
+        readingFrame: suite.schemaDefault(1),
       });
 
       const taskLifecycleTest = tests.find(t => t.id === 'task_auto_complex_01');
