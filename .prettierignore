@@ -1,0 +1,10 @@
+# Third-party assets are vendored verbatim so they can be refreshed by copying
+# a newer release in. Reformatting them would create spurious diffs.
+src/renderer/vendor/
+
+# Generated and non-source directories
+node_modules/
+dist/
+build/
+site/
+package-lock.json

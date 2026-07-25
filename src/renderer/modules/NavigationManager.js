@@ -73,6 +73,10 @@ class NavigationManager {
     // Initialize aligned reads redraw timeout
     this.alignedReadsRedrawTimeout = null;
 
+    // Wheel-zoom render coalescing: at most one commit per animation frame
+    this.wheelZoomFrameHandle = null;
+    this.pendingWheelZoom = null;
+
     // Bind methods and add global listeners once
     this.handleDocumentMouseMove = this.handleDocumentMouseMove.bind(this);
     this.handleDocumentMouseUp = this.handleDocumentMouseUp.bind(this);
@@ -401,10 +405,55 @@ class NavigationManager {
       }
     }
 
-    // Update position
+    // Update position synchronously so rapid wheel events compound correctly
+    // even though the render below is coalesced.
     this.genomeBrowser.currentPosition = { start: Math.round(newStart), end: Math.round(newEnd) };
 
-    // Update statistics immediately
+    // A trackpad emits wheel events far faster than the display refreshes.
+    // Committing the render per event stacked several full track rebuilds into
+    // a single frame; coalescing collapses them to one commit per frame.
+    this.scheduleWheelZoomCommit({ currentChr, sequence, zoomDirection });
+
+    // Guarded explicitly: the four toLocaleString() calls below are *arguments*,
+    // so they would still run on every wheel event even when console.log is a
+    // no-op. Only build them when verbose logging is actually on.
+    if (window.CodeXomicsDebug?.isEnabled?.()) {
+      console.log('🔍 [WHEEL-ZOOM]', {
+        direction: zoomDirection > 0 ? 'out' : 'in',
+        oldRange: currentRange.toLocaleString(),
+        newRange: Math.round(newEnd - newStart).toLocaleString(),
+        position: `${newStart.toLocaleString()}-${newEnd.toLocaleString()}`,
+        zoomToCursor: this.wheelZoomConfig.zoomToCursor,
+      });
+    }
+  }
+
+  /**
+   * Coalesce wheel-zoom rendering into a single requestAnimationFrame.
+   *
+   * Only the latest pending state is kept: intermediate frames within the same
+   * tick are superseded, since `currentPosition` has already been advanced by
+   * every wheel event that arrived.
+   */
+  scheduleWheelZoomCommit(pending) {
+    this.pendingWheelZoom = pending;
+    if (this.wheelZoomFrameHandle !== null && this.wheelZoomFrameHandle !== undefined) return;
+
+    const schedule =
+      typeof requestAnimationFrame === 'function' ? requestAnimationFrame : callback => setTimeout(callback, 16);
+
+    this.wheelZoomFrameHandle = schedule(() => {
+      this.wheelZoomFrameHandle = null;
+      const state = this.pendingWheelZoom;
+      this.pendingWheelZoom = null;
+      if (state) this.commitWheelZoom(state);
+    });
+  }
+
+  /** Apply the visible effects of a wheel zoom. Runs at most once per frame. */
+  commitWheelZoom({ currentChr, sequence, zoomDirection }) {
+    const { start, end } = this.genomeBrowser.currentPosition;
+
     this.genomeBrowser.updateStatistics(currentChr, sequence);
 
     // Handle aligned reads track differently - use delayed redraw
@@ -417,20 +466,11 @@ class NavigationManager {
 
     // Update current tab title with new position (from wheel zoom)
     if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, { source: 'zoom' });
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, start + 1, end, { source: 'zoom' });
     }
 
     // Show visual feedback
-    this.showWheelZoomFeedback(zoomDirection, Math.round(newEnd - newStart));
-
-    // Log zoom action for debugging
-    console.log('🔍 [WHEEL-ZOOM]', {
-      direction: zoomDirection > 0 ? 'out' : 'in',
-      oldRange: currentRange.toLocaleString(),
-      newRange: Math.round(newEnd - newStart).toLocaleString(),
-      position: `${newStart.toLocaleString()}-${newEnd.toLocaleString()}`,
-      zoomToCursor: this.wheelZoomConfig.zoomToCursor,
-    });
+    this.showWheelZoomFeedback(zoomDirection, Math.round(end - start));
   }
 
   /**

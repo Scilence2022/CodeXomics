@@ -2375,19 +2375,12 @@ class LLMConfigManager {
 
   async sendOpenAIMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
-    console.log(
-      'Sending to OpenAI - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: messages,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to OpenAI - Request Payload:', {
+      model: provider.model,
+      messages: messages,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -2415,19 +2408,12 @@ class LLMConfigManager {
     const streamed = await this.tryStreamChatCompletions('openai', provider, conversationHistory, options);
     if (streamed !== null) return streamed;
 
-    console.log(
-      'Sending to OpenAI - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to OpenAI - Request Payload:', {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     return await this.makeRequestWithRetry(
       async () => {
@@ -2467,19 +2453,12 @@ class LLMConfigManager {
 
   async sendAnthropicMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'anthropic', memoryContext);
-    console.log(
-      'Sending to Anthropic - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-          messages: messages,
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to Anthropic - Request Payload:', {
+      model: provider.model,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+      messages: messages,
+    });
 
     const response = await fetch(`${provider.baseUrl}/v1/messages`, {
       method: 'POST',
@@ -2524,7 +2503,7 @@ class LLMConfigManager {
       payload.system = systemMessage.content;
     }
 
-    console.log('Sending to Anthropic - Request Payload:', JSON.stringify(payload, null, 2));
+    console.log('Sending to Anthropic - Request Payload:', payload);
 
     const response = await fetch(`${provider.baseUrl}/v1/messages`, {
       method: 'POST',
@@ -2570,7 +2549,7 @@ class LLMConfigManager {
       console.log('Google API (simple): Including systemInstruction with', systemMessage.length, 'chars');
     }
 
-    console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
+    console.log('Sending to Google - Request Payload:', payload);
 
     const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
 
@@ -2635,7 +2614,7 @@ class LLMConfigManager {
       );
     }
 
-    console.log('Sending to Google - Request Payload:', JSON.stringify(payload, null, 2));
+    console.log('Sending to Google - Request Payload:', payload);
 
     const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
 
@@ -2659,19 +2638,12 @@ class LLMConfigManager {
 
   async sendDeepSeekMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
-    console.log(
-      'Sending to DeepSeek - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: messages,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to DeepSeek - Request Payload:', {
+      model: provider.model,
+      messages: messages,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -2699,19 +2671,12 @@ class LLMConfigManager {
     const streamed = await this.tryStreamChatCompletions('deepseek', provider, conversationHistory, options);
     if (streamed !== null) return streamed;
 
-    console.log(
-      'Sending to DeepSeek - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to DeepSeek - Request Payload:', {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -2737,19 +2702,12 @@ class LLMConfigManager {
 
   async sendSiliconFlowMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
-    console.log(
-      'Sending to SiliconFlow - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: messages,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to SiliconFlow - Request Payload:', {
+      model: provider.model,
+      messages: messages,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -2864,19 +2822,12 @@ class LLMConfigManager {
     const streamed = await this.tryStreamChatCompletions('siliconflow', provider, conversationHistory, options);
     if (streamed !== null) return streamed;
 
-    console.log(
-      'Sending to SiliconFlow - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to SiliconFlow - Request Payload:', {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     return await this.makeRequestWithRetry(
       async () => {
@@ -2957,19 +2908,12 @@ class LLMConfigManager {
 
   async sendOpenRouterMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
-    console.log(
-      'Sending to OpenRouter - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: messages,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to OpenRouter - Request Payload:', {
+      model: provider.model,
+      messages: messages,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const doRequest = async modelToUse => {
       const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -3024,19 +2968,12 @@ class LLMConfigManager {
     const streamed = await this.tryStreamChatCompletions('openrouter', provider, conversationHistory, options);
     if (streamed !== null) return streamed;
 
-    console.log(
-      'Sending to OpenRouter - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to OpenRouter - Request Payload:', {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const doRequest = async modelToUse => {
       const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -3144,19 +3081,12 @@ class LLMConfigManager {
 
   async sendMinimaxMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
-    console.log(
-      'Sending to MiniMax (Global) - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: messages,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to MiniMax (Global) - Request Payload:', {
+      model: provider.model,
+      messages: messages,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -3185,19 +3115,12 @@ class LLMConfigManager {
     const streamed = await this.tryStreamChatCompletions('minimax', provider, conversationHistory, options);
     if (streamed !== null) return streamed;
 
-    console.log(
-      'Sending to MiniMax (Global) - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to MiniMax (Global) - Request Payload:', {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -3224,19 +3147,12 @@ class LLMConfigManager {
 
   async sendMinimax_cnMessage(provider, message, context, memoryContext = null) {
     const messages = this.buildMessages(message, context, 'openai', memoryContext);
-    console.log(
-      'Sending to MiniMax CN - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: messages,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to MiniMax CN - Request Payload:', {
+      model: provider.model,
+      messages: messages,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -3265,19 +3181,12 @@ class LLMConfigManager {
     const streamed = await this.tryStreamChatCompletions('minimax_cn', provider, conversationHistory, options);
     if (streamed !== null) return streamed;
 
-    console.log(
-      'Sending to MiniMax CN - Request Payload:',
-      JSON.stringify(
-        {
-          model: provider.model,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        },
-        null,
-        2
-      )
-    );
+    console.log('Sending to MiniMax CN - Request Payload:', {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -3320,7 +3229,7 @@ class LLMConfigManager {
       stream: false, // Assuming stream is false for now based on previous setup
     };
     console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
-    console.log('Sending to Local LLM - Request Payload:', JSON.stringify(payload, null, 2));
+    console.log('Sending to Local LLM - Request Payload:', payload);
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -3343,7 +3252,7 @@ class LLMConfigManager {
 
     const data = await response.json();
     // Log the full raw response from the local LLM
-    console.log('Full raw response from Local LLM:', JSON.stringify(data, null, 2));
+    console.log('Full raw response from Local LLM:', data);
 
     return this.normalizeLocalResponse(data);
   }
@@ -3375,7 +3284,7 @@ class LLMConfigManager {
     };
 
     console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
-    console.log('Sending to Local LLM - Request Payload:', JSON.stringify(payload, null, 2));
+    console.log('Sending to Local LLM - Request Payload:', payload);
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -3397,7 +3306,7 @@ class LLMConfigManager {
     }
 
     const data = await response.json();
-    console.log('Full raw response from Local LLM:', JSON.stringify(data, null, 2));
+    console.log('Full raw response from Local LLM:', data);
 
     return this.normalizeLocalResponse(data);
   }
@@ -3479,7 +3388,7 @@ If the user is asking a general question that doesn't require a tool, respond no
 
     if (context && context.genomeBrowser && context.genomeBrowser.currentState) {
       // Debug: Log the actual context structure
-      console.log('Context structure for system message:', JSON.stringify(context, null, 2));
+      console.log('Context structure for system message:', context);
       console.log('Current state:', context.genomeBrowser.currentState);
 
       // Only append a summary of the context, not the whole thing if it's still too large.
