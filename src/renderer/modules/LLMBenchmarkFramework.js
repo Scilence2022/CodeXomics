@@ -4485,7 +4485,19 @@ class LLMBenchmarkFramework {
     if (test.evaluator && typeof test.evaluator === 'function') {
       console.log('🔧 [Test Evaluation] Using custom evaluator for test:', test.id);
       try {
-        const evaluatorContext = { ...testResult, earlyReturn: test.earlyReturn || false, testId: test.id };
+        const evaluatorContext = {
+          ...testResult,
+          earlyReturn: test.earlyReturn || false,
+          testId: test.id,
+          // Evaluators branch on these (e.g. navigation-specific response parsing), so they
+          // must travel with the context instead of being dropped from the test definition.
+          category: test.category,
+          complexity: test.complexity,
+          maxScore: test.maxScore || testResult.maxScore,
+          // Tracker-based evaluation only considers records inside a recent window; it has to
+          // cover the whole run, so long tests must advertise their own timeout.
+          timeout: test.timeout || this.testTimeout,
+        };
         const customEval = await test.evaluator(testResult.actualResult, test.expectedResult, evaluatorContext);
         Object.assign(evaluation, customEval);
         console.log('✅ [Test Evaluation] Custom evaluator completed with score:', evaluation.score);

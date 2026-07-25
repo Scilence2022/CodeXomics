@@ -373,37 +373,33 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             'export_cds_fasta',
             'export_protein_fasta',
           ],
+          // Only filePath is dictated by the instruction; every other export option keeps its
+          // tool default, so expecting explicit values here scored correct runs as failures.
           parameters: [
             {
-              format: 'fasta',
-              includeDescription: true,
               filePath: this.buildFilePath('exported_files/exported_sequences.fasta'),
+              includeDescription: this.schemaDefault(true),
             },
             {
-              includeSequence: true,
-              includeAnnotations: true,
               filePath: this.buildFilePath('exported_files/exported_data.gbk'),
+              includeSequence: this.schemaDefault(true),
+              includeFeatures: this.schemaDefault(true),
             },
             {
-              version: 'gff3',
-              includeSequence: false,
               filePath: this.buildFilePath('exported_files/exported_annotations.gff3'),
+              gffVersion: this.schemaDefault('gff3'),
             },
             {
-              trackName: 'exported_features',
-              includeScore: true,
               filePath: this.buildFilePath('exported_files/exported_features.bed'),
+              bedFormat: this.schemaDefault('bed6'),
             },
             {
-              sequenceType: 'cds',
-              includeHeaders: true,
               filePath: this.buildFilePath('exported_files/exported_cds.fasta'),
+              includeGeneNames: this.schemaDefault(true),
             },
             {
-              sequenceType: 'protein',
-              includeHeaders: true,
-              translate: true,
               filePath: this.buildFilePath('exported_files/exported_proteins.fasta'),
+              geneticCode: this.schemaDefault('standard'),
             },
           ],
           expectedFiles: [
@@ -439,7 +435,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               filePath: this.buildFilePath('exported_files/current_view_region.fasta'),
-              includeCoordinates: true,
+              includeCoordinates: this.schemaDefault(true),
             },
           ],
         },
@@ -551,6 +547,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           'Retrieve the current genome information, perform genome-wide codon usage analysis, and calculate the GC content of the region currently being viewed.',
         expectedResult: {
           tool_sequence: ['get_genome_info', 'genome_codon_usage_analysis', 'calc_region_gc'],
+          // Three independent read-only queries; the task does not constrain their order.
+          orderInsensitiveTools: ['get_genome_info', 'genome_codon_usage_analysis', 'calc_region_gc'],
           parameters: [{}, {}, {}],
         },
         maxScore: 15,
@@ -597,7 +595,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           'Navigate to 100000-101000, then Get the current visible DNA sequence, calculate its entropy, compute its reverse complement, and translate the same DNA sequence in reading frame 1.',
         expectedResult: {
           tool_sequence: [
-            ['navigate_to_position', 'navigate_to'],
+            'navigate_to_position',
             'get_sequence',
             'calculate_entropy',
             'reverse_complement',
@@ -620,7 +618,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               dna: '{get_sequence.sequence}',
-              readingFrame: 1,
+              readingFrame: this.schemaDefault(1),
             },
           ],
         },
@@ -685,8 +683,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           tool_name: 'simulate_gel_electrophoresis',
           parameters: {
             fragments: '<any>',
-            gelPercentage: 1.0,
-            ladderType: '1kb',
+            gelPercentage: this.schemaDefault(1.0),
+            ladderType: this.schemaDefault('1kb'),
           },
         },
         maxScore: 5,
@@ -710,7 +708,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             fragments: '<any>',
             gelPercentage: 0.8,
             ladderType: 'lambda_hindiii',
-            bandColorScheme: 'ethidium_bromide',
+            bandColorScheme: this.schemaDefault('ethidium_bromide'),
           },
         },
         maxScore: 5,
@@ -835,6 +833,8 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           'Check the current visibility status of all tracks, then show the GC content track, hide the variants track, and check the track status again to confirm the visibility changes.',
         expectedResult: {
           tool_sequence: ['get_track_status', 'toggle_track', 'toggle_track', 'get_track_status'],
+          // Showing GC and hiding Variants are independent; either order satisfies the task.
+          orderInsensitiveTools: ['toggle_track'],
           parameters: [
             {},
             {
@@ -867,7 +867,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           tool_sequence: ['clear_tasks', 'add_task', 'list_tasks', 'update_task', 'delete_task', 'list_tasks'],
           parameters: [
             {
-              confirm: true,
+              confirm: this.schemaDefault(true),
             },
             {
               title: 'Benchmark complex task',
@@ -911,11 +911,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               uniprot_id: 'P04637',
-              format: 'pdb',
+              format: this.schemaDefault('pdb'),
             },
             {
               data_ref: '{fetch_alphafold_structure._dataRef}',
-              representation: 'cartoon',
+              representation: this.schemaDefault('cartoon'),
             },
           ],
         },
@@ -935,14 +935,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         instruction: `Create a new nucleotide BLAST database of currently loaded E. coli genome using name 'ecoli_nucl', then list the available BLAST databases to verify, and run a local blastn search against the database for the query sequence 'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC'.`,
         expectedResult: {
           tool_sequence: [
-            ['blast_create_db_from_genome', 'quick_db_for_current_genome', 'blast_create_quick_db_for_current_genome'],
+            ['blast_create_db_from_genome', 'blast_create_quick_db_for_current_genome'],
             'blast_list_databases',
             'blast_search_local',
           ],
           parameters: [
             {},
             {
-              includeLocal: true,
+              includeLocal: this.schemaDefault(true),
             },
             {
               sequence:
@@ -1007,7 +1007,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {
               filePath: this.buildFilePath('exported_files/benchmark_blast_input.fasta'),
-              includeCoordinates: true,
+              includeCoordinates: this.schemaDefault(true),
             },
             {
               inputFile: this.buildFilePath('exported_files/benchmark_blast_input.fasta'),
@@ -1046,7 +1046,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               sequence: 'ATGAAAGCGCTGAAAGCGCTG',
-              blastType: 'blastn',
+              blastType: this.schemaDefault('blastn'),
               database: 'nt',
               maxTargets: 5,
             },
@@ -1158,7 +1158,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               uniprot_id: 'P0A6L2',
-              include_sequence: true,
+              include_sequence: this.schemaDefault(true),
             },
             {
               sequence:
@@ -1184,7 +1184,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   /**
    * Parse natural language response from LLM to detect successful file loading
    */
-  parseNaturalLanguageFileLoadingResponse(actualResult, evaluation) {
+  parseNaturalLanguageFileLoadingResponse(actualResult, evaluation, testResult = {}) {
     let responseText = '';
 
     // Extract text from various response formats
@@ -1209,7 +1209,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     const { matched: trackerMatchedTools } = this.getRecentToolMatches(
       Object.keys(fileLoadingExpectedTools),
-      BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT
+      this.getEvaluationWindow(testResult)
     );
 
     if (trackerMatchedTools.length > 0) {
@@ -1431,6 +1431,35 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return Array.isArray(expectedResult.parameters) ? expectedResult.parameters : [expectedResult.parameters];
   }
 
+  /**
+   * True when the workflow is just "navigate (and optionally zoom)", the only shape the
+   * navigation-specific natural-language parser can score correctly.
+   */
+  isNavigateAndZoomWorkflow(expectedTools) {
+    const navigationTools = ['navigate_to_position', 'zoom_in', 'zoom_out', 'set_zoom_level'];
+    if (!Array.isArray(expectedTools) || expectedTools.length === 0 || expectedTools.length > 2) return false;
+
+    return expectedTools.every(expectedTool =>
+      (Array.isArray(expectedTool) ? expectedTool : [expectedTool]).every(tool =>
+        navigationTools.some(navigationTool => this.matchToolName(tool, navigationTool))
+      )
+    );
+  }
+
+  /**
+   * How far back tracker records stay relevant for this test.
+   *
+   * A fixed 120s window silently dropped the opening tool calls of the long workflows
+   * (BLAST and export tests allow 180s), which scored them as missing steps. The window
+   * must therefore cover the test's own timeout plus room for the final LLM turn.
+   */
+  getEvaluationWindow(testResult) {
+    const testTimeout = Number(testResult?.timeout) || 0;
+    const frameworkTimeout = Number(this.framework?.testTimeout) || 0;
+    const longest = Math.max(testTimeout, frameworkTimeout);
+    return Math.max(BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT, longest + BenchmarkEvaluatorBase.TIMEOUTS.SHORT);
+  }
+
   getWorkflowMatchOptions(expectedResult) {
     if (!expectedResult || typeof expectedResult !== 'object') return {};
     return {
@@ -1541,6 +1570,25 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return call && call.success !== false && !call.error && call.status !== 'failed';
   }
 
+  /**
+   * Count how many times a tool actually ran successfully during this test, using the
+   * executed-call record first and the execution tracker as a fallback.
+   */
+  countSuccessfulToolCalls(actualResult, toolName) {
+    const calls = this.extractWorkflowCalls(this.normalizeResultParameters(actualResult));
+    const executedCount = calls.filter(
+      call => this.matchToolName(this.getToolNameFromCall(call), toolName) && this.isSuccessfulWorkflowCall(call)
+    ).length;
+
+    if (executedCount > 0) return executedCount;
+
+    const trackedCount = this.getTrackedExecutions().filter(
+      exec => this.matchToolName(exec.toolName, toolName) && exec.status === 'completed'
+    ).length;
+
+    return trackedCount;
+  }
+
   isPlaceholderExpectedValue(value) {
     return typeof value === 'string' && value.startsWith('<') && value.endsWith('>');
   }
@@ -1562,6 +1610,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   }
 
   hasConcreteExpectedValue(value) {
+    if (this.isSchemaDefaultExpectation(value)) return this.hasConcreteExpectedValue(this.unwrapExpectedValue(value));
     if (this.isPlaceholderExpectedValue(value)) return false;
     if (this.isToolResultReferenceValue(value)) return false;
     if (Array.isArray(value)) return value.some(item => this.hasConcreteExpectedValue(item));
@@ -1676,6 +1725,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   }
 
   workflowValuesMatch(actualValue, expectedValue) {
+    if (this.isSchemaDefaultExpectation(expectedValue)) {
+      // Absent is fine (the tool applies the same default); when supplied it must match.
+      if (actualValue === undefined || actualValue === null) return true;
+      return this.workflowValuesMatch(actualValue, this.unwrapExpectedValue(expectedValue));
+    }
+
     if (this.isPlaceholderExpectedValue(expectedValue)) {
       if (expectedValue === '<created_protein_database>') {
         if (actualValue === undefined || actualValue === null) return false;
@@ -1732,6 +1787,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       const expectedBase = expectedLower.split('/').pop();
       if (actualBase && expectedBase && actualBase === expectedBase) return true;
 
+      // Fuzzy matching is meant for long values (paths, sequences) where formatting differs.
+      // On short enum-like values it is actively wrong: 'blastp' is 83% similar to 'blastn'
+      // yet is a different search, so short values must match exactly.
+      const FUZZY_MATCH_MIN_LENGTH = 12;
+      if (actualText.length < FUZZY_MATCH_MIN_LENGTH || expectedText.length < FUZZY_MATCH_MIN_LENGTH) {
+        return false;
+      }
+
       return this.calculateStringSimilarity(actualText, expectedText) >= 0.8;
     }
 
@@ -1746,12 +1809,24 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const normalizedExpected = this.normalizeParameterKeys(expectedParams);
 
     return Object.entries(normalizedExpected).every(([expectedKey, expectedValue]) => {
+      if (expectedKey === 'organism') {
+        const actualCandidate = this.getActualParameterValue(normalizedActual, expectedKey);
+        if (!actualCandidate.found) {
+          return !this.hasConcreteExpectedValue(expectedValue) || this.isSchemaDefaultExpectation(expectedValue);
+        }
+        const expectedOrganism = this.unwrapExpectedValue(expectedValue);
+        if (this.isPlaceholderExpectedValue(expectedOrganism)) {
+          return actualCandidate.value !== undefined && actualCandidate.value !== null;
+        }
+        return this.normalizeOrganismValue(actualCandidate.value) === this.normalizeOrganismValue(expectedOrganism);
+      }
+
       if (expectedKey === 'trackName') {
         const actualCandidate = this.getActualParameterValue(normalizedActual, expectedKey);
         if (!actualCandidate.found) {
-          return !this.hasConcreteExpectedValue(expectedValue);
+          return !this.hasConcreteExpectedValue(expectedValue) || this.isSchemaDefaultExpectation(expectedValue);
         }
-        return this.trackValuesMatch(actualCandidate.value, expectedValue);
+        return this.trackValuesMatch(actualCandidate.value, this.unwrapExpectedValue(expectedValue));
       }
 
       if (expectedKey === 'visible' && Object.prototype.hasOwnProperty.call(normalizedActual, 'action')) {
@@ -1764,10 +1839,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
       const actualCandidate = this.getActualParameterValue(normalizedActual, expectedKey);
       if (!actualCandidate.found) {
-        return !this.hasConcreteExpectedValue(expectedValue);
+        return !this.hasConcreteExpectedValue(expectedValue) || this.isSchemaDefaultExpectation(expectedValue);
       }
       if (expectedKey === 'visible' || expectedKey === 'action') {
-        return this.visibilityValuesMatch(actualCandidate.value, expectedValue, normalizedActual);
+        return this.visibilityValuesMatch(
+          actualCandidate.value,
+          this.unwrapExpectedValue(expectedValue),
+          normalizedActual
+        );
       }
       return this.workflowValuesMatch(actualCandidate.value, expectedValue);
     });
@@ -1816,30 +1895,32 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const usedOrderedIndexes = new Set();
     const orderInsensitiveTools = options.orderInsensitiveTools || [];
 
-    expectedTools.forEach((expectedTool, expectedIndex) => {
-      let matchedIndex = -1;
-      for (let callIndex = searchStart; callIndex < normalizedCalls.length; callIndex++) {
+    // Among several calls of the same tool (e.g. two toggle_track calls), pick the one whose
+    // parameters match this step instead of blindly taking the first: otherwise a workflow
+    // that toggles the tracks in the opposite order is scored as two parameter mismatches.
+    const findCandidateIndex = (expectedTool, expectedParam, fromIndex) => {
+      let fallbackIndex = -1;
+      for (let callIndex = fromIndex; callIndex < normalizedCalls.length; callIndex++) {
         const call = normalizedCalls[callIndex];
         if (usedOrderedIndexes.has(callIndex)) continue;
         if (!this.isSuccessfulWorkflowCall(call)) continue;
-        if (this.matchToolName(this.getToolNameFromCall(call), expectedTool)) {
-          matchedIndex = callIndex;
-          break;
+        if (!this.matchToolName(this.getToolNameFromCall(call), expectedTool)) continue;
+        if (this.workflowParametersMatch(this.getParametersFromCall(call), expectedParam)) {
+          return callIndex;
         }
+        if (fallbackIndex === -1) fallbackIndex = callIndex;
       }
+      return fallbackIndex;
+    };
+
+    expectedTools.forEach((expectedTool, expectedIndex) => {
+      const expectedParam = normalizedExpectedParams[expectedIndex] || {};
+      let matchedIndex = findCandidateIndex(expectedTool, expectedParam, searchStart);
 
       let matchedOutOfOrder = false;
       if (matchedIndex === -1 && this.isOrderInsensitiveWorkflowTool(expectedTool, orderInsensitiveTools)) {
-        for (let callIndex = 0; callIndex < normalizedCalls.length; callIndex++) {
-          const call = normalizedCalls[callIndex];
-          if (usedOrderedIndexes.has(callIndex)) continue;
-          if (!this.isSuccessfulWorkflowCall(call)) continue;
-          if (this.matchToolName(this.getToolNameFromCall(call), expectedTool)) {
-            matchedIndex = callIndex;
-            matchedOutOfOrder = true;
-            break;
-          }
-        }
+        matchedIndex = findCandidateIndex(expectedTool, expectedParam, 0);
+        matchedOutOfOrder = matchedIndex !== -1;
       }
 
       if (matchedIndex === -1) {
@@ -1848,7 +1929,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       }
 
       const call = normalizedCalls[matchedIndex];
-      const expectedParam = normalizedExpectedParams[expectedIndex] || {};
       const actualParams = this.getParametersFromCall(call);
       const concreteExpectedParams = this.getConcreteExpectedParameters(expectedParam);
       const hasCriticalParameters = Object.keys(concreteExpectedParams).length > 0;
@@ -1991,6 +2071,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
   async evaluateBasicFunctionCall(actualResult, expectedResult, testResult) {
     const normalizedActual = this.normalizeResultParameters(actualResult);
     const normalizedExpected = this.normalizeExpectedParameters(expectedResult);
+    const criticalParameterCheck = this.checkCriticalParametersOfExecutedCall(normalizedActual, normalizedExpected);
 
     // Delegate to the base class with AutomaticComplex-specific options:
     // - useParseDebugInfo: true (ComplexSuite PRIORITY 1 feature)
@@ -1998,12 +2079,66 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     // - maxParamDeduction: 2 (complex allows more deduction)
     // - successThreshold: 0.4 (40% for complex tests)
     // - defaultMaxScore: 10
-    return super.evaluateBasicFunctionCall(normalizedActual, normalizedExpected, testResult, {
+    const evaluation = await super.evaluateBasicFunctionCall(normalizedActual, normalizedExpected, testResult, {
       defaultMaxScore: 10,
       successThreshold: BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_COMPLEX,
       useParseDebugInfo: true,
       maxParamDeduction: 2,
     });
+
+    // The base evaluator reads parameters off the top level of the result, but the runner
+    // hands evaluators a parsed response whose tool calls live in executedFunctionCalls —
+    // so parameters went unchecked and a call with the wrong enzyme, ladder or gene still
+    // scored full marks. When the executed call is available, its concrete parameters must
+    // match, matching the rule the workflow evaluator already applies.
+    if (evaluation.success && criticalParameterCheck.checked && !criticalParameterCheck.matched) {
+      const passScore = Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_COMPLEX);
+      evaluation.success = false;
+      evaluation.score = Math.max(0, Math.min(evaluation.score, passScore - 1));
+      evaluation.errors.push(
+        `Critical parameters did not match for ${normalizedExpected.tool_name}: expected ${JSON.stringify(
+          criticalParameterCheck.expected
+        )}, got ${JSON.stringify(criticalParameterCheck.actual)}`
+      );
+    }
+
+    return evaluation;
+  }
+
+  /**
+   * Resolve the executed call for the expected tool and verify its concrete parameters.
+   * Returns `checked: false` when no executed call is available, so results that only carry
+   * natural-language evidence keep their previous scoring.
+   */
+  checkCriticalParametersOfExecutedCall(normalizedActual, normalizedExpected) {
+    const expectedToolName = normalizedExpected?.tool_name;
+    const expectedParams = Array.isArray(normalizedExpected?.parameters)
+      ? normalizedExpected.parameters[0]
+      : normalizedExpected?.parameters;
+    const concreteExpected = this.getConcreteExpectedParameters(expectedParams || {});
+
+    if (!expectedToolName || Object.keys(concreteExpected).length === 0) {
+      return { checked: false };
+    }
+
+    const call = this.extractWorkflowCalls(normalizedActual).find(
+      candidate =>
+        this.matchToolName(this.getToolNameFromCall(candidate), expectedToolName) &&
+        this.isSuccessfulWorkflowCall(candidate) &&
+        this.getParametersFromCall(candidate) !== undefined
+    );
+
+    if (!call) {
+      return { checked: false };
+    }
+
+    const actualParams = this.getParametersFromCall(call);
+    return {
+      checked: true,
+      matched: this.workflowParametersMatch(actualParams, concreteExpected),
+      expected: concreteExpected,
+      actual: actualParams,
+    };
   }
 
   async evaluateNavigationCall(actualResult, expectedResult, testResult) {
@@ -2062,15 +2197,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     console.log('📄 [NavigationWorkflow] Parsing response text:', responseText.substring(0, 500));
 
-    const navTrackerCheck = this.checkToolExecutionTracker(
-      'navigate_to_position',
-      BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT
-    );
+    const evaluationWindow = this.getEvaluationWindow(testResult);
+    const navTrackerCheck = this.checkToolExecutionTracker('navigate_to_position', evaluationWindow);
     if (navTrackerCheck.found && navTrackerCheck.status === 'completed') {
       evaluation.score = Math.ceil(evaluation.maxScore * BenchmarkEvaluatorBase.THRESHOLDS.SUCCESS_EXPORT_PASS);
 
-      const zoomTrackerCheck = this.checkToolExecutionTracker('zoom_in', BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT);
-      const zoomAltCheck = this.checkToolExecutionTracker('set_zoom_level', BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT);
+      const zoomTrackerCheck = this.checkToolExecutionTracker('zoom_in', evaluationWindow);
+      const zoomAltCheck = this.checkToolExecutionTracker('set_zoom_level', evaluationWindow);
       if (
         (zoomTrackerCheck.found && zoomTrackerCheck.status === 'completed') ||
         (zoomAltCheck.found && zoomAltCheck.status === 'completed')
@@ -2193,13 +2326,15 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         !Array.isArray(normalizedActual));
 
     if (isNaturalLanguageResponse) {
-      if (testResult.category === 'navigation') {
+      // The navigation parser only looks for a navigate (+ zoom) call, so it may only be used
+      // for workflows that consist of exactly that. Longer navigation workflows — highlight,
+      // save, restore, bookmark — go through the general parser, which checks every step.
+      if (this.isNavigateAndZoomWorkflow(expectedTools)) {
         console.log('📝 [WorkflowCall] Detected natural language response, parsing for navigation success');
         return this.parseNaturalLanguageNavigationResponse(normalizedActual, normalizedExpected, testResult);
-      } else {
-        console.log('📝 [WorkflowCall] Detected natural language response, parsing for workflow success');
-        return this.parseNaturalLanguageWorkflowResponse(normalizedActual, normalizedExpected, testResult);
       }
+      console.log('📝 [WorkflowCall] Detected natural language response, parsing for workflow success');
+      return this.parseNaturalLanguageWorkflowResponse(normalizedActual, normalizedExpected, testResult);
     }
 
     // Single step workflow fallback
@@ -2256,7 +2391,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     const trackerMatchResult = this.getRecentOrderedWorkflowMatches(
       expectedTools,
-      BenchmarkEvaluatorBase.TIMEOUTS.DEFAULT,
+      this.getEvaluationWindow(testResult),
       expectedParams,
       matchOptions
     );
@@ -2356,7 +2491,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
 
     if (isNaturalLanguageResponse) {
       console.log('📝 [FileLoadingWorkflow] Detected natural language response, parsing for file loading success');
-      return this.parseNaturalLanguageFileLoadingResponse(actualResult, evaluation);
+      return this.parseNaturalLanguageFileLoadingResponse(actualResult, evaluation, testResult);
     }
 
     // Handle different result formats flexibly
@@ -2542,7 +2677,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const exportExpectedParams = expectedResult.parameters || null;
     const exportTrackerMatch = this.getRecentOrderedWorkflowMatches(
       exportExpectedTools,
-      BenchmarkEvaluatorBase.TIMEOUTS.EXPORT_WORKFLOW,
+      Math.max(BenchmarkEvaluatorBase.TIMEOUTS.EXPORT_WORKFLOW, this.getEvaluationWindow(testResult)),
       exportExpectedParams
     );
     const trackerMatchedExportTools = exportTrackerMatch.orderedMatchedTools;
@@ -3050,64 +3185,25 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       return evaluation;
     }
 
-    // Get tabs count through genomeBrowser.tabManager
+    // Count the open_new_tab calls that actually ran. The runner hands evaluators a parsed
+    // response object (executedFunctionCalls + text), never a bare array of calls, so counting
+    // only array-shaped results reported 0 tabs for every run that did the right thing.
+    evaluation.details.tabsOpened = this.countSuccessfulToolCalls(actualResult, expectedResult.tool_name);
+
     try {
       if (window.genomeBrowser && window.genomeBrowser.tabManager) {
         evaluation.details.finalTabsCount = window.genomeBrowser.tabManager.tabs.size;
-
-        // Try to estimate initial count (this is a limitation - we don't have before/after tracking)
-        // For complex tests, we assume reasonable initial state or check from tool execution results
-        if (Array.isArray(actualResult) && actualResult.length > 0) {
-          // Multiple tool calls - number of successful calls
-          const successfulCalls = actualResult.filter(
-            call =>
-              call &&
-              this.matchToolName(call.tool_name, expectedResult.tool_name) &&
-              !call.error &&
-              call.success !== false
-          ).length;
-          evaluation.details.tabsOpened = successfulCalls;
-          console.log('🗂️ [evaluateMultipleTabOpeningCall] Multiple calls detected:', {
-            totalCalls: actualResult.length,
-            successfulCalls: successfulCalls,
-          });
-        } else if (actualResult && this.matchToolName(actualResult.tool_name, expectedResult.tool_name)) {
-          // Single tool call - assume 1 tab opened if successful
-          evaluation.details.tabsOpened = !actualResult.error && actualResult.success !== false ? 1 : 0;
-          console.log('🗂️ [evaluateMultipleTabOpeningCall] Single call detected');
-        } else {
-          evaluation.details.tabsOpened = 0;
-          console.log('🗂️ [evaluateMultipleTabOpeningCall] No valid tool calls detected');
-        }
-
         console.log('🗂️ [evaluateMultipleTabOpeningCall] Tab analysis:', {
           finalTabsCount: evaluation.details.finalTabsCount,
-          estimatedTabsOpened: evaluation.details.tabsOpened,
+          tabsOpened: evaluation.details.tabsOpened,
           expectedIncrease: evaluation.details.expectedTabsIncrease,
         });
       } else {
         evaluation.warnings.push('TabManager not available for verification');
-        // Fallback: analyze actualResult structure
-        if (Array.isArray(actualResult)) {
-          evaluation.details.tabsOpened = actualResult.filter(
-            call => call && this.matchToolName(call.tool_name, expectedResult.tool_name)
-          ).length;
-        } else if (actualResult && this.matchToolName(actualResult.tool_name, expectedResult.tool_name)) {
-          evaluation.details.tabsOpened = 1;
-        }
       }
     } catch (error) {
       console.warn('⚠️ [evaluateMultipleTabOpeningCall] Could not access TabManager:', error.message);
       evaluation.warnings.push('Could not verify tab count directly');
-
-      // Fallback analysis based on actualResult structure
-      if (Array.isArray(actualResult)) {
-        evaluation.details.tabsOpened = actualResult.filter(
-          call => call && this.matchToolName(call.tool_name, expectedResult.tool_name)
-        ).length;
-      } else if (actualResult && this.matchToolName(actualResult.tool_name, expectedResult.tool_name)) {
-        evaluation.details.tabsOpened = 1;
-      }
     }
 
     // Song's complex scoring system
