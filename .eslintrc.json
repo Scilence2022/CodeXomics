@@ -48,6 +48,7 @@
     "ExtensionMode": "readonly",
     "ExtensionService": "readonly",
     "ExternalAgent": "readonly",
+    "FeatureGlyphLegend": "readonly",
     "FunctionCallsOrganizer": "readonly",
     "GeneShapeCreators": "readonly",
     "LLMBenchmarkFramework": "readonly",

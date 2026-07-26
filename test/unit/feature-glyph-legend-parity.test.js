@@ -213,7 +213,6 @@ describe('Feature Glyph Legend parity with the genes track', () => {
 
   describe('descriptions match the active renderer', () => {
     it('describes the SVG glyph in SVG mode and the Canvas glyph in Canvas mode', () => {
-      const { renderer } = makeRenderer();
       const entries = FeatureGlyphLegend.getEntries();
 
       entries.forEach(entry => {
@@ -231,7 +230,6 @@ describe('Feature Glyph Legend parity with the genes track', () => {
     });
 
     it('covers every feature type the renderers special-case', () => {
-      const { renderer } = makeRenderer();
       const covered = new Set(FeatureGlyphLegend.getEntries().map(e => e.type.toLowerCase()));
       ['promoter', 'terminator', 'regulatory', 'repeat_region', 'trna', 'rrna', 'mrna', 'misc_feature'].forEach(
         type => {
