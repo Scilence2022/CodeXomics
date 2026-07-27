@@ -93,6 +93,42 @@ describe('ChatManager bounded model-turn recovery', () => {
     expect(manager.requestRequiresToolExecution('I need to open a new tab')).toBe(true);
   });
 
+  it('treats imperative retrieval prompts as app actions', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    expect(manager.requestRequiresToolExecution('Get the current track display settings.')).toBe(true);
+    expect(manager.requestRequiresToolExecution('Get the current content of the sequence clipboard.')).toBe(true);
+    expect(manager.requestRequiresToolExecution('Get features near position 500000 within a 5000bp range.')).toBe(true);
+    expect(manager.requestRequiresToolExecution('List all chromosomes (contigs) in the loaded genome.')).toBe(true);
+    expect(manager.requestRequiresToolExecution('Perform genome-wide codon usage analysis.')).toBe(true);
+
+    // Conceptual questions must stay informational.
+    expect(manager.requestRequiresToolExecution('What is a codon?')).toBe(false);
+    expect(manager.requestRequiresToolExecution('How do I get the sequence of a gene?')).toBe(false);
+  });
+
+  it('does not suppress retrieval-only tools on informational requests', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    // No capability policy wired up: name alone must be enough.
+    for (const tool of [
+      'get_chromosome_list',
+      'get_clipboard_content',
+      'get_action_list',
+      'get_nearby_features',
+      'get_all_track_settings',
+      'genome_codon_usage_analysis',
+    ]) {
+      expect(manager.isReadOnlyToolForInformationalRequest(tool)).toBe(true);
+    }
+
+    for (const tool of ['load_genome_file', 'delete_annotation', 'set_track_settings', 'show_action_list']) {
+      expect(manager.isReadOnlyToolForInformationalRequest(tool)).toBe(false);
+    }
+  });
+
   it('disables text-derived calls for instructional prompts and rejects unadvertised tools', () => {
     const LoopSupport = loadLoopSupportClass();
     const manager = new LoopSupport();
