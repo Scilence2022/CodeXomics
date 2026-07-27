@@ -935,11 +935,27 @@ class LLMBenchmarkFramework {
         result.warnings.push(...evaluation.warnings);
       }
     } catch (error) {
-      result.status = 'error';
-      result.success = false;
-      result.score = 0;
-      result.errors.push(error.message);
-      console.error(`Test ${test.id} failed with error:`, error);
+      // An earlyReturn test is scored on tool submission, not completion, so a
+      // long-running tool (online BLAST against nt, makeblastdb over a whole
+      // genome) must not fail the test it already satisfied. The normal
+      // evaluation path never runs on timeout, so honour the flag here.
+      const submitted = this.findEarlyReturnSubmission(test, error);
+      if (submitted) {
+        result.status = 'passed';
+        result.success = true;
+        result.score = test.maxScore || 0;
+        result.warnings.push(
+          `Tool '${submitted.toolName}' was submitted before the timeout ` +
+            '(earlyReturn: scored on submission, not completion)'
+        );
+        console.log(`⏱️ Test ${test.id} timed out but '${submitted.toolName}' was submitted (earlyReturn)`);
+      } else {
+        result.status = 'error';
+        result.success = false;
+        result.score = 0;
+        result.errors.push(error.message);
+        console.error(`Test ${test.id} failed with error:`, error);
+      }
 
       // CRITICAL FIX: Try to capture LLM interaction data even on timeout/error
       // Check if we have any LLM interaction data from ChatManager or other sources
@@ -959,6 +975,41 @@ class LLMBenchmarkFramework {
     this.currentTest = null;
 
     return result;
+  }
+
+  /**
+   * For an `earlyReturn` test that hit its timeout, report the tracked execution of an
+   * expected tool if the model did submit one. Returns null for any other failure, so
+   * genuine errors and non-earlyReturn timeouts still fail the test.
+   */
+  findEarlyReturnSubmission(test, error) {
+    if (!test?.earlyReturn) return null;
+    if (!/^Test timeout after \d+ms$/.test(String(error?.message || ''))) return null;
+
+    const expected = test.expectedResult || {};
+    const expectedNames = (
+      Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name]
+    ).filter(name => typeof name === 'string' && name);
+    if (expectedNames.length === 0) return null;
+
+    const tracker = this.chatManager?.toolExecutionTracker;
+    if (!tracker || typeof tracker.getTestExecutions !== 'function') return null;
+
+    let executions = [];
+    try {
+      executions = tracker.getTestExecutions(test.id) || [];
+    } catch (trackerError) {
+      console.warn(`Could not read tracked executions for ${test.id}:`, trackerError);
+      return null;
+    }
+
+    // 'running' is the expected state here: the tool was dispatched and is still
+    // in flight. 'completed' can also appear if the timeout landed on a later round.
+    return (
+      executions.find(
+        exec => expectedNames.includes(exec?.toolName) && (exec.status === 'running' || exec.status === 'completed')
+      ) || null
+    );
   }
 
   /**

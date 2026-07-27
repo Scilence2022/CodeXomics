@@ -43,7 +43,9 @@ class DatabaseTools {
 
       advanced_uniprot_search: {
         name: 'advanced_uniprot_search',
-        description: 'Advanced UniProt search with multiple query fields',
+        description:
+          'Advanced UniProt search. Pass each criterion as a flat top-level argument ' +
+          '(proteinName, geneName, organism, ...); do not nest them under query_fields or filters.',
         parameters: {
           type: 'object',
           properties: {

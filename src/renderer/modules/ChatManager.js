@@ -7012,10 +7012,14 @@ class ChatManager {
   // get_chromosome_list is absent from the table entirely.
   isRetrievalOnlyToolName(toolName) {
     const name = String(toolName || '');
-    return (
-      /^(?:get|list|search|find|calc|calculate|compute|count|describe|inspect|read)_/.test(name) ||
-      /_analysis$/.test(name)
-    );
+    const retrievalVerb = /^(?:get|list|search|find|calc|calculate|compute|count|describe|inspect|read|detect)$/;
+    const segments = name.split('_');
+    // Bare retrieval tools (get_genome_info) and namespaced ones where the
+    // provider prefixes the verb (blast_get_installation_status,
+    // uniprot_get_protein, blast_list_databases).
+    if (retrievalVerb.test(segments[0])) return true;
+    if (segments.length > 2 && retrievalVerb.test(segments[1])) return true;
+    return /_(?:analysis|status)$/.test(name);
   }
 
   getToolCallRequestMismatchReason(toolCall, originalMessage) {
@@ -7053,7 +7057,7 @@ class ChatManager {
   }
 
   getActionVerbPattern() {
-    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|fetch|get|list|retrieve|perform|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry)';
+    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|expand|collapse|view|check|change|fetch|get|list|retrieve|perform|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry)';
   }
 
   requestRequiresToolExecution(originalMessage, responseText = '') {
@@ -7080,7 +7084,7 @@ class ChatManager {
     const contextRequiredAction =
       /\b(?:calculate|compute|analy[sz]e|assess|predict|show|find|search|locate|open|fetch|retrieve)\b/.test(message);
     const genomicsOrAppContext =
-      /\b(?:genome|gene|dna|rna|sequence|annotation|feature|chromosome|track|tab|window|file|image|primer|protein|blast|codon|gc|domain|motif|region|position|view|browser|state|task|action|bookmark|setting|theme|style|mode|model|provider|option|sidebar|panel|plugin|workflow|benchmark|database|uniprot|interpro|report|screenshot|directory|folder|reads?|variants?|wig|operon|fasta|genbank|bed|gff|vcf|molecular|translation)\b/.test(
+      /\b(?:genomes?|genes?|dna|rna|sequences?|annotations?|features?|chromosomes?|tracks?|tabs?|windows?|files?|images?|primers?|proteins?|blast|codons?|gc|domains?|motifs?|regions?|positions?|views?|browsers?|states?|tasks?|actions?|bookmarks?|settings?|themes?|styles?|modes?|models?|providers?|options?|sidebars?|panels?|banners?|modals?|plugins?|workflows?|benchmarks?|databases?|uniprot|interpro|reports?|screenshots?|director(?:y|ies)|folders?|reads?|variants?|wig|operons?|fasta|genbank|bed|gff|vcf|molecular|translations?)\b/.test(
         message
       ) ||
       /(?:基因组|基因|序列|注释|染色体|轨道|标签页|文件|引物|蛋白|区域|位置|视图|状态|任务|设置|数据库|截图|目录|变异|操纵子)/.test(

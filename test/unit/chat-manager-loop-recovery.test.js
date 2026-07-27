@@ -129,6 +129,47 @@ describe('ChatManager bounded model-turn recovery', () => {
     }
   });
 
+  it('treats imperative UI and settings prompts as app actions', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    // Plural nouns: "settings" must match the app-context vocabulary, not just "setting".
+    expect(manager.requestRequiresToolExecution('Open the settings modal.')).toBe(true);
+    expect(manager.requestRequiresToolExecution('Open or configure export settings for the current workspace.')).toBe(
+      true
+    );
+    expect(manager.requestRequiresToolExecution('Change the application appearance to the midnight style.')).toBe(true);
+    expect(manager.requestRequiresToolExecution('Expand the main genome browser Sidebar.')).toBe(true);
+    expect(manager.requestRequiresToolExecution('Expand the top banner area.')).toBe(true);
+    expect(manager.requestRequiresToolExecution('View the /tmp/test_data/README.md file in the markdown viewer.')).toBe(
+      true
+    );
+    expect(manager.requestRequiresToolExecution('Check if BLAST is installed and available on the system.')).toBe(true);
+
+    // Off-topic imperatives must stay conversational.
+    expect(manager.requestRequiresToolExecution('open the discussion with a summary')).toBe(false);
+    expect(manager.requestRequiresToolExecution('find the capital of France')).toBe(false);
+  });
+
+  it('recognizes provider-namespaced retrieval tools as read-only', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    for (const tool of [
+      'blast_get_installation_status',
+      'blast_list_databases',
+      'uniprot_get_protein',
+      'alphafold_get_structure',
+      'get_track_status',
+    ]) {
+      expect(manager.isReadOnlyToolForInformationalRequest(tool)).toBe(true);
+    }
+
+    for (const tool of ['blast_create_database', 'blast_delete_database', 'uninstall_plugin']) {
+      expect(manager.isReadOnlyToolForInformationalRequest(tool)).toBe(false);
+    }
+  });
+
   it('disables text-derived calls for instructional prompts and rejects unadvertised tools', () => {
     const LoopSupport = loadLoopSupportClass();
     const manager = new LoopSupport();
