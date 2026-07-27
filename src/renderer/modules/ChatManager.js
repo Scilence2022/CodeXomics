@@ -6998,10 +6998,24 @@ class ChatManager {
       'list_primers',
     ]);
     if (readOnlyTools.has(toolName)) return true;
+    if (this.isRetrievalOnlyToolName(toolName)) return true;
     const policyName = this.services?.context
       ?.getToolExecutionPolicy?.()
       ?.capabilityPolicy?.getPolicyForTool?.(toolName)?.name;
     return readOnlyPolicyNames.has(policyName);
+  }
+
+  // Retrieval-only tools cannot mutate application state, so answering an
+  // informational request with one is always safe. Naming is the reliable
+  // signal: the capability policy groups tools by feature area rather than by
+  // effect, so get_clipboard_content sits under sequence_editing_actions and
+  // get_chromosome_list is absent from the table entirely.
+  isRetrievalOnlyToolName(toolName) {
+    const name = String(toolName || '');
+    return (
+      /^(?:get|list|search|find|calc|calculate|compute|count|describe|inspect|read)_/.test(name) ||
+      /_analysis$/.test(name)
+    );
   }
 
   getToolCallRequestMismatchReason(toolCall, originalMessage) {
@@ -7039,7 +7053,7 @@ class ChatManager {
   }
 
   getActionVerbPattern() {
-    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|fetch|retrieve|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry)';
+    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|fetch|get|list|retrieve|perform|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry)';
   }
 
   requestRequiresToolExecution(originalMessage, responseText = '') {
