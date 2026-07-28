@@ -1815,8 +1815,10 @@ class LLMConfigManager {
 
   /**
    * @param {object} [options] Streaming hooks. `onToken(text)` receives visible
-   *   text as it arrives; `onStreamReset()` is invoked if a stream fails partway
-   *   so the caller can discard partial text before the non-streaming retry;
+   *   text as it arrives; `onReasoningToken(text)` receives reasoning/thinking
+   *   text as it arrives, for providers that stream it separately from the
+   *   answer; `onStreamReset()` is invoked if a stream fails partway so the
+   *   caller can discard partial text before the non-streaming retry;
    *   `signal` aborts an in-flight stream.
    */
   async sendMessageWithHistory(conversationHistory, context = null, memoryContext = null, options = {}) {
@@ -2170,7 +2172,7 @@ class LLMConfigManager {
   // retry, and tool-call behaviour.
   // ---------------------------------------------------------------------------
 
-  /** Streaming is opt-out; it only engages when a caller supplies an onToken sink. */
+  /** Streaming is opt-out; it only engages when a caller supplies a token sink. */
   isStreamingEnabled() {
     try {
       // The owning app instance is stored as `genomeBrowser` (both construction
@@ -2192,11 +2194,14 @@ class LLMConfigManager {
   }
 
   /**
-   * True when a streaming attempt is worth making. Without an onToken sink there
-   * is no user-visible benefit, so the simpler non-streaming path is used.
+   * True when a streaming attempt is worth making. Without a token sink there is
+   * no user-visible benefit, so the simpler non-streaming path is used. Either
+   * sink qualifies: a caller that only renders live reasoning still gains from
+   * streaming.
    */
   shouldAttemptStream(options) {
-    return Boolean(options?.onToken) && this.isStreamingEnabled() && Boolean(this.getStreamClient());
+    const hasSink = Boolean(options?.onToken || options?.onReasoningToken);
+    return hasSink && this.isStreamingEnabled() && Boolean(this.getStreamClient());
   }
 
   /**
@@ -2261,6 +2266,7 @@ class LLMConfigManager {
 
       const data = await streamClient.streamOpenAICompatible(response, {
         onToken: options.onToken,
+        onReasoningToken: options.onReasoningToken,
         signal: options.signal,
       });
 
@@ -2309,6 +2315,7 @@ class LLMConfigManager {
 
       const data = await streamClient.streamAnthropic(response, {
         onToken: options.onToken,
+        onReasoningToken: options.onReasoningToken,
         signal: options.signal,
       });
 
@@ -2364,6 +2371,7 @@ class LLMConfigManager {
 
       const data = await streamClient.streamGoogle(response, {
         onToken: options.onToken,
+        onReasoningToken: options.onReasoningToken,
         signal: options.signal,
       });
 

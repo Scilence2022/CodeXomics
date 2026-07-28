@@ -9,8 +9,11 @@
  * on LLMConfigManager, so streaming does not introduce a second response
  * contract and tool-call handling stays on one code path.
  *
- * Visible text is surfaced incrementally through the `onToken` callback while
- * the full object is being reassembled.
+ * Visible text is surfaced incrementally through the `onToken` callback, and
+ * reasoning/chain-of-thought through `onReasoningToken`, while the full object
+ * is being reassembled. The two sinks are kept separate because the caller
+ * renders them in different places: answer text in the message bubble,
+ * reasoning in the thinking panel.
  */
 class LLMStreamClient {
   /**
@@ -150,7 +153,7 @@ class LLMStreamClient {
    * Covers every OpenAI-compatible provider (OpenAI, DeepSeek, SiliconFlow,
    * OpenRouter, MiniMax, local runtimes).
    */
-  static async streamOpenAICompatible(response, { onToken = null, signal = null } = {}) {
+  static async streamOpenAICompatible(response, { onToken = null, onReasoningToken = null, signal = null } = {}) {
     let content = '';
     let reasoning = '';
     let role = 'assistant';
@@ -188,6 +191,7 @@ class LLMStreamClient {
         const reasoningDelta = delta.reasoning_content ?? delta.reasoning;
         if (typeof reasoningDelta === 'string' && reasoningDelta) {
           reasoning += reasoningDelta;
+          if (onReasoningToken) onReasoningToken(reasoningDelta);
         }
 
         if (Array.isArray(delta.tool_calls)) {
@@ -228,7 +232,7 @@ class LLMStreamClient {
    * Reassemble an Anthropic Messages stream into a non-streaming
    * `{ content: [...blocks], stop_reason }` envelope.
    */
-  static async streamAnthropic(response, { onToken = null, signal = null } = {}) {
+  static async streamAnthropic(response, { onToken = null, onReasoningToken = null, signal = null } = {}) {
     const blocks = new Map(); // index -> block being built
     const partialJson = new Map(); // index -> accumulated tool input JSON
     let envelope = { type: 'message', role: 'assistant', content: [] };
@@ -273,6 +277,7 @@ class LLMStreamClient {
             } else if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
               block.type = block.type || 'thinking';
               block.thinking = (block.thinking || '') + delta.thinking;
+              if (onReasoningToken && delta.thinking) onReasoningToken(delta.thinking);
             } else if (delta.type === 'signature_delta' && typeof delta.signature === 'string') {
               block.signature = (block.signature || '') + delta.signature;
             } else if (delta.type === 'input_json_delta' && typeof delta.partial_json === 'string') {
@@ -328,7 +333,7 @@ class LLMStreamClient {
    * Gemini streams whole `parts` rather than fragments, so text parts are
    * concatenated while functionCall parts are appended verbatim.
    */
-  static async streamGoogle(response, { onToken = null, signal = null } = {}) {
+  static async streamGoogle(response, { onToken = null, onReasoningToken = null, signal = null } = {}) {
     let visibleText = '';
     let thoughtText = '';
     const functionCallParts = [];
@@ -360,6 +365,7 @@ class LLMStreamClient {
           } else if (typeof part?.text === 'string') {
             if (part.thought === true) {
               thoughtText += part.text;
+              if (onReasoningToken && part.text) onReasoningToken(part.text);
             } else {
               visibleText += part.text;
               if (onToken) onToken(part.text);

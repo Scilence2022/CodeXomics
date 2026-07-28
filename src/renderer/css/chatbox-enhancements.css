@@ -1170,3 +1170,24 @@
     opacity: 0.85;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Live reasoning block
+   Reasoning streams into the thinking panel while it arrives, then the same
+   block is reformatted and collapsed once the round resolves.
+   --------------------------------------------------------------------------- */
+.reasoning-stream > summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.reasoning-stream-body {
+  word-break: break-word;
+}
+
+/* While streaming, cap the height so a long chain of thought cannot push the
+   rest of the thinking log off screen; the finalized block is collapsed anyway. */
+.reasoning-stream[open] > .reasoning-stream-body {
+  max-height: 14em;
+  overflow-y: auto;
+}
