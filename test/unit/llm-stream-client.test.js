@@ -170,6 +170,27 @@ describe('LLMStreamClient', () => {
       expect(data.choices[0].message.reasoning_content).toBe('thinking...');
     });
 
+    it('streams reasoning deltas to onReasoningToken as they arrive', async () => {
+      const response = makeResponse([
+        sse({ choices: [{ delta: { reasoning_content: 'first ' } }] }),
+        sse({ choices: [{ delta: { reasoning: 'second' } }] }),
+        sse({ choices: [{ delta: { content: 'answer' } }] }),
+        'data: [DONE]\n\n',
+      ]);
+
+      const tokens = [];
+      const reasoningTokens = [];
+      const data = await LLMStreamClient.streamOpenAICompatible(response, {
+        onToken: t => tokens.push(t),
+        onReasoningToken: t => reasoningTokens.push(t),
+      });
+
+      // Each delta is surfaced individually, and the two sinks stay disjoint.
+      expect(reasoningTokens).toEqual(['first ', 'second']);
+      expect(tokens).toEqual(['answer']);
+      expect(data.choices[0].message.reasoning_content).toBe('first second');
+    });
+
     it('reports content as null when only tool calls were returned', async () => {
       const response = makeResponse([
         sse({
@@ -272,6 +293,33 @@ describe('LLMStreamClient', () => {
       expect(tokens).toEqual([]);
       expect(data.content[0]).toMatchObject({ type: 'thinking', thinking: 'reasoning' });
     });
+
+    it('streams thinking deltas to onReasoningToken as they arrive', async () => {
+      const response = makeResponse([
+        `event: content_block_start\ndata: ${JSON.stringify({ index: 0, content_block: { type: 'thinking' } })}\n\n`,
+        `event: content_block_delta\ndata: ${JSON.stringify({
+          index: 0,
+          delta: { type: 'thinking_delta', thinking: 'step one ' },
+        })}\n\n`,
+        `event: content_block_delta\ndata: ${JSON.stringify({
+          index: 0,
+          delta: { type: 'thinking_delta', thinking: 'step two' },
+        })}\n\n`,
+        `event: content_block_stop\ndata: ${JSON.stringify({ index: 0 })}\n\n`,
+        `event: content_block_start\ndata: ${JSON.stringify({ index: 1, content_block: { type: 'text', text: '' } })}\n\n`,
+        `event: content_block_delta\ndata: ${JSON.stringify({ index: 1, delta: { type: 'text_delta', text: 'Hi' } })}\n\n`,
+      ]);
+
+      const tokens = [];
+      const reasoningTokens = [];
+      await LLMStreamClient.streamAnthropic(response, {
+        onToken: t => tokens.push(t),
+        onReasoningToken: t => reasoningTokens.push(t),
+      });
+
+      expect(reasoningTokens).toEqual(['step one ', 'step two']);
+      expect(tokens).toEqual(['Hi']);
+    });
   });
 
   describe('streamGoogle', () => {
@@ -319,6 +367,23 @@ describe('LLMStreamClient', () => {
 
       expect(tokens).toEqual(['visible']);
       expect(data.candidates[0].content.parts).toEqual([{ text: 'internal', thought: true }, { text: 'visible' }]);
+    });
+
+    it('streams thought parts to onReasoningToken as they arrive', async () => {
+      const response = makeResponse([
+        sse({ candidates: [{ content: { parts: [{ text: 'why ', thought: true }] } }] }),
+        sse({ candidates: [{ content: { parts: [{ text: 'because', thought: true }, { text: 'visible' }] } }] }),
+      ]);
+
+      const tokens = [];
+      const reasoningTokens = [];
+      await LLMStreamClient.streamGoogle(response, {
+        onToken: t => tokens.push(t),
+        onReasoningToken: t => reasoningTokens.push(t),
+      });
+
+      expect(reasoningTokens).toEqual(['why ', 'because']);
+      expect(tokens).toEqual(['visible']);
     });
   });
 

@@ -330,4 +330,50 @@ describe('LLMConfigManager streaming integration', () => {
     expect(tokens).toEqual(['Gene ', 'found']);
     expect(result).toBe('Gene found');
   });
+
+  it('forwards reasoning deltas to onReasoningToken while streaming the answer', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        makeSSEResponse([
+          sse({ choices: [{ delta: { role: 'assistant', reasoning_content: 'weighing ' } }] }),
+          sse({ choices: [{ delta: { reasoning_content: 'options' } }] }),
+          sse({ choices: [{ delta: { content: 'Answer' } }] }),
+          sse({ choices: [{ delta: {}, finish_reason: 'stop' }] }),
+          'data: [DONE]\n\n',
+        ])
+      )
+    );
+
+    const tokens = [];
+    const reasoningTokens = [];
+    const result = await manager.sendOpenAIMessageWithHistory(provider, [{ role: 'user', content: 'hi' }], null, null, {
+      onToken: t => tokens.push(t),
+      onReasoningToken: t => reasoningTokens.push(t),
+    });
+
+    expect(reasoningTokens).toEqual(['weighing ', 'options']);
+    expect(tokens).toEqual(['Answer']);
+    // Contract is unchanged: reasoning still normalizes into the <think> form.
+    expect(result).toBe('<think>\nweighing options\n</think>\nAnswer');
+  });
+
+  it('streams when only a reasoning sink is supplied', async () => {
+    const fetchMock = vi.fn(async () =>
+      makeSSEResponse([
+        sse({ choices: [{ delta: { reasoning_content: 'thought' } }] }),
+        sse({ choices: [{ delta: { content: 'x' } }] }),
+        'data: [DONE]\n\n',
+      ])
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const reasoningTokens = [];
+    await manager.sendOpenAIMessageWithHistory(provider, [{ role: 'user', content: 'hi' }], null, null, {
+      onReasoningToken: t => reasoningTokens.push(t),
+    });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).stream).toBe(true);
+    expect(reasoningTokens).toEqual(['thought']);
+  });
 });

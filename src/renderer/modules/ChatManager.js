@@ -51,6 +51,12 @@ class ChatManager {
     // Live token-streaming render state (null when no stream is in flight)
     this.streamingState = null;
 
+    // Live reasoning-streaming render state for the thinking panel. Separate
+    // from streamingState because the two render into different containers and
+    // have different lifetimes: the answer preview is discarded once the round
+    // completes, the reasoning block stays in the thinking log.
+    this.reasoningStreamState = null;
+
     // Use app's LLM configuration manager if available, otherwise create one
     // Ensure we pass arguments correctly: (genomeBrowser, configManager)
     this.llmConfigManager = this.app?.llmConfigManager || new LLMConfigManager(this.app, this.configManager);
@@ -5083,6 +5089,7 @@ class ChatManager {
         try {
           response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context, memoryContext, {
             onToken: token => this.appendStreamingToken(token),
+            onReasoningToken: token => this.appendStreamingReasoningToken(token),
             onStreamReset: () => this.resetStreamingResponse(),
             signal: this.conversationState.abortController?.signal,
           });
@@ -16094,7 +16101,30 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   // into one DOM update per animation frame. Text lands in a single Text node
   // via appendData(), which appends in place rather than re-parsing the whole
   // message the way `innerHTML +=` would.
+  //
+  // Two independent streams run per round: visible answer text into the preview
+  // bubble, and reasoning into a live block inside the thinking panel.
   // ---------------------------------------------------------------------------
+
+  /** rAF when available; a timer fallback keeps this working outside a browser. */
+  scheduleStreamFrame(callback) {
+    const schedule =
+      typeof requestAnimationFrame === 'function' ? requestAnimationFrame : handler => setTimeout(handler, 16);
+    return schedule(callback);
+  }
+
+  cancelStreamFrame(handle) {
+    if (handle === null || handle === undefined) return;
+    const cancel = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
+    cancel(handle);
+  }
+
+  /** Keep the transcript pinned to the newest output when auto-scroll is on. */
+  scrollMessagesToBottom() {
+    if (!this.autoScrollToBottom) return;
+    const messagesContainer = document.getElementById('chatMessages');
+    if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
 
   /**
    * Create (or reuse) the live response bubble for the current request.
@@ -16104,6 +16134,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   beginStreamingResponse() {
     const messagesContainer = document.getElementById('chatMessages');
     if (!messagesContainer) return;
+
+    // A new round streams its own reasoning. Any block left over from a previous
+    // round has already been settled in the DOM, so the handle is simply dropped.
+    this.reasoningStreamState = null;
 
     if (this.streamingState?.container?.isConnected) return;
 
@@ -16142,22 +16176,101 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       pending: '',
       frameHandle: null,
       hasContent: false,
+      // Inline-reasoning routing state (see routeStreamedToken)
+      inReasoningTag: false,
+      carry: '',
     };
   }
 
-  /** Buffer a token and schedule a single coalesced DOM write for this frame. */
-  appendStreamingToken(token) {
-    if (!token || !this.streamingState?.textNode) return;
+  // Inline reasoning tags. Matches the set IntentParserService extracts reasoning
+  // from, so the live block and the finalized block agree on what counts as
+  // reasoning. Non-global: `match` on these is stateless and safe to share.
+  static REASONING_TAG_NAMES = ['think', 'thinking', 'analysis', 'reasoning'];
+  static REASONING_OPEN_TAG = /<(?:think|thinking|analysis|reasoning)\b[^>]*>/i;
+  static REASONING_CLOSE_TAG = /<\/(?:think|thinking|analysis|reasoning)\s*>/i;
 
-    this.streamingState.pending += token;
+  /**
+   * Route one streamed token to the answer bubble or the reasoning block.
+   *
+   * Providers split into two camps: those that stream reasoning on a separate
+   * channel (handled by onReasoningToken) and those that inline it as
+   * <think>…</think> inside the content. Without this split the inline camp
+   * streams raw tags into the answer bubble, then has them stripped when the
+   * finished message renders — reasoning that never reaches the thinking panel
+   * while it is being produced.
+   *
+   * Tags can straddle token boundaries, so a trailing partial tag is carried
+   * over to the next token rather than emitted.
+   */
+  appendStreamingToken(token) {
+    if (!token || !this.streamingState) return;
+
+    const state = this.streamingState;
+    let buffer = state.carry + token;
+    state.carry = '';
+
+    while (buffer) {
+      if (state.inReasoningTag) {
+        const close = buffer.match(ChatManager.REASONING_CLOSE_TAG);
+        if (!close) {
+          buffer = this.holdPartialTag(buffer, text => this.appendStreamingReasoningToken(text));
+          return;
+        }
+        if (close.index > 0) this.appendStreamingReasoningToken(buffer.slice(0, close.index));
+        buffer = buffer.slice(close.index + close[0].length);
+        state.inReasoningTag = false;
+      } else {
+        const open = buffer.match(ChatManager.REASONING_OPEN_TAG);
+        if (!open) {
+          buffer = this.holdPartialTag(buffer, text => this.writeStreamingText(text));
+          return;
+        }
+        if (open.index > 0) this.writeStreamingText(buffer.slice(0, open.index));
+        buffer = buffer.slice(open.index + open[0].length);
+        state.inReasoningTag = true;
+      }
+    }
+  }
+
+  /**
+   * Emit everything in `buffer` except a trailing fragment that could still turn
+   * out to be a reasoning tag, which is held for the next token.
+   */
+  holdPartialTag(buffer, emit) {
+    const cut = this.findPartialTagStart(buffer);
+    if (cut > 0) emit(buffer.slice(0, cut));
+    this.streamingState.carry = buffer.slice(cut);
+    return '';
+  }
+
+  /**
+   * Index where a trailing fragment could still grow into a reasoning tag, or
+   * `buffer.length` when nothing needs holding back.
+   *
+   * Held text is invisible until the next token arrives, so the test is kept
+   * narrow: prose like `a < b` or `x <threshold` can never become one of these
+   * tags and must not be stalled waiting for a `>` that never comes.
+   */
+  findPartialTagStart(buffer) {
+    const start = buffer.lastIndexOf('<');
+    if (start === -1) return buffer.length;
+
+    const tail = buffer.slice(start).toLowerCase();
+    if (tail.includes('>')) return buffer.length; // a complete tag, and not one of ours
+    const name = tail.startsWith('</') ? tail.slice(2) : tail.slice(1);
+    return ChatManager.REASONING_TAG_NAMES.some(tag => tag.startsWith(name)) ? start : buffer.length;
+  }
+
+  /** Buffer answer text and schedule a single coalesced DOM write for this frame. */
+  writeStreamingText(text) {
+    if (!text || !this.streamingState?.textNode) return;
+
+    this.streamingState.pending += text;
     this.streamingState.hasContent = true;
 
     if (this.streamingState.frameHandle !== null) return;
 
-    const schedule =
-      typeof requestAnimationFrame === 'function' ? requestAnimationFrame : callback => setTimeout(callback, 16);
-
-    this.streamingState.frameHandle = schedule(() => {
+    this.streamingState.frameHandle = this.scheduleStreamFrame(() => {
       this.flushStreamingTokens();
     });
   }
@@ -16174,10 +16287,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     state.textNode.appendData(state.pending);
     state.pending = '';
 
-    if (this.autoScrollToBottom) {
-      const messagesContainer = document.getElementById('chatMessages');
-      if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
+    this.scrollMessagesToBottom();
   }
 
   /**
@@ -16186,32 +16296,215 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * duplicated by the retry.
    */
   resetStreamingResponse() {
+    // A retry regenerates the reasoning too, so the live block goes with it.
+    this.resetStreamingReasoning();
+
     const state = this.streamingState;
     if (!state) return;
 
-    if (state.frameHandle !== null) {
-      const cancel = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
-      cancel(state.frameHandle);
-      state.frameHandle = null;
-    }
+    this.cancelStreamFrame(state.frameHandle);
+    state.frameHandle = null;
 
     state.pending = '';
     state.hasContent = false;
+    // The retry restarts the response from scratch, so tag routing restarts too.
+    state.inReasoningTag = false;
+    state.carry = '';
     if (state.textNode) state.textNode.data = '';
   }
 
   /** Tear down the live bubble; the completed message renders through the normal path. */
   endStreamingResponse() {
+    // Runs from a `finally`, so it is also the stop signal on error and abort:
+    // stop the reasoning block animating even when no final render follows.
+    this.settleStreamingReasoning();
+
     const state = this.streamingState;
     if (!state) return;
 
-    if (state.frameHandle !== null) {
-      const cancel = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
-      cancel(state.frameHandle);
-    }
+    this.cancelStreamFrame(state.frameHandle);
 
     state.container?.remove();
     this.streamingState = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Live reasoning streaming
+  //
+  // Reasoning models emit their chain of thought before (and alongside) the
+  // answer. It renders into the thinking panel as it arrives, then displayLLMThinking()
+  // finalizes the same block once the round resolves — so the reasoning is never
+  // rendered twice.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Create the live reasoning block on first token. Returns the render state, or
+   * null when the thinking panel is hidden or unavailable.
+   */
+  beginStreamingReasoning() {
+    if (!this.showThinkingProcess) return null;
+    if (this.reasoningStreamState?.body?.isConnected) return this.reasoningStreamState;
+
+    // The round's own progress lines create the panel before the request goes
+    // out; create it here too so reasoning is never dropped for want of one.
+    let thinkingContent = this.findThinkingContentElement();
+    if (!thinkingContent) {
+      this.addThinkingMessage('');
+      thinkingContent = this.findThinkingContentElement();
+      if (!thinkingContent) return null;
+    }
+
+    const details = document.createElement('details');
+    details.className = 'reasoning-stream';
+    details.open = true;
+
+    const summary = document.createElement('summary');
+    summary.textContent = '💭 Model reasoning';
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'reasoning-stream-body';
+    body.style.paddingTop = '8px';
+    body.style.fontFamily = 'inherit';
+    body.style.fontSize = 'inherit';
+    body.style.whiteSpace = 'pre-wrap';
+
+    const textNode = document.createTextNode('');
+    body.appendChild(textNode);
+
+    const cursor = document.createElement('span');
+    cursor.className = 'streaming-cursor';
+    body.appendChild(cursor);
+
+    details.appendChild(body);
+
+    // Inserted directly rather than through updateThinkingMessage: Evolution
+    // records the finalized reasoning text once the round resolves, which is
+    // more useful than an entry holding a still-empty DOM node.
+    const wrapper = this.appendThinkingStepElement(thinkingContent, details);
+
+    this.reasoningStreamState = {
+      wrapper,
+      details,
+      body,
+      textNode,
+      cursor,
+      pending: '',
+      text: '',
+      frameHandle: null,
+    };
+    return this.reasoningStreamState;
+  }
+
+  /** Buffer a reasoning token and schedule a single coalesced DOM write. */
+  appendStreamingReasoningToken(token) {
+    if (!token) return;
+
+    const state = this.beginStreamingReasoning();
+    if (!state) return;
+
+    state.pending += token;
+    state.text += token;
+
+    if (state.frameHandle !== null) return;
+
+    state.frameHandle = this.scheduleStreamFrame(() => {
+      this.flushStreamingReasoningTokens();
+    });
+  }
+
+  /** Write all buffered reasoning tokens in one operation. */
+  flushStreamingReasoningTokens() {
+    const state = this.reasoningStreamState;
+    if (!state) return;
+
+    state.frameHandle = null;
+    if (!state.pending || !state.textNode) return;
+
+    state.textNode.appendData(state.pending);
+    state.pending = '';
+
+    // The body is height-capped while streaming, so keep its own view on the
+    // newest text in addition to scrolling the transcript.
+    if (state.body) state.body.scrollTop = state.body.scrollHeight;
+    this.scrollMessagesToBottom();
+  }
+
+  /**
+   * Discard streamed reasoning entirely. Used when a provider stream fails
+   * partway: the retry regenerates the reasoning from scratch, so a partial
+   * block must not survive to be appended to.
+   */
+  resetStreamingReasoning() {
+    const state = this.reasoningStreamState;
+    if (!state) return;
+
+    this.cancelStreamFrame(state.frameHandle);
+    // Remove the whole step, not just the block, so no empty wrapper is left.
+    (state.wrapper || state.details).remove();
+    this.reasoningStreamState = null;
+  }
+
+  /**
+   * Stop the live block animating and commit any buffered text, while keeping
+   * the handle so the round's final render can still format it. Safe to call
+   * when nothing streamed.
+   */
+  settleStreamingReasoning() {
+    const state = this.reasoningStreamState;
+    if (!state) return;
+
+    this.cancelStreamFrame(state.frameHandle);
+    state.frameHandle = null;
+    this.flushStreamingReasoningTokens();
+    state.cursor?.remove();
+    state.cursor = null;
+  }
+
+  /**
+   * Replace the streamed raw text with the round's formatted reasoning and
+   * collapse the block, matching how a non-streamed round renders.
+   *
+   * @param {string} finalText Normalized reasoning for the round; falls back to
+   *   the streamed text when the normalizer produced nothing.
+   * @returns {boolean} True when a live block was finalized, so the caller
+   *   should not render a second one.
+   */
+  finalizeStreamingReasoning(finalText = '') {
+    const state = this.reasoningStreamState;
+    if (!state) return false;
+
+    this.settleStreamingReasoning();
+    this.reasoningStreamState = null;
+
+    const streamedText = state.text.trim();
+    if (!streamedText) {
+      // Only whitespace arrived — drop the block so an empty one is not shown.
+      (state.wrapper || state.details).remove();
+      return false;
+    }
+
+    const resolvedText = String(finalText || '').trim() || streamedText;
+    const formatted = this.formatThinkingContent(resolvedText);
+    state.body.textContent = formatted;
+    state.body.style.whiteSpace = 'pre-line';
+    state.details.open = false;
+
+    // Recorded here rather than at creation time so the entry holds the
+    // reasoning text instead of a DOM node that was still empty.
+    this.addToEvolutionData({
+      type: 'thinking_process',
+      timestamp: new Date().toISOString(),
+      content: formatted,
+      visible: true,
+      metadata: {
+        source: 'ai_thinking',
+        requestId: this.conversationState.currentRequestId,
+        step: 'model_reasoning',
+      },
+    });
+
+    return true;
   }
 
   /**
@@ -16611,6 +16904,17 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   /**
+   * Resolve the content container of the thinking panel this request is writing
+   * into, preferring the panel for the current request and falling back to any
+   * panel on screen. Returns null when no panel exists yet.
+   */
+  findThinkingContentElement() {
+    const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
+    const thinkingDiv = document.getElementById(thinkingId) || document.querySelector('.thinking-process');
+    return thinkingDiv?.querySelector('.thinking-content') || null;
+  }
+
+  /**
    * Update the thinking-process message
    */
   updateThinkingMessage(message) {
@@ -16632,40 +16936,23 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return;
     }
 
-    // Find the thinking-process message for the current request
-    const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
-    let thinkingDiv = document.getElementById(thinkingId);
-
-    // If none is found, find any thinking-process message
-    if (!thinkingDiv) {
-      thinkingDiv = document.querySelector('.thinking-process');
-    }
-
-    if (thinkingDiv) {
-      const thinkingContent = thinkingDiv.querySelector('.thinking-content');
-      if (thinkingContent) {
-        if (message instanceof HTMLElement) {
-          // If message is a DOM element, append it directly
-          const wrapper = document.createElement('div');
-          wrapper.className = 'thinking-step-dom';
-          wrapper.style.marginTop = '8px';
-          wrapper.style.marginBottom = '8px';
-          wrapper.appendChild(message);
-          thinkingContent.appendChild(wrapper);
-        } else {
-          // Parse only the new fragment and append it, rather than
-          // `innerHTML +=`, which re-serializes and re-parses the entire
-          // accumulated thinking log on every step — quadratic over a round
-          // that appends dozens of times.
-          //
-          // Parsing into a detached holder keeps the previous security
-          // behaviour: script elements created by innerHTML never execute, and
-          // moving those nodes does not re-enable them.
-          const holder = document.createElement('div');
-          holder.innerHTML = '\n' + message;
-          while (holder.firstChild) {
-            thinkingContent.appendChild(holder.firstChild);
-          }
+    const thinkingContent = this.findThinkingContentElement();
+    if (thinkingContent) {
+      if (message instanceof HTMLElement) {
+        this.appendThinkingStepElement(thinkingContent, message);
+      } else {
+        // Parse only the new fragment and append it, rather than
+        // `innerHTML +=`, which re-serializes and re-parses the entire
+        // accumulated thinking log on every step — quadratic over a round
+        // that appends dozens of times.
+        //
+        // Parsing into a detached holder keeps the previous security
+        // behaviour: script elements created by innerHTML never execute, and
+        // moving those nodes does not re-enable them.
+        const holder = document.createElement('div');
+        holder.innerHTML = '\n' + message;
+        while (holder.firstChild) {
+          thinkingContent.appendChild(holder.firstChild);
         }
       }
     } else {
@@ -16679,6 +16966,17 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
   }
 
+  /** Append a pre-built element to the thinking log as its own step. */
+  appendThinkingStepElement(thinkingContent, element) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'thinking-step-dom';
+    wrapper.style.marginTop = '8px';
+    wrapper.style.marginBottom = '8px';
+    wrapper.appendChild(element);
+    thinkingContent.appendChild(wrapper);
+    return wrapper;
+  }
+
   /**
    * Show the LLM's thinking process
    */
@@ -16687,7 +16985,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Check whether the response contains thinking tags
     const thinkingMatch = responseText.match(/<think>([\s\S]*?)<\/think>/);
     const thinkingContent = String(normalizedReasoning || thinkingMatch?.[1] || '').trim();
-    if (thinkingContent) {
+
+    // Reasoning that streamed live is already on screen: finalize that block in
+    // place rather than appending a duplicate. Runs unconditionally so a live
+    // block is always closed out, even when the round yielded no final reasoning.
+    const finalizedLiveReasoning = this.finalizeStreamingReasoning(thinkingContent);
+
+    if (thinkingContent && !finalizedLiveReasoning) {
       // Format the thinking content to make it more readable
       const formattedThinking = this.formatThinkingContent(thinkingContent);
 
