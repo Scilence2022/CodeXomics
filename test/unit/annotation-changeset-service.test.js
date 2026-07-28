@@ -2625,6 +2625,63 @@ describe('AnnotationChangeSetService', () => {
     expect(calls[0].__executionContext).toBe(agentContext);
   });
 
+  it('routes a description update to the note qualifier create_annotation stores it in', async () => {
+    const created = await annotationService.updateAnnotation({
+      identifier: 'b0001',
+      updates: { description: 'Highly conserved regulatory region' },
+      __executionContext: agentContext,
+    });
+
+    expect(created.success).toBe(true);
+    expect(created.changeSet.operations).toEqual([
+      expect.objectContaining({ op: 'addQualifier', field: 'note', value: 'Highly conserved regulatory region' }),
+    ]);
+  });
+
+  it('reports an update the annotation already satisfies as a no-op instead of failing', async () => {
+    annotation.qualifiers.note = 'Highly conserved regulatory region';
+
+    const result = await annotationService.updateAnnotation({
+      identifier: 'b0001',
+      updates: { description: 'Highly conserved regulatory region' },
+      __executionContext: agentContext,
+    });
+
+    expect(result).toMatchObject({ success: true, applied: false, noChanges: true, identifier: 'b0001' });
+    expect(result.message).toContain('already carries the requested values');
+  });
+
+  it('still surfaces a rejected update rather than reporting it as a no-op', async () => {
+    await expect(
+      annotationService.updateAnnotation({
+        identifier: 'b0001',
+        updates: { start: 999 },
+        __executionContext: agentContext,
+      })
+    ).rejects.toThrow('not writable by the autonomous annotation profile');
+  });
+
+  it('names the failing annotations in the bulk update message', async () => {
+    annotation.qualifiers.note = 'unchanged note';
+
+    const result = await annotationService.bulkUpdateAnnotations({
+      updates: [
+        { identifier: 'b0001', updates: { description: 'unchanged note' } },
+        { identifier: 'b0001', updates: { start: 999 } },
+        { identifier: 'b0001', updates: { note: 'a second, genuinely new note' } },
+      ],
+      __executionContext: agentContext,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.changeSets).toHaveLength(1);
+    expect(result.unchanged).toHaveLength(1);
+    expect(result.errors).toHaveLength(1);
+    expect(result.message).toContain('1 of 3');
+    expect(result.message).toContain('1 already carried the requested values');
+    expect(result.message).toContain('b0001: Field "start" is not writable');
+  });
+
   it('keeps legacy research merges schema-less and preserves the authenticated initiator', async () => {
     let delegated;
     annotationService.createAnnotationChangeset = vi.fn(async params => {

@@ -12,6 +12,9 @@
  * pending review queue without modifying the source genome file.
  */
 class AnnotationChangeSetService {
+  /** Error code for a proposal whose values the annotation already carries. */
+  static NO_EFFECTIVE_CHANGES = 'NO_EFFECTIVE_ANNOTATION_CHANGES';
+
   constructor(app, chatManager, annotationService) {
     this.app = app;
     this.chatManager = chatManager;
@@ -1925,7 +1928,9 @@ class AnnotationChangeSetService {
           !this._isPlainRecord(citation) ||
           citation.type !== 'pmid'
         ) {
-          throw new Error(`Research literature fact ${fact.id} requires an authenticated literature basis and PMID citation`);
+          throw new Error(
+            `Research literature fact ${fact.id} requires an authenticated literature basis and PMID citation`
+          );
         }
         this._assertBoundedScalar(
           basis.pmid,
@@ -2005,8 +2010,7 @@ class AnnotationChangeSetService {
               !/^[a-f0-9]{64}$/i.test(String(basis.textSha256)) ||
               !['user_upload', 'pmc_xml'].includes(String(basis.sourceOrigin)) ||
               basis.canonicalization !== 'dgr.full-text.v1' ||
-              (basis.pageNumber !== undefined &&
-                (!Number.isSafeInteger(basis.pageNumber) || basis.pageNumber < 1))))
+              (basis.pageNumber !== undefined && (!Number.isSafeInteger(basis.pageNumber) || basis.pageNumber < 1))))
         ) {
           throw new Error(`Research literature fact ${fact.id} has an invalid source document binding`);
         }
@@ -2014,9 +2018,7 @@ class AnnotationChangeSetService {
           throw new Error(`Research literature fact ${fact.id} has an invalid DOI`);
         }
         if (String(fact.statement) !== String(basis.excerpt)) {
-          throw new Error(
-            `Research literature fact ${fact.id} statement must equal its authenticated source excerpt`
-          );
+          throw new Error(`Research literature fact ${fact.id} statement must equal its authenticated source excerpt`);
         }
         const computedExcerptHash = await this._hashSerialized(String(basis.excerpt), { requireSha256: true });
         if (computedExcerptHash !== String(basis.excerptSha256).toLowerCase()) {
@@ -2685,6 +2687,19 @@ class AnnotationChangeSetService {
     return incoming.some(value => !existing.has(value.toLowerCase()));
   }
 
+  /**
+   * Map the field names an updates map may use onto the qualifier they are stored under.
+   *
+   * create_annotation writes its `description` argument to the `note` qualifier, so an update
+   * naming the same field it was created with has to reach that qualifier rather than be
+   * rejected as unwritable. Only the free-form updates map is aliased; an explicit operation
+   * list names its target qualifier deliberately and stays strict.
+   */
+  _normaliseUpdateField(field) {
+    const aliases = { description: 'note' };
+    return aliases[field] || field;
+  }
+
   _proposalToOperations(params) {
     const proposal = params.annotationProposal || params.proposal || {};
     if (proposal.schema === 'codexomics.annotation-change-set.v2') {
@@ -2697,8 +2712,9 @@ class AnnotationChangeSetService {
       operations = proposal.operations.map(operation => ({ ...operation }));
     } else {
       const updates = proposal.updates || params.updates || {};
-      for (const [field, value] of Object.entries(updates)) {
+      for (const [rawField, value] of Object.entries(updates)) {
         if (value === undefined || value === null || value === '') continue;
+        const field = this._normaliseUpdateField(rawField);
         operations.push({
           op:
             field === 'db_xref'
@@ -2958,7 +2974,13 @@ class AnnotationChangeSetService {
       .map(operation => this._validateOperation({ ...operation }, found.annotation))
       .filter(operation => this._operationWouldChange(found.annotation, operation));
     if (operations.length === 0) {
-      throw new Error('ChangeSet contains no effective annotation changes after existing qualifiers are considered');
+      // Tagged so callers can tell an already-satisfied request apart from a rejected one:
+      // nothing was written either way, but only this case is a no-op rather than a failure.
+      const noEffectiveChanges = new Error(
+        'ChangeSet contains no effective annotation changes after existing qualifiers are considered'
+      );
+      noEffectiveChanges.code = AnnotationChangeSetService.NO_EFFECTIVE_CHANGES;
+      throw noEffectiveChanges;
     }
     const effectiveClaimIds = new Set(operations.flatMap(operation => operation.claimIds || []));
     const riskLevel = operations.some(

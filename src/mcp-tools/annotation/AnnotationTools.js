@@ -195,7 +195,7 @@ class AnnotationTools {
             updates: {
               type: 'object',
               description:
-                'Object of fields to update. Keys are qualifier names (e.g., "product", "gene", "note", "EC_number", "db_xref"), values are the new values. Example: {"product": "ATP synthase subunit alpha", "EC_number": "3.6.3.14"}',
+                'Object of fields to update. Keys are qualifier names (e.g., "product", "note", "EC_number", "db_xref"), values are the new values. "description" is accepted as an alias of "note", the qualifier create_annotation stores a description in. Example: {"product": "ATP synthase subunit alpha", "EC_number": "3.6.3.14"}',
             },
             agent: {
               type: 'string',
@@ -729,7 +729,8 @@ class AnnotationTools {
                   },
                   updates: {
                     type: 'object',
-                    description: 'Object of fields to update.',
+                    description:
+                      'Object of fields to update. Keys are qualifier names such as "product", "note", "EC_number" or "db_xref"; "description" is accepted as an alias of "note".',
                   },
                 },
                 required: ['identifier', 'updates'],

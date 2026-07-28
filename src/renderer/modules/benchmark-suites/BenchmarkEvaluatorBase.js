@@ -134,6 +134,28 @@ class BenchmarkEvaluatorBase {
     return this.isSchemaDefaultExpectation(value) ? value.benchmarkDefaultValue : value;
   }
 
+  // ─── Interchangeable Parameter Shapes ────────────────────────────────────
+
+  /**
+   * Declare parameter shapes the tool accepts interchangeably; matching any one is enough.
+   *
+   * Several tools expose more than one way to name the same target - remove_highlight takes
+   * an id from list_highlights or the literal start/end, analyze_interpro_domains takes a
+   * sequence or the uniprot_id it can fetch that sequence with. Pinning the expectation to a
+   * single shape scored the other, equally correct, call as a parameter failure.
+   *
+   *   parameters: { ...this.anyOfParameters({ id: '<highlight_id>' }, { start: 100, end: 200 }) }
+   *
+   * Spread into the expected parameters so shape-independent keys stay alongside it.
+   */
+  anyOfParameters(...alternatives) {
+    return { benchmarkAnyOf: alternatives.filter(alternative => alternative && typeof alternative === 'object') };
+  }
+
+  isAnyOfExpectationKey(key) {
+    return key === 'benchmarkAnyOf';
+  }
+
   // ─── Organism Name Normalization ─────────────────────────────────────────
 
   /**

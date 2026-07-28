@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-25T04:17:14.285Z",
-  "registryHash": "fb2ec4b5a894eb826d2f260eaa66e2bac6700905c3c2c06f043de39040e56d82",
+  "generatedAt": "2026-07-28T02:57:38.371Z",
+  "registryHash": "46072819febdca08493d8ecdccef880ffbfce25d7345a37c3e05fafd5861e476",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -4868,7 +4868,7 @@
     {
       "name": "blast_export_results",
       "version": "1.0.0",
-      "description": "Export BLAST search results in various formats",
+      "description": "Export BLAST search results in various formats. Defaults to the most recent BLAST search, so format and outputPath are usually the only arguments needed.",
       "category": "data_management",
       "keywords": ["blast", "export", "results", "download", "format"],
       "priority": 2,
@@ -4885,26 +4885,26 @@
         "properties": {
           "searchId": {
             "type": "string",
-            "description": "ID of the BLAST search to export results from"
+            "description": "ID of the BLAST search to export results from; omit to export the most recent search"
           },
           "format": {
             "type": "string",
             "description": "Output format for exported results",
-            "enum": ["tsv", "xml", "json", "csv"],
+            "enum": ["tsv", "xml", "json", "csv", "text"],
             "default": "tsv"
           },
           "outputPath": {
             "type": "string",
-            "description": "File path to save exported results"
+            "description": "File path to save exported results; omit to return the content inline"
           }
         },
-        "required": ["searchId"]
+        "required": []
       },
       "sample_usages": [
         {
           "user_query": "Export BLAST results as CSV",
-          "tool_call": "blast_export_results(searchId='blast_123', format='csv')",
-          "thought": "User wants to export BLAST results in CSV format",
+          "tool_call": "blast_export_results(format='csv', outputPath='/tmp/blast_hits.csv')",
+          "thought": "User wants the search that just ran written out as CSV",
           "expected_result": "BLAST results exported in CSV format"
         }
       ],
@@ -4918,13 +4918,14 @@
         "usage_pattern": "moderate"
       },
       "error_handling": {
-        "not_found": "Returns error if search ID does not exist",
+        "not_found": "Returns error if no BLAST search has been run, or if the given search ID is not the current one",
         "invalid_format": "Returns error if format is not supported"
       },
       "returns": {
         "success": "boolean",
-        "filePath": "string - Path to exported file",
+        "outputPath": "string - Path to exported file",
         "format": "string - Export format used",
+        "hitCount": "integer - Number of hits written",
         "message": "string"
       },
       "source": "app_registry",
@@ -4950,7 +4951,7 @@
     {
       "name": "blast_filter_results",
       "version": "1.0.0",
-      "description": "Filter BLAST search results by identity, E-value, coverage, or hit count",
+      "description": "Filter BLAST search results by identity, E-value, coverage, or hit count. Defaults to the most recent BLAST search, so the filter criteria are usually the only arguments needed.",
       "category": "data_management",
       "keywords": ["blast", "filter", "results", "quality"],
       "priority": 2,
@@ -4965,9 +4966,13 @@
       "parameters": {
         "type": "object",
         "properties": {
+          "searchId": {
+            "type": "string",
+            "description": "ID of the BLAST search to filter; omit to filter the most recent search"
+          },
           "results": {
             "type": "object",
-            "description": "BLAST results object to filter"
+            "description": "BLAST results object to filter; omit to filter the most recent search"
           },
           "minIdentity": {
             "type": "number",
@@ -4986,18 +4991,18 @@
             "description": "Maximum number of hits to keep"
           }
         },
-        "required": ["results"]
+        "required": []
       },
       "sample_usages": [
         {
           "user_query": "Show only BLAST hits with >95% identity",
-          "tool_call": "blast_filter_results(results=<blast_results>, minIdentity=95)",
-          "thought": "User wants highly similar matches only",
+          "tool_call": "blast_filter_results(minIdentity=95)",
+          "thought": "User wants highly similar matches from the search that just ran",
           "expected_result": "Filtered results with identity ≥95%"
         },
         {
           "user_query": "Filter BLAST results to top 10 hits with E-value < 1e-50",
-          "tool_call": "blast_filter_results(results=<blast_results>, maxEvalue=1e-50, maxHits=10)",
+          "tool_call": "blast_filter_results(maxEvalue=1e-50, maxHits=10)",
           "thought": "User wants significant hits only",
           "expected_result": "Top 10 most significant hits"
         }
@@ -27331,7 +27336,7 @@
     "blast_export_results": {
       "name": "blast_export_results",
       "version": "1.0.0",
-      "description": "Export BLAST search results in various formats",
+      "description": "Export BLAST search results in various formats. Defaults to the most recent BLAST search, so format and outputPath are usually the only arguments needed.",
       "category": "data_management",
       "keywords": ["blast", "export", "results", "download", "format"],
       "priority": 2,
@@ -27348,26 +27353,26 @@
         "properties": {
           "searchId": {
             "type": "string",
-            "description": "ID of the BLAST search to export results from"
+            "description": "ID of the BLAST search to export results from; omit to export the most recent search"
           },
           "format": {
             "type": "string",
             "description": "Output format for exported results",
-            "enum": ["tsv", "xml", "json", "csv"],
+            "enum": ["tsv", "xml", "json", "csv", "text"],
             "default": "tsv"
           },
           "outputPath": {
             "type": "string",
-            "description": "File path to save exported results"
+            "description": "File path to save exported results; omit to return the content inline"
           }
         },
-        "required": ["searchId"]
+        "required": []
       },
       "sample_usages": [
         {
           "user_query": "Export BLAST results as CSV",
-          "tool_call": "blast_export_results(searchId='blast_123', format='csv')",
-          "thought": "User wants to export BLAST results in CSV format",
+          "tool_call": "blast_export_results(format='csv', outputPath='/tmp/blast_hits.csv')",
+          "thought": "User wants the search that just ran written out as CSV",
           "expected_result": "BLAST results exported in CSV format"
         }
       ],
@@ -27381,13 +27386,14 @@
         "usage_pattern": "moderate"
       },
       "error_handling": {
-        "not_found": "Returns error if search ID does not exist",
+        "not_found": "Returns error if no BLAST search has been run, or if the given search ID is not the current one",
         "invalid_format": "Returns error if format is not supported"
       },
       "returns": {
         "success": "boolean",
-        "filePath": "string - Path to exported file",
+        "outputPath": "string - Path to exported file",
         "format": "string - Export format used",
+        "hitCount": "integer - Number of hits written",
         "message": "string"
       },
       "source": "app_registry",
@@ -27413,7 +27419,7 @@
     "blast_filter_results": {
       "name": "blast_filter_results",
       "version": "1.0.0",
-      "description": "Filter BLAST search results by identity, E-value, coverage, or hit count",
+      "description": "Filter BLAST search results by identity, E-value, coverage, or hit count. Defaults to the most recent BLAST search, so the filter criteria are usually the only arguments needed.",
       "category": "data_management",
       "keywords": ["blast", "filter", "results", "quality"],
       "priority": 2,
@@ -27428,9 +27434,13 @@
       "parameters": {
         "type": "object",
         "properties": {
+          "searchId": {
+            "type": "string",
+            "description": "ID of the BLAST search to filter; omit to filter the most recent search"
+          },
           "results": {
             "type": "object",
-            "description": "BLAST results object to filter"
+            "description": "BLAST results object to filter; omit to filter the most recent search"
           },
           "minIdentity": {
             "type": "number",
@@ -27449,18 +27459,18 @@
             "description": "Maximum number of hits to keep"
           }
         },
-        "required": ["results"]
+        "required": []
       },
       "sample_usages": [
         {
           "user_query": "Show only BLAST hits with >95% identity",
-          "tool_call": "blast_filter_results(results=<blast_results>, minIdentity=95)",
-          "thought": "User wants highly similar matches only",
+          "tool_call": "blast_filter_results(minIdentity=95)",
+          "thought": "User wants highly similar matches from the search that just ran",
           "expected_result": "Filtered results with identity ≥95%"
         },
         {
           "user_query": "Filter BLAST results to top 10 hits with E-value < 1e-50",
-          "tool_call": "blast_filter_results(results=<blast_results>, maxEvalue=1e-50, maxHits=10)",
+          "tool_call": "blast_filter_results(maxEvalue=1e-50, maxHits=10)",
           "thought": "User wants significant hits only",
           "expected_result": "Top 10 most significant hits"
         }

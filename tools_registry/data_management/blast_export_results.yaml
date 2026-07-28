@@ -1,6 +1,7 @@
 name: blast_export_results
 version: 1.0.0
-description: Export BLAST search results in various formats
+description: Export BLAST search results in various formats. Defaults to the most recent BLAST search, so format and
+  outputPath are usually the only arguments needed.
 category: data_management
 keywords:
   - blast
@@ -21,7 +22,7 @@ parameters:
   properties:
     searchId:
       type: string
-      description: ID of the BLAST search to export results from
+      description: ID of the BLAST search to export results from; omit to export the most recent search
     format:
       type: string
       description: Output format for exported results
@@ -30,16 +31,16 @@ parameters:
         - xml
         - json
         - csv
+        - text
       default: tsv
     outputPath:
       type: string
-      description: File path to save exported results
-  required:
-    - searchId
+      description: File path to save exported results; omit to return the content inline
+  required: []
 sample_usages:
   - user_query: 'Export BLAST results as CSV'
-    tool_call: "blast_export_results(searchId='blast_123', format='csv')"
-    thought: 'User wants to export BLAST results in CSV format'
+    tool_call: "blast_export_results(format='csv', outputPath='/tmp/blast_hits.csv')"
+    thought: 'User wants the search that just ran written out as CSV'
     expected_result: 'BLAST results exported in CSV format'
 relationships:
   depends_on:
@@ -54,10 +55,11 @@ metadata:
   complexity: simple
   usage_pattern: moderate
 error_handling:
-  not_found: 'Returns error if search ID does not exist'
+  not_found: 'Returns error if no BLAST search has been run, or if the given search ID is not the current one'
   invalid_format: 'Returns error if format is not supported'
 returns:
   success: boolean
-  filePath: string - Path to exported file
+  outputPath: string - Path to exported file
   format: string - Export format used
+  hitCount: integer - Number of hits written
   message: string

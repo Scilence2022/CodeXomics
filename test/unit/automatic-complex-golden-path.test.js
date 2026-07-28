@@ -547,6 +547,17 @@ describe('AutomaticComplexSuite expectations match the tool registry', () => {
     }
   };
 
+  /**
+   * Every concrete parameter shape a step expects. anyOfParameters nests the interchangeable
+   * shapes one level down, and each of them names real schema properties, so the registry
+   * checks below have to look inside it rather than at the wrapper key.
+   */
+  const expectedShapes = params => {
+    const nested = Array.isArray(params?.benchmarkAnyOf) ? params.benchmarkAnyOf : [];
+    const own = Object.fromEntries(Object.entries(params || {}).filter(([key]) => key !== 'benchmarkAnyOf'));
+    return [own, ...nested];
+  };
+
   it('only expects tools that exist in the registry', () => {
     const unknown = [];
 
@@ -581,10 +592,12 @@ describe('AutomaticComplexSuite expectations match the tool registry', () => {
       if (!properties) return;
 
       const propertyKeys = new Set(Object.keys(properties).map(normalizeKey));
-      for (const key of Object.keys(params)) {
-        const normalized = normalizeKey(key);
-        if (!propertyKeys.has(normalized) && !aliases.has(normalized)) {
-          unknown.push(`${test.id}: ${tool.name}.${key}`);
+      for (const shape of expectedShapes(params)) {
+        for (const key of Object.keys(shape)) {
+          const normalized = normalizeKey(key);
+          if (!propertyKeys.has(normalized) && !aliases.has(normalized)) {
+            unknown.push(`${test.id}: ${tool.name}.${key}`);
+          }
         }
       }
     });
@@ -602,13 +615,15 @@ describe('AutomaticComplexSuite expectations match the tool registry', () => {
       const properties = tool?.parameters?.properties;
       if (!properties) return;
 
-      for (const [key, value] of Object.entries(params)) {
-        if (suite.isSchemaDefaultExpectation(value)) continue;
-        const propertyKey = Object.keys(properties).find(pk => normalizeKey(pk) === normalizeKey(key));
-        if (!propertyKey) continue;
-        const schemaDefault = properties[propertyKey].default;
-        if (schemaDefault !== undefined && schemaDefault === value) {
-          unwrapped.push(`${test.id}: ${tool.name}.${key} = ${JSON.stringify(value)} (use this.schemaDefault(...))`);
+      for (const shape of expectedShapes(params)) {
+        for (const [key, value] of Object.entries(shape)) {
+          if (suite.isSchemaDefaultExpectation(value)) continue;
+          const propertyKey = Object.keys(properties).find(pk => normalizeKey(pk) === normalizeKey(key));
+          if (!propertyKey) continue;
+          const schemaDefault = properties[propertyKey].default;
+          if (schemaDefault !== undefined && schemaDefault === value) {
+            unwrapped.push(`${test.id}: ${tool.name}.${key} = ${JSON.stringify(value)} (use this.schemaDefault(...))`);
+          }
         }
       }
     });
@@ -624,13 +639,15 @@ describe('AutomaticComplexSuite expectations match the tool registry', () => {
       const properties = tool?.parameters?.properties;
       if (!properties) return;
 
-      for (const [key, rawValue] of Object.entries(params)) {
-        const value = suite.unwrapExpectedValue(rawValue);
-        if (typeof value !== 'string' || value.startsWith('<') || value.startsWith('{')) continue;
-        const propertyKey = Object.keys(properties).find(pk => normalizeKey(pk) === normalizeKey(key));
-        const enumValues = propertyKey ? properties[propertyKey].enum : null;
-        if (Array.isArray(enumValues) && !enumValues.map(normalizeKey).includes(normalizeKey(value))) {
-          invalid.push(`${test.id}: ${tool.name}.${key} = "${value}" not in [${enumValues.join(', ')}]`);
+      for (const shape of expectedShapes(params)) {
+        for (const [key, rawValue] of Object.entries(shape)) {
+          const value = suite.unwrapExpectedValue(rawValue);
+          if (typeof value !== 'string' || value.startsWith('<') || value.startsWith('{')) continue;
+          const propertyKey = Object.keys(properties).find(pk => normalizeKey(pk) === normalizeKey(key));
+          const enumValues = propertyKey ? properties[propertyKey].enum : null;
+          if (Array.isArray(enumValues) && !enumValues.map(normalizeKey).includes(normalizeKey(value))) {
+            invalid.push(`${test.id}: ${tool.name}.${key} = "${value}" not in [${enumValues.join(', ')}]`);
+          }
         }
       }
     });
