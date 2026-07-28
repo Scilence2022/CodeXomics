@@ -978,6 +978,32 @@ class LLMBenchmarkFramework {
   }
 
   /**
+   * Put the expected tools of an `assertCallOnly` test into call-only mode, so the model's
+   * tool call is recorded but never executed. Returns a restore function.
+   *
+   * These are function_call tests: the assertion is on tool selection and arguments, so
+   * actually running the tool adds nothing but latency and flakiness (an online BLAST
+   * against `nt` can outlast any per-test timeout, and a local one shells out to a
+   * subprocess). Scoring the call directly is what the test claims to measure.
+   */
+  applyCallOnlyMode(test) {
+    if (!test?.assertCallOnly || !this.chatManager) return () => {};
+
+    const expected = test.expectedResult || {};
+    const names = (Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name]).filter(
+      name => typeof name === 'string' && name
+    );
+    if (names.length === 0) return () => {};
+
+    const previous = this.chatManager.callOnlyTools;
+    this.chatManager.callOnlyTools = new Set(names);
+    console.log(`🧪 [Benchmark] Call-only mode for ${test.id}: ${names.join(', ')}`);
+    return () => {
+      this.chatManager.callOnlyTools = previous;
+    };
+  }
+
+  /**
    * For an `earlyReturn` test that hit its timeout, report the tracked execution of an
    * expected tool if the model did submit one. Returns null for any other failure, so
    * genuine errors and non-earlyReturn timeouts still fail the test.
@@ -1066,6 +1092,14 @@ class LLMBenchmarkFramework {
       await test.setup(context);
     }
 
+    // A benchmark run is unattended, so any tool that would open a blocking modal must
+    // fail closed instead of waiting forever for a click that will never come.
+    const restoreUnattended =
+      typeof window !== 'undefined' && window.BlastManager?.setUnattended
+        ? window.BlastManager.setUnattended(true)
+        : () => {};
+    const restoreCallOnly = this.applyCallOnlyMode(test);
+
     try {
       // Determine timeout based on configuration
       let timeoutMs;
@@ -1150,6 +1184,9 @@ class LLMBenchmarkFramework {
         detailedLogs: interactionData?.detailedLogs || null,
       };
     } finally {
+      restoreCallOnly();
+      restoreUnattended();
+
       // Execute test cleanup if provided
       if (test.cleanup) {
         try {
