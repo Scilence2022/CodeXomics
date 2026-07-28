@@ -181,8 +181,17 @@ describe('BLAST Tool Registry Consistency', () => {
       expect(content).toContain('const dbName = this.getQuickDatabaseBaseName(genomeName, dbType)');
       expect(content).toContain('dbId = dbName');
       expect(content).toContain(`fileName: \`${dbNameToken}.fasta\``);
-      expect(content).toContain("replace(/\\.(fasta|fa|fas|txt|gbk|gb|genbank)$/i, '')");
+      expect(content).toContain("replace(/\\.gz$/i, '')");
+      expect(content).toContain("replace(/\\.(fasta|fa|fas|fna|txt|gbk|gb|gbff|genbank)$/i, '')");
       expect(content).not.toContain('dbId = `quick_${dbName');
+    });
+
+    it('should resolve the quick database source from the genome, not the last loaded file', () => {
+      // Regression: fileManager.currentFile tracks every loaded file, so a WIG
+      // track loaded after the genome named the database "another_sample.wig".
+      expect(content).toContain('if (this.app?.loadedGenomePath) return this.app.loadedGenomePath;');
+      expect(content).toContain('candidates.find(candidate => candidate && this.isGenomeSequenceFilePath(candidate))');
+      expect(content).toContain('const genomeFilePath = this.getCurrentGenomeFilePath();');
     });
 
     it('should refresh BLAST Search database UI after quick database creation', () => {
