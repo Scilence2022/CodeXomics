@@ -326,10 +326,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               label: 'benchmark_focus',
             },
             {},
-            {
-              start: 110000,
-              end: 112000,
-            },
+            // remove_highlight identifies its target either by the id list_highlights just
+            // returned or by the literal coordinates; the instruction lists highlights first,
+            // so the id form is the expected path and must score as correct.
+            this.anyOfParameters({ id: '<highlight_id>' }, { start: 110000, end: 112000 }),
             {},
             {
               name: 'benchmark smoke view',
@@ -751,6 +751,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           "Create a new custom regulatory annotation named 'regulatory_region_A' on chromosome 'U00096' spanning start position 150000 to end position 150500, then update its note description to 'Highly conserved regulatory region', and list all annotations in that region to verify.",
         expectedResult: {
           tool_sequence: ['create_annotation', 'update_annotation', 'list_annotations'],
+          // Listing is a read-only lookup: models legitimately list first to resolve the
+          // identifier they need for the update, so its position must not decide the score.
+          orderInsensitiveTools: ['list_annotations'],
           parameters: [
             {
               name: 'regulatory_region_A',
@@ -789,6 +792,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           "Create a temporary CDS annotation named 'benchmark_bulk_gene' at 160000-160900, bulk update that annotation to set its description to 'Bulk benchmark annotation', get its annotation history, and then list annotations in that region.",
         expectedResult: {
           tool_sequence: ['create_annotation', 'bulk_update_annotations', 'get_annotation_history', 'list_annotations'],
+          orderInsensitiveTools: ['list_annotations'],
           parameters: [
             {
               name: 'benchmark_bulk_gene',
@@ -1037,7 +1041,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'blast',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Detect the type of sequence ATGAAAGCGCTGAAAGCGCTG, run blast_search against nt with blastn and max 5 targets, filter the BLAST results to hits with at least 90 percent identity and at most 5 hits, then export the BLAST results as CSV to ${this.buildFilePath('exported_files/benchmark_blast_results.csv')}.`,
+        // A 21 bp query against nt legitimately returns no significant hits, and models then
+        // reported the workflow as finished after two tools. Filtering and exporting an empty
+        // hit set are well-defined, so the instruction requires both steps either way.
+        instruction: `Detect the type of sequence ATGAAAGCGCTGAAAGCGCTG, run blast_search against nt with blastn and max 5 targets, filter the BLAST results to hits with at least 90 percent identity and at most 5 hits, then export the BLAST results as CSV to ${this.buildFilePath('exported_files/benchmark_blast_results.csv')}. Always run the filter and export steps on the search results, including when the search returns zero hits - an empty filtered set and a header-only CSV are the expected outcome in that case.`,
         expectedResult: {
           tool_sequence: ['blast_detect_sequence_type', 'blast_search', 'blast_filter_results', 'blast_export_results'],
           parameters: [
@@ -1161,9 +1168,17 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               include_sequence: this.schemaDefault(true),
             },
             {
-              sequence:
-                'MFTGSIVAIVTPMDEKGNVCRASLKKLIDYHVASGTSAIVSVGTTGESATLNHDEHADVVMMTLDLADGRIPVIAGTGANATAEAISLTQRFNDSGIVGCLTVTPYYNRPSQEGLYQHFKAIAEHTDLPQILYNVPSRTGCDLLPETVGRLAKVKNIIGIKEATGNLTRVNQIKELVSDDFVLLSGDDASALDFMQLGGHGVISVTANVAARDMAQMCKLAAEGHFAEARVINQRLMPLHNKLFVEPNPIPVKWACKELGLVATDTLRLPMTPITDSGRETVRAALKHAGLL',
               analysis_type: 'domains',
+              // The tool resolves the sequence itself from a UniProt accession, and the
+              // instruction supplies that accession, so passing uniprot_id instead of
+              // re-transcribing 292 residues is the equally correct call.
+              ...this.anyOfParameters(
+                { uniprot_id: 'P0A6L2' },
+                {
+                  sequence:
+                    'MFTGSIVAIVTPMDEKGNVCRASLKKLIDYHVASGTSAIVSVGTTGESATLNHDEHADVVMMTLDLADGRIPVIAGTGANATAEAISLTQRFNDSGIVGCLTVTPYYNRPSQEGLYQHFKAIAEHTDLPQILYNVPSRTGCDLLPETVGRLAKVKNIIGIKEATGNLTRVNQIKELVSDDFVLLSGDDASALDFMQLGGHGVISVTANVAARDMAQMCKLAAEGHFAEARVINQRLMPLHNKLFVEPNPIPVKWACKELGLVATDTLRLPMTPITDSGRETVRAALKHAGLL',
+                }
+              ),
             },
             {
               geneName: 'dapA',
@@ -1801,6 +1816,28 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     return actualValue === expectedValue;
   }
 
+  /**
+   * Decide whether a call used one specific interchangeable parameter shape.
+   *
+   * An alternative only counts when the call actually carries its keys. The ordinary rule -
+   * that an absent parameter satisfies a placeholder expectation - would otherwise make an
+   * alternative such as { id: '<highlight_id>' } match every call, and with it the whole
+   * anyOf expectation.
+   */
+  workflowAlternativeMatches(actualParams, alternative) {
+    if (!alternative || typeof alternative !== 'object' || Array.isArray(alternative)) return false;
+
+    const normalizedActual = this.normalizeParameterKeys(actualParams || {});
+    const requiredKeys = Object.keys(alternative).filter(key => !this.isAnyOfExpectationKey(key));
+    if (requiredKeys.length === 0) return false;
+
+    const suppliedByCaller = requiredKeys.every(
+      key =>
+        this.isSchemaDefaultExpectation(alternative[key]) || this.getActualParameterValue(normalizedActual, key).found
+    );
+    return suppliedByCaller && this.workflowParametersMatch(normalizedActual, alternative);
+  }
+
   workflowParametersMatch(actualParams, expectedParams) {
     if (!expectedParams || Object.keys(expectedParams).length === 0) return true;
     if (!actualParams || typeof actualParams !== 'object') return false;
@@ -1809,6 +1846,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
     const normalizedExpected = this.normalizeParameterKeys(expectedParams);
 
     return Object.entries(normalizedExpected).every(([expectedKey, expectedValue]) => {
+      // Interchangeable parameter shapes: satisfied by whichever alternative the model used.
+      if (this.isAnyOfExpectationKey(expectedKey)) {
+        if (!Array.isArray(expectedValue) || expectedValue.length === 0) return true;
+        return expectedValue.some(alternative => this.workflowAlternativeMatches(normalizedActual, alternative));
+      }
+
       if (expectedKey === 'organism') {
         const actualCandidate = this.getActualParameterValue(normalizedActual, expectedKey);
         if (!actualCandidate.found) {

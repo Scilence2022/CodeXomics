@@ -693,13 +693,60 @@ class BlastFunctionTools {
   }
 
   /**
+   * Resolve the BLAST results a follow-up tool should act on.
+   *
+   * The published schemas let callers name a search by `searchId` (export) or hand back a
+   * results object (filter), but an LLM cannot echo a whole result payload, so both tools
+   * fall back to the search this session just ran - the one the caller is referring to.
+   */
+  resolveBlastResults(params = {}) {
+    const requestedId = params.searchId || params.search_id || null;
+    const passedResults = this.normalizeBlastResultsShape(params.results);
+    if (passedResults) return passedResults;
+
+    for (const candidate of [this.blastManager?.currentResults, this.blastManager?.searchResults]) {
+      const normalized = this.normalizeBlastResultsShape(candidate);
+      if (!normalized) continue;
+      if (requestedId && normalized.searchId && String(normalized.searchId) !== String(requestedId)) {
+        throw new Error(
+          `No BLAST results found for searchId "${requestedId}"; the most recent search is "${normalized.searchId}".`
+        );
+      }
+      return normalized;
+    }
+    return null;
+  }
+
+  /**
+   * Reduce either shape a BLAST search returns - the raw results or the tool envelope that
+   * wraps them - to a single results object that always exposes a hits array.
+   */
+  normalizeBlastResultsShape(candidate) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+
+    const inner = candidate.results && typeof candidate.results === 'object' ? candidate.results : null;
+    const source = Array.isArray(candidate.hits) ? candidate : inner || candidate;
+    if (!source || typeof source !== 'object') return null;
+
+    const searchId = source.searchId || candidate.searchId || null;
+    if (Array.isArray(source.hits)) return { ...source, searchId };
+
+    // A completed search with no matches still carries its query and parameter metadata.
+    const looksLikeResults = ['queryInfo', 'parameters', 'searchId', 'rawText', 'rawOutput'].some(key => key in source);
+    return looksLikeResults ? { ...source, hits: [], searchId } : null;
+  }
+
+  /**
    * Filter BLAST results based on criteria
    */
   async filterBlastResults(params) {
-    const { results, minIdentity, maxEvalue, minCoverage, maxHits } = params;
+    const { minIdentity, maxEvalue, minCoverage, maxHits } = params;
+    const results = this.resolveBlastResults(params);
 
-    if (!results || !results.hits) {
-      throw new Error('results parameter with hits array is required');
+    if (!results || !Array.isArray(results.hits)) {
+      throw new Error(
+        'No BLAST results to filter. Run a BLAST search first, or pass results (or searchId) from a previous search.'
+      );
     }
 
     let filteredHits = results.hits;
@@ -761,27 +808,19 @@ class BlastFunctionTools {
    * Export BLAST results to file
    */
   async exportBlastResults(params) {
-    const { results, format = 'text', outputPath } = params;
+    const { format = 'tsv', outputPath } = params;
+    const results = this.resolveBlastResults(params);
 
     if (!results) {
-      throw new Error('results parameter is required');
+      throw new Error(
+        'No BLAST results to export. Run a BLAST search first, or pass searchId (or results) from a previous search.'
+      );
     }
 
     try {
-      let content = '';
-
-      if (format === 'text') {
-        content = results.rawText || results.rawOutput || 'No raw output available';
-      } else if (format === 'json') {
-        content = JSON.stringify(results, null, 2);
-      } else if (format === 'csv') {
-        // Generate CSV format
-        const hits = results.hits || [];
-        content = 'Hit ID,Accession,Description,E-value,Score,Identity,Coverage\n';
-        hits.forEach(hit => {
-          content += `"${hit.id}","${hit.accession}","${hit.description}","${hit.evalue}","${hit.score}","${hit.identity}","${hit.coverage}"\n`;
-        });
-      }
+      // Every advertised format now produces content: an unhandled one used to write an
+      // empty file and report success.
+      const content = this.formatBlastResultsForExport(results, format);
 
       if (outputPath) {
         if (!window.electronAPI?.writeFile) {
@@ -796,6 +835,8 @@ class BlastFunctionTools {
           success: true,
           outputPath: writeResult.filePath || outputPath,
           format: format,
+          searchId: results.searchId || null,
+          hitCount: results.hits.length,
           size: content.length,
           timestamp: new Date().toISOString(),
         };
@@ -804,6 +845,8 @@ class BlastFunctionTools {
           success: true,
           content: content,
           format: format,
+          searchId: results.searchId || null,
+          hitCount: results.hits.length,
           size: content.length,
           timestamp: new Date().toISOString(),
         };
@@ -815,6 +858,52 @@ class BlastFunctionTools {
         timestamp: new Date().toISOString(),
       };
     }
+  }
+
+  /**
+   * Render BLAST results in one of the formats the export tool advertises.
+   *
+   * A search that matched nothing exports its header row or empty container rather than
+   * failing: an empty result set is a real answer, and callers chain export unconditionally.
+   */
+  formatBlastResultsForExport(results, format) {
+    const normalizedFormat = String(format || 'tsv').toLowerCase();
+    const hits = Array.isArray(results.hits) ? results.hits : [];
+    const columns = ['Hit ID', 'Accession', 'Description', 'E-value', 'Score', 'Identity', 'Coverage'];
+    const fields = ['id', 'accession', 'description', 'evalue', 'score', 'identity', 'coverage'];
+    const cell = hit => fields.map(field => (hit?.[field] === undefined || hit?.[field] === null ? '' : hit[field]));
+
+    if (normalizedFormat === 'csv') {
+      const escape = value => `"${String(value).replace(/"/g, '""')}"`;
+      return [columns.map(escape).join(','), ...hits.map(hit => cell(hit).map(escape).join(','))].join('\n') + '\n';
+    }
+
+    if (normalizedFormat === 'tsv') {
+      const escape = value => String(value).replace(/[\t\r\n]+/g, ' ');
+      return [columns.map(escape).join('\t'), ...hits.map(hit => cell(hit).map(escape).join('\t'))].join('\n') + '\n';
+    }
+
+    if (normalizedFormat === 'json') {
+      return JSON.stringify(results, null, 2);
+    }
+
+    if (normalizedFormat === 'xml') {
+      const escape = value =>
+        String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const hitXml = hits
+        .map(hit => {
+          const inner = fields.map(field => `      <${field}>${escape(hit?.[field] ?? '')}</${field}>`);
+          return `    <Hit>\n${inner.join('\n')}\n    </Hit>`;
+        })
+        .join('\n');
+      return `<?xml version="1.0"?>\n<BlastOutput>\n  <SearchId>${escape(results.searchId || '')}</SearchId>\n  <Hits>\n${hitXml}${hitXml ? '\n' : ''}  </Hits>\n</BlastOutput>\n`;
+    }
+
+    if (normalizedFormat === 'text') {
+      return results.rawText || results.rawOutput || this.formatBlastResultsForExport(results, 'tsv');
+    }
+
+    throw new Error(`Unsupported export format "${format}". Supported formats: tsv, csv, json, xml, text.`);
   }
 
   /**

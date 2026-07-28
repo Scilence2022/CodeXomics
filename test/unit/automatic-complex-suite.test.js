@@ -423,6 +423,53 @@ describe('AutomaticComplexSuite', () => {
       expect(evalResult.errors.join(' ')).toContain('Critical parameters');
     });
 
+    it('evaluateWorkflowCall should accept either shape declared with anyOfParameters', async () => {
+      const expectedResult = {
+        tool_sequence: ['list_highlights', 'remove_highlight'],
+        parameters: [{}, suite.anyOfParameters({ id: '<highlight_id>' }, { start: 110000, end: 112000 })],
+      };
+      const testResult = { id: 'nav_auto_complex_02', maxScore: 10, category: 'navigation' };
+
+      const byId = await suite.evaluateWorkflowCall(
+        [
+          { tool_name: 'list_highlights', parameters: {} },
+          { tool_name: 'remove_highlight', parameters: { id: 'hl_1785204766028_1' } },
+        ],
+        expectedResult,
+        testResult
+      );
+      expect(byId.success).toBe(true);
+      expect(byId.errors).toEqual([]);
+
+      const byCoordinates = await suite.evaluateWorkflowCall(
+        [
+          { tool_name: 'list_highlights', parameters: {} },
+          { tool_name: 'remove_highlight', parameters: { start: 110000, end: 112000 } },
+        ],
+        expectedResult,
+        testResult
+      );
+      expect(byCoordinates.success).toBe(true);
+      expect(byCoordinates.errors).toEqual([]);
+    });
+
+    it('evaluateWorkflowCall should still reject a call matching no anyOfParameters alternative', async () => {
+      const evalResult = await suite.evaluateWorkflowCall(
+        [
+          { tool_name: 'list_highlights', parameters: {} },
+          { tool_name: 'remove_highlight', parameters: { start: 999000, end: 999500 } },
+        ],
+        {
+          tool_sequence: ['list_highlights', 'remove_highlight'],
+          parameters: [{}, suite.anyOfParameters({ id: '<highlight_id>' }, { start: 110000, end: 112000 })],
+        },
+        { id: 'nav_auto_complex_02', maxScore: 10, category: 'navigation' }
+      );
+
+      expect(evalResult.success).toBe(false);
+      expect(evalResult.errors.join(' ')).toContain('Critical parameters');
+    });
+
     it('getRecentOrderedWorkflowMatches should consume tracker executions in order', () => {
       const now = Date.now();
       global.window.chatManager.toolExecutionTracker.getSessionExecutions = () => [

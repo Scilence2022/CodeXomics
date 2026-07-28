@@ -1041,16 +1041,42 @@ class AnnotationService {
         __executionContext: params.__executionContext,
       });
     }
-    const changeSet = await this.createAnnotationChangeset({
-      ...params,
-      annotationProposal: { updates: params.updates || {}, evidence: params.evidence || [] },
-      principal: params.principal || params.agent || 'mcp-agent',
-      __executionContext: params.__executionContext,
-    });
+    let changeSet;
+    try {
+      changeSet = await this.createAnnotationChangeset({
+        ...params,
+        annotationProposal: { updates: params.updates || {}, evidence: params.evidence || [] },
+        principal: params.principal || params.agent || 'mcp-agent',
+        __executionContext: params.__executionContext,
+      });
+    } catch (error) {
+      const noChanges = this._describeNoOpUpdate(error, params.identifier);
+      if (!noChanges) throw error;
+      return noChanges;
+    }
     return {
       ...changeSet,
       message:
         'Direct annotation mutation is disabled for autonomous callers. Review and approve the returned ChangeSet before applying it.',
+    };
+  }
+
+  /**
+   * Report a request the annotation already satisfies as a completed no-op.
+   *
+   * Nothing is written when a proposal reduces to zero effective operations, so failing the
+   * call made callers abandon the rest of a multi-step workflow over an update that had, in
+   * substance, already been performed. Every other error still propagates.
+   */
+  _describeNoOpUpdate(error, identifier) {
+    const noEffectiveChanges = this._getChangeSetService()?.constructor?.NO_EFFECTIVE_CHANGES;
+    if (!noEffectiveChanges || error?.code !== noEffectiveChanges) return null;
+    return {
+      success: true,
+      applied: false,
+      noChanges: true,
+      identifier: identifier || null,
+      message: `Annotation${identifier ? ` "${identifier}"` : ''} already carries the requested values; no ChangeSet was created.`,
     };
   }
 
@@ -1134,6 +1160,7 @@ class AnnotationService {
     if (updatesList.length === 0) throw new Error('bulk_update_annotations requires a non-empty updates list');
     const results = [];
     const errors = [];
+    const unchanged = [];
     for (const item of updatesList) {
       try {
         const itemParams = item && typeof item === 'object' ? { ...item } : {};
@@ -1147,16 +1174,34 @@ class AnnotationService {
           })
         );
       } catch (error) {
-        errors.push({ identifier: item.identifier, error: error.message });
+        const noChanges = this._describeNoOpUpdate(error, item?.identifier);
+        if (noChanges) {
+          unchanged.push(noChanges);
+          continue;
+        }
+        errors.push({ identifier: item?.identifier, error: error.message });
       }
     }
+
+    // The per-item errors used to be reachable only by inspecting the result object, so a
+    // caller reading just the message saw the success wording on a run that changed nothing.
+    const failureDetail = errors.map(entry => `${entry.identifier || 'unknown annotation'}: ${entry.error}`).join('; ');
+    const summary = [
+      `${results.length} of ${updatesList.length} requested annotation update(s) became reviewable ChangeSets`,
+      unchanged.length > 0 ? `${unchanged.length} already carried the requested values` : null,
+      errors.length > 0 ? `${errors.length} failed (${failureDetail})` : null,
+    ]
+      .filter(Boolean)
+      .join('; ');
+
     return {
       success: errors.length === 0,
       applied: false,
       totalRequested: updatesList.length,
       changeSets: results,
+      unchanged,
       errors,
-      message: 'Created independent reviewable ChangeSets; no bulk annotation changes were applied.',
+      message: `${summary}. No bulk annotation changes were applied; review and approve each ChangeSet to commit it.`,
     };
   }
 
