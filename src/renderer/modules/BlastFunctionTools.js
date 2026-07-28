@@ -1117,22 +1117,13 @@ class BlastFunctionTools {
    * Get current genome ID
    */
   getCurrentGenomeId() {
-    // Try multiple approaches to get current genome identifier
-    const currentFile = this.blastManager.app?.fileManager?.currentFile;
-
-    if (currentFile) {
-      // Use file name without extension as genome ID
-      if (currentFile.name) {
-        return currentFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
-      }
-      if (currentFile.path) {
-        const fileName = String(currentFile.path || '')
-          .replace(/\\/g, '/')
-          .split('/')
-          .filter(Boolean)
-          .pop();
-        return fileName.replace(/\.[^/.]+$/, '');
-      }
+    // Resolve from the genome source rather than fileManager.currentFile, which
+    // tracks the most recently loaded file of any type. A WIG track loaded after
+    // the genome would otherwise re-key the genome-to-database associations.
+    const genomeFilePath = this.blastManager.getCurrentGenomeFilePath?.();
+    if (genomeFilePath) {
+      const fileName = String(genomeFilePath).replace(/\\/g, '/').split('/').filter(Boolean).pop();
+      return this.blastManager.stripGenomeFileExtension(fileName) || fileName;
     }
 
     // Fallback to current chromosome

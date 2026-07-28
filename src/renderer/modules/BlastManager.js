@@ -131,34 +131,18 @@ class BlastManager {
   }
 
   /**
-   * Get current file directory for database creation
+   * Get the directory of the loaded genome, used to co-locate created databases.
+   * Resolves from the genome source only - a track or annotation file loaded
+   * afterwards must not relocate the database.
    */
   getCurrentFileDirectory() {
-    // Try multiple approaches to get the current file path
-    let currentFilePath = null;
-
-    // Approach 1: From FileManager.currentFile.path (primary structure)
-    const currentFile = this.app?.fileManager?.currentFile;
-    if (currentFile && currentFile.path) {
-      currentFilePath = currentFile.path;
+    const genomeFilePath = this.getCurrentGenomeFilePath();
+    if (!genomeFilePath) {
+      return null;
     }
 
-    // Approach 2: From FileManager.currentFile.info.path (alternative structure)
-    if (!currentFilePath && currentFile && currentFile.info?.path) {
-      currentFilePath = currentFile.info.path;
-    }
-
-    // Approach 3: Check if there's a global file path stored
-    if (!currentFilePath && this.app?.currentFilePath) {
-      currentFilePath = this.app.currentFilePath;
-    }
-
-    if (currentFilePath) {
-      const path = this.getPathModule();
-      return path.dirname(currentFilePath);
-    }
-
-    return null;
+    const path = this.getPathModule();
+    return path.dirname(genomeFilePath);
   }
 
   parseBlastCommand(command) {
@@ -2396,16 +2380,35 @@ class BlastManager {
     }
   }
 
+  /**
+   * Sequence-bearing file formats, matching the genome filter of the open dialog.
+   * Track, annotation, variant and alignment files are excluded on purpose: they
+   * carry no sequence, so they can never be the source of a BLAST database.
+   */
+  isGenomeSequenceFilePath(filePath) {
+    return /\.(fasta|fa|fas|fna|gb|gbk|gbff|genbank)(\.gz)?$/i.test(String(filePath || '').trim());
+  }
+
+  /**
+   * Path of the genome the databases are built from.
+   *
+   * `fileManager.currentFile` holds the most recently loaded file of ANY type -
+   * loading a WIG track after a genome leaves it pointing at the track. Prefer
+   * `loadedGenomePath`, which is only written when a FASTA/GenBank source is
+   * parsed, and accept the fallbacks solely when they name a sequence file.
+   */
   getCurrentGenomeFilePath() {
+    if (this.app?.loadedGenomePath) return this.app.loadedGenomePath;
+
     const currentFile = this.app?.fileManager?.currentFile;
-    if (currentFile?.path) return currentFile.path;
-    if (currentFile?.info?.path) return currentFile.info.path;
-    if (this.app?.currentFilePath) return this.app.currentFilePath;
-    return null;
+    const candidates = [currentFile?.path, currentFile?.info?.path, this.app?.currentFilePath];
+    return candidates.find(candidate => candidate && this.isGenomeSequenceFilePath(candidate)) || null;
   }
 
   stripGenomeFileExtension(fileName) {
-    return String(fileName || '').replace(/\.(fasta|fa|fas|txt|gbk|gb|genbank)$/i, '');
+    return String(fileName || '')
+      .replace(/\.gz$/i, '')
+      .replace(/\.(fasta|fa|fas|fna|txt|gbk|gb|gbff|genbank)$/i, '');
   }
 
   getQuickDatabaseBaseName(genomeName, dbType) {
@@ -6623,26 +6626,10 @@ class BlastManager {
   async writeSequenceToFile(fastaContent, dbName, dbType, options = {}) {
     const path = this.getPathModule();
 
-    // Try to get current file directory first, fallback to the main-process temp directory.
+    // Write next to the genome source when one is known, otherwise fall back to
+    // the main-process temp directory.
     let targetDir = await this.getAppTempDirectory();
-    let currentFilePath = null;
-
-    // Try multiple approaches to get the current file path
-    // Approach 1: From FileManager.currentFile.path (primary structure)
-    const currentFile = this.app?.fileManager?.currentFile;
-    if (currentFile && currentFile.path) {
-      currentFilePath = currentFile.path;
-    }
-
-    // Approach 2: From FileManager.currentFile.info.path (alternative structure)
-    if (!currentFilePath && currentFile && currentFile.info?.path) {
-      currentFilePath = currentFile.info.path;
-    }
-
-    // Approach 3: Check if there's a global file path stored
-    if (!currentFilePath && this.app?.currentFilePath) {
-      currentFilePath = this.app.currentFilePath;
-    }
+    const currentFilePath = this.getCurrentGenomeFilePath();
 
     if (currentFilePath) {
       // Use the same directory as the loaded genome file
