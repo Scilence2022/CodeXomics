@@ -45,6 +45,10 @@ const {
 
 let BamReaderClass = null;
 const BLAST_EXECUTABLES = new Set(['blastdbcmd', 'makeblastdb', 'blastn', 'blastp', 'blastx', 'tblastn', 'tblastx']);
+// Upper bound for a single BLAST subprocess. Generous enough for makeblastdb over a
+// large genome, but finite so a stalled process can never hang the caller.
+const BLAST_COMMAND_DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
+const BLAST_COMMAND_MAX_TIMEOUT_MS = 60 * 60 * 1000;
 const FILE_LOAD_TOOLS = new Set([
   'load_genome_file',
   'load_annotation_file',
@@ -4610,7 +4614,14 @@ function registerIpcHandlers(deps) {
       }
 
       const executable = resolveBlastExecutable(app, executableToken, options.blastExecutablePath);
-      const execOptions = { maxBuffer: 10 * 1024 * 1024 };
+      // Always bound the subprocess. makeblastdb/blastn can stall indefinitely on a
+      // slow volume or a malformed input, and an unbounded execFile never settles its
+      // promise — which strands the caller (and any benchmark driving it) forever.
+      const requestedTimeout = Number(options.timeoutMs);
+      const timeout = Number.isFinite(requestedTimeout)
+        ? Math.min(Math.max(requestedTimeout, 1000), BLAST_COMMAND_MAX_TIMEOUT_MS)
+        : BLAST_COMMAND_DEFAULT_TIMEOUT_MS;
+      const execOptions = { maxBuffer: 10 * 1024 * 1024, timeout, killSignal: 'SIGKILL' };
 
       if (options.workingDirectory) {
         execOptions.cwd = assertAllowedFileAccess(app, options.workingDirectory, {
@@ -4633,9 +4644,15 @@ function registerIpcHandlers(deps) {
       return await new Promise(resolve => {
         execFile(executable, args, execOptions, (error, stdout, stderr) => {
           if (error) {
+            // execFile reports a timeout kill as `killed` with the killSignal set,
+            // which is otherwise indistinguishable from a crash.
+            const timedOut = error.killed === true || error.signal === 'SIGKILL';
             resolve({
               success: false,
-              error: error.message,
+              timedOut,
+              error: timedOut
+                ? `BLAST command '${getBlastExecutableName(executable)}' timed out after ${timeout} ms and was terminated`
+                : error.message,
               stdout,
               stderr,
               executable,

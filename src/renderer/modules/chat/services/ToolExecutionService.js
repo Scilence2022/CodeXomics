@@ -71,6 +71,59 @@ class ToolExecutionService {
         parameterKeys: Object.keys(parameters).filter(key => !['approvalToken', '__executionContext'].includes(key)),
       });
 
+      // Call-only mode: the caller (a function_call benchmark) is asserting on the
+      // tool selection and arguments, not on the side effect. Record the call and
+      // return without running it, so an expensive or network-bound tool cannot make
+      // a test about model behaviour depend on NCBI latency or a local subprocess.
+      if (this.chatManager?.callOnlyTools?.has(toolName)) {
+        console.log(`[ToolExecutionService] Call-only mode: recording '${toolName}' without executing it`);
+        const tracker = this.chatManager.toolExecutionTracker;
+        const callOnlyId = tracker?.recordExecutionStart?.(toolName, parameters, { callOnly: true });
+        const callOnlyResult = {
+          success: true,
+          tool: toolName,
+          callOnly: true,
+          executed: false,
+          message: `Recorded call to '${toolName}' without executing it (call-only mode).`,
+        };
+        if (callOnlyId) tracker?.recordExecutionSuccess?.(callOnlyId, callOnlyResult);
+        return callOnlyResult;
+      }
+
+      // Track the in-flight execution. Without this the tracker only ever learns about
+      // finished calls, so anything keyed on a 'running' status (benchmark earlyReturn)
+      // can never match. Only record while a session is open — the tracker retains every
+      // record it is given, so tracking ordinary chat would grow without bound.
+      const tracker = this.chatManager?.toolExecutionTracker?.currentSessionId
+        ? this.chatManager.toolExecutionTracker
+        : null;
+      const executionId = tracker?.recordExecutionStart?.(toolName, parameters);
+      if (executionId) {
+        try {
+          const result = await this._dispatch(toolName, parameters, options);
+          // Most tools report failure by returning { success: false } rather than by
+          // throwing. Recording those as succeeded would erase the failure signal that
+          // consumers previously derived from the tool result itself.
+          if (result && typeof result === 'object' && result.success === false) {
+            tracker.recordExecutionFailure?.(executionId, new Error(result.error || `${toolName} reported failure`));
+          } else {
+            tracker.recordExecutionSuccess?.(executionId, result);
+          }
+          return result;
+        } catch (error) {
+          tracker.recordExecutionFailure?.(executionId, error);
+          throw error;
+        }
+      }
+      return await this._dispatch(toolName, parameters, options);
+    } catch (error) {
+      console.error(`[ToolExecutionService] Error executing tool: ${toolName}`, error);
+      throw error;
+    }
+  }
+
+  async _dispatch(toolName, parameters, options = {}) {
+    {
       // --- PRIORITY 1: MULTI-AGENT SETTINGS (if handled exclusively) ---
       if (
         ['update_agent_setting', 'get_agent_settings', 'toggle_agent_mode'].includes(toolName) &&
@@ -369,9 +422,6 @@ class ToolExecutionService {
       }
 
       throw new Error(`Unknown tool: ${toolName}`);
-    } catch (error) {
-      console.error(`[ToolExecutionService] Error executing tool: ${toolName}`, error);
-      throw error;
     }
   }
 

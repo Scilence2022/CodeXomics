@@ -27,7 +27,8 @@ class BlastManager {
     // BLAST configuration
     this.config = {
       ncbiBaseUrl: 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi',
-      maxWaitTime: 300000, // 5 minutes max wait
+      maxWaitTime: 300000, // 5 minutes max wait for a whole online search, retries included
+      commandTimeout: 600000, // 10 minutes max for a single local BLAST subprocess
       pollInterval: 5000, // Check every 5 seconds
       ncbiPollInterval: 60000,
       ncbiTool: 'CodeXomics',
@@ -346,6 +347,7 @@ class BlastManager {
         workingDirectory,
         localDbPath,
         blastExecutablePath: this.config.blastExecutablePath,
+        timeoutMs: options.timeoutMs ?? this.config.commandTimeout,
       });
 
       if (result?.success) {
@@ -539,6 +541,27 @@ class BlastManager {
   }
 
   /**
+   * True when no human is available to answer a modal prompt (benchmark runs,
+   * headless automation). Callers must fail closed rather than block on a dialog.
+   */
+  static isUnattended() {
+    return typeof window !== 'undefined' && window.__codexomicsUnattendedMode === true;
+  }
+
+  /**
+   * Mark the app as running without a user present. Returns a restore function so a
+   * caller can nest/unwind cleanly rather than assuming it owns the flag.
+   */
+  static setUnattended(enabled) {
+    if (typeof window === 'undefined') return () => {};
+    const previous = window.__codexomicsUnattendedMode;
+    window.__codexomicsUnattendedMode = enabled === true;
+    return () => {
+      window.__codexomicsUnattendedMode = previous;
+    };
+  }
+
+  /**
    * Request write permission for an explicitly chosen BLAST database directory.
    *
    * The CodeXomics file-access policy only auto-allows the default writable roots
@@ -576,6 +599,17 @@ class BlastManager {
     // Step 2: the directory needs explicit user consent. Pop up a folder picker so
     // the user can confirm the destination (selecting it issues a recursive grant
     // via rememberApprovedDialogPaths in the main process).
+    //
+    // A native dialog has no timeout and blocks until someone clicks it, so it must
+    // never be opened in an unattended run (benchmarks, headless automation) — there
+    // it hangs the caller indefinitely. Fail closed instead.
+    if (promptIfNeeded && BlastManager.isUnattended()) {
+      console.warn(
+        `BlastManager: Skipping directory permission prompt for "${directoryPath}" (unattended mode); denying instead of blocking.`
+      );
+      return { approved: false, path: null, unattended: true };
+    }
+
     if (promptIfNeeded && api?.showDirectoryDialog) {
       try {
         const picked = await api.showDirectoryDialog({
@@ -3874,20 +3908,24 @@ class BlastManager {
     }
   }
 
-  async executeNCBIBlast(params, retryCount = 0) {
+  async executeNCBIBlast(params, retryCount = 0, deadline = null) {
     const maxRetries = 3;
     const baseDelay = 2000; // 2 seconds base delay
+    // maxWaitTime is a budget for the whole search, not for one attempt. Anchoring an
+    // absolute deadline on the first call stops retries from multiplying the ceiling
+    // (previously 4 x maxWaitTime, plus backoff and an uncounted RTOE delay).
+    const effectiveDeadline = deadline ?? Date.now() + Number(this.config?.maxWaitTime || 300000);
 
     try {
       console.log('Executing NCBI BLAST with parameters:', params);
 
       // Step 1: Submit BLAST job to NCBI with retry logic
-      const submittedJob = await this.submitNCBIBlastJobWithRetry(params, retryCount);
+      const submittedJob = await this.submitNCBIBlastJobWithRetry(params, retryCount, effectiveDeadline);
       const jobId = typeof submittedJob === 'string' ? submittedJob : submittedJob.rid;
       console.log('BLAST job submitted with ID:', jobId);
 
       // Step 2: Poll for job completion
-      const results = await this.pollNCBIBlastResults(submittedJob, params);
+      const results = await this.pollNCBIBlastResults(submittedJob, params, null, effectiveDeadline);
 
       // Mark as real results
       results.isRealResults = true;
@@ -3904,13 +3942,16 @@ class BlastManager {
     } catch (error) {
       console.error('NCBI BLAST error:', error);
 
-      // Retry logic for network errors
+      // Retry logic for network errors, but never past the overall deadline.
       if (retryCount < maxRetries && this.isRetryableError(error)) {
         const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
-        console.log(`Retrying BLAST submission in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        if (Date.now() + delay < effectiveDeadline) {
+          console.log(`Retrying BLAST submission in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
 
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return this.executeNCBIBlast(params, retryCount + 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.executeNCBIBlast(params, retryCount + 1, effectiveDeadline);
+        }
+        console.warn('NCBI BLAST retry budget exhausted: overall deadline reached');
       }
 
       // Show error directly instead of simulated results
@@ -3959,15 +4000,21 @@ class BlastManager {
     return retryablePatterns.some(pattern => errorMessage.includes(pattern));
   }
 
-  async submitNCBIBlastJobWithRetry(params, retryCount = 0) {
+  async submitNCBIBlastJobWithRetry(params, retryCount = 0, deadline = null) {
     try {
-      return await this.submitNCBIBlastJob(params);
+      return await this.submitNCBIBlastJob(params, deadline);
     } catch (error) {
+      // This retry loop is nested inside executeNCBIBlast's own retry loop, so without a
+      // deadline check an outage multiplies out to ~9 submit attempts and overruns the
+      // overall budget. Stop as soon as the next attempt could not finish in time.
       if (retryCount < 2 && this.isRetryableError(error)) {
         const delay = 1000 * (retryCount + 1); // 1s, 2s delays
-        console.log(`Retrying BLAST job submission in ${delay}ms (attempt ${retryCount + 1})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return this.submitNCBIBlastJobWithRetry(params, retryCount + 1);
+        if (!deadline || Date.now() + delay < deadline) {
+          console.log(`Retrying BLAST job submission in ${delay}ms (attempt ${retryCount + 1})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.submitNCBIBlastJobWithRetry(params, retryCount + 1, deadline);
+        }
+        console.warn('NCBI BLAST submission retries stopped: overall deadline reached');
       }
       throw error;
     }
@@ -4069,11 +4116,7 @@ class BlastManager {
       /name=["']RID["'][^>]*value=["']([^"']+)["']/i,
       /[?&]RID=([^&"'<>\\\s]+)/i,
     ];
-    const rtoePatterns = [
-      /\bRTOE\s*=\s*(\d+)/i,
-      /name=["']RTOE["'][^>]*value=["'](\d+)["']/i,
-      /[?&]RTOE=(\d+)/i,
-    ];
+    const rtoePatterns = [/\bRTOE\s*=\s*(\d+)/i, /name=["']RTOE["'][^>]*value=["'](\d+)["']/i, /[?&]RTOE=(\d+)/i];
 
     const ridMatch = ridPatterns.map(pattern => text.match(pattern)).find(Boolean);
     const rtoeMatch = rtoePatterns.map(pattern => text.match(pattern)).find(Boolean);
@@ -4140,7 +4183,7 @@ class BlastManager {
     await new Promise(resolve => setTimeout(resolve, delayMs));
   }
 
-  async submitNCBIBlastJob(params) {
+  async submitNCBIBlastJob(params, deadline = null) {
     // Check rate limits before submission
     this.checkRateLimit();
 
@@ -4194,14 +4237,18 @@ class BlastManager {
     });
 
     try {
-      const response = await fetch(baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'text/plain, text/html, application/xml;q=0.9, */*;q=0.8',
+      const response = await this.fetchWithDeadline(
+        baseUrl,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'text/plain, text/html, application/xml;q=0.9, */*;q=0.8',
+          },
+          body: formData.toString(),
         },
-        body: formData.toString(),
-      });
+        deadline
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
@@ -4267,7 +4314,33 @@ class BlastManager {
     }
   }
 
-  async pollNCBIBlastResults(job, params, maxAttempts = null) {
+  /**
+   * fetch() with no timeout never settles when a connection stalls, which defeats any
+   * caller-side deadline. Abort each request at the smaller of a per-request cap and
+   * the remaining overall budget.
+   */
+  async fetchWithDeadline(url, options = {}, deadline = null) {
+    const perRequestCap = Number(this.config?.requestTimeout || 60000);
+    const remaining = deadline ? deadline - Date.now() : perRequestCap;
+    if (remaining <= 0) {
+      throw new Error('NCBI BLAST request budget exhausted before the request was issued');
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(perRequestCap, remaining));
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw new Error(`NCBI BLAST request timed out: ${url}`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async pollNCBIBlastResults(job, params, maxAttempts = null, deadline = null) {
     const jobId = typeof job === 'string' ? job : job?.rid;
     if (!jobId) {
       throw new Error('Cannot poll NCBI BLAST results without a valid RID');
@@ -4275,6 +4348,7 @@ class BlastManager {
 
     const pollInterval = this.getNCBIPollInterval();
     const maxWaitTime = Number(this.config?.maxWaitTime || 300000);
+    const effectiveDeadline = deadline ?? Date.now() + maxWaitTime;
     const effectiveMaxAttempts =
       maxAttempts === null || maxAttempts === undefined
         ? Math.max(1, Math.ceil(maxWaitTime / pollInterval))
@@ -4284,13 +4358,24 @@ class BlastManager {
     let attempts = 0;
 
     if (initialDelayMs > 0) {
-      this.updateSearchProgress(
-        `NCBI BLAST job submitted. Waiting ${initialDelaySeconds} seconds before first status check...`
-      );
-      await this.waitForNCBIPollDelay(initialDelayMs);
+      // NCBI's RTOE hint used to be awaited outside the wait budget entirely; clamp it
+      // so a large RTOE cannot blow past the deadline before polling even starts.
+      const boundedInitialDelay = Math.max(0, Math.min(initialDelayMs, effectiveDeadline - Date.now()));
+      if (boundedInitialDelay > 0) {
+        this.updateSearchProgress(
+          `NCBI BLAST job submitted. Waiting ${Math.round(boundedInitialDelay / 1000)} seconds before first status check...`
+        );
+        await this.waitForNCBIPollDelay(boundedInitialDelay);
+      }
     }
 
     while (attempts < effectiveMaxAttempts) {
+      if (Date.now() >= effectiveDeadline) {
+        throw new Error(
+          `NCBI BLAST timed out after ${maxWaitTime} ms waiting for RID ${jobId}. ` +
+            'The job may still be running on the NCBI server.'
+        );
+      }
       attempts++;
 
       // Check job status
@@ -4299,7 +4384,7 @@ class BlastManager {
         FORMAT_OBJECT: 'SearchInfo',
         RID: jobId,
       });
-      const statusResponse = await fetch(statusUrl);
+      const statusResponse = await this.fetchWithDeadline(statusUrl, {}, effectiveDeadline);
 
       if (!statusResponse.ok) {
         throw new Error(`Status check failed for NCBI BLAST RID ${jobId}: ${statusResponse.status}`);
@@ -4346,7 +4431,7 @@ class BlastManager {
         }
 
         const resultsUrl = this.buildNCBIGetUrl(resultParams);
-        const resultsResponse = await fetch(resultsUrl);
+        const resultsResponse = await this.fetchWithDeadline(resultsUrl);
 
         if (!resultsResponse.ok) {
           throw new Error(`Results retrieval failed for NCBI BLAST RID ${jobId}: ${resultsResponse.status}`);
@@ -4359,7 +4444,7 @@ class BlastManager {
           ...resultParams,
           FORMAT_TYPE: 'Text',
         });
-        const textResultsResponse = await fetch(textResultsUrl);
+        const textResultsResponse = await this.fetchWithDeadline(textResultsUrl);
         const textResults = textResultsResponse.ok ? await textResultsResponse.text() : 'Text format not available';
 
         // Parse XML results
@@ -7220,6 +7305,12 @@ class BlastManager {
 }
 
 // Export for Node/test environments; in the renderer this class is loaded as a script-tag global.
+// A top-level `class` declaration is a lexical binding, so it is NOT reachable as
+// window.BlastManager — attach it explicitly for callers that look it up that way.
+if (typeof window !== 'undefined') {
+  window.BlastManager = BlastManager;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = BlastManager;
 }
