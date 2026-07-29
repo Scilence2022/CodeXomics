@@ -1,15 +1,20 @@
 # blast_search.yaml
 name: 'blast_search'
-version: '1.4.0'
-description: 'Perform BLAST sequence similarity search against various databases. Supports nucleotide and protein sequences with comprehensive search options.'
+version: '1.5.0'
+description: >-
+  Router for BLAST similarity search: dispatches to NCBI online or local BLAST+ based on the `service`
+  parameter (default: online). Prefer blast_search_online or blast_search_local when the backend is
+  known - they state it in the name and need no routing parameter.
 category: 'external_apis'
 keywords: ['blast', 'search', 'similarity', 'alignment', 'database', 'sequence', 'homology']
 priority: 1
 
 # Tool execution metadata
 execution:
+  # Matches BlastManager.config.maxWaitTime (300000). At the previous 120000 this
+  # tool declared a 2-minute ceiling for a search the backend allows 5 minutes.
   type: 'built-in'
-  timeout: 120000
+  timeout: 300000
   retries: 2
   requires_auth: false
   requires_data: false
@@ -19,6 +24,13 @@ execution:
 parameters:
   type: 'object'
   properties:
+    service:
+      type: 'string'
+      description: >-
+        Which BLAST backend to run against. Omit for NCBI online. Use 'local' to search a
+        BLAST+ database on this machine (create one first with blast_create_quick_db_for_current_genome).
+      default: 'online'
+      enum: ['online', 'ncbi', 'remote', 'local', 'blast+']
     sequence:
       type: 'string'
       description: 'Query sequence (DNA or protein)'
@@ -97,6 +109,11 @@ sample_usages:
     tool_call: "blast_search(sequence='MKELLKAGWKELQP', blastType='blastp', database='swissprot', evalue='1e-10', matrix='BLOSUM80')"
     thought: 'User wants high-stringency protein search with specific scoring matrix'
     expected_result: 'High-confidence protein matches with detailed alignments'
+
+  - user_query: 'BLAST this against my local database instead of NCBI'
+    tool_call: "blast_search(sequence='ATGCGCTATCG', blastType='blastn', database='my_genome_db', service='local')"
+    thought: 'User wants the local BLAST+ backend, so route with service=local'
+    expected_result: 'Hits from the local BLAST+ database without contacting NCBI'
 
 # Tool relationships and dependencies
 relationships:
