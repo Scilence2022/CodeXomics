@@ -495,10 +495,6 @@
   color: var(--primary-color) !important;
 }
 
-[data-ui-style='professional'] .thinking-process .message-icon {
-  background: var(--primary-color) !important;
-}
-
 /* ===== WELCOME BUTTONS ===== */
 [data-ui-style='professional'] .welcome-buttons .btn-primary {
   background: var(--btn-gradient) !important;
