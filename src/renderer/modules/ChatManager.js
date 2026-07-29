@@ -7418,9 +7418,14 @@ class ChatManager {
       // Provider-namespaced tools put the verb in the middle of the name, so an
       // anchored prefix silently fails to recognize blast_export_results as the
       // export the user asked for.
+      //
+      // "download" is the user's word for it; the tools that do it are named
+      // fetch_/download_/save_. Matching only export_ left "download its
+      // AlphaFold 3D structure" unsatisfiable even though
+      // fetch_alphafold_structure had already downloaded it.
       return requirement(
         'export',
-        toolName => toolName === 'export_data' || verbTool('export')(toolName),
+        toolName => toolName === 'export_data' || verbTool('export', 'download', 'save', 'fetch')(toolName),
         'export_data'
       );
     }
@@ -7601,21 +7606,112 @@ class ChatManager {
 
     return {
       actionableClauseCount: actionableClauses.length,
-      requirements: [...requirementsByCapability.values()],
+      requirements: [...requirementsByCapability.values()].filter(requirement =>
+        this.isRequirementSatisfiableByAnyTool(requirement)
+      ),
     };
   }
 
-  doSuccessfulRecordsSatisfyRequirements(successfulRecords, requirements) {
-    const unmatchedRecords = successfulRecords.slice();
-    for (const requirement of requirements) {
+  /**
+   * Tool names this session can execute, or null when the registry is not loaded.
+   */
+  getRegisteredToolNames() {
+    const registry = this.builtInToolsMap;
+    if (!registry || typeof registry.keys !== 'function') return null;
+    const names = [...registry.keys()].filter(name => typeof name === 'string' && name);
+    return names.length > 0 ? names : null;
+  }
+
+  /**
+   * Whether any registered tool could satisfy a requirement at all.
+   *
+   * A capability comes from the user's wording while tools are named for the
+   * effect, and the two pick different verbs for the same thing: "download its
+   * AlphaFold structure" is carried out by fetch_alphafold_structure, "identify
+   * key domains" by analyze_interpro_domains. When a requirement matches no
+   * registered tool, no response can satisfy it, so holding it against the model
+   * sends a finished turn into repair it can never pass. That is missing
+   * knowledge on our side, the same reason an unrecognized clause is not held
+   * against the model.
+   *
+   * Only tool-name matchers are probed. A matcher that also inspects the
+   * execution record (arity > 1) constrains parameters, not availability, and
+   * would always fail against a bare name.
+   */
+  isRequirementSatisfiableByAnyTool(requirement) {
+    if (typeof requirement?.matcher !== 'function' || requirement.matcher.length > 1) return true;
+
+    const toolNames = this.getRegisteredToolNames();
+    // Registry unknown: keep the requirement rather than silently dropping every check.
+    if (!toolNames) return true;
+
+    return toolNames.some(name => {
+      try {
+        return requirement.matcher(name, { tool: name, parameters: {}, normalizedParameters: {} });
+      } catch (e) {
+        return false;
+      }
+    });
+  }
+
+  /**
+   * Assign each required occurrence a distinct successful execution, and report
+   * how many of each requirement went unassigned.
+   *
+   * Claiming the first match and moving on makes the verdict depend on the order
+   * the model happened to run its tools: "retrieve the entry, download the
+   * structure" is satisfied by get_uniprot_entry + fetch_alphafold_structure, but
+   * a greedy "retrieve" takes whichever of the two it sees first, and if that is
+   * the fetch then "download" is left with nothing and a finished request looks
+   * unfinished. Re-assigning through an augmenting path finds an assignment
+   * whenever one exists, so the outcome no longer depends on execution order.
+   */
+  assignRecordsToRequirements(successfulRecords, requirements) {
+    const records = successfulRecords.slice();
+    const slots = [];
+    requirements.forEach((requirement, requirementIndex) => {
       const requiredCount = Math.max(1, Number(requirement.count) || 1);
       for (let occurrence = 0; occurrence < requiredCount; occurrence++) {
-        const matchingIndex = unmatchedRecords.findIndex(record => requirement.matcher(record.tool, record));
-        if (matchingIndex === -1) return false;
-        unmatchedRecords.splice(matchingIndex, 1);
+        slots.push({ requirement, requirementIndex });
       }
-    }
-    return true;
+    });
+
+    const recordAssignedTo = new Array(records.length).fill(-1);
+
+    const assign = (slotIndex, visited) => {
+      const { requirement } = slots[slotIndex];
+      for (let recordIndex = 0; recordIndex < records.length; recordIndex++) {
+        if (visited.has(recordIndex)) continue;
+        const record = records[recordIndex];
+        let matches = false;
+        try {
+          matches = requirement.matcher(record.tool, record);
+        } catch (e) {
+          matches = false;
+        }
+        if (!matches) continue;
+
+        visited.add(recordIndex);
+        const heldBy = recordAssignedTo[recordIndex];
+        if (heldBy === -1 || assign(heldBy, visited)) {
+          recordAssignedTo[recordIndex] = slotIndex;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const unassignedByRequirement = new Map();
+    slots.forEach((slot, slotIndex) => {
+      if (assign(slotIndex, new Set())) return;
+      unassignedByRequirement.set(slot.requirementIndex, (unassignedByRequirement.get(slot.requirementIndex) || 0) + 1);
+    });
+
+    return unassignedByRequirement;
+  }
+
+  doSuccessfulRecordsSatisfyRequirements(successfulRecords, requirements) {
+    return this.assignRecordsToRequirements(successfulRecords, requirements).size === 0;
   }
 
   hasSuccessfulExecutionForRequest(toolExecutionState) {
@@ -7642,27 +7738,16 @@ class ChatManager {
   getOutstandingRequestSteps(toolExecutionState) {
     const successfulRecords = (toolExecutionState?.records || []).filter(record => record.status === 'success');
     const { requirements } = this.getSequentialActionRequirements(String(toolExecutionState?.originalMessage || ''));
-    const unmatchedRecords = successfulRecords.slice();
-    const outstanding = [];
+    const unassigned = this.assignRecordsToRequirements(successfulRecords, requirements);
 
-    for (const requirement of requirements) {
-      const requiredCount = Math.max(1, Number(requirement.count) || 1);
-      let satisfied = 0;
-      for (let occurrence = 0; occurrence < requiredCount; occurrence++) {
-        const matchingIndex = unmatchedRecords.findIndex(record => requirement.matcher(record.tool, record));
-        if (matchingIndex === -1) break;
-        unmatchedRecords.splice(matchingIndex, 1);
-        satisfied++;
-      }
-      if (satisfied >= requiredCount) continue;
-      outstanding.push({
-        capability: requirement.capability,
-        clause: requirement.clause || '',
-        remaining: requiredCount - satisfied,
-      });
-    }
-
-    return outstanding;
+    return requirements
+      .map((requirement, requirementIndex) => ({ requirement, remaining: unassigned.get(requirementIndex) || 0 }))
+      .filter(entry => entry.remaining > 0)
+      .map(entry => ({
+        capability: entry.requirement.capability,
+        clause: entry.requirement.clause || '',
+        remaining: entry.remaining,
+      }));
   }
 
   canFinalizeFromSuccessfulToolResults(toolExecutionState, successfulResults, successfulTools, originalMessage) {

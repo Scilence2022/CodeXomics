@@ -964,3 +964,114 @@ describe('ChatManager repair budget survives a tool that keeps re-running', () =
     expect(manager.getModelTurnRecoveryDecision(answer, state, 3, 20).action).toBe('fail');
   });
 });
+
+describe('ChatManager requirements match the tools that carry them out', () => {
+  const REGISTRY = [
+    'get_uniprot_entry',
+    'fetch_alphafold_structure',
+    'open_protein_viewer',
+    'search_uniprot_database',
+    'analyze_interpro_domains',
+    'export_data',
+    'select_gene',
+    'create_annotation',
+    'list_annotations',
+  ];
+
+  function managerWithRegistry() {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    manager.builtInToolsMap = new Map(REGISTRY.map(name => [name, {}]));
+    return manager;
+  }
+
+  function stateFor(manager, message, tools) {
+    const state = manager.createToolExecutionState(message);
+    for (const tool of tools) state.records.push({ tool, status: 'success' });
+    return state;
+  }
+
+  // Verbatim instruction from the benchmark run that kept re-downloading.
+  const ALPHAFOLD_WORKFLOW =
+    "Retrieve the UniProt entry details for human protein p53 using accession ID 'P04637', download its " +
+    'AlphaFold 3D structure, and then open the returned AlphaFold structure in the interactive 3D protein ' +
+    'viewer using cartoon representation.';
+
+  const EXECUTED = ['get_uniprot_entry', 'fetch_alphafold_structure', 'open_protein_viewer'];
+
+  it('counts a fetch_ tool as the download the request asked for', () => {
+    const manager = managerWithRegistry();
+    const state = stateFor(manager, ALPHAFOLD_WORKFLOW, EXECUTED);
+
+    expect(manager.hasSuccessfulExecutionForRequest(state)).toBe(true);
+    expect(manager.getOutstandingRequestSteps(state)).toEqual([]);
+  });
+
+  it('does not depend on the order the model ran the tools', () => {
+    const manager = managerWithRegistry();
+    // "retrieve" and "download" both match fetch_alphafold_structure. Claiming the
+    // first match left whichever step lost the race looking unfinished.
+    const reordered = ['fetch_alphafold_structure', 'get_uniprot_entry', 'open_protein_viewer'];
+
+    expect(manager.hasSuccessfulExecutionForRequest(stateFor(manager, ALPHAFOLD_WORKFLOW, reordered))).toBe(true);
+    expect(manager.getOutstandingRequestSteps(stateFor(manager, ALPHAFOLD_WORKFLOW, reordered))).toEqual([]);
+  });
+
+  it('finishes the turn instead of asking for a download that already happened', () => {
+    const manager = managerWithRegistry();
+    const decision = manager.getModelTurnRecoveryDecision(
+      {
+        text: 'Retrieved P04637, downloaded its AlphaFold model and opened it in cartoon representation.',
+        toolCalls: [],
+        invalidToolCalls: [],
+        isEmpty: false,
+      },
+      stateFor(manager, ALPHAFOLD_WORKFLOW, EXECUTED),
+      3,
+      20
+    );
+
+    expect(decision.action).toBe('complete');
+  });
+
+  it('still reports a download step that genuinely never ran', () => {
+    const manager = managerWithRegistry();
+    const state = stateFor(manager, ALPHAFOLD_WORKFLOW, ['get_uniprot_entry', 'open_protein_viewer']);
+
+    expect(manager.getOutstandingRequestSteps(state).map(step => step.capability)).toEqual(['export']);
+    expect(manager.hasSuccessfulExecutionForRequest(state)).toBe(false);
+  });
+
+  it('drops a requirement no registered tool could ever satisfy', () => {
+    const manager = managerWithRegistry();
+    // Nothing in the registry is named detect_/identify_, so requiring it would
+    // send every finished answer into a repair it can never pass.
+    const { requirements } = manager.getSequentialActionRequirements('identify the promoter regions');
+
+    expect(requirements).toEqual([]);
+    expect(
+      manager.hasSuccessfulExecutionForRequest(
+        stateFor(manager, 'identify the promoter regions', ['search_uniprot_database'])
+      )
+    ).toBe(true);
+  });
+
+  it('keeps every requirement when the registry has not loaded yet', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    manager.builtInToolsMap = null;
+
+    const { requirements } = manager.getSequentialActionRequirements('identify the promoter regions');
+
+    expect(requirements.map(requirement => requirement.capability)).toEqual(['detect']);
+  });
+
+  it('keeps a requirement whose matcher constrains parameters rather than availability', () => {
+    const manager = managerWithRegistry();
+    // The gene_selection matcher reads the execution record, so probing it with a
+    // bare tool name says nothing about whether the tool exists.
+    const { requirements } = manager.getSequentialActionRequirements('select the lysC gene');
+
+    expect(requirements.map(requirement => requirement.capability)).toContain('gene_selection');
+  });
+});
