@@ -1226,72 +1226,33 @@
   position: relative;
 }
 
+/* Multi-agent notice: a centered status chip rather than a hero banner. It is
+ * re-emitted on every request while the mode is on, so it has to stay quiet.
+ * Colors come from the theme variables so no per-theme override is needed. */
 .multi-agent-activation {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  margin: 10px 0;
-}
-
-.multi-agent-banner {
-  display: flex;
+  align-self: center !important;
   align-items: center;
-  padding: 15px;
-  color: white;
-  border-radius: 8px;
+  max-width: 100% !important;
+  margin: 2px 0 !important;
 }
 
-.multi-agent-icon {
-  font-size: 24px;
-  margin-right: 15px;
-  animation: pulse 2s infinite;
-}
-
-.multi-agent-content {
-  flex: 1;
-}
-
-.multi-agent-title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.multi-agent-subtitle {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-bottom: 8px;
-}
-
-.multi-agent-features {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.feature-tag {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 10px;
+.multi-agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 500;
+  line-height: 1.5;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.08);
+  border: 1px solid rgba(var(--primary-rgb), 0.2);
 }
 
-.multi-agent-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4caf50;
-  animation: blink 1.5s infinite;
-}
-
-.status-indicator.active {
-  background: #4caf50;
+.multi-agent-chip i {
+  font-size: 10px;
+  opacity: 0.85;
 }
 
 .status-text {
