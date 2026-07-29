@@ -2699,4 +2699,111 @@ describe('AnnotationChangeSetService', () => {
     expect(delegated.annotationProposal.updates.go_terms).toBe('GO:0003674');
     expect(delegated.__executionContext).toBe(agentContext);
   });
+
+  // create_annotation keeps its feature in memory only while the ledger is written
+  // to the sidecar, so committing an edit to one and reloading used to leave every
+  // later annotation operation on that genome throwing during reconciliation, with
+  // no way back: the feature could never reappear to satisfy the check.
+  describe('committed ChangeSets whose target no longer exists', () => {
+    const readerContext = { ...curatorContext, permissions: ['annotation:read'] };
+
+    async function commitEditThenReload({ liveId, reloadedAnnotations }) {
+      const sessionAnnotation = {
+        id: liveId,
+        type: 'CDS',
+        start: 500,
+        end: 900,
+        strand: 1,
+        qualifiers: { locus_tag: 'benchmark_bulk_gene', gene: 'fakG' },
+      };
+      const sidecarData = {};
+      const mockWindow = loadServices();
+      const app = {
+        loadedGenomePath: '/tmp/session.gbk',
+        currentFile: { path: '/tmp/session.gbk' },
+        currentChromosome: 'NC_000913.3',
+        currentAnnotations: { 'NC_000913.3': [sessionAnnotation] },
+        sidecarManager: {
+          get: async (_genomePath, key) => JSON.parse(JSON.stringify(sidecarData[key] || {})),
+          setAndForceSave: async (_genomePath, key, value) => {
+            sidecarData[key] = JSON.parse(JSON.stringify(value));
+          },
+        },
+      };
+      const service = new mockWindow.AnnotationService(app, {
+        _getChangeTracker: () => ({ recordChange: () => ({}) }),
+      });
+
+      const created = await service.createAnnotationChangeset({
+        identifier: 'benchmark_bulk_gene',
+        operations: [{ op: 'addQualifier', field: 'note', value: 'Bulk benchmark annotation' }],
+        __executionContext: agentContext,
+      });
+      const approval = await service.requestAnnotationApproval({
+        changeSetId: created.changeSet.id,
+        __executionContext: curatorContext,
+      });
+      await service.applyAnnotationChangeset({
+        changeSetId: created.changeSet.id,
+        approvalToken: approval.approvalToken,
+        __executionContext: curatorContext,
+      });
+
+      // Reopen the same genome path with the persisted ledger but without the feature.
+      const reloadedWindow = loadServices();
+      const reloadedService = new reloadedWindow.AnnotationService(
+        {
+          loadedGenomePath: '/tmp/session.gbk',
+          currentFile: { path: '/tmp/session.gbk' },
+          currentChromosome: 'NC_000913.3',
+          currentAnnotations: reloadedAnnotations,
+          sidecarManager: {
+            get: async (_genomePath, key) => JSON.parse(JSON.stringify(sidecarData[key] || {})),
+            setAndForceSave: async (_genomePath, key, value) => {
+              sidecarData[key] = JSON.parse(JSON.stringify(value));
+            },
+          },
+        },
+        { _getChangeTracker: () => ({ recordChange: () => ({}) }) }
+      );
+      return reloadedService;
+    }
+
+    it('keeps the ledger usable after a session-local annotation is gone', async () => {
+      const reloadedService = await commitEditThenReload({
+        liveId: 'user_1785208572839_xw9o206jt',
+        reloadedAnnotations: { 'NC_000913.3': [] },
+      });
+
+      const listed = await reloadedService.listAnnotationChangesets({ __executionContext: readerContext });
+      expect(listed.success).toBe(true);
+
+      // The whole point: a fresh edit to a different annotation must still work.
+      reloadedService.app.currentAnnotations['NC_000913.3'].push({
+        id: 'feature-2',
+        type: 'CDS',
+        start: 12,
+        end: 120,
+        strand: 1,
+        qualifiers: { locus_tag: 'b0001', gene: 'thrL' },
+      });
+      const bulk = await reloadedService.bulkUpdateAnnotations({
+        updates: [{ identifier: 'b0001', updates: { note: 'still curatable' } }],
+        __executionContext: agentContext,
+      });
+      expect(bulk.errors).toEqual([]);
+      expect(bulk.changeSets).toHaveLength(1);
+    });
+
+    it('still fails closed when a source-file feature disappears', async () => {
+      const reloadedService = await commitEditThenReload({
+        liveId: 'feature-1',
+        reloadedAnnotations: { 'NC_000913.3': [] },
+      });
+
+      await expect(reloadedService.listAnnotationChangesets({ __executionContext: readerContext })).rejects.toThrow(
+        'is missing from the loaded genome'
+      );
+    });
+  });
 });

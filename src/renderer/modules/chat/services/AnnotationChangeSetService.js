@@ -871,9 +871,11 @@ class AnnotationChangeSetService {
     }
   }
 
-  async _validateMigratedOverlayProof(ledger, provenStates, workspace) {
+  async _validateMigratedOverlayProof(ledger, provenStates, workspace, sessionLocalOrphans = new Set()) {
     for (const changeSet of Object.values(ledger.changeSets)) {
       if (changeSet.status !== 'committed') continue;
+      // No live feature remains to prove a session-local overlay against.
+      if (sessionLocalOrphans.has(changeSet.id)) continue;
       const proven = provenStates.get(changeSet.id);
       if (!proven?.preState || !proven?.postState) {
         throw new Error(`Migrated committed ChangeSet ${changeSet.id} is missing its detached state proof`);
@@ -1051,10 +1053,19 @@ class AnnotationChangeSetService {
       chains.get(key).push(changeSet);
     }
     const provenStates = new Map();
+    // Committed ChangeSets whose target only existed in the session that made
+    // them. Same reasoning as _reconcileCommittedChanges: such a target is
+    // expected to be absent after a reload, and failing on it would leave the
+    // ledger permanently unmigratable and therefore permanently unreadable.
+    const sessionLocalOrphans = new Set();
     for (const chain of chains.values()) {
       chain.sort((left, right) => left.commitReceipt.revision - right.commitReceipt.revision);
       const found = await this._findLegacyFeatureByRef(chain[0].target, workspace);
       if (!found) {
+        if (this._isSessionLocalTarget(chain[0].target)) {
+          chain.forEach(changeSet => sessionLocalOrphans.add(changeSet.id));
+          continue;
+        }
         throw new Error(`Legacy committed target ${chain[0].target.featureId} is missing from the loaded genome`);
       }
       const states = await this._reconstructLegacyFeatureChain(chain, found);
@@ -1074,7 +1085,7 @@ class AnnotationChangeSetService {
         const liveTargetMatches = Boolean(
           found && (await this._legacyStateMatchesTarget(found.annotation, found.chromosome, changeSet.target))
         );
-        if (!liveTargetMatches && changeSet.status !== 'stale') {
+        if (!liveTargetMatches && changeSet.status !== 'stale' && !sessionLocalOrphans.has(changeSet.id)) {
           throw new Error(`Legacy pending ChangeSet ${changeSet.id} target cannot be proven against the loaded genome`);
         }
         if (liveTargetMatches) {
@@ -1206,7 +1217,7 @@ class AnnotationChangeSetService {
     });
     this._assertLedgerCapacity(migrated);
     await this._validateMigratedCommittedHistory(migrated);
-    await this._validateMigratedOverlayProof(migrated, provenStates, workspace);
+    await this._validateMigratedOverlayProof(migrated, provenStates, workspace, sessionLocalOrphans);
     this._assertWorkspace(workspace);
     return this._normaliseLedger(migrated);
   }
@@ -1382,9 +1393,25 @@ class AnnotationChangeSetService {
     }
 
     const pendingSwaps = [];
+    const orphanedChains = [];
     for (const chain of chains.values()) {
       const found = await this._findFeatureByRef(chain[0].target, workspace);
-      if (!found) throw new Error(`Committed ChangeSet ${chain[0].id} target is missing from the loaded genome`);
+      if (!found) {
+        // A committed edit to a session-local annotation outlives the annotation
+        // itself: create_annotation keeps the feature in memory only, while the
+        // ledger is written to the sidecar, so after a reload the target is
+        // legitimately gone. Failing the whole reconciliation there bricked every
+        // later annotation operation on that genome for good, because _loadLedger
+        // replays this check on every call and nothing can restore the feature.
+        // There is no overlay to replay onto a feature that no longer exists, so
+        // the chain is recorded and skipped. A vanished source-file feature still
+        // fails closed - that one means the genome diverged from the ledger.
+        if (this._isSessionLocalTarget(chain[0].target)) {
+          orphanedChains.push(chain[0]);
+          continue;
+        }
+        throw new Error(`Committed ChangeSet ${chain[0].id} target is missing from the loaded genome`);
+      }
       const liveSnapshot = JSON.stringify(this._canonicalise(found.annotation));
       const workingAnnotation = this._clone(found.annotation);
       let currentRef = await this._featureRef(found.chromosome, workingAnnotation, ledger, workspace);
@@ -1434,6 +1461,23 @@ class AnnotationChangeSetService {
       Object.keys(pending.liveAnnotation).forEach(key => delete pending.liveAnnotation[key]);
       Object.assign(pending.liveAnnotation, pending.workingAnnotation);
     }
+    if (orphanedChains.length > 0) {
+      console.warn(
+        `[AnnotationChangeSetService] ${orphanedChains.length} committed ChangeSet chain(s) target session-local ` +
+          `annotations that are no longer loaded and were skipped during reconciliation: ` +
+          `${orphanedChains.map(changeSet => `${changeSet.id} -> ${changeSet.target.annotationId}`).join(', ')}`
+      );
+    }
+  }
+
+  /**
+   * True when a ChangeSet target is an annotation that only ever existed in the
+   * running session. create_annotation stamps these with a `user_` id and keeps
+   * them in memory, so unlike a feature parsed from the genome file they cannot
+   * be expected to reappear after a reload.
+   */
+  _isSessionLocalTarget(target) {
+    return /^user_\d+_[a-z0-9]+$/i.test(String(target?.annotationId || ''));
   }
 
   async _saveLedger(ledger, workspace) {

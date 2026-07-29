@@ -5140,7 +5140,10 @@ class ChatManager {
             if (responseText.trim()) conversationHistory.push({ role: 'assistant', content: responseText });
             conversationHistory.push({
               role: 'user',
-              content: this.buildToolProtocolRecoveryMessage(recoveryDecision.reason),
+              content: this.buildToolProtocolRecoveryMessage(
+                recoveryDecision.reason,
+                recoveryDecision.outstandingSteps
+              ),
             });
             continue;
           }
@@ -5250,7 +5253,10 @@ class ChatManager {
             }
             conversationHistory.push({
               role: 'user',
-              content: this.buildToolProtocolRecoveryMessage(recoveryDecision.reason),
+              content: this.buildToolProtocolRecoveryMessage(
+                recoveryDecision.reason,
+                recoveryDecision.outstandingSteps
+              ),
             });
             if (this.showThinkingProcess) {
               this.updateThinkingMessage(
@@ -6891,7 +6897,7 @@ class ChatManager {
         : Array.isArray(analyzed.malformedToolCalls)
           ? analyzed.malformedToolCalls
           : [];
-      const actionRequested = this.requestRequiresToolExecution(originalMessage, '');
+      const actionRequested = this.requestRequiresToolExecutionAnywhere(originalMessage, '');
       const suppressedToolCalls = [];
       toolCalls = toolCalls.filter(toolCall => {
         if (actionRequested || this.isReadOnlyToolForInformationalRequest(toolCall.tool_name)) return true;
@@ -7063,8 +7069,12 @@ class ChatManager {
     return (planningLanguage && actionLanguage) || chinesePlanning;
   }
 
+  // The verbs the app's own tools are named after. A gap here is not cosmetic:
+  // requestRequiresToolExecution anchors on the leading verb, so a request whose
+  // first word is missing from this list is read as informational and every
+  // state-changing call the model makes for it is suppressed unexecuted.
   getActionVerbPattern() {
-    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|expand|collapse|view|check|change|fetch|get|list|retrieve|perform|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry)';
+    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|detect|identify|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|expand|collapse|view|check|change|fetch|get|list|retrieve|filter|sort|extract|annotate|compare|convert|summari[sz]e|generate|perform|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry)';
   }
 
   requestRequiresToolExecution(originalMessage, responseText = '') {
@@ -7114,6 +7124,23 @@ class ChatManager {
       (!knowledgeAction || (genomicsOrAppContext && !conceptualKnowledgeRequest)) &&
       !clarification
     );
+  }
+
+  /**
+   * True when the request as a whole, or any step within it, asks for an action.
+   *
+   * requestRequiresToolExecution anchors on the first verb of the text it is
+   * given, which is right for a single-step request but wrong for a workflow:
+   * "Detect the type of X, run a search, then export the results" hinged
+   * entirely on whether "detect" happened to be in the verb list, and when it
+   * was not, every state-changing step after it was suppressed as if the user
+   * had only asked a question. Checking the clauses too means one unfamiliar
+   * leading verb can no longer disarm the rest of the workflow.
+   */
+  requestRequiresToolExecutionAnywhere(originalMessage, responseText = '') {
+    if (this.requestRequiresToolExecution(originalMessage, responseText)) return true;
+    if (this.isInstructionalRequest(originalMessage)) return false;
+    return this.getSequentialActionRequirements(originalMessage).actionableClauseCount > 0;
   }
 
   getRequestedGeneSelection(originalMessage) {
@@ -7185,13 +7212,33 @@ class ChatManager {
       .filter(Boolean);
   }
 
+  /**
+   * Match a tool by the verb that says what it does, wherever that verb sits.
+   *
+   * Tool names in this app are namespaced by provider - blast_create_database,
+   * blast_search_local, uniprot_get_annotation - so the acting verb is often not
+   * the first segment. Anchoring on the first segment made the effect table blind
+   * to every namespaced tool, which read as "the model never did what was asked"
+   * for whole BLAST workflows that had in fact run start to finish.
+   */
+  verbToolMatcher(...verbs) {
+    const pattern = new RegExp(`(?:^|_)(?:${verbs.join('|')})_`);
+    return toolName => pattern.test(String(toolName || ''));
+  }
+
   getRequestClauseEffectRequirement(clause, inheritedDomain = '') {
     const text = String(clause || '').trim();
     const message = text.toLowerCase();
     const contextMessage = `${message} ${inheritedDomain}`.trim();
+    const verbTool = (...verbs) => this.verbToolMatcher(...verbs);
     const requirement = (capability, matcher, repeatToolName = capability) => ({
       capability,
       matcher,
+      // Kept so a repair prompt can quote the step the user actually asked for.
+      // Several capabilities map to more than one tool (update_annotation and
+      // edit_annotation both satisfy edit_annotation), so naming one of them
+      // would steer the model toward an arbitrary choice; its own wording will not.
+      clause: text,
       count: this.getRequestedExecutionCountFallback(text, repeatToolName),
     });
 
@@ -7213,11 +7260,7 @@ class ChatManager {
       );
     }
     if (/\b(?:select|highlight|choose|pick|activate)\b|(?:选择|选中|高亮)/.test(message)) {
-      return requirement(
-        'selection',
-        toolName => /^(?:select_|highlight_|switch_|set_)/.test(toolName),
-        'select_sequence_region'
-      );
+      return requirement('selection', verbTool('select', 'highlight', 'switch', 'set'), 'select_sequence_region');
     }
     if (
       /\b(?:create|add|open)\b|(?:创建|添加|打开)/.test(message) &&
@@ -7264,22 +7307,14 @@ class ChatManager {
       );
     }
     if (/\b(?:create|add|insert)\b|(?:创建|添加|插入)/.test(message)) {
-      return requirement(
-        'create',
-        toolName => /^(?:create_|add_|insert_|batch_create_)/.test(toolName),
-        'create_annotation'
-      );
+      return requirement('create', verbTool('create', 'add', 'insert'), 'create_annotation');
     }
     if (
       /\b(?:edit|update|modify|rename|replace|apply|set|configure)\b|(?:编辑|更新|修改|重命名|替换|应用|设置|配置)/.test(
         message
       )
     ) {
-      return requirement(
-        'edit',
-        toolName => /^(?:edit_|update_|replace_|apply_|bulk_update_|set_|configure_)/.test(toolName),
-        'edit_annotation'
-      );
+      return requirement('edit', verbTool('edit', 'update', 'replace', 'apply', 'set', 'configure'), 'edit_annotation');
     }
     if (/\bsave\b|保存/.test(message) && /\bprimers?\b|引物/.test(contextMessage)) {
       return requirement('save_primer', toolName => toolName === 'save_primer', 'save_primer');
@@ -7288,26 +7323,34 @@ class ChatManager {
       return requirement('save_view', toolName => toolName === 'save_view_state', 'save_view_state');
     }
     if (/\b(?:save|archive)\b|(?:保存|归档)/.test(message)) {
-      return requirement('save', toolName => /^(?:save_|archive_)/.test(toolName), 'save_view_state');
+      return requirement('save', verbTool('save', 'archive'), 'save_view_state');
     }
     if (/\b(?:delete|remove|clear|uninstall)\b|(?:删除|移除|清除|卸载)/.test(message)) {
       return requirement(
         'delete',
-        toolName => /^(?:delete_|remove_|clear_|uninstall_|apply_annotation_changeset$)/.test(toolName),
+        toolName =>
+          verbTool('delete', 'remove', 'clear', 'uninstall')(toolName) || toolName === 'apply_annotation_changeset',
         'delete_sequence'
       );
     }
     if (/\b(?:export|download)\b|(?:导出|下载)/.test(message)) {
-      return requirement('export', toolName => toolName === 'export_data' || /^export_/.test(toolName), 'export_data');
+      // Provider-namespaced tools put the verb in the middle of the name, so an
+      // anchored prefix silently fails to recognize blast_export_results as the
+      // export the user asked for.
+      return requirement(
+        'export',
+        toolName => toolName === 'export_data' || verbTool('export')(toolName),
+        'export_data'
+      );
     }
     if (/\b(?:load|import)\b|(?:加载|导入)/.test(message)) {
-      return requirement('load', toolName => /^(?:load_|import_)/.test(toolName), 'load_genome_file');
+      return requirement('load', verbTool('load', 'import'), 'load_genome_file');
     }
     if (/\bopen\b|打开/.test(message)) {
       const isTabRequest = /\b(?:tabs?|windows?)\b|标签页|窗口/.test(message);
       return requirement(
         isTabRequest ? 'open_tab' : 'open',
-        toolName => (isTabRequest ? toolName === 'open_new_tab' : /^(?:open_|view_)/.test(toolName)),
+        toolName => (isTabRequest ? toolName === 'open_new_tab' : verbTool('open', 'view')(toolName)),
         isTabRequest ? 'open_new_tab' : 'open_image_file'
       );
     }
@@ -7315,7 +7358,7 @@ class ChatManager {
       const isTabRequest = /\b(?:tabs?|windows?)\b|标签页|窗口/.test(message);
       return requirement(
         isTabRequest ? 'close_tab' : 'close',
-        toolName => (isTabRequest ? toolName === 'close_tab' : /^(?:close_|hide_)/.test(toolName)),
+        toolName => (isTabRequest ? toolName === 'close_tab' : verbTool('close', 'hide')(toolName)),
         isTabRequest ? 'close_tab' : 'close'
       );
     }
@@ -7323,7 +7366,7 @@ class ChatManager {
       const isTabRequest = /\b(?:tabs?|windows?)\b|标签页|窗口/.test(message);
       return requirement(
         isTabRequest ? 'switch_tab' : 'switch',
-        toolName => (isTabRequest ? toolName === 'switch_to_tab' : /^(?:switch_|set_)/.test(toolName)),
+        toolName => (isTabRequest ? toolName === 'switch_to_tab' : verbTool('switch', 'set')(toolName)),
         isTabRequest ? 'switch_to_tab' : 'switch'
       );
     }
@@ -7331,7 +7374,7 @@ class ChatManager {
       const direction = /\b(?:out|away)\b|缩小/.test(message) ? 'out' : /\bin\b|放大/.test(message) ? 'in' : null;
       return requirement(
         direction ? `zoom_${direction}` : 'zoom',
-        toolName => (direction ? toolName === `zoom_${direction}` : /^zoom_/.test(toolName)),
+        toolName => (direction ? toolName === `zoom_${direction}` : verbTool('zoom')(toolName)),
         direction ? `zoom_${direction}` : 'zoom_in'
       );
     }
@@ -7345,35 +7388,47 @@ class ChatManager {
       return requirement(
         directionalTool || 'navigation',
         toolName =>
-          directionalTool ? toolName === directionalTool : /^(?:navigate_|jump_|pan_|scroll_)/.test(toolName),
+          directionalTool ? toolName === directionalTool : verbTool('navigate', 'jump', 'pan', 'scroll')(toolName),
         directionalTool || 'navigate_to_position'
       );
     }
     if (/\b(?:search|find|locate)\b|(?:搜索|查找|定位)/.test(message)) {
-      return requirement('search', toolName => /^(?:search_|find_|locate_|get_)/.test(toolName), 'search_features');
+      return requirement('search', verbTool('search', 'find', 'locate', 'get'), 'search_features');
+    }
+    if (/\b(?:detect|identify)\b|(?:检测|识别|鉴定)/.test(message)) {
+      return requirement('detect', verbTool('detect', 'identify'), 'blast_detect_sequence_type');
+    }
+    if (/\b(?:filter|sort)\b|(?:筛选|过滤|排序)/.test(message)) {
+      return requirement('filter', verbTool('filter', 'sort'), 'blast_filter_results');
     }
     if (/\btranslate\b|翻译/.test(message)) {
-      return requirement('translate', toolName => /^translate_/.test(toolName), 'translate_sequence');
+      return requirement('translate', verbTool('translate'), 'translate_sequence');
+    }
+    // "run blast_search against nt" names a search, but \bsearch\b does not match
+    // inside blast_search, so the clause used to fall through to the generic
+    // execute rule and demand a run_-prefixed tool that does not exist.
+    if (/\bblast/.test(message)) {
+      return requirement('blast', toolName => /^blast_/.test(toolName), 'blast_search');
     }
     if (/\balign\b|比对/.test(message)) {
-      return requirement('align', toolName => /^(?:align_|blast_)/.test(toolName), 'align');
+      return requirement('align', verbTool('align', 'blast'), 'align');
     }
     if (/\b(?:calculate|compute)\b|计算/.test(message)) {
       return requirement(
         'calculate',
-        toolName => /^(?:calculate_|compute_|calc_)/.test(toolName) || /_analysis$/.test(toolName),
+        toolName => verbTool('calculate', 'compute', 'calc')(toolName) || /_analysis$/.test(toolName),
         'calculate_molecular_weight'
       );
     }
     if (/\b(?:analy[sz]e|assess|predict)\b|(?:分析|评估|预测)/.test(message)) {
       return requirement(
         'analysis',
-        toolName => /^(?:analy[sz]e_|assess_|predict_)/.test(toolName) || /_analysis$/.test(toolName),
+        toolName => verbTool('analy[sz]e', 'assess', 'predict')(toolName) || /_analysis$/.test(toolName),
         'analyze'
       );
     }
     if (/\bdesign\b|设计/.test(message)) {
-      return requirement('design', toolName => /^(?:design_|create_)/.test(toolName), 'design_primers');
+      return requirement('design', verbTool('design', 'create'), 'design_primers');
     }
     if (
       /\b(?:run|execute|start|stop|pause|resume|simulate|retry)\b|(?:运行|执行|启动|停止|暂停|恢复|模拟|重试)/.test(
@@ -7382,21 +7437,29 @@ class ChatManager {
     ) {
       return requirement(
         'execute',
-        toolName => /^(?:run_|execute_|start_|stop_|pause_|resume_|simulate_|virtual_|retry_)/.test(toolName),
+        verbTool('run', 'execute', 'start', 'stop', 'pause', 'resume', 'simulate', 'virtual', 'retry'),
         'execute_actions'
       );
     }
     if (/\bcopy\b|复制/.test(message)) {
-      return requirement('copy', toolName => /^copy_/.test(toolName), 'copy_sequence');
+      return requirement('copy', verbTool('copy'), 'copy_sequence');
     }
     if (/\bpaste\b|粘贴/.test(message)) {
-      return requirement('paste', toolName => /^(?:paste_|insert_)/.test(toolName), 'paste_sequence');
+      return requirement('paste', verbTool('paste', 'insert'), 'paste_sequence');
     }
     if (/\b(?:show|hide|toggle)\b|(?:显示|隐藏)/.test(message)) {
-      return requirement('display', toolName => /^(?:show_|hide_|toggle_|view_|list_|get_)/.test(toolName), 'show');
+      return requirement('display', verbTool('show', 'hide', 'toggle', 'view', 'list', 'get'), 'show');
     }
-    if (/\b(?:fetch|retrieve)\b|获取/.test(message)) {
-      return requirement('retrieve', toolName => /^(?:fetch_|retrieve_|get_|list_|search_)/.test(toolName), 'fetch');
+    // "list the annotations", "get its history" and "review the results" are
+    // ordinary closing steps of a workflow. Leaving them unmapped used to make
+    // the whole request permanently unsatisfiable, so the model was asked to
+    // repair a request it had already carried out and then hard-failed.
+    if (/\b(?:fetch|retrieve|list|get|view|inspect|review)\b|(?:获取|列出|查看)/.test(message)) {
+      return requirement(
+        'retrieve',
+        verbTool('fetch', 'retrieve', 'get', 'list', 'search', 'describe', 'read'),
+        'list_annotations'
+      );
     }
 
     const directPrefixAction = message.match(
@@ -7405,7 +7468,7 @@ class ChatManager {
     if (directPrefixAction) {
       return requirement(
         directPrefixAction,
-        toolName => toolName === directPrefixAction || toolName.startsWith(`${directPrefixAction}_`),
+        toolName => toolName === directPrefixAction || verbTool(directPrefixAction)(toolName),
         directPrefixAction
       );
     }
@@ -7428,7 +7491,7 @@ class ChatManager {
   getSequentialActionRequirements(originalMessage) {
     const clauses = this.getSequentialRequestClauses(originalMessage);
     const actionableClauses = [];
-    const requirements = [];
+    const requirementsByCapability = new Map();
     let inheritedDomain = '';
 
     for (const clause of clauses) {
@@ -7437,12 +7500,23 @@ class ChatManager {
       if (!this.requestRequiresToolExecution(clauseWithDomain)) continue;
       actionableClauses.push(clause);
       const requirement = this.getRequestClauseEffectRequirement(clause, inheritedDomain);
-      if (requirement) requirements.push(requirement);
+      if (!requirement) continue;
+      // How many times a capability is required is decided by explicit
+      // repetition in the wording ("three times", "2x"), never by how many
+      // clauses the splitter produced. Splitting "run the filter and export
+      // steps" yields a second export fragment, and counting it demanded two
+      // exports of a request that has exactly one export step to perform.
+      const existing = requirementsByCapability.get(requirement.capability);
+      if (!existing) {
+        requirementsByCapability.set(requirement.capability, requirement);
+      } else if (Number(requirement.count) > Number(existing.count)) {
+        existing.count = requirement.count;
+      }
     }
 
     return {
       actionableClauseCount: actionableClauses.length,
-      requirements,
+      requirements: [...requirementsByCapability.values()],
     };
   }
 
@@ -7466,8 +7540,44 @@ class ChatManager {
     const originalMessage = String(toolExecutionState?.originalMessage || '');
     const requestedActions = this.getSequentialActionRequirements(originalMessage);
     if (requestedActions.actionableClauseCount === 0) return true;
-    if (requestedActions.requirements.length !== requestedActions.actionableClauseCount) return false;
+    // Every effect that could be recognized still has to be accounted for. What
+    // is deliberately no longer required is that every actionable clause be
+    // recognizable: demanding that made an unmapped verb anywhere in a request
+    // permanently unsatisfiable, so the model was sent into protocol repair for
+    // work it had already completed and the turn ended in a hard failure it had
+    // no way to avoid. An unrecognized clause is missing knowledge on our side,
+    // not evidence that the model failed to act.
+    if (requestedActions.requirements.length === 0) return true;
     return this.doSuccessfulRecordsSatisfyRequirements(successfulRecords, requestedActions.requirements);
+  }
+
+  /**
+   * The recognized effects a request asked for that no successful execution covers yet.
+   */
+  getOutstandingRequestSteps(toolExecutionState) {
+    const successfulRecords = (toolExecutionState?.records || []).filter(record => record.status === 'success');
+    const { requirements } = this.getSequentialActionRequirements(String(toolExecutionState?.originalMessage || ''));
+    const unmatchedRecords = successfulRecords.slice();
+    const outstanding = [];
+
+    for (const requirement of requirements) {
+      const requiredCount = Math.max(1, Number(requirement.count) || 1);
+      let satisfied = 0;
+      for (let occurrence = 0; occurrence < requiredCount; occurrence++) {
+        const matchingIndex = unmatchedRecords.findIndex(record => requirement.matcher(record.tool, record));
+        if (matchingIndex === -1) break;
+        unmatchedRecords.splice(matchingIndex, 1);
+        satisfied++;
+      }
+      if (satisfied >= requiredCount) continue;
+      outstanding.push({
+        capability: requirement.capability,
+        clause: requirement.clause || '',
+        remaining: requiredCount - satisfied,
+      });
+    }
+
+    return outstanding;
   }
 
   canFinalizeFromSuccessfulToolResults(toolExecutionState, successfulResults, successfulTools, originalMessage) {
@@ -7499,7 +7609,13 @@ class ChatManager {
       toolName === 'open_new_tab' ? '(?:(?:new|additional|analysis|browser)\\s+)*(?:tabs?|windows?)' : null;
     const genericRepeatTarget = '(?:times?|rounds?|steps?)';
     const repeatTarget = repeatNoun ? `(?:${repeatNoun}|${genericRepeatTarget})` : genericRepeatTarget;
-    const numeric = message.match(new RegExp(`\\b(\\d{1,2})\\s*(?:x|${repeatTarget})\\b`));
+    // "zoom in 10x" is a magnification factor, not ten zoom steps, so the bare
+    // Nx form is not a repeat count for zoom. Spelled-out repetition ("zoom in
+    // 3 times") still is.
+    const bareMultiplierIsRepeat = !/^zoom(?:_|$)/.test(String(toolName || ''));
+    const numeric = message.match(
+      new RegExp(`\\b(\\d{1,2})\\s*(?:${bareMultiplierIsRepeat ? 'x|' : ''}${repeatTarget})\\b`)
+    );
     if (numeric) return Math.max(1, Math.min(Number(numeric[1]), 20));
     for (const [word, count] of Object.entries(numberWords)) {
       if (new RegExp(`\\b${word}\\s+${repeatTarget}\\b`).test(message)) {
@@ -7611,15 +7727,23 @@ class ChatManager {
       return { action: 'complete', reason: 'final conversational response' };
     }
 
+    const outstandingSteps = this.getOutstandingRequestSteps(toolExecutionState);
     const maxRepairRounds = 2;
     const attemptedRepairs = toolExecutionState?.protocolRecoveryAttempts || 0;
     if (currentRound >= maxRounds || attemptedRepairs >= maxRepairRounds) {
+      const unfinished =
+        outstandingSteps.length > 0
+          ? ` The following requested step(s) were never carried out: ${outstandingSteps
+              .map(step => step.capability)
+              .join(', ')}.`
+          : '';
       return {
         action: 'fail',
         reason,
+        outstandingSteps,
         finalResponse:
           `I could not complete the requested action because the model repeatedly returned ${reason} ` +
-          'instead of a valid tool call.',
+          `instead of a valid tool call.${unfinished}`,
       };
     }
 
@@ -7627,13 +7751,28 @@ class ChatManager {
       toolExecutionState.protocolRecoveryAttempts = attemptedRepairs + 1;
       toolExecutionState.updatedAt = new Date().toISOString();
     }
-    return { action: 'retry', reason };
+    return { action: 'retry', reason, outstandingSteps };
   }
 
-  buildToolProtocolRecoveryMessage(reason) {
+  buildToolProtocolRecoveryMessage(reason, outstandingSteps = []) {
+    // Naming the step that is still missing is what makes this prompt
+    // recoverable. Told only that the request was incomplete, a model that had
+    // folded two steps into one call had no way to work out which one to redo,
+    // and simply restated that it was finished until the round budget ran out.
+    const outstanding = Array.isArray(outstandingSteps) ? outstandingSteps : [];
+    const outstandingLine =
+      outstanding.length > 0
+        ? `These requested steps have not been carried out yet:\n` +
+          outstanding
+            .map(step => `- ${step.clause || step.capability}${step.remaining > 1 ? ` (x${step.remaining})` : ''}`)
+            .join('\n') +
+          `\nIssue a tool call for each one, even when an earlier call already set a similar value; ` +
+          `every step was requested separately and has to be performed separately.\n`
+        : '';
     return (
       `[Tool Protocol Repair]\n` +
       `The previous response did not complete the request: ${reason}.\n` +
+      outstandingLine +
       `If an available tool is needed, respond with ONLY canonical JSON in this form:\n` +
       `{"tool_name":"exact_tool_name","parameters":{"exact_parameter_name":"value"}}\n` +
       `For independent calls, use a JSON array. For dependent steps, return only the next call and wait for its result.\n` +
