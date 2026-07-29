@@ -274,5 +274,11 @@ describe('activity panel', () => {
       expect(cm.formatActivityDuration(125000)).toBe('2m 05s');
       expect(cm.formatActivityDuration(-1)).toBe('');
     });
+
+    it('carries a rounded-up remainder into the minute instead of printing 60s', () => {
+      expect(cm.formatActivityDuration(119600)).toBe('2m 00s');
+      expect(cm.formatActivityDuration(179800)).toBe('3m 00s');
+      expect(cm.formatActivityDuration(119400)).toBe('1m 59s');
+    });
   });
 });

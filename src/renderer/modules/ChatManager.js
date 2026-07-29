@@ -17210,8 +17210,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     if (!Number.isFinite(ms) || ms < 0) return '';
     if (ms < 1000) return `${Math.round(ms)}ms`;
     if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.round((ms % 60000) / 1000);
+    // Round to whole seconds first, then split. Splitting before rounding lets a
+    // remainder above 59.5s round up to "60s" and print as "1m 60s".
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
     return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
   }
 
