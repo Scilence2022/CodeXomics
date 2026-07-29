@@ -48,6 +48,17 @@ class ChatManager {
     this.showDetailedToolData = true;
     this.detailedLogging = true;
 
+    // Activity panel (formerly "AI Thinking Process") display state.
+    // 'compact' drops the transport-level chatter — sending/receiving,
+    // history size, parameter-key echoes — and keeps the tool calls and
+    // their outcomes. Evolution data always records every step regardless.
+    this.activityDetailLevel = 'compact';
+    this.activityAutoCollapse = true;
+    // The round group currently being written into, and the per-request
+    // tallies used to build the panel's one-line summary once it finishes.
+    this.activityRoundState = null;
+    this.activityTotals = null;
+
     // Live token-streaming render state (null when no stream is in flight)
     this.streamingState = null;
 
@@ -301,6 +312,8 @@ class ChatManager {
         'hideThinkingAfterConversation',
         false
       );
+      this.activityDetailLevel = this.chatBoxSettingsManager.getSetting('activityDetailLevel', 'compact');
+      this.activityAutoCollapse = this.chatBoxSettingsManager.getSetting('activityAutoCollapse', true);
       this.autoScrollToBottom = this.chatBoxSettingsManager.getSetting('autoScrollToBottom', true);
       this.showTimestamps = this.chatBoxSettingsManager.getSetting('showTimestamps', false);
       this.maxHistoryMessages = this.chatBoxSettingsManager.getSetting('maxHistoryMessages', 1000);
@@ -5075,9 +5088,13 @@ class ChatManager {
 
         // Update the thinking process - add more detailed information
         if (this.showThinkingProcess) {
-          this.updateThinkingMessage(`<br><br>🤖 <strong>Round ${currentRound}/${maxRounds}</strong>`);
-          this.updateThinkingMessage(`📤 Sending request to LLM...`);
-          this.updateThinkingMessage(`📚 Conversation history: ${conversationHistory.length} messages`);
+          // Opens a collapsible group; every step below lands inside it until
+          // the next round starts or the request finishes.
+          this.beginActivityRound(currentRound, maxRounds);
+          this.updateThinkingMessage(`📤 Sending request to LLM...`, { verbose: true });
+          this.updateThinkingMessage(`📚 Conversation history: ${conversationHistory.length} messages`, {
+            verbose: true,
+          });
         }
 
         // Send conversation history to configured LLM.
@@ -5120,7 +5137,21 @@ class ChatManager {
 
         // Show the LLM's thinking process (if the response contains thinking tags)
         if (this.showThinkingProcess) {
-          this.updateThinkingMessage(`✅ Response received (${responseText.length} chars)`);
+          // `responseText` holds only the prose part, so a round answered with a
+          // native structured tool call measures 0 chars. Report the tool calls
+          // and reasoning too, or the line reads as an empty response.
+          const receivedParts = [];
+          if (responseText.length) receivedParts.push(`${responseText.length} chars`);
+          const nativeToolCallCount = responseAnalysis.toolCalls?.length || 0;
+          if (nativeToolCallCount) {
+            receivedParts.push(`${nativeToolCallCount} tool call${nativeToolCallCount === 1 ? '' : 's'}`);
+          }
+          if (responseAnalysis.reasoningText?.length) {
+            receivedParts.push(`${responseAnalysis.reasoningText.length} chars reasoning`);
+          }
+          this.updateThinkingMessage(`✅ Response received (${receivedParts.join(', ') || 'empty'})`, {
+            verbose: true,
+          });
           this.displayLLMThinking(responseText, responseAnalysis.reasoningText, responseAnalysis.toolCalls);
         }
 
@@ -5308,8 +5339,11 @@ class ChatManager {
 
           // Show thinking process for tool execution
           if (this.showThinkingProcess) {
-            this.updateThinkingMessage(`<br><br>⚡ <strong>Preparing tool execution...</strong>`);
-            this.updateThinkingMessage(`🛠️ Tools to execute: ${toolsToExecute.map(t => t.tool_name).join(', ')}`);
+            this.noteActivityRoundTools(toolsToExecute.map(t => t.tool_name));
+            this.updateThinkingMessage(`<br><br>⚡ <strong>Preparing tool execution...</strong>`, { verbose: true });
+            this.updateThinkingMessage(`🛠️ Tools to execute: ${toolsToExecute.map(t => t.tool_name).join(', ')}`, {
+              verbose: true,
+            });
           }
 
           // Show the tool-call info
@@ -5320,7 +5354,7 @@ class ChatManager {
 
             // Show execution start in thinking process
             if (this.showThinkingProcess) {
-              this.updateThinkingMessage(`🚀 Starting execution...`);
+              this.updateThinkingMessage(`🚀 Starting execution...`, { verbose: true });
             }
 
             // Check whether it was aborted
@@ -5333,7 +5367,7 @@ class ChatManager {
               this.toolParametersContainReferences(tool.parameters)
             );
             if (hasToolParameterReferences && this.showThinkingProcess) {
-              this.updateThinkingMessage(`🔗 Resolving tool result references sequentially`);
+              this.updateThinkingMessage(`🔗 Resolving tool result references sequentially`, { verbose: true });
             }
 
             // Use Smart Executor if available and enabled
@@ -5409,6 +5443,7 @@ class ChatManager {
             if (this.showThinkingProcess) {
               const successCount = toolResults.filter(r => r.success).length;
               const failCount = toolResults.filter(r => !r.success).length;
+              this.noteActivityRoundOutcome(successCount, failCount);
               this.updateThinkingMessage(`✅ Execution completed: ${successCount} successful, ${failCount} failed`);
 
               // Show details for each tool
@@ -16104,6 +16139,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     this.conversationState.processSteps = [];
     this.conversationState.currentStep = 0;
 
+    // Drop any round group left dangling by a previous run so the first step
+    // of this request cannot be appended into the last request's panel.
+    this.activityRoundState = null;
+    this.activityTotals = { rounds: 0, tools: 0, failures: 0 };
+
     // Update the UI state
     this.updateUIState();
   }
@@ -16137,25 +16177,50 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   finalizeCurrentThinkingProcess(requestId) {
     if (!requestId) return;
 
+    // Seal the last open round before summarizing the panel around it.
+    this.closeActivityRound();
+
     const thinkingElement = document.getElementById(`thinkingProcess_${requestId}`);
     if (thinkingElement) {
+      const totals = this.activityTotals || { rounds: 0, tools: 0, failures: 0 };
+      const failed = totals.failures > 0;
+
       // Remove animations and interactive elements, converting to a static history record
       // Update message-icon to the completed checkmark icon
       const messageIcon = thinkingElement.querySelector('.message-icon i');
       if (messageIcon) {
         messageIcon.classList.remove('fa-spin');
         messageIcon.classList.remove('fa-cog');
-        messageIcon.classList.add('fa-check-circle');
+        messageIcon.classList.add(failed ? 'fa-exclamation-circle' : 'fa-check-circle');
       }
 
-      // Update the header text to indicate completion
-      const headerText = thinkingElement.querySelector('.thinking-header span');
-      if (headerText) {
-        headerText.textContent = 'AI Thinking Process (Completed)';
+      // The checkmark already says "done", so the header carries what the run
+      // actually did instead: rounds, tools, failures, elapsed time.
+      const summarySlot = thinkingElement.querySelector('.activity-summary');
+      if (summarySlot) {
+        const parts = [];
+        if (totals.rounds) parts.push(`${totals.rounds} round${totals.rounds === 1 ? '' : 's'}`);
+        if (totals.tools) parts.push(`${totals.tools} tool${totals.tools === 1 ? '' : 's'}`);
+        if (failed) parts.push(`${totals.failures} failed`);
+        const elapsed = this.conversationState?.startTime
+          ? this.formatActivityDuration(Date.now() - this.conversationState.startTime)
+          : '';
+        if (elapsed) parts.push(elapsed);
+        summarySlot.textContent = parts.length ? `· ${parts.join(' · ')}` : '';
+      } else {
+        // Panels built before this markup existed (e.g. restored history).
+        const headerText = thinkingElement.querySelector('.thinking-header span');
+        if (headerText) headerText.textContent = 'Agent Activity (Completed)';
       }
 
       // Change the style to indicate completion
       thinkingElement.classList.add('thinking-completed');
+      thinkingElement.classList.toggle('activity-failed', failed);
+
+      // Collapse to the summary line now the run is over. A run with a failing
+      // tool stays open — that is exactly when the detail is worth reading.
+      this.bindActivityHeaderToggle(thinkingElement);
+      this.setActivityPanelCollapsed(thinkingElement, this.activityAutoCollapse && !failed);
 
       // Remove the ID to avoid conflicts with a new thinking process
       thinkingElement.removeAttribute('id');
@@ -16168,7 +16233,24 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         timestampDiv.textContent = `Completed at ${timestamp}`;
         thinkingElement.querySelector('.message-content').appendChild(timestampDiv);
       }
+
+      // The setting was read but never acted on, so the panel stayed on screen
+      // either way. Only this request's panel goes — earlier ones are history.
+      if (this.hideThinkingAfterConversation) {
+        this.removeActivityPanel(thinkingElement);
+      }
     }
+
+    // Tallies belong to the panel that just closed; the next one starts fresh.
+    this.activityTotals = null;
+  }
+
+  /** Fade a finished activity panel out and drop it from the transcript. */
+  removeActivityPanel(panel) {
+    if (!panel) return;
+    panel.style.transition = 'opacity 0.5s ease-out';
+    panel.style.opacity = '0';
+    setTimeout(() => panel.remove(), 500);
   }
 
   /**
@@ -16679,9 +16761,26 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     thinkingDiv.className = 'message assistant-message thinking-process';
     const thinkingId = `thinkingProcess_${currentRequestId}`;
     thinkingDiv.id = thinkingId;
-    thinkingDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-cog fa-spin"></i></div><div class="message-text thinking-text"><div class="thinking-header"><span>AI Thinking Process</span></div><div class="thinking-content">${message}</div></div></div>`;
+    // The header doubles as the collapse control: chevron, title, and a
+    // summary slot that stays empty until the request finishes.
+    thinkingDiv.innerHTML =
+      `<div class="message-content">` +
+      `<div class="message-icon"><i class="fas fa-cog fa-spin"></i></div>` +
+      `<div class="message-text thinking-text">` +
+      `<div class="thinking-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse or expand">` +
+      `<i class="fas fa-chevron-down activity-chevron" aria-hidden="true"></i>` +
+      `<span class="activity-title">Agent Activity</span>` +
+      `<span class="activity-summary"></span>` +
+      `</div>` +
+      `<div class="thinking-content">${message}</div>` +
+      `</div></div>`;
 
     messagesContainer.appendChild(thinkingDiv);
+
+    // A fresh panel means a fresh set of round groups and tallies.
+    this.activityRoundState = null;
+    this.activityTotals = { rounds: 0, tools: 0, failures: 0 };
+    this.bindActivityHeaderToggle(thinkingDiv);
 
     // Add to Evolution data structure
     this.addToEvolutionData({
@@ -17042,36 +17141,205 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return reasoningTemplates[agentName] || reasoningTemplates['System Agent'];
   }
 
+  // ---------------------------------------------------------------------------
+  // Activity panel
+  //
+  // One panel per request, holding a collapsible group per round. Steps land in
+  // the round group that is currently open, so the panel reads as a short list
+  // of rounds rather than one flat wall of progress lines. The panel collapses
+  // to a single summary line when the request finishes.
+  // ---------------------------------------------------------------------------
+
+  /** Resolve the activity panel for this request, or any panel on screen. */
+  findActivityPanelElement() {
+    const thinkingId = `thinkingProcess_${this.conversationState?.currentRequestId || Date.now()}`;
+    return document.getElementById(thinkingId) || document.querySelector('.thinking-process');
+  }
+
   /**
-   * Resolve the content container of the thinking panel this request is writing
-   * into, preferring the panel for the current request and falling back to any
-   * panel on screen. Returns null when no panel exists yet.
+   * Resolve the container the next step should be appended to: the open round
+   * group when there is one, otherwise the panel body (pre-round preamble).
+   * Returns null when no panel exists yet.
    */
   findThinkingContentElement() {
-    const thinkingId = `thinkingProcess_${this.conversationState.currentRequestId || Date.now()}`;
-    const thinkingDiv = document.getElementById(thinkingId) || document.querySelector('.thinking-process');
-    return thinkingDiv?.querySelector('.thinking-content') || null;
+    const roundBody = this.activityRoundState?.body;
+    if (roundBody?.isConnected) return roundBody;
+    return this.findActivityPanelElement()?.querySelector('.thinking-content') || null;
+  }
+
+  /** Wire the header so clicking (or Enter/Space on) it collapses the panel. */
+  bindActivityHeaderToggle(panel) {
+    const header = panel?.querySelector('.thinking-header');
+    if (!header || header.dataset.activityToggleBound === 'true') return;
+    header.dataset.activityToggleBound = 'true';
+
+    const toggle = () => {
+      const collapsed = !panel.classList.contains('activity-collapsed');
+      this.setActivityPanelCollapsed(panel, collapsed);
+      // A manual toggle on a finished panel is a standing preference: the next
+      // request's panel opens the same way instead of snapping back.
+      if (panel.classList.contains('thinking-completed')) {
+        this.activityAutoCollapse = collapsed;
+        this.chatBoxSettingsManager?.setSetting?.('activityAutoCollapse', collapsed);
+      }
+    };
+
+    header.addEventListener('click', toggle);
+    header.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      toggle();
+    });
+  }
+
+  /** Collapse or expand a panel, keeping the chevron and ARIA state in step. */
+  setActivityPanelCollapsed(panel, collapsed) {
+    if (!panel) return;
+    panel.classList.toggle('activity-collapsed', collapsed);
+
+    const header = panel.querySelector('.thinking-header');
+    header?.setAttribute('aria-expanded', String(!collapsed));
+
+    const chevron = panel.querySelector('.activity-chevron');
+    chevron?.classList.toggle('fa-chevron-down', !collapsed);
+    chevron?.classList.toggle('fa-chevron-right', collapsed);
+  }
+
+  /** Format a duration the way the panel summaries want it: 940ms, 12.4s, 2m 05s. */
+  formatActivityDuration(ms) {
+    if (!Number.isFinite(ms) || ms < 0) return '';
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    // Round to whole seconds first, then split. Splitting before rounding lets a
+    // remainder above 59.5s round up to "60s" and print as "1m 60s".
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+  }
+
+  /**
+   * Open a collapsible group for a round. Closes the previous one first, so at
+   * most one round is open at a time and finished rounds sit collapsed above.
+   */
+  beginActivityRound(round, maxRounds) {
+    if (!this.showThinkingProcess) return null;
+    this.closeActivityRound();
+
+    // The preamble normally creates the panel before round 1; create it here
+    // too so a round is never dropped for want of one.
+    let panelBody = this.findActivityPanelElement()?.querySelector('.thinking-content');
+    if (!panelBody) {
+      this.addThinkingMessage('');
+      panelBody = this.findActivityPanelElement()?.querySelector('.thinking-content');
+      if (!panelBody) return null;
+    }
+
+    const details = document.createElement('details');
+    details.className = 'activity-round';
+    details.open = true;
+
+    const summary = document.createElement('summary');
+    summary.className = 'activity-round-summary';
+    summary.textContent = `Round ${round}/${maxRounds}`;
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'activity-round-body';
+    details.appendChild(body);
+
+    panelBody.appendChild(details);
+
+    if (this.activityTotals) this.activityTotals.rounds = round;
+
+    this.activityRoundState = {
+      details,
+      summary,
+      body,
+      round,
+      maxRounds,
+      startedAt: Date.now(),
+      tools: [],
+      failures: 0,
+    };
+    return this.activityRoundState;
+  }
+
+  /** Record the tools a round is about to run, for its collapsed summary. */
+  noteActivityRoundTools(toolNames) {
+    const state = this.activityRoundState;
+    if (!state || !Array.isArray(toolNames)) return;
+    for (const name of toolNames) {
+      if (name) state.tools.push(name);
+    }
+    if (this.activityTotals) this.activityTotals.tools += toolNames.filter(Boolean).length;
+  }
+
+  /** Record how a round's tool batch resolved. */
+  noteActivityRoundOutcome(successCount, failureCount) {
+    const state = this.activityRoundState;
+    const failures = Number(failureCount) || 0;
+    if (state) state.failures += failures;
+    if (this.activityTotals) this.activityTotals.failures += failures;
+  }
+
+  /**
+   * Collapse the open round into a one-line summary. Rounds that had a failing
+   * tool stay open — that is the one case where hiding the detail is wrong.
+   */
+  closeActivityRound() {
+    const state = this.activityRoundState;
+    this.activityRoundState = null;
+    if (!state?.details?.isConnected) return;
+
+    const parts = [`Round ${state.round}`];
+    if (state.tools.length) {
+      const shown = state.tools.slice(0, 3).join(', ');
+      parts.push(state.tools.length > 3 ? `${shown} +${state.tools.length - 3} more` : shown);
+    } else {
+      parts.push('no tools');
+    }
+    if (state.failures > 0) parts.push(`${state.failures} failed ❌`);
+    else if (state.tools.length) parts.push('✅');
+
+    const elapsed = this.formatActivityDuration(Date.now() - state.startedAt);
+    if (elapsed) parts.push(elapsed);
+
+    state.summary.textContent = parts.join(' · ');
+    state.details.classList.toggle('activity-round-failed', state.failures > 0);
+    state.details.open = state.failures > 0;
   }
 
   /**
    * Update the thinking-process message
    */
-  updateThinkingMessage(message) {
+  updateThinkingMessage(message, options = {}) {
+    // `verbose` steps are transport-level narration — sending, receiving,
+    // history size, parameter-key echoes. They stay out of the panel at the
+    // compact detail level, but are still recorded below, so Evolution export
+    // and the settings toggle both see the complete trace either way.
+    const isVerboseStep = options.verbose === true;
+
     // Add to Evolution data first (regardless of visibility)
     this.addToEvolutionData({
       type: 'thinking_process',
       timestamp: new Date().toISOString(),
       content: message,
-      visible: this.showThinkingProcess,
+      visible: this.showThinkingProcess && !(isVerboseStep && this.activityDetailLevel === 'compact'),
       metadata: {
         source: 'ai_thinking',
         requestId: this.conversationState.currentRequestId,
         step: 'update_thinking',
+        verbose: isVerboseStep,
       },
     });
 
     // Check whether thinking-process display is enabled
     if (!this.showThinkingProcess) {
+      return;
+    }
+
+    if (isVerboseStep && this.activityDetailLevel === 'compact') {
       return;
     }
 
@@ -17149,20 +17417,24 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       ? normalizedToolCalls
       : this.parseMultipleToolCalls(response);
     if (detectedTools.length > 0) {
-      this.updateThinkingMessage(`🔧 Analyzing tool call structure...`);
+      this.updateThinkingMessage(`🔧 Analyzing tool call structure...`, { verbose: true });
 
       // Extract and display parameter information
       try {
         const toolCall = detectedTools[0];
         if (toolCall) {
           const paramCount = Object.keys(toolCall.parameters || {}).length;
-          this.updateThinkingMessage(`&nbsp;&nbsp;✅ Tool identified: <strong>${toolCall.tool_name}</strong>`);
-          this.updateThinkingMessage(`&nbsp;&nbsp;📊 Parameters extracted: ${paramCount} parameter(s)`);
+          this.updateThinkingMessage(`&nbsp;&nbsp;✅ Tool identified: <strong>${toolCall.tool_name}</strong>`, {
+            verbose: true,
+          });
+          this.updateThinkingMessage(`&nbsp;&nbsp;📊 Parameters extracted: ${paramCount} parameter(s)`, {
+            verbose: true,
+          });
 
           // Display parameter details
           if (paramCount > 0) {
             const paramKeys = Object.keys(toolCall.parameters);
-            this.updateThinkingMessage(`&nbsp;&nbsp;🔑 Keys: ${paramKeys.join(', ')}`);
+            this.updateThinkingMessage(`&nbsp;&nbsp;🔑 Keys: ${paramKeys.join(', ')}`, { verbose: true });
           }
         }
       } catch (e) {
@@ -17170,9 +17442,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
     } else if (responseText.length > 0) {
       // No tool call - this is a conversational response
-      this.updateThinkingMessage(`💬 Conversational response generated`);
+      this.updateThinkingMessage(`💬 Conversational response generated`, { verbose: true });
       if (responseText.length > 100) {
-        this.updateThinkingMessage(`&nbsp;&nbsp;📝 Response preview: "${responseText.substring(0, 100)}..."`);
+        this.updateThinkingMessage(`&nbsp;&nbsp;📝 Response preview: "${responseText.substring(0, 100)}..."`, {
+          verbose: true,
+        });
       }
     }
   }

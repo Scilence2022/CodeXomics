@@ -14,6 +14,8 @@ class ChatBoxSettingsManager {
       showDetailedToolData: true, // Show detailed tool data
       hideThinkingAfterConversation: false,
       preserveThinkingHistory: true, // Preserve thinking history
+      activityDetailLevel: 'compact', // 'compact' | 'detailed' — how much of the activity panel is rendered
+      activityAutoCollapse: true, // Collapse the activity panel to its summary line once a request finishes
 
       // Behavior settings
       autoScrollToBottom: true,
@@ -259,6 +261,8 @@ class ChatBoxSettingsManager {
       showDetailedToolData: true,
       hideThinkingAfterConversation: false,
       preserveThinkingHistory: true,
+      activityDetailLevel: 'compact',
+      activityAutoCollapse: true,
 
       // Behavior settings
       autoScrollToBottom: true,
@@ -425,6 +429,11 @@ class ChatBoxSettingsManager {
     const validThemes = ['auto', 'light', 'dark'];
     if (!validThemes.includes(this.settings.theme)) {
       errors.push('theme must be one of: ' + validThemes.join(', '));
+    }
+
+    const validActivityDetailLevels = ['compact', 'detailed'];
+    if (!validActivityDetailLevels.includes(this.settings.activityDetailLevel)) {
+      errors.push('activityDetailLevel must be one of: ' + validActivityDetailLevels.join(', '));
     }
 
     return errors;
@@ -662,13 +671,30 @@ class ChatBoxSettingsManager {
                         <!-- Display Tab -->
                         <div id="display-tab" class="tab-content active">
                             <div class="form-section">
-                                <h4>Thinking Process</h4>
+                                <h4>Agent Activity</h4>
                                 <div class="form-group">
                                     <label>
                                         <input type="checkbox" id="showThinkingProcess" class="setting-checkbox">
-                                        Show AI thinking process
+                                        Show agent activity
                                     </label>
-                                    <small class="help-text">Display the AI's reasoning and analysis steps</small>
+                                    <small class="help-text">Display the agent's rounds, tool calls, and reasoning</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="activityDetailLevel">Detail level:</label>
+                                    <select id="activityDetailLevel" class="select">
+                                        <option value="compact">Compact — tool calls and outcomes</option>
+                                        <option value="detailed">Detailed — every step</option>
+                                    </select>
+                                    <small class="help-text">Compact hides transport chatter (sending/receiving, history size, parameter keys). The full trace is still exported either way.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="activityAutoCollapse" class="setting-checkbox">
+                                        Collapse activity when a request finishes
+                                    </label>
+                                    <small class="help-text">Leave only the summary line once the run ends; a run with a failed tool stays expanded. Clicking a finished panel's header also updates this setting.</small>
                                 </div>
 
                                 <div class="form-group">
@@ -676,23 +702,23 @@ class ChatBoxSettingsManager {
                                         <input type="checkbox" id="showAvailableTools" class="setting-checkbox">
                                         Show available tools
                                     </label>
-                                    <small class="help-text">List the tools from the Dynamic Tool registry in the thinking process before the first LLM round</small>
+                                    <small class="help-text">List the tools from the Dynamic Tool registry in the activity panel before the first LLM round</small>
                                 </div>
 
                                 <div class="form-group">
                                     <label>
                                         <input type="checkbox" id="hideThinkingAfterConversation" class="setting-checkbox">
-                                        Hide thinking process after conversation ends
+                                        Remove activity panel after conversation ends
                                     </label>
-                                    <small class="help-text">Automatically remove thinking process when conversation completes</small>
+                                    <small class="help-text">Discard the panel entirely when the conversation completes, rather than collapsing it</small>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <label>
                                         <input type="checkbox" id="preserveThinkingHistory" class="setting-checkbox">
-                                        Preserve thinking history
+                                        Preserve activity history
                                     </label>
-                                    <small class="help-text">Keep thinking process history in chat records</small>
+                                    <small class="help-text">Keep activity panels in chat records</small>
                                 </div>
                                 
                                 <div class="form-group">
@@ -2256,7 +2282,9 @@ class ChatBoxSettingsManager {
       memoryOptimizationEnabled: 'Memory Optimization',
       memoryCleanupInterval: 'Memory Cleanup Interval',
       memoryMaxEntries: 'Memory Max Entries',
-      showThinkingProcess: 'Thinking Process Display',
+      showThinkingProcess: 'Agent Activity Display',
+      activityDetailLevel: 'Agent Activity Detail Level',
+      activityAutoCollapse: 'Collapse Agent Activity When Finished',
       showAvailableTools: 'Available Tools Display',
       showToolCalls: 'Tool Calls Display',
       showToolCallSource: 'Tool Call Source Display',
