@@ -539,7 +539,7 @@ class LLMBenchmarkFramework {
         break;
       }
 
-      console.log(`Running test: ${test.id} (${i + 1}/${filteredTests.length})`);
+      console.log(`Running test: ${this.formatTestLabel(test, test.id)} (${i + 1}/${filteredTests.length})`);
 
       // CRITICAL FIX: Update test progress BEFORE starting the test to show current test name
       if (options.onTestProgress) {
@@ -549,11 +549,11 @@ class LLMBenchmarkFramework {
           : testProgress;
 
         console.log(
-          `📊 [Test Progress START] Starting test ${i + 1}/${filteredTests.length} in suite, Overall: ${this.framework?.completedTestCount + i || i}/${this.framework?.totalTestCount || filteredTests.length}`
+          `📊 [Test Progress START] Starting test ${this.formatTestLabel(test, test.id)} (${i + 1}/${filteredTests.length} in suite), Overall: ${this.framework?.completedTestCount + i || i}/${this.framework?.totalTestCount || filteredTests.length}`
         );
 
         // Call with null testResult to indicate test is starting
-        options.onTestProgress(overallTestProgress, test.id, null, suiteId);
+        options.onTestProgress(overallTestProgress, test.id, null, suiteId, test.number || null);
       }
 
       // CRITICAL FIX: Clear chat history and previous execution data before test starts to prevent memory bloat and context contamination
@@ -614,9 +614,9 @@ class LLMBenchmarkFramework {
           : testProgress;
 
         console.log(
-          `📊 [Test Progress COMPLETE] Test ${i + 1}/${filteredTests.length} in suite, Overall: ${this.framework?.completedTestCount + i + 1 || i + 1}/${this.framework?.totalTestCount || filteredTests.length}`
+          `📊 [Test Progress COMPLETE] Test ${this.formatTestLabel(test, test.id)} (${i + 1}/${filteredTests.length} in suite), Overall: ${this.framework?.completedTestCount + i + 1 || i + 1}/${this.framework?.totalTestCount || filteredTests.length}`
         );
-        options.onTestProgress(overallTestProgress, test.id, testResult, suiteId);
+        options.onTestProgress(overallTestProgress, test.id, testResult, suiteId, test.number || null);
       }
 
       // MEMORY OPTIMIZATION: Force garbage collection every 5 tests AND check memory
@@ -689,6 +689,23 @@ class LLMBenchmarkFramework {
   }
 
   /**
+   * Format a test's stable suite number for display, e.g. "#12".
+   * Accepts a test object or a bare number, and returns '' when unnumbered.
+   */
+  formatTestNumber(testOrNumber) {
+    const number = typeof testOrNumber === 'number' ? testOrNumber : testOrNumber?.number;
+    return number ? `#${number}` : '';
+  }
+
+  /**
+   * Prefix a label with the test number, e.g. "#12 Set Working Directory".
+   */
+  formatTestLabel(testOrNumber, label) {
+    const number = this.formatTestNumber(testOrNumber);
+    return number ? `${number} ${label}` : String(label);
+  }
+
+  /**
    * Display individual test progress
    */
   displayTestProgress(test, currentIndex, totalTests) {
@@ -699,8 +716,9 @@ class LLMBenchmarkFramework {
     this.chatManager.updateThinkingMessage(
       `</br></br>📍 **TEST PROGRESS:** ${currentIndex}/${totalTests} (${progressPercentage}%)</br>\n` +
         `${progressBar}</br></br>\n\n` +
-        `👩‍🔬 CodeXomics Benchmark Tester: "Proceeding with ${test.name}"</br></br>\n` +
+        `👩‍🔬 CodeXomics Benchmark Tester: "Proceeding with ${this.formatTestLabel(test, test.name)}"</br></br>\n` +
         `**Test Specification:**</br>\n` +
+        `&nbsp;&nbsp;&nbsp;• Test Number: ${this.formatTestNumber(test) || 'N/A'} (position in suite)</br>\n` +
         `&nbsp;&nbsp;&nbsp;• Test ID: ${test.id}</br>\n` +
         `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(test.type)}</br>\n` +
         `&nbsp;&nbsp;&nbsp;• Complexity: ${test.complexity || 'Standard'}</br>\n` +
@@ -820,9 +838,10 @@ class LLMBenchmarkFramework {
   async runSingleTest(test, suiteId) {
     // Check if benchmark was stopped before starting test
     if (!this.isRunning) {
-      console.log(`🛑 Test ${test.id} skipped - benchmark stopped`);
+      console.log(`🛑 Test ${this.formatTestLabel(test, test.id)} skipped - benchmark stopped`);
       return {
         testId: test.id,
+        testNumber: test.number || null,
         testName: test.name,
         suiteId: suiteId,
         startTime: Date.now(),
@@ -847,6 +866,7 @@ class LLMBenchmarkFramework {
 
     const result = {
       testId: test.id,
+      testNumber: test.number || null,
       testName: test.name,
       suiteId: suiteId,
       startTime: startTime,
@@ -1161,6 +1181,7 @@ class LLMBenchmarkFramework {
         timeout: timeoutMs, // Pass the actual timeout being used
         testInfo: {
           id: test.id,
+          number: test.number || null,
           name: test.name,
           type: test.type,
           expectedResult: test.expectedResult,
@@ -1264,6 +1285,7 @@ class LLMBenchmarkFramework {
         timeout: test.timeout || this.testTimeout,
         testInfo: {
           id: test.id,
+          number: test.number || null,
           name: test.name,
           type: test.type,
           expectedResult: test.expectedResult,
@@ -1288,6 +1310,7 @@ class LLMBenchmarkFramework {
       // STEP 2: Prepare test data for manual dialog INCLUDING LLM response
       const testData = {
         testId: test.id,
+        testNumber: test.number || null,
         testName: test.name,
         category: test.category || 'manual',
         complexity: test.complexity || 'simple',
@@ -1445,6 +1468,7 @@ class LLMBenchmarkFramework {
     const interactionData = {
       timestamp: new Date().toISOString(),
       testId: options.testInfo?.id || 'unknown',
+      testNumber: options.testInfo?.number || null,
       testName: options.testInfo?.name || 'Unknown Test',
 
       // Request details
@@ -1926,7 +1950,7 @@ class LLMBenchmarkFramework {
         `═══════════════════════════════════════════════════════════<br><br>` +
         `🧪 INITIATING TEST EXECUTION<br><br>` +
         `📋 Test Specification:<br>` +
-        `&nbsp;&nbsp;&nbsp;• Name: ${testName}<br>` +
+        `&nbsp;&nbsp;&nbsp;• Name: ${this.formatTestLabel(testInfo.number, testName)}<br>` +
         `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(testType)}<br>` +
         `&nbsp;&nbsp;&nbsp;• ID: ${testInfo.id || 'N/A'}<br>` +
         `&nbsp;&nbsp;&nbsp;• Max Score: ${testInfo.maxScore || 100} points<br><br>` +
@@ -4684,7 +4708,7 @@ class LLMBenchmarkFramework {
         `═══════════════════════════════════════════════════════════<br><br>` +
         `⚖️ **SCORING EVALUATION INITIATED**<br><br>` +
         `**📋 Test Details:**<br>` +
-        `&nbsp;&nbsp;&nbsp;• Name: ${test.name}<br>` +
+        `&nbsp;&nbsp;&nbsp;• Name: ${this.formatTestLabel(test, test.name)}<br>` +
         `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(test.type)}<br>` +
         `&nbsp;&nbsp;&nbsp;• Evaluator: ${test.evaluator ? 'Custom Algorithm' : 'Standard ' + test.type.charAt(0).toUpperCase() + test.type.slice(1) + ' Evaluator'}<br>` +
         `&nbsp;&nbsp;&nbsp;• Maximum Score: ${test.maxScore || 100} points<br>` +
@@ -4725,7 +4749,8 @@ class LLMBenchmarkFramework {
     this.chatManager.updateThinkingMessage(
       `<br><br>👩‍🔬 **EVALUATION REPORT**<br>` +
         `═══════════════════════════════════════════════════════════<br><br>` +
-        `${gradeEmoji} **FINAL TEST RESULT: ${evaluation.success ? 'PASS' : 'FAIL'}** ${successIcon}<br><br>` +
+        `${gradeEmoji} **FINAL TEST RESULT: ${evaluation.success ? 'PASS' : 'FAIL'}** ${successIcon}<br>` +
+        `&nbsp;&nbsp;&nbsp;${this.formatTestLabel(test, test.name)} (${test.id})<br><br>` +
         `**📊 SCORING BREAKDOWN:**<br>` +
         `&nbsp;&nbsp;&nbsp;• Final Score: ${evaluation.score}/${evaluation.maxScore} points<br>` +
         `&nbsp;&nbsp;&nbsp;• Percentage: ${scorePercentage}%<br>` +
@@ -5647,6 +5672,7 @@ class LLMBenchmarkFramework {
     return {
       timestamp: new Date().toISOString(),
       testId: test.id,
+      testNumber: test.number || null,
       testName: test.name,
 
       request: {
@@ -5695,6 +5721,7 @@ class LLMBenchmarkFramework {
     return {
       timestamp: new Date().toISOString(),
       testId: test.id,
+      testNumber: test.number || null,
       testName: test.name,
 
       request: {
@@ -5888,6 +5915,7 @@ class LLMBenchmarkFramework {
     // Build a slim copy with fields needed for reporting/scoring AND UI fallback reconstruction
     const slim = {
       testId: result.testId,
+      testNumber: result.testNumber || null,
       testName: result.testName,
       suiteId: result.suiteId,
       startTime: result.startTime,
@@ -5931,6 +5959,7 @@ class LLMBenchmarkFramework {
       const data = result.llmInteractionData;
       slim.llmInteractionDataSummary = {
         testId: data.testId,
+        testNumber: data.testNumber || result.testNumber || null,
         testName: data.testName,
         // Request summary (no full prompts)
         requestProvider: data.request?.provider,

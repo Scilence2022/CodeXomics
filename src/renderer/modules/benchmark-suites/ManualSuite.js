@@ -9,7 +9,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
     this.suiteId = 'manual_suite';
     this.description = 'Manual evaluation tests - Genomic operations requiring human verification';
     this.framework = null;
-    this.tests = this.initializeTests();
+    this.tests = this.numberTests(this.initializeTests());
   }
 
   getName() {

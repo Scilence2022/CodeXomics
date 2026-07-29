@@ -1,144 +1,144 @@
-Category,Test ID,Test Name,Instruction
-analysis,anal_auto_01,Calculate GC Content,Calculate the GC content of this DNA sequence: TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG
-analysis,anal_auto_02,Reverse Complement,Get the reverse complement of sequence TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG
-analysis,anal_auto_03,Translate DNA to Protein,"Translate DNA sequence ""TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG"" to protein"
-analysis,anal_auto_04,Genome-wide Codon Usage Analysis,Perform genome-wide codon usage analysis to identify codon preferences and biases.
-annotation,annot_auto_01,Create Gene Annotation,"Create a gene annotation named ""fakG"" of type ""gene"" at position 500000 to 501500 on the current chromosome."
-annotation,annot_auto_02,List Annotations,List all annotations in the current visible genomic region using list_annotations.
-annotation,annot_auto_03,Search Annotations,"Search for annotations matching ""ligase"" in the current genome using search_annotations."
-annotation,annot_auto_04,Get Annotation Details,Get annotation details for the lacZ gene using get_annotation.
-annotation,annot_auto_05,Update Annotation,"Update the annotation named ""fakG"" to change its description to ""Updated fakG gene annotation""."
-annotation,annot_auto_06,Delete Annotation,"Delete the annotation named ""fakG"" using delete_annotation without user confirmation."
-annotation,annot_auto_07,Get Annotation History,Get the latest annotation change history with a limit of 10 records.
-annotation,annot_auto_08,Get Operons,List predicted operons for the current chromosome.
-annotation,annot_auto_09,Assess Annotation Quality,Assess the annotation quality of lysC using assess_annotation_quality.
-annotation,annot_auto_10,List Low-quality Annotation Candidates,"List up to 10 gene-associated annotation candidates with quality scores at or below 70, ranked lowest quality first."
-annotation,annot_auto_11,List Annotation Research History,List the latest durable annotation research record for each target.
-benchmark,bench_auto_01,Open Benchmark Interface,Open the benchmark interface without starting a benchmark run.
-benchmark,bench_auto_02,Get Benchmark Status,Get the current benchmark system status.
-blast,blast_auto_01,BLAST Get Installation Status,Check if BLAST is installed and available on the system.
-blast,blast_auto_02,List BLAST Databases,List all available BLAST databases.
-blast,blast_auto_03,Create BLAST Database Quick,Create a BLAST database from the current genome.
-blast,blast_auto_04,Online BLAST Search,Run a BLAST nucleotide search for sequence ATGAAAGCGCTGAAAGCGCTG against the nt database with max 5 targets.
-blast,blast_auto_05,BLAST Current Region,Run BLAST for the current genomic region from 100000 to 100400 against the nt database using blast_sequence_from_region.
-data_loading,load_auto_01,Load Genome File Path,Load genome file ${this.buildFilePath('ECOLI.gbk')}
-data_loading,load_auto_02,Load BED Annotation File,Load BED annotation file ${this.buildFilePath('CHOPCHOP-Design.bed')}
-data_loading,load_auto_03,Load Aligned Reads File,Load aligned reads file ${this.buildFilePath('1655_C10.sorted.bam')}
-data_loading,load_auto_04,Load Variant VCF File,Load variant VCF file ${this.buildFilePath('1655_C10.mutations.vcf')}
-data_loading,load_auto_05,Load WIG Track File,Load WIG track file ${this.buildFilePath('another_sample.wig')}
-data_loading,load_auto_06,Load Operon File,Load operon file ${this.buildFilePath('OperonSet.tsv')}
-data_management,data_auto_01,Export Generic Data,Run export_data for the current genomic data context.
-database,db_auto_01,Advanced UniProt Search,Search UniProt for reviewed Escherichia coli beta-galactosidase entries using advanced_uniprot_search.
-database,db_auto_02,Search InterPro Entry,Search InterPro entries for beta-galactosidase domains.
-database,db_auto_03,Get InterPro Entry Details,Get minimal details for InterPro entry IPR000322.
-external_database,ext_auto_01,Search PDB Structure for talB,Search PDB experimental structures for gene talB from Escherichia coli.
-external_database,ext_auto_02,Search AlphaFold Structure for talB,Search AlphaFold structure prediction for gene talB from Escherichia coli.
-external_database,ext_auto_03,Search PDB Structure for lysC,Search PDB experimental structures for gene lysC from Escherichia coli.
-external_database,ext_auto_04,Search AlphaFold Structure for lysC,Search AlphaFold structure prediction for gene lysC from Escherichia coli.
-file_export,export_auto_01,Export FASTA Sequence,Export genome sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_sequences.fasta')}
-file_export,export_auto_02,Export GenBank Format,Export data in GenBank format to file: ${this.buildFilePath('exported_files/exported_data.gbk')}
-file_export,export_auto_03,Export GFF3 Annotations,Export GFF3 annotation format to file: ${this.buildFilePath('exported_files/exported_annotations.gff3')}
-file_export,export_auto_04,Export BED Format Features,Export features in BED format to file: ${this.buildFilePath('exported_files/exported_features.bed')}
-file_export,export_auto_05,Export CDS FASTA,Export coding sequences as FASTA format to file: ${this.buildFilePath('exported_files/exported_cds.fasta')}
-file_export,export_auto_06,Export Protein FASTA,Export protein sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_proteins.fasta')}
-file_export,export_auto_07,Export Current View FASTA,Export currently visible genomic region as FASTA to file: ${this.buildFilePath('exported_files/exported_region.fasta')}
-file_loading,load_auto_07,Get Loaded Files List,List all currently loaded files in the genome browser.
-file_operations,fileop_auto_01,Capture Track Screenshot,Capture a visible tracks screenshot as PNG and save it to ${this.buildFilePath('exported_files/benchmark_tracks.png')}.
-file_operations,fileop_auto_02,Configure Export Settings,Open or configure export settings for the current workspace.
-gene_analysis,gene_auto_03,Get Nearby Features,Get features near position 500000 within a 5000bp range using get_nearby_features.
-navigation,nav_auto_01,Navigate to Genomic Position,Navigate to genomic position 100000 on the current chromosome.
-navigation,nav_auto_02,Navigate to 3.5M Position,Navigate to genomic position 3.5M
-navigation,nav_auto_03,Navigate to Region Range,Navigate to the genomic region from position 50000 to 75000.
-navigation,nav_auto_04,Get Current Browser State,Get the current state of the genome browser.
-navigation,nav_auto_05,Zoom In,Zoom in
-navigation,nav_auto_06,Zoom In,Zoom in the genome browser view by 10x.
-navigation,nav_auto_07,Zoom Out,Zoom out.
-navigation,nav_auto_08,Zoom Out,Zoom out the genome browser view by 10x.
-navigation,nav_auto_09,Pan Left,Pan the genome browser view to the left.
-navigation,nav_auto_10,Pan Right,Pan the genome browser view to the right.
-navigation,nav_auto_11,Zoom to Gene,Zoom to fit the lacZ gene in the genome browser view using zoom_to_gene.
-navigation,nav_auto_12,Select Gene,Select and highlight the gene lacZ in the genome browser.
-navigation,nav_auto_13,Select Sequence Region,Select the sequence region from position 100000 to 105000 on the current chromosome.
-navigation,tab_auto_02,Close Tab,Close the current tab in the genome browser.
-navigation,nav_auto_14,Highlight Genomic Region,Highlight region 110000 to 112000 and label it benchmark_focus.
-navigation,nav_auto_15,List Highlights,List all highlighted genomic regions.
-navigation,nav_auto_16,Remove Highlight by Coordinates,Remove the highlight spanning 110000 to 112000.
-navigation,nav_auto_17,Clear Highlights,Clear all highlighted regions from the active tab.
-navigation,nav_auto_18,Save View State,"Save the current genome browser view state as ""benchmark smoke view""."
-navigation,nav_auto_19,Restore View State,"Restore the saved genome browser view state named ""benchmark smoke view""."
-navigation,nav_auto_20,Bookmark Position,"Bookmark the region 120000 to 121000 as ""Test bookmark""."
-navigation,nav_auto_24,Get Bookmarks,List all saved bookmarks and saved view states.
-primer_design,primer_auto_01,Calculate Primer Properties,Calculate properties for primer sequence ATGAAAGCGCTGAAAGCGCTGAAAG.
-primer_design,primer_auto_03,Find Primer Binding Sites,Find binding sites for primer GCAATATGTCTCTGTGTGGAT on the current genome.
-primer_design,primer_auto_04,List Primers,List primers and their binding sites for the current chromosome using list_primers.
-primer_design,primer_auto_05,Delete Primers,Delete all saved primers from the primer library with confirm=true.
-protein_structure,protein_auto_01,Fetch PDB Protein Structure,Fetch the PDB protein structure 1TUP including ligands.
-restriction,seq_auto_07,List Restriction Enzymes,List commercially available Eco restriction enzymes with at least 6 bp recognition sites.
-restriction,seq_auto_08,List DNA Markers,List DNA markers from Takara.
-restriction,seq_auto_09,Get DNA Marker Info,Get detailed band information for the Takara DL2000 DNA marker.
-restriction,restrict_auto_01,Virtual Digest,Perform a virtual restriction digest with EcoRI and HindIII enzymes using sequence ACGGACAAATTGACCTCCCTTCGTCAGTACACCACCGTAGTGGCCGACACTGGGGACATCGCGGCAATGAAGCTGTATCAACCGCAGGATGCCACAACCAACCCTTCTCTCATTCTTAACGCAGCGCAGATTCCGGAATACCGTAAGTTGATTGATGATGCTGTCGCCTGGGCGAAACAGCAGAGCAACGATCGCGCGCAGCAGATCGTGGACGCGACCGACAAACTGGCAGTAAATATTGGTCTGGAAATCCTGAAACTGGTTCCGGGCCGTATCTCAACTGAAGTTGATGCGCGTCTTTCCTATGACACCGAAGCGTCAATTGCGAAAGCAAAACGCCTGATCAAACTCTACAACGATGCTGGTATTAGCAACGATCGTATTCTGATCAAACTGGCTTCTACCTGGCAGGGTATCCGTGCTGCAGAACAGCTGGAAAAAGAAGGCATCAACTGTAACCTGACCCTGCTGTTCTCCTTCGCTCAGGCTCGTGCTTGTGCGGAAGCGGGCGTGTTCCTGATCTCGCCGTTTGTTGGCCGTATTCTTGACTGGTACAAAGCGAATACCGATAAGAAAGAGTACGCTCCGGCAGAAGATCCGGGCGTGGTTTCTGTATCTGAAATCTACCAGTACTACAAAGAGCACGGTTATGAAACCGTGGTTATGGGCGCAAGCTTCCGTAACATCGGCGAAATTCTGGAACTGGCAGGCTGCGACCGTCTGACCATCGCACCGGCACTGCTGAAAGAGCTGGCGGAGAGCGAAGGGGCTATCGAACGTAAACTGTCTTACACCGGCGAAGTGAAAGCGCGTCCGGCGCGTATCACTGAGTCCGAGTTCCTGTGGCAGCACAACCAGGATCCAATGGCAGTAGATAAACTGGCGGAAGGTATCCGTAAGTTTGCTATTGACCAGGAAAAACTGGAAAAAATGATCGGCGATCTGCTGTAA
-search,search_auto_01,Search Gene lacZ,Search for the gene lacZ by name.
-search,search_auto_02,Search DNA Polymerase,"Search for ""DNA Polymerase"" genes."
-search,search_auto_03,Search Locus Tag b0344,Find gene with locus tag b0344.
-search,search_auto_04,Search Sequence Motif TATAAA,Search for TATA box motif (TATAAA) in the current genomic region on both strands.
-sequence,seq_auto_01,Get Genomic Sequence,Get the DNA sequence from position 100000 to 101000 on the current chromosome.
-sequence,seq_auto_02,Get Coding Sequence for Gene,Get the coding sequence for gene lacZ.
-sequence,seq_auto_03,Translate Sequence to Protein,Translate the DNA sequence ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG to protein using standard genetic code.
-sequence,seq_auto_04,Predict Promoter,Predict promoter elements in sequence TTGACATGAAAGTATAATGCGTAT.
-sequence,seq_auto_05,Search Regex Pattern,Search for regex GAATTC in the current view using search_pattern.
-sequence,seq_auto_06,Translate Sequence Alias,Translate DNA sequence ATGAAATAA with translate_sequence in reading frame 1.
-sequence_editing,edit_auto_01,Copy Sequence Region,Copy the sequence region from position 100000 to 100500 on the current chromosome.
-sequence_editing,edit_auto_02,Paste Sequence from Clipboard,Paste the sequence from clipboard at position 600000.
-sequence_editing,edit_auto_03,Delete Sequence Region,Delete the sequence region from position 200000 to 200100.
-sequence_editing,edit_auto_04,Insert Sequence at Position,"Insert the DNA sequence ""ATGCGATCGATCGATCG"" at position 300000 without user confirmation."
-sequence_editing,edit_auto_05,Replace Sequence Region,"Replace the sequence in region 400000 to 400200 with the new sequence ""GCTAGCTAGCTAGCTA""."
-sequence_editing,edit_auto_06,Cut Sequence Region,Cut the sequence region from position 500000 to 500300 (copy to clipboard and mark for deletion).
-sequence_editing,edit_auto_07,Execute Pending Actions,Execute all pending sequence editing actions in the queue and export the resulting gbk file to ${this.buildFilePath('exported_files/edited_genome_sequence.gbk')}
-sequence_editing,edit_auto_08,Get Action List,Get the current list of sequence editing actions and their status.
-sequence_editing,edit_auto_09,Clear Action Queue,Clear all actions from the sequence editing queue without user confirmation.
-sequence_editing,edit_auto_10,Get Clipboard Content,Get the current content of the sequence clipboard using get_clipboard_content.
-sequence_editing,edit_auto_11,Show Action List,Show the sequence editing action list manager.
-system,sys_auto_02,List Available Tools,List all available tools in the CodeXomics system.
-system,load_auto_08,Get Chromosome List,List all chromosomes (contigs) in the currently loaded genome using get_chromosome_list.
-system,settings_auto_04,Toggle Settings Modal,Open the settings modal.
-system,settings_auto_05,Switch UI Style Theme,Switch the application UI visual style to the Professional theme.
-system,settings_auto_06,Switch to Midnight Mode,Change the application appearance to the midnight style.
-system,ui_control_auto_01,Show ChatBox Panel,Show the main ChatBox panel.
-system,ui_control_auto_02,Set ChatBox Floating Layout,Set the ChatBox layout to floating mode.
-system,ui_control_auto_03,Restore ChatBox Window,Restore the ChatBox window if it is minimized.
-system,ui_control_auto_04,Expand Sidebar,Expand the main genome browser Sidebar.
-system,ui_control_auto_05,Show Tracks Sidebar Panel,Show the tracks panel in the Sidebar.
-system,ui_control_auto_06,Expand Top Banner,Expand the top banner area.
-system_setup,sys_auto_01,Set Working Directory,Set working directory to: “${this.getDefaultDirectory()}”
-task_management,task_auto_01,Add Benchmark Task,"Add a task titled ""Benchmark coverage smoke task"" with status in_progress and progress 25."
-task_management,task_auto_02,List In-progress Tasks,List all in-progress tasks using list_tasks.
-task_management,task_auto_03,Clear Tasks,Clear all task checklist items with confirmation.
-track_control,track_auto_01,Get Track Status,Get the current visibility status of all tracks using get_track_status.
-track_control,track_auto_02,Toggle GC Content Track OFF,Toggle off the GC content track visibility.
-track_control,track_auto_03,Toggle GC Content Track ON,Toggle on the GC content track visibility.
-track_control,track_auto_04,Toggle Genes Track OFF,Toggle off the genes track visibility.
-track_control,track_auto_05,Toggle Genes Track ON,Toggle on the genes track visibility.
-track_control,track_auto_06,Toggle Sequence Track OFF,Toggle off the sequence track visibility.
-track_control,track_auto_07,Toggle Sequence Track ON,Toggle on the sequence track visibility.
-track_control,track_auto_08,Toggle Variants Track OFF,Toggle off the variants track visibility.
-track_control,track_auto_09,Toggle Variants Track ON,Toggle on the variants track visibility.
-track_control,track_auto_10,Toggle Reads Track OFF,Toggle off the reads track visibility.
-track_control,track_auto_11,Toggle Reads Track ON,Toggle on the reads track visibility.
-track_control,track_auto_12,Toggle Proteins Track ON,Toggle on the proteins track visibility.
-track_control,track_auto_13,Toggle Proteins Track OFF,Toggle off the proteins track visibility.
-track_control,track_auto_14,Toggle Primers Track ON,Toggle on the primers track visibility.
-track_control,track_auto_15,Toggle Primers Track OFF,Toggle off the primers track visibility.
-track_control,track_auto_16,Toggle Actions Track ON,Toggle on the actions track visibility.
-track_control,track_auto_17,Toggle Actions Track OFF,Toggle off the actions track visibility.
-track_control,track_auto_18,Toggle WIG Track OFF,Toggle off the WIG track visibility.
-track_control,track_auto_19,Toggle WIG Track ON,Toggle on the WIG track visibility.
-track_control,track_auto_20,Toggle BLAST Track ON,Toggle on the BLAST track visibility.
-track_control,track_auto_21,Toggle BLAST Track OFF,Toggle off the BLAST track visibility.
-track_settings,settings_auto_01,Get Track Settings,Get the current track display settings.
-track_settings,settings_auto_02,Get All Track Settings,Get settings for all tracks.
-track_settings,settings_auto_03,Get Track Settings Schema,Get the schema for track settings configuration.
-track_settings,settings_auto_07,Set Sequence Track Settings,Configure the sequence track to hide gene start markers and set end arrow size to 12.
-track_settings,settings_auto_08,Batch Set Track Settings,Set genes track height to 120 and GC track line width to 3 in one batch settings call.
-ui_interaction,tab_auto_01,Open New Tab,Open a new tab
-utility,util_auto_01,Download Internet File,Download a file from the URL https://ftp.ncbi.nlm.nih.gov/genomes/README_change_notice.txt to the working directory.
-utility,util_auto_02,View Markdown File,View the ${this.buildFilePath('README.md')} file in the markdown viewer.
+Category,Test #,Test ID,Test Name,Instruction
+analysis,24,anal_auto_01,Calculate GC Content,Calculate the GC content of this DNA sequence: TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG
+analysis,25,anal_auto_02,Reverse Complement,Get the reverse complement of sequence TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG
+analysis,26,anal_auto_03,Translate DNA to Protein,"Translate DNA sequence ""TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG"" to protein"
+analysis,27,anal_auto_04,Genome-wide Codon Usage Analysis,Perform genome-wide codon usage analysis to identify codon preferences and biases.
+annotation,57,annot_auto_01,Create Gene Annotation,"Create a gene annotation named ""fakG"" of type ""gene"" at position 500000 to 501500 on the current chromosome."
+annotation,58,annot_auto_02,List Annotations,List all annotations in the current visible genomic region using list_annotations.
+annotation,59,annot_auto_03,Search Annotations,"Search for annotations matching ""ligase"" in the current genome using search_annotations."
+annotation,60,annot_auto_04,Get Annotation Details,Get annotation details for the lacZ gene using get_annotation.
+annotation,61,annot_auto_05,Update Annotation,"Update the annotation named ""fakG"" to change its description to ""Updated fakG gene annotation""."
+annotation,62,annot_auto_06,Delete Annotation,"Delete the annotation named ""fakG"" using delete_annotation without user confirmation."
+annotation,127,annot_auto_07,Get Annotation History,Get the latest annotation change history with a limit of 10 records.
+annotation,128,annot_auto_08,Get Operons,List predicted operons for the current chromosome.
+annotation,129,annot_auto_09,Assess Annotation Quality,Assess the annotation quality of lysC using assess_annotation_quality.
+annotation,130,annot_auto_10,List Low-quality Annotation Candidates,"List up to 10 gene-associated annotation candidates with quality scores at or below 70, ranked lowest quality first."
+annotation,131,annot_auto_11,List Annotation Research History,List the latest durable annotation research record for each target.
+benchmark,113,bench_auto_01,Open Benchmark Interface,Open the benchmark interface without starting a benchmark run.
+benchmark,114,bench_auto_02,Get Benchmark Status,Get the current benchmark system status.
+blast,101,blast_auto_01,BLAST Get Installation Status,Check if BLAST is installed and available on the system.
+blast,102,blast_auto_02,List BLAST Databases,List all available BLAST databases.
+blast,103,blast_auto_03,Create BLAST Database Quick,Create a BLAST database from the current genome using blast_create_quick_db_for_current_genome.
+blast,104,blast_auto_04,Online BLAST Search,Run a BLAST nucleotide search for sequence ATGAAAGCGCTGAAAGCGCTG against the nt database with max 5 targets.
+blast,105,blast_auto_05,BLAST Current Region,Run BLAST for the current genomic region from 100000 to 100400 against the nt database using blast_sequence_from_region.
+data_loading,3,load_auto_01,Load Genome File Path,Load genome file ${this.buildFilePath('ECOLI.gbk')}
+data_loading,4,load_auto_02,Load BED Annotation File,Load BED annotation file ${this.buildFilePath('CHOPCHOP-Design.bed')}
+data_loading,5,load_auto_03,Load Aligned Reads File,Load aligned reads file ${this.buildFilePath('1655_C10.sorted.bam')}
+data_loading,6,load_auto_04,Load Variant VCF File,Load variant VCF file ${this.buildFilePath('1655_C10.mutations.vcf')}
+data_loading,7,load_auto_05,Load WIG Track File,Load WIG track file ${this.buildFilePath('another_sample.wig')}
+data_loading,8,load_auto_06,Load Operon File,Load operon file ${this.buildFilePath('OperonSet.tsv')}
+data_management,126,data_auto_01,Export Generic Data,Run export_data for the current genomic data context.
+database,132,db_auto_01,Advanced UniProt Search,Search UniProt for reviewed Escherichia coli beta-galactosidase entries using advanced_uniprot_search.
+database,133,db_auto_02,Search InterPro Entry,Search InterPro entries for beta-galactosidase domains.
+database,134,db_auto_03,Get InterPro Entry Details,Get minimal details for InterPro entry IPR000322.
+external_database,43,ext_auto_01,Search PDB Structure for talB,Search PDB experimental structures for gene talB from Escherichia coli.
+external_database,44,ext_auto_02,Search AlphaFold Structure for talB,Search AlphaFold structure prediction for gene talB from Escherichia coli.
+external_database,45,ext_auto_03,Search PDB Structure for lysC,Search PDB experimental structures for gene lysC from Escherichia coli.
+external_database,46,ext_auto_04,Search AlphaFold Structure for lysC,Search AlphaFold structure prediction for gene lysC from Escherichia coli.
+file_export,34,export_auto_01,Export FASTA Sequence,Export genome sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_sequences.fasta')}
+file_export,35,export_auto_02,Export GenBank Format,Export data in GenBank format to file: ${this.buildFilePath('exported_files/exported_data.gbk')}
+file_export,36,export_auto_03,Export GFF3 Annotations,Export GFF3 annotation format to file: ${this.buildFilePath('exported_files/exported_annotations.gff3')}
+file_export,37,export_auto_04,Export BED Format Features,Export features in BED format to file: ${this.buildFilePath('exported_files/exported_features.bed')}
+file_export,38,export_auto_05,Export CDS FASTA,Export coding sequences as FASTA format to file: ${this.buildFilePath('exported_files/exported_cds.fasta')}
+file_export,39,export_auto_06,Export Protein FASTA,Export protein sequences in FASTA format to file: ${this.buildFilePath('exported_files/exported_proteins.fasta')}
+file_export,40,export_auto_07,Export Current View FASTA,Export currently visible genomic region as FASTA to file: ${this.buildFilePath('exported_files/exported_region.fasta')}
+file_loading,9,load_auto_07,Get Loaded Files List,List all currently loaded files in the genome browser.
+file_operations,124,fileop_auto_01,Capture Track Screenshot,Capture a visible tracks screenshot as PNG and save it to ${this.buildFilePath('exported_files/benchmark_tracks.png')}.
+file_operations,125,fileop_auto_02,Configure Export Settings,Open or configure export settings for the current workspace.
+gene_analysis,84,gene_auto_03,Get Nearby Features,Get features near position 500000 within a 5000bp range using get_nearby_features.
+navigation,11,nav_auto_01,Navigate to Genomic Position,Navigate to genomic position 100000 on the current chromosome.
+navigation,12,nav_auto_02,Navigate to 3.5M Position,Navigate to genomic position 3.5M
+navigation,13,nav_auto_03,Navigate to Region Range,Navigate to the genomic region from position 50000 to 75000.
+navigation,14,nav_auto_04,Get Current Browser State,Get the current state of the genome browser.
+navigation,15,nav_auto_05,Zoom In,Zoom in
+navigation,16,nav_auto_06,Zoom In,Zoom in the genome browser view by 10x.
+navigation,17,nav_auto_07,Zoom Out,Zoom out.
+navigation,18,nav_auto_08,Zoom Out,Zoom out the genome browser view by 10x.
+navigation,19,nav_auto_09,Pan Left,Pan the genome browser view to the left.
+navigation,20,nav_auto_10,Pan Right,Pan the genome browser view to the right.
+navigation,21,nav_auto_11,Zoom to Gene,Zoom to fit the lacZ gene in the genome browser view using zoom_to_gene.
+navigation,22,nav_auto_12,Select Gene,Select and highlight the gene lacZ in the genome browser.
+navigation,23,nav_auto_13,Select Sequence Region,Select the sequence region from position 100000 to 105000 on the current chromosome.
+navigation,42,tab_auto_02,Close Tab,Close the current tab in the genome browser.
+navigation,115,nav_auto_14,Highlight Genomic Region,Highlight region 110000 to 112000 and label it benchmark_focus.
+navigation,116,nav_auto_15,List Highlights,List all highlighted genomic regions.
+navigation,117,nav_auto_16,Remove Highlight by Coordinates,Remove the highlight spanning 110000 to 112000.
+navigation,118,nav_auto_17,Clear Highlights,Clear all highlighted regions from the active tab.
+navigation,119,nav_auto_18,Save View State,"Save the current genome browser view state as ""benchmark smoke view""."
+navigation,120,nav_auto_19,Restore View State,"Restore the saved genome browser view state named ""benchmark smoke view""."
+navigation,121,nav_auto_20,Bookmark Position,"Bookmark the region 120000 to 121000 as ""Test bookmark""."
+navigation,122,nav_auto_24,Get Bookmarks,List all saved bookmarks and saved view states.
+primer_design,106,primer_auto_01,Calculate Primer Properties,Calculate properties for primer sequence ATGAAAGCGCTGAAAGCGCTGAAAG.
+primer_design,107,primer_auto_03,Find Primer Binding Sites,Find binding sites for primer GCAATATGTCTCTGTGTGGAT on the current genome.
+primer_design,108,primer_auto_04,List Primers,List primers and their binding sites for the current chromosome using list_primers.
+primer_design,109,primer_auto_05,Delete Primers,Delete all saved primers from the primer library with confirm=true.
+protein_structure,135,protein_auto_01,Fetch PDB Protein Structure,Fetch the PDB protein structure 1TUP including ligands.
+restriction,139,seq_auto_07,List Restriction Enzymes,List commercially available Eco restriction enzymes with at least 6 bp recognition sites.
+restriction,140,seq_auto_08,List DNA Markers,List DNA markers from Takara.
+restriction,141,seq_auto_09,Get DNA Marker Info,Get detailed band information for the Takara DL2000 DNA marker.
+restriction,143,restrict_auto_01,Virtual Digest,Perform a virtual restriction digest with EcoRI and HindIII enzymes using sequence ACGGACAAATTGACCTCCCTTCGTCAGTACACCACCGTAGTGGCCGACACTGGGGACATCGCGGCAATGAAGCTGTATCAACCGCAGGATGCCACAACCAACCCTTCTCTCATTCTTAACGCAGCGCAGATTCCGGAATACCGTAAGTTGATTGATGATGCTGTCGCCTGGGCGAAACAGCAGAGCAACGATCGCGCGCAGCAGATCGTGGACGCGACCGACAAACTGGCAGTAAATATTGGTCTGGAAATCCTGAAACTGGTTCCGGGCCGTATCTCAACTGAAGTTGATGCGCGTCTTTCCTATGACACCGAAGCGTCAATTGCGAAAGCAAAACGCCTGATCAAACTCTACAACGATGCTGGTATTAGCAACGATCGTATTCTGATCAAACTGGCTTCTACCTGGCAGGGTATCCGTGCTGCAGAACAGCTGGAAAAAGAAGGCATCAACTGTAACCTGACCCTGCTGTTCTCCTTCGCTCAGGCTCGTGCTTGTGCGGAAGCGGGCGTGTTCCTGATCTCGCCGTTTGTTGGCCGTATTCTTGACTGGTACAAAGCGAATACCGATAAGAAAGAGTACGCTCCGGCAGAAGATCCGGGCGTGGTTTCTGTATCTGAAATCTACCAGTACTACAAAGAGCACGGTTATGAAACCGTGGTTATGGGCGCAAGCTTCCGTAACATCGGCGAAATTCTGGAACTGGCAGGCTGCGACCGTCTGACCATCGCACCGGCACTGCTGAAAGAGCTGGCGGAGAGCGAAGGGGCTATCGAACGTAAACTGTCTTACACCGGCGAAGTGAAAGCGCGTCCGGCGCGTATCACTGAGTCCGAGTTCCTGTGGCAGCACAACCAGGATCCAATGGCAGTAGATAAACTGGCGGAAGGTATCCGTAAGTTTGCTATTGACCAGGAAAAACTGGAAAAAATGATCGGCGATCTGCTGTAA
+search,30,search_auto_01,Search Gene lacZ,Search for the gene lacZ by name.
+search,31,search_auto_02,Search DNA Polymerase,"Search for ""DNA Polymerase"" genes."
+search,32,search_auto_03,Search Locus Tag b0344,Find gene with locus tag b0344.
+search,33,search_auto_04,Search Sequence Motif TATAAA,Search for TATA box motif (TATAAA) in the current genomic region on both strands.
+sequence,28,seq_auto_01,Get Genomic Sequence,Get the DNA sequence from position 100000 to 101000 on the current chromosome.
+sequence,29,seq_auto_02,Get Coding Sequence for Gene,Get the coding sequence for gene lacZ.
+sequence,85,seq_auto_03,Translate Sequence to Protein,Translate the DNA sequence ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG to protein using standard genetic code.
+sequence,136,seq_auto_04,Predict Promoter,Predict promoter elements in sequence TTGACATGAAAGTATAATGCGTAT.
+sequence,137,seq_auto_05,Search Regex Pattern,Search for regex GAATTC in the current view using search_pattern.
+sequence,138,seq_auto_06,Translate Sequence Alias,Translate DNA sequence ATGAAATAA with translate_sequence in reading frame 1.
+sequence_editing,47,edit_auto_01,Copy Sequence Region,Copy the sequence region from position 100000 to 100500 on the current chromosome.
+sequence_editing,48,edit_auto_02,Paste Sequence from Clipboard,Paste the sequence from clipboard at position 600000.
+sequence_editing,49,edit_auto_03,Delete Sequence Region,Delete the sequence region from position 200000 to 200100.
+sequence_editing,50,edit_auto_04,Insert Sequence at Position,"Insert the DNA sequence ""ATGCGATCGATCGATCG"" at position 300000 without user confirmation."
+sequence_editing,51,edit_auto_05,Replace Sequence Region,"Replace the sequence in region 400000 to 400200 with the new sequence ""GCTAGCTAGCTAGCTA""."
+sequence_editing,52,edit_auto_06,Cut Sequence Region,Cut the sequence region from position 500000 to 500300 (copy to clipboard and mark for deletion).
+sequence_editing,53,edit_auto_07,Execute Pending Actions,Execute all pending sequence editing actions in the queue and export the resulting gbk file to ${this.buildFilePath('exported_files/edited_genome_sequence.gbk')}
+sequence_editing,54,edit_auto_08,Get Action List,Get the current list of sequence editing actions and their status.
+sequence_editing,55,edit_auto_09,Clear Action Queue,Clear all actions from the sequence editing queue without user confirmation.
+sequence_editing,56,edit_auto_10,Get Clipboard Content,Get the current content of the sequence clipboard using get_clipboard_content.
+sequence_editing,142,edit_auto_11,Show Action List,Show the sequence editing action list manager.
+system,2,sys_auto_02,List Available Tools,List all available tools in the CodeXomics system.
+system,10,load_auto_08,Get Chromosome List,List all chromosomes (contigs) in the currently loaded genome using get_chromosome_list.
+system,89,settings_auto_04,Toggle Settings Modal,Open the settings modal.
+system,90,settings_auto_05,Switch UI Style Theme,Switch the application UI visual style to the Professional theme.
+system,91,settings_auto_06,Switch to Midnight Mode,Change the application appearance to the midnight style.
+system,92,ui_control_auto_01,Show ChatBox Panel,Show the main ChatBox panel.
+system,93,ui_control_auto_02,Set ChatBox Floating Layout,Set the ChatBox layout to floating mode.
+system,94,ui_control_auto_03,Restore ChatBox Window,Restore the ChatBox window if it is minimized.
+system,95,ui_control_auto_04,Expand Sidebar,Expand the main genome browser Sidebar.
+system,96,ui_control_auto_05,Show Tracks Sidebar Panel,Show the tracks panel in the Sidebar.
+system,97,ui_control_auto_06,Expand Top Banner,Expand the top banner area.
+system_setup,1,sys_auto_01,Set Working Directory,Set working directory to: “${this.getDefaultDirectory()}”
+task_management,110,task_auto_01,Add Benchmark Task,"Add a task titled ""Benchmark coverage smoke task"" with status in_progress and progress 25."
+task_management,111,task_auto_02,List In-progress Tasks,List all in-progress tasks using list_tasks.
+task_management,112,task_auto_03,Clear Tasks,Clear all task checklist items with confirmation.
+track_control,63,track_auto_01,Get Track Status,Get the current visibility status of all tracks using get_track_status.
+track_control,64,track_auto_02,Toggle GC Content Track OFF,Toggle off the GC content track visibility.
+track_control,65,track_auto_03,Toggle GC Content Track ON,Toggle on the GC content track visibility.
+track_control,66,track_auto_04,Toggle Genes Track OFF,Toggle off the genes track visibility.
+track_control,67,track_auto_05,Toggle Genes Track ON,Toggle on the genes track visibility.
+track_control,68,track_auto_06,Toggle Sequence Track OFF,Toggle off the sequence track visibility.
+track_control,69,track_auto_07,Toggle Sequence Track ON,Toggle on the sequence track visibility.
+track_control,70,track_auto_08,Toggle Variants Track OFF,Toggle off the variants track visibility.
+track_control,71,track_auto_09,Toggle Variants Track ON,Toggle on the variants track visibility.
+track_control,72,track_auto_10,Toggle Reads Track OFF,Toggle off the reads track visibility.
+track_control,73,track_auto_11,Toggle Reads Track ON,Toggle on the reads track visibility.
+track_control,74,track_auto_12,Toggle Proteins Track ON,Toggle on the proteins track visibility.
+track_control,75,track_auto_13,Toggle Proteins Track OFF,Toggle off the proteins track visibility.
+track_control,76,track_auto_14,Toggle Primers Track ON,Toggle on the primers track visibility.
+track_control,77,track_auto_15,Toggle Primers Track OFF,Toggle off the primers track visibility.
+track_control,78,track_auto_16,Toggle Actions Track ON,Toggle on the actions track visibility.
+track_control,79,track_auto_17,Toggle Actions Track OFF,Toggle off the actions track visibility.
+track_control,80,track_auto_18,Toggle WIG Track OFF,Toggle off the WIG track visibility.
+track_control,81,track_auto_19,Toggle WIG Track ON,Toggle on the WIG track visibility.
+track_control,82,track_auto_20,Toggle BLAST Track ON,Toggle on the BLAST track visibility.
+track_control,83,track_auto_21,Toggle BLAST Track OFF,Toggle off the BLAST track visibility.
+track_settings,86,settings_auto_01,Get Track Settings,Get the current track display settings.
+track_settings,87,settings_auto_02,Get All Track Settings,Get settings for all tracks.
+track_settings,88,settings_auto_03,Get Track Settings Schema,Get the schema for track settings configuration.
+track_settings,98,settings_auto_07,Set Sequence Track Settings,Configure the sequence track to hide gene start markers and set end arrow size to 12.
+track_settings,123,settings_auto_08,Batch Set Track Settings,Set genes track height to 120 and GC track line width to 3 in one batch settings call.
+ui_interaction,41,tab_auto_01,Open New Tab,Open a new tab
+utility,99,util_auto_01,Download Internet File,Download a file from the URL https://ftp.ncbi.nlm.nih.gov/genomes/README_change_notice.txt to the working directory.
+utility,100,util_auto_02,View Markdown File,View the ${this.buildFilePath('README.md')} file in the markdown viewer.

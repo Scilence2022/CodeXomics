@@ -108,7 +108,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       get_annotation_history: [/annotation.*history/i, /change history/i],
       list_annotations: [/list.*annotations/i, /annotations.*listed/i, /show.*annotations/i],
     };
-    this.tests = this.initializeTests();
+    this.tests = this.numberTests(this.initializeTests());
   }
 
   getName() {
@@ -132,7 +132,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       console.log(`📁 AutomaticComplexSuite default directory set to: ${this.defaultDirectory}`);
 
       // Regenerate tests with updated paths
-      this.tests = this.initializeTests();
+      this.tests = this.numberTests(this.initializeTests());
     }
   }
 

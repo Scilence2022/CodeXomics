@@ -76,34 +76,39 @@ function parseBuiltInToolNames() {
   return [...source.matchAll(/builtInToolsMap\.set\(['"]([^'"]+)['"]/g)].map(match => match[1]);
 }
 
-function parseCsvIds(filePath) {
-  const text = fs.readFileSync(filePath, 'utf-8').trim();
-  const lines = text.split(/\r?\n/).slice(1);
+function parseCsvLine(line) {
+  const fields = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index++) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      current += '"';
+      index++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      fields.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  fields.push(current);
+  return fields;
+}
+
+function parseCsvRows(filePath) {
+  const lines = fs.readFileSync(filePath, 'utf-8').trim().split(/\r?\n/);
+  const header = parseCsvLine(lines.shift());
 
   return lines.map(line => {
-    const fields = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let index = 0; index < line.length; index++) {
-      const char = line[index];
-      const next = line[index + 1];
-
-      if (char === '"' && inQuotes && next === '"') {
-        current += '"';
-        index++;
-      } else if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        fields.push(current);
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-
-    fields.push(current);
-    return fields[1];
+    const fields = parseCsvLine(line);
+    return Object.fromEntries(header.map((column, index) => [column, fields[index]]));
   });
 }
 
@@ -172,6 +177,27 @@ describe('benchmark suite coverage', () => {
     }
   });
 
+  it('numbers every test by its position in the suite', () => {
+    const suites = loadSuites();
+
+    for (const suite of suites) {
+      const tests = suite.getTests();
+      const numbers = tests.map(test => test.number);
+
+      expect(numbers, `${suite.constructor.name} numbering`).toEqual(tests.map((test, index) => index + 1));
+    }
+  });
+
+  it('keeps test numbers stable when only a subset of tests is selected', () => {
+    const suite = loadSuites().find(candidate => candidate.constructor.name === 'ManualSuite');
+    const tests = suite.getTests();
+    const selectedIds = [tests[2].id, tests[5].id];
+    const selected = tests.filter(test => selectedIds.includes(test.id));
+
+    // A filtered run must still report "#3"/"#6", not "#1"/"#2".
+    expect(selected.map(test => test.number)).toEqual([3, 6]);
+  });
+
   it('keeps exported benchmark CSV files synchronized with suite definitions', () => {
     const suites = loadSuites();
     const exportedSuites = [
@@ -187,9 +213,20 @@ describe('benchmark suite coverage', () => {
         .getTests()
         .map(test => test.id)
         .sort();
-      const csvIds = parseCsvIds(path.join(BENCHMARK_CSV_DIR, csvFile)).sort();
+      const csvRows = parseCsvRows(path.join(BENCHMARK_CSV_DIR, csvFile));
+      const csvIds = csvRows.map(row => row['Test ID']).sort();
 
       expect(csvIds, `${csvFile} IDs`).toEqual(suiteIds);
+
+      // The CSV is how a "#12 failed" report gets traced back to a test definition,
+      // so its numbers must be the same ones the benchmark UI shows.
+      const csvNumbersById = new Map(csvRows.map(row => [row['Test ID'], Number(row['Test #'])]));
+      const mismatched = suite
+        .getTests()
+        .filter(test => csvNumbersById.get(test.id) !== test.number)
+        .map(test => `${test.id}: suite #${test.number} vs CSV #${csvNumbersById.get(test.id)}`);
+
+      expect(mismatched, `${csvFile} numbers`).toEqual([]);
     }
   });
 });

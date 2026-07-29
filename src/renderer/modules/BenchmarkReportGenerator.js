@@ -416,6 +416,7 @@ class BenchmarkReportGenerator {
     // Header
     csvData.push([
       'Test Suite',
+      'Test #',
       'Test ID',
       'Test Name',
       'Success',
@@ -436,6 +437,7 @@ class BenchmarkReportGenerator {
       for (const testResult of suiteResult.testResults) {
         csvData.push([
           suiteResult.suiteName,
+          testResult.testNumber || '',
           testResult.testId,
           testResult.testName,
           testResult.success,
@@ -1098,6 +1100,7 @@ class BenchmarkReportGenerator {
             } else if (testResult.llmInteractionDataSummary) {
               const interaction = {
                 testId: testResult.llmInteractionDataSummary.testId,
+                testNumber: testResult.llmInteractionDataSummary.testNumber,
                 testName: testResult.llmInteractionDataSummary.testName,
                 request: {
                   provider: testResult.llmInteractionDataSummary.requestProvider,
@@ -1135,6 +1138,7 @@ class BenchmarkReportGenerator {
   buildLLMInteractionTestInfo(suiteResult, testResult) {
     return {
       testId: testResult.testId,
+      testNumber: testResult.testNumber,
       testName: testResult.testName,
       suiteId: testResult.suiteId || suiteResult.suiteId,
       suiteName: suiteResult.suiteName,
