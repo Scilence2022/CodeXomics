@@ -2,22 +2,27 @@ import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-function loadMethod(relativePath, signature) {
+function loadMethod(relativePath, signatures) {
   const source = fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8');
-  const start = source.indexOf(`\n  ${signature} {`);
-  if (start === -1) throw new Error(`Unable to locate ${signature} in ${relativePath}`);
-  const end = source.indexOf('\n  }\n', start);
-  if (end === -1) throw new Error(`Unable to bound ${signature} in ${relativePath}`);
-  const body = source.slice(start + 1, end + 4);
+  const bodies = [].concat(signatures).map(signature => {
+    const start = source.indexOf(`\n  ${signature} {`);
+    if (start === -1) throw new Error(`Unable to locate ${signature} in ${relativePath}`);
+    const end = source.indexOf('\n  }\n', start);
+    if (end === -1) throw new Error(`Unable to bound ${signature} in ${relativePath}`);
+    return source.slice(start + 1, end + 4);
+  });
   // eslint-disable-next-line no-new-func -- loads the real source method into an isolated class
-  return new Function(`return class Extracted {\n${body}\n}`)();
+  return new Function(`return class Extracted {\n${bodies.join('\n')}\n}`)();
 }
 
+const TIMEOUT_METHODS = [
+  'findEarlyReturnSubmission(test, error)',
+  'abortTimedOutConversation(test, error)',
+  'isTestTimeoutError(error)',
+];
+
 function makeFramework(executions) {
-  const Framework = loadMethod(
-    'src/renderer/modules/LLMBenchmarkFramework.js',
-    'findEarlyReturnSubmission(test, error)'
-  );
+  const Framework = loadMethod('src/renderer/modules/LLMBenchmarkFramework.js', TIMEOUT_METHODS);
   const framework = new Framework();
   framework.chatManager = {
     toolExecutionTracker: {
@@ -87,14 +92,77 @@ describe('earlyReturn tests that outlive their timeout', () => {
   });
 
   it('is inert when no tracker is available', () => {
-    const Framework = loadMethod(
-      'src/renderer/modules/LLMBenchmarkFramework.js',
-      'findEarlyReturnSubmission(test, error)'
-    );
+    const Framework = loadMethod('src/renderer/modules/LLMBenchmarkFramework.js', TIMEOUT_METHODS);
     const framework = new Framework();
     framework.chatManager = null;
 
     expect(framework.findEarlyReturnSubmission(blastTest, timeout)).toBeNull();
+  });
+});
+
+describe('cancelling the conversation a timed-out test left running', () => {
+  // Promise.race abandons the losing promise, it does not stop it. A model still
+  // looping over tool calls keeps executing them into the tests that follow.
+  const makeChatManager = () => {
+    const chatManager = {
+      conversationState: { isProcessing: true, abortController: { abort: () => {} } },
+      aborted: 0,
+      abortCurrentConversation() {
+        this.aborted++;
+        this.conversationState.isProcessing = false;
+      },
+    };
+    return chatManager;
+  };
+
+  const makeFrameworkFor = chatManager => {
+    const Framework = loadMethod('src/renderer/modules/LLMBenchmarkFramework.js', TIMEOUT_METHODS);
+    const framework = new Framework();
+    framework.chatManager = chatManager;
+    return framework;
+  };
+
+  const test = { id: 'protein_auto_complex_02' };
+
+  it('aborts a conversation still processing after the timeout', () => {
+    const chatManager = makeChatManager();
+
+    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout);
+
+    expect(chatManager.aborted).toBe(1);
+    expect(chatManager.conversationState.isProcessing).toBe(false);
+  });
+
+  it('leaves a finished conversation alone', () => {
+    const chatManager = makeChatManager();
+    chatManager.conversationState.isProcessing = false;
+
+    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout);
+
+    expect(chatManager.aborted).toBe(0);
+  });
+
+  it('does not abort on a genuine (non-timeout) error', () => {
+    const chatManager = makeChatManager();
+
+    makeFrameworkFor(chatManager).abortTimedOutConversation(test, new Error('BLAST binary not found'));
+
+    expect(chatManager.aborted).toBe(0);
+  });
+
+  it('falls back to the abort controller when no abort method exists', () => {
+    let aborted = 0;
+    const chatManager = {
+      conversationState: { isProcessing: true, abortController: { abort: () => aborted++ } },
+    };
+
+    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout);
+
+    expect(aborted).toBe(1);
+  });
+
+  it('is inert without a chat manager', () => {
+    expect(() => makeFrameworkFor(null).abortTimedOutConversation(test, timeout)).not.toThrow();
   });
 });
 

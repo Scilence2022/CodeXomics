@@ -85,11 +85,20 @@ function loadChatManagerClass() {
   const extractParametersMatch = content.match(
     /extractParametersFromExecutionMessage\s*\(content\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
   );
+  const parseToolExecutionFeedbackEntriesMatch = content.match(
+    /parseToolExecutionFeedbackEntries\s*\(content\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
+  );
+  const doesFeedbackEntryMatchParametersMatch = content.match(
+    /doesFeedbackEntryMatchParameters\s*\(toolName,\s*parsedKeyParams,\s*paramsStr,\s*entry\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
+  );
   const wasToolExecutedSuccessfullyMatch = content.match(
     /wasToolExecutedSuccessfully\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
   );
   const getToolExecutionCountMatch = content.match(
     /getToolExecutionCount\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
+  );
+  const getToolExecutionCountByNameMatch = content.match(
+    /getToolExecutionCountByName\s*\(toolName,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
   );
   const findExistingExecutionMatch = content.match(
     /findExistingExecution\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
@@ -128,10 +137,19 @@ function loadChatManagerClass() {
     ? areToolParametersEqualMatch[0].replace('/**', '')
     : '';
   const extractParametersCode = extractParametersMatch ? extractParametersMatch[0].replace('/**', '') : '';
+  const parseToolExecutionFeedbackEntriesCode = parseToolExecutionFeedbackEntriesMatch
+    ? parseToolExecutionFeedbackEntriesMatch[0].replace('/**', '')
+    : '';
+  const doesFeedbackEntryMatchParametersCode = doesFeedbackEntryMatchParametersMatch
+    ? doesFeedbackEntryMatchParametersMatch[0].replace('/**', '')
+    : '';
   const wasToolExecutedSuccessfullyCode = wasToolExecutedSuccessfullyMatch
     ? wasToolExecutedSuccessfullyMatch[0].replace('/**', '')
     : '';
   const getToolExecutionCountCode = getToolExecutionCountMatch ? getToolExecutionCountMatch[0].replace('/**', '') : '';
+  const getToolExecutionCountByNameCode = getToolExecutionCountByNameMatch
+    ? getToolExecutionCountByNameMatch[0].replace('/**', '')
+    : '';
   const findExistingExecutionCode = findExistingExecutionMatch ? findExistingExecutionMatch[0].replace('/**', '') : '';
 
   const mockClassCode = `
@@ -149,8 +167,11 @@ function loadChatManagerClass() {
       ${areParametersEqualCode}
       ${areToolParametersEqualCode}
       ${extractParametersCode}
+      ${parseToolExecutionFeedbackEntriesCode}
+      ${doesFeedbackEntryMatchParametersCode}
       ${wasToolExecutedSuccessfullyCode}
       ${getToolExecutionCountCode}
+      ${getToolExecutionCountByNameCode}
       ${findExistingExecutionCode}
     }
     return MockChatManager;
@@ -1043,6 +1064,109 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     ];
 
     expect(manager.getToolExecutionCount(toolKey, history)).toBe(2);
+  });
+
+  describe('multi-tool rounds', () => {
+    // A round that runs several tools reports all of them in one feedback message.
+    // Every repeat guard reads that message, so a tool that is not listed first must
+    // still be recognised — otherwise the model can re-issue it every round and the
+    // tool really re-runs (re-opening viewers, re-hitting external APIs) until the
+    // turn times out.
+    const buildMultiToolFeedback = () => ({
+      role: 'system',
+      content:
+        '[Tool Result]\n' +
+        'search_uniprot_database executed successfully with parameters: ' +
+        '{"organism":"Escherichia coli","search_query":"DapA"}: {"success":true,"count":5}; ' +
+        'search_pdb_structures executed successfully with parameters: ' +
+        '{"geneName":"dapA","organism":"Escherichia coli"}: {"success":true,"count":10}',
+    });
+
+    const pdbKey = 'search_pdb_structures:{"geneName":"dapA","organism":"Escherichia coli"}';
+
+    it('attributes parameters to the tool that reported them', () => {
+      const manager = new MockChatManager();
+      const entries = manager.parseToolExecutionFeedbackEntries(buildMultiToolFeedback().content);
+
+      expect(entries.map(entry => entry.toolName)).toEqual(['search_uniprot_database', 'search_pdb_structures']);
+      expect(entries.every(entry => entry.success)).toBe(true);
+      expect(JSON.parse(entries[0].parametersText)).toEqual({
+        organism: 'Escherichia coli',
+        search_query: 'DapA',
+      });
+      expect(JSON.parse(entries[1].parametersText)).toEqual({
+        geneName: 'dapA',
+        organism: 'Escherichia coli',
+      });
+    });
+
+    it('detects a tool reported after the first one in the same round', () => {
+      const manager = new MockChatManager();
+      const history = [buildMultiToolFeedback()];
+
+      expect(manager.wasToolExecutedSuccessfully(pdbKey, history)).toBe(true);
+      expect(manager.getToolExecutionCount(pdbKey, history)).toBe(1);
+      expect(manager.findExistingExecution(pdbKey, history)).toMatchObject({ success: true });
+    });
+
+    it('counts repeats of a non-first tool so the identical-execution limit can fire', () => {
+      const manager = new MockChatManager();
+      const history = [buildMultiToolFeedback(), buildMultiToolFeedback(), buildMultiToolFeedback()];
+
+      expect(manager.getToolExecutionCount(pdbKey, history)).toBe(3);
+    });
+
+    it('does not match a non-first tool called with different parameters', () => {
+      const manager = new MockChatManager();
+      const otherKey = 'search_pdb_structures:{"geneName":"lysC","organism":"Escherichia coli"}';
+
+      expect(manager.wasToolExecutedSuccessfully(otherKey, [buildMultiToolFeedback()])).toBe(false);
+      expect(manager.getToolExecutionCount(otherKey, [buildMultiToolFeedback()])).toBe(0);
+    });
+
+    it('lets the execution policy stop a tool the model keeps re-issuing', () => {
+      // The end of the chain the parsing bug broke: a PDB search batched behind
+      // the UniProt search in every round used to look brand new each time, so it
+      // re-ran and re-opened the results viewer until the turn timed out.
+      const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+      const manager = new MockChatManager();
+      const policy = new ToolExecutionPolicy({
+        chatManager: {
+          configManager: { get: (key, fallback) => (key === 'chatboxSettings' ? {} : fallback) },
+          getToolExecutionKey: manager.getToolExecutionKey.bind(manager),
+          getToolExecutionCount: manager.getToolExecutionCount.bind(manager),
+          getToolExecutionCountByName: manager.getToolExecutionCountByName.bind(manager),
+          wasToolExecutedSuccessfully: manager.wasToolExecutedSuccessfully.bind(manager),
+          findExistingExecution: manager.findExistingExecution.bind(manager),
+        },
+      });
+
+      const call = {
+        tool_name: 'search_pdb_structures',
+        parameters: { geneName: 'dapA', organism: 'Escherichia coli' },
+      };
+
+      expect(policy.shouldAllowToolExecution(call, [], 1, [])).toBe(true);
+      expect(policy.shouldAllowToolExecution(call, [buildMultiToolFeedback()], 2, [])).toBe(false);
+    });
+
+    it('reads failure from the tool own entry, not from a sibling that succeeded', () => {
+      const manager = new MockChatManager();
+      const history = [
+        {
+          role: 'system',
+          content:
+            '[Tool Result]\n' +
+            'search_uniprot_database executed successfully with parameters: ' +
+            '{"organism":"Escherichia coli","search_query":"DapA"}: {"success":true}; ' +
+            'search_pdb_structures executed with parameters: ' +
+            '{"geneName":"dapA","organism":"Escherichia coli"}: {"success":false}',
+        },
+      ];
+
+      expect(manager.findExistingExecution(pdbKey, history)).toMatchObject({ success: false });
+      expect(manager.wasToolExecutedSuccessfully(pdbKey, history)).toBe(false);
+    });
   });
 
   it('should detect view state changes in hasViewStateChangedSinceLastExecution', () => {

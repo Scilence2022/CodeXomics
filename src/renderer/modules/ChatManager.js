@@ -5503,6 +5503,9 @@ class ChatManager {
 
             if (successfulResults.length > 0) {
               toolExecutionState.consecutiveFailureRounds = 0;
+              // Clears the consecutive streak only. The cumulative count in
+              // totalProtocolRecoveryAttempts is what bounds the turn, because a
+              // repair that just re-runs an already-recorded tool is not progress.
               toolExecutionState.protocolRecoveryAttempts = 0;
               successfulResults.forEach(result => {
                 const toolKey = this.getToolExecutionKey(result.tool, result.parameters);
@@ -7266,9 +7269,47 @@ class ChatManager {
     return toolName => pattern.test(String(toolName || ''));
   }
 
-  getRequestClauseEffectRequirement(clause, inheritedDomain = '') {
+  /**
+   * The part of a clause that says what to do, without the trailing phrase that
+   * says why.
+   *
+   * "perform an InterPro domain analysis to identify key domains" asks for one
+   * effect, the analysis. Reading the goal phrase as the effect demands a tool
+   * matching "identify", which no analysis tool is named for, so the request can
+   * never be satisfied: every finished answer is bounced back for repair, the
+   * model re-runs the analysis it already ran, and the turn burns its whole
+   * budget. Only unambiguous goal wording is stripped, so "jump to gene lacZ"
+   * and "switch to tab 2" keep naming their own action.
+   */
+  stripClausePurposePhrase(clause) {
     const text = String(clause || '').trim();
-    const message = text.toLowerCase();
+    const goalVerb =
+      'identify|detect|determine|find|locate|check|verify|confirm|see|understand|' +
+      'characteri[sz]e|reveal|assess|evaluate|obtain|discover|explore|examine|study|compare|validate';
+    const purposeMarker = new RegExp(`\\s+(?:in order to|so as to|so that|to\\s+(?:${goalVerb})\\b)`, 'i');
+
+    const match = text.match(purposeMarker);
+    if (!match || match.index === undefined || match.index === 0) return text;
+    return text.slice(0, match.index).trim();
+  }
+
+  getRequestClauseEffectRequirement(clause, inheritedDomain = '') {
+    const fullClause = String(clause || '').trim();
+    const mainAction = this.stripClausePurposePhrase(fullClause);
+
+    if (mainAction && mainAction !== fullClause) {
+      const mainRequirement = this.deriveClauseEffectRequirement(mainAction, fullClause, inheritedDomain);
+      if (mainRequirement) return mainRequirement;
+    }
+
+    return this.deriveClauseEffectRequirement(fullClause, fullClause, inheritedDomain);
+  }
+
+  deriveClauseEffectRequirement(actionText, fullClause, inheritedDomain = '') {
+    const text = String(fullClause || '').trim();
+    const message = String(actionText || '')
+      .trim()
+      .toLowerCase();
     const contextMessage = `${message} ${inheritedDomain}`.trim();
     const verbTool = (...verbs) => this.verbToolMatcher(...verbs);
     const requirement = (capability, matcher, repeatToolName = capability) => ({
@@ -7460,7 +7501,11 @@ class ChatManager {
         'calculate_molecular_weight'
       );
     }
-    if (/\b(?:analy[sz]e|assess|predict)\b|(?:分析|评估|预测)/.test(message)) {
+    // The noun forms matter as much as the verb: requests phrase this step as
+    // "perform a domain analysis" at least as often as "analyze the domains",
+    // and only the verb was recognized, so the noun form fell through to a rule
+    // that no analysis tool can satisfy.
+    if (/\b(?:analy[sz]e|analys[ei]s|assess(?:ment)?|predict(?:ion)?)\b|(?:分析|评估|预测)/.test(message)) {
       return requirement(
         'analysis',
         toolName => verbTool('analy[sz]e', 'assess', 'predict')(toolName) || /_analysis$/.test(toolName),
@@ -7769,8 +7814,19 @@ class ChatManager {
 
     const outstandingSteps = this.getOutstandingRequestSteps(toolExecutionState);
     const maxRepairRounds = 2;
+    // A successful tool execution clears the consecutive streak, so a request the
+    // model can never satisfy — one whose requirement no available tool matches —
+    // used to alternate repair, re-run, repair forever without either budget
+    // running out, and the turn only ended when it hit the round cap or the clock.
+    // The cumulative count is not cleared, so that alternation terminates.
+    const maxTotalRepairRounds = 4;
     const attemptedRepairs = toolExecutionState?.protocolRecoveryAttempts || 0;
-    if (currentRound >= maxRounds || attemptedRepairs >= maxRepairRounds) {
+    const totalAttemptedRepairs = toolExecutionState?.totalProtocolRecoveryAttempts || 0;
+    if (
+      currentRound >= maxRounds ||
+      attemptedRepairs >= maxRepairRounds ||
+      totalAttemptedRepairs >= maxTotalRepairRounds
+    ) {
       const unfinished =
         outstandingSteps.length > 0
           ? ` The following requested step(s) were never carried out: ${outstandingSteps
@@ -7789,6 +7845,7 @@ class ChatManager {
 
     if (toolExecutionState) {
       toolExecutionState.protocolRecoveryAttempts = attemptedRepairs + 1;
+      toolExecutionState.totalProtocolRecoveryAttempts = totalAttemptedRepairs + 1;
       toolExecutionState.updatedAt = new Date().toISOString();
     }
     return { action: 'retry', reason, outstandingSteps };
@@ -7851,6 +7908,7 @@ class ChatManager {
       consecutiveSuppressedRounds: 0,
       consecutiveFailureRounds: 0,
       protocolRecoveryAttempts: 0,
+      totalProtocolRecoveryAttempts: 0,
       terminationReason: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -8485,6 +8543,67 @@ class ChatManager {
   }
 
   /**
+   * Split one execution-feedback message into a record per tool it reports on.
+   *
+   * A round that runs several tools joins every outcome into a single feedback
+   * message, so reading only the first "with parameters:" block attributes those
+   * parameters to every tool named in the message. Every tool after the first
+   * then looks like it was never run, and the repeat guards let the model call it
+   * again on each subsequent round.
+   */
+  parseToolExecutionFeedbackEntries(content) {
+    if (typeof content !== 'string' || !content) {
+      return [];
+    }
+
+    const entries = [];
+    const headerPattern = /([A-Za-z_][A-Za-z0-9_]*) executed( successfully)?/g;
+    const marker = ' with parameters:';
+    let match;
+
+    while ((match = headerPattern.exec(content)) !== null) {
+      const entry = {
+        toolName: match[1],
+        success: Boolean(match[2]),
+        parametersText: null,
+      };
+
+      if (content.startsWith(marker, headerPattern.lastIndex)) {
+        const tail = content.slice(headerPattern.lastIndex);
+        const parametersText = this.extractParametersFromExecutionMessage(tail);
+        if (parametersText) {
+          entry.parametersText = parametersText;
+          // Resume scanning after this tool's parameters so the next header match
+          // belongs to the next tool rather than to text inside these parameters.
+          headerPattern.lastIndex += tail.indexOf(parametersText) + parametersText.length;
+        }
+      }
+
+      entries.push(entry);
+    }
+
+    return entries;
+  }
+
+  /**
+   * Check whether a feedback entry's parameters describe the same call as a tool key
+   */
+  doesFeedbackEntryMatchParameters(toolName, parsedKeyParams, paramsStr, entry) {
+    if (!entry.parametersText) {
+      return false;
+    }
+
+    try {
+      const parsedEntryParams = JSON.parse(entry.parametersText);
+      if (parsedKeyParams) {
+        return this.areToolParametersEqual(toolName, parsedKeyParams, parsedEntryParams);
+      }
+    } catch (e) {}
+
+    return entry.parametersText === paramsStr;
+  }
+
+  /**
    * Check if a tool with specific parameters was executed successfully in conversation history
    */
   wasToolExecutedSuccessfully(toolKey, conversationHistory) {
@@ -8498,36 +8617,27 @@ class ChatManager {
 
     for (const msg of conversationHistory) {
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
-      if (isExecutionFeedback && msg.content && msg.content.includes('executed successfully')) {
-        // Extract tool name and check if it matches
-        if (msg.content.includes(`${toolName} executed successfully`)) {
-          // If message contains parameters, check for exact match
-          if (msg.content.includes('with parameters:')) {
-            const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
-            if (msgParamsStr) {
-              try {
-                const parsedMsgParams = JSON.parse(msgParamsStr);
-                if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
-                  console.log(
-                    `🔍 Found successful execution record for: ${toolName} with matching parameters (robust check)`
-                  );
-                  return true;
-                }
-              } catch (e) {
-                if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-                  return true;
-                }
-              }
-            } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-              return true;
-            }
-          } else if (!msg.content.includes('with parameters:')) {
-            // Legacy support: if message doesn't have the "with parameters" part,
-            // we fall back to name-only match to be safe
-            console.log(`🔍 Found legacy successful execution record for: ${toolName}`);
-            return true;
-          }
-        }
+      if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed successfully`)) {
+        continue;
+      }
+
+      if (!msg.content.includes('with parameters:')) {
+        // Legacy support: if message doesn't have the "with parameters" part,
+        // we fall back to name-only match to be safe
+        console.log(`🔍 Found legacy successful execution record for: ${toolName}`);
+        return true;
+      }
+
+      const matched = this.parseToolExecutionFeedbackEntries(msg.content).some(
+        entry =>
+          entry.success &&
+          entry.toolName === toolName &&
+          this.doesFeedbackEntryMatchParameters(toolName, parsedKeyParams, paramsStr, entry)
+      );
+
+      if (matched) {
+        console.log(`🔍 Found successful execution record for: ${toolName} with matching parameters (robust check)`);
+        return true;
       }
     }
     return false;
@@ -8620,28 +8730,22 @@ class ChatManager {
 
     for (const msg of conversationHistory) {
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
-      if (isExecutionFeedback && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
-        if (msg.content.includes('with parameters:')) {
-          const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
-          if (msgParamsStr) {
-            try {
-              const parsedMsgParams = JSON.parse(msgParamsStr);
-              if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
-                count++;
-              }
-            } catch (e) {
-              if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-                count++;
-              }
-            }
-          } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-            count++;
-          }
-        } else if (!msg.content.includes('with parameters:')) {
-          // Legacy support
-          count++;
-        }
+      if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed successfully`)) {
+        continue;
       }
+
+      if (!msg.content.includes('with parameters:')) {
+        // Legacy support
+        count++;
+        continue;
+      }
+
+      count += this.parseToolExecutionFeedbackEntries(msg.content).filter(
+        entry =>
+          entry.success &&
+          entry.toolName === toolName &&
+          this.doesFeedbackEntryMatchParameters(toolName, parsedKeyParams, paramsStr, entry)
+      ).length;
     }
     return count;
   }
@@ -8673,40 +8777,31 @@ class ChatManager {
 
     for (const msg of conversationHistory) {
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
-      if (isExecutionFeedback && msg.content && msg.content.includes(`${toolName} executed`)) {
-        // Check for parameter match
-        const hasParams = msg.content.includes('with parameters:');
-        if (hasParams) {
-          const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
-          if (msgParamsStr) {
-            try {
-              const parsedMsgParams = JSON.parse(msgParamsStr);
-              if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
-                return {
-                  success: msg.content.includes('successfully'),
-                  timestamp: new Date().toISOString(),
-                };
-              }
-            } catch (e) {
-              if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-                return {
-                  success: msg.content.includes('successfully'),
-                  timestamp: new Date().toISOString(),
-                };
-              }
-            }
-          } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-            return {
-              success: msg.content.includes('successfully'),
-              timestamp: new Date().toISOString(),
-            };
-          }
-        } else {
-          return {
-            success: msg.content.includes('successfully'),
-            timestamp: new Date().toISOString(), // Approximate
-          };
-        }
+      if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed`)) {
+        continue;
+      }
+
+      if (!msg.content.includes('with parameters:')) {
+        return {
+          success: msg.content.includes('successfully'),
+          timestamp: new Date().toISOString(), // Approximate
+        };
+      }
+
+      // Read the outcome off this tool's own entry: a multi-tool round reports
+      // every tool in one message, so "successfully" anywhere in it says nothing
+      // about the tool being looked up.
+      const entry = this.parseToolExecutionFeedbackEntries(msg.content).find(
+        candidate =>
+          candidate.toolName === toolName &&
+          this.doesFeedbackEntryMatchParameters(toolName, parsedKeyParams, paramsStr, candidate)
+      );
+
+      if (entry) {
+        return {
+          success: entry.success,
+          timestamp: new Date().toISOString(),
+        };
       }
     }
     return null;
