@@ -4154,7 +4154,6 @@ class ChatManager {
                     <div class="welcome-message">
                         <div class="message assistant-message">
                             <div class="message-content">
-                                <i class="fas fa-robot message-icon"></i>
                                 <div class="message-text">
                                     <div class="welcome-hero">
                                         <div class="welcome-hero-icon">🧬</div>
@@ -11783,9 +11782,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     typingDiv.className = 'message assistant-message typing';
     typingDiv.innerHTML = `
             <div class="message-content">
-                <div class="message-icon">
-                    <i class="fas fa-robot"></i>
-                </div>
                 <div class="typing-dots">
                     <span></span>
                     <span></span>
@@ -11961,7 +11957,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const safeMessage = this.formatMessage(message);
     const safeDisplayId = displayId.replace(/[^a-zA-Z0-9_-]/g, '');
-    messageDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i></div><div class="message-text" id="${safeDisplayId}">${safeMessage}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${safeDisplayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
+    // Only the user's turn carries an avatar; assistant replies use the full width.
+    const icon = sender === 'user' ? `<div class="message-icon"><i class="fas fa-user"></i></div>` : '';
+    messageDiv.innerHTML = `<div class="message-content">${icon}<div class="message-text" id="${safeDisplayId}">${safeMessage}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${safeDisplayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
 
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -16186,12 +16184,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const failed = totals.failures > 0;
 
       // Remove animations and interactive elements, converting to a static history record
-      // Update message-icon to the completed checkmark icon
-      const messageIcon = thinkingElement.querySelector('.message-icon i');
-      if (messageIcon) {
-        messageIcon.classList.remove('fa-spin');
-        messageIcon.classList.remove('fa-cog');
-        messageIcon.classList.add(failed ? 'fa-exclamation-circle' : 'fa-check-circle');
+      // Swap the header's spinner for the terminal state icon
+      const statusIcon = thinkingElement.querySelector('.activity-status');
+      if (statusIcon) {
+        statusIcon.classList.remove('fa-spin');
+        statusIcon.classList.remove('fa-cog');
+        statusIcon.classList.add(failed ? 'fa-exclamation-circle' : 'fa-check-circle');
       }
 
       // The checkmark already says "done", so the header carries what the run
@@ -16372,10 +16370,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const content = document.createElement('div');
     content.className = 'message-content';
 
-    const icon = document.createElement('div');
-    icon.className = 'message-icon';
-    icon.innerHTML = '<i class="fas fa-robot"></i>';
-
     const text = document.createElement('div');
     text.className = 'message-text streaming-text';
 
@@ -16386,7 +16380,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     cursor.className = 'streaming-cursor';
     text.appendChild(cursor);
 
-    content.appendChild(icon);
     content.appendChild(text);
     streamingDiv.appendChild(content);
     messagesContainer.appendChild(streamingDiv);
@@ -16761,14 +16754,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     thinkingDiv.className = 'message assistant-message thinking-process';
     const thinkingId = `thinkingProcess_${currentRequestId}`;
     thinkingDiv.id = thinkingId;
-    // The header doubles as the collapse control: chevron, title, and a
-    // summary slot that stays empty until the request finishes.
+    // The header doubles as the collapse control: chevron, run state, title, and
+    // a summary slot that stays empty until the request finishes. The run state
+    // sits inline here rather than in an avatar column so the log runs full width.
     thinkingDiv.innerHTML =
       `<div class="message-content">` +
-      `<div class="message-icon"><i class="fas fa-cog fa-spin"></i></div>` +
       `<div class="message-text thinking-text">` +
       `<div class="thinking-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse or expand">` +
       `<i class="fas fa-chevron-down activity-chevron" aria-hidden="true"></i>` +
+      `<i class="fas fa-cog fa-spin activity-status" aria-hidden="true"></i>` +
       `<span class="activity-title">Agent Activity</span>` +
       `<span class="activity-summary"></span>` +
       `</div>` +

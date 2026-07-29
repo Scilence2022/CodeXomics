@@ -427,10 +427,6 @@
   color: var(--primary-color) !important;
 }
 
-[data-ui-style='elegant'] .thinking-process .message-icon {
-  background: var(--primary-color) !important;
-}
-
 /* ===== WELCOME BUTTONS ===== */
 [data-ui-style='elegant'] .welcome-buttons .btn-primary {
   background: var(--btn-gradient) !important;

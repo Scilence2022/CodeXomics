@@ -137,7 +137,7 @@ describe('activity panel', () => {
       expect(finished.classList.contains('activity-collapsed')).toBe(false);
       expect(finished.classList.contains('activity-failed')).toBe(true);
       expect(document.querySelector('.activity-summary').textContent).toContain('1 failed');
-      expect(finished.querySelector('.message-icon i').classList.contains('fa-exclamation-circle')).toBe(true);
+      expect(finished.querySelector('.activity-status').classList.contains('fa-exclamation-circle')).toBe(true);
     });
 
     it('honours the auto-collapse setting being off', () => {
