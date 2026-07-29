@@ -238,6 +238,22 @@ class LLMConfigManager {
       },
     };
 
+    // Snapshot of the model lists shipped with the app. These stay the
+    // fallback for any provider whose list has never been refreshed from its
+    // API, and they supply the friendly labels used for refreshed models.
+    this.builtInModels = {};
+    Object.entries(this.providers).forEach(([key, provider]) => {
+      this.builtInModels[key] = [...(provider.availableModels || [])];
+    });
+
+    // Model list auto-refresh settings
+    this.modelRefreshTtlMs = 6 * 60 * 60 * 1000; // Re-fetch a cached list after 6 hours
+    this.modelRefreshRetryMs = 10 * 60 * 1000; // Never auto-retry a provider more than once per 10 minutes
+    this.modelRefreshTimeoutMs = 15000;
+    this.maxAvailableModels = 500;
+    this.modelRefreshState = {}; // providerKey -> { inFlight, lastAttemptAt, lastError, unsupported }
+    this.staticModelOptionsHtml = {}; // providerKey -> original <select> markup
+
     // Initialize asynchronously to wait for ConfigManager
     this._initPromise = this.initializeAsync();
   }
@@ -821,6 +837,16 @@ class LLMConfigManager {
       }
     });
 
+    // Manual "refresh models" button on each provider tab
+    providerNames.forEach(providerKey => {
+      const refreshBtn = document.getElementById(`refresh${this.capitalizeProviderKey(providerKey)}ModelsBtn`);
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+          this.refreshProviderModels(providerKey, { silent: false });
+        });
+      }
+    });
+
     // Add event listeners for all new paste buttons
     const pasteButtonConfigs = [
       { btnId: 'pasteOpenaiApiKeyBtn', inputId: 'openaiApiKey' },
@@ -922,6 +948,21 @@ class LLMConfigManager {
 
     // Ensure no element has initial focus to prevent blue scrollbar
     document.activeElement.blur();
+
+    // Keep the visible tab's model list current (runs in the background)
+    const activeTab = document.querySelector('#llmConfigModal .tab-button.active');
+    this.autoRefreshModelsForTab(activeTab ? activeTab.dataset.provider : null);
+  }
+
+  /**
+   * Auto-refresh whatever model lists the given config tab shows.
+   * The Model Selection tab draws on every provider; a provider tab only
+   * needs its own list.
+   */
+  autoRefreshModelsForTab(tab) {
+    if (!tab) return Promise.resolve([]);
+    if (tab === 'models') return this.autoRefreshAllProviderModels();
+    return this.maybeAutoRefreshProviderModels(tab);
   }
 
   hideConfigModal() {
@@ -949,6 +990,9 @@ class LLMConfigManager {
     if (provider === 'models') {
       this.loadModelTypeSelectionToUI();
     }
+
+    // Refresh the newly revealed tab's model list when it has gone stale
+    this.autoRefreshModelsForTab(provider);
   }
 
   loadConfiguration() {
@@ -1019,7 +1063,39 @@ class LLMConfigManager {
     } catch (error) {
       console.error('Error loading LLM configuration:', error);
     }
+    this.reconcileBuiltInModelLists();
     console.log('=== LLMConfigManager.loadConfiguration Debug End ===');
+  }
+
+  /**
+   * Persisted providers are merged over the defaults, so a saved config can
+   * shadow the model lists shipped with a newer app version. Keep a cached
+   * list only when it actually came from the provider's API, and re-merge it
+   * with the current built-in list so both sources stay represented.
+   */
+  reconcileBuiltInModelLists() {
+    Object.entries(this.providers).forEach(([providerKey, provider]) => {
+      const builtIn = this.builtInModels[providerKey];
+      if (!Array.isArray(builtIn)) return; // Provider that only exists in the saved config
+
+      const remoteModels = Array.isArray(provider.remoteModels) ? provider.remoteModels : [];
+      if (provider.modelsSource === 'remote' && remoteModels.length > 0) {
+        provider.availableModels = this.mergeModelLists(providerKey, remoteModels);
+        return;
+      }
+
+      // Never refreshed from the API: the shipped list wins
+      delete provider.remoteModels;
+      delete provider.modelsSource;
+      delete provider.modelsUpdatedAt;
+      delete provider.modelsFingerprint;
+      delete provider.modelsTruncated;
+      if (builtIn.length > 0) {
+        provider.availableModels = [...builtIn];
+      } else {
+        delete provider.availableModels;
+      }
+    });
   }
 
   /**
@@ -1095,6 +1171,13 @@ class LLMConfigManager {
 
       this.showNotification(`${provider.name} configuration saved successfully!`, 'success');
       console.log(`${provider.name} configuration saved:`, provider);
+
+      // New credentials mean a different model list — fetch it right away
+      // instead of waiting for the cache to expire.
+      const fingerprint = this.getProviderCredentialFingerprint(provider);
+      if (provider.modelsFingerprint !== fingerprint) {
+        this.refreshProviderModels(providerName, { silent: true });
+      }
     } catch (error) {
       console.error(`Error saving ${providerName} configuration:`, error);
       this.showNotification(`Error saving ${providerName} configuration`, 'error');
@@ -1278,6 +1361,10 @@ class LLMConfigManager {
     Object.keys(this.providers).forEach(providerKey => {
       const provider = this.providers[providerKey];
       const prefix = providerKey;
+
+      // Show any previously refreshed model list before the saved selection
+      // is applied below
+      this.populateProviderModelSelect(providerKey);
 
       const apiKeyField = document.getElementById(`${prefix}ApiKey`);
       const modelField = document.getElementById(`${prefix}Model`);
@@ -1773,6 +1860,514 @@ class LLMConfigManager {
     }
 
     return { success: true };
+  }
+
+  // ==========================================
+  // Provider Model List Auto-Refresh
+  // ==========================================
+
+  /**
+   * Build the model-listing request for a provider.
+   * @returns {{url: string, headers: Object}|null} null when the provider
+   *          still lacks the credentials or endpoint needed to list models.
+   */
+  buildModelListRequest(providerKey, config = {}) {
+    const provider = this.providers[providerKey];
+    if (!provider) return null;
+
+    const apiKey = (config.apiKey || '').trim();
+    const baseUrl = (config.baseUrl || provider.baseUrl || '').trim().replace(/\/+$/, '');
+    if (!baseUrl) return null;
+
+    if (providerKey === 'anthropic') {
+      if (!apiKey) return null;
+      return {
+        url: `${baseUrl}/v1/models?limit=1000`,
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+      };
+    }
+
+    if (providerKey === 'google') {
+      if (!apiKey) return null;
+      // Same v1beta path used by sendGoogleMessage/testGoogle
+      return {
+        url: `${baseUrl}/v1beta/models?pageSize=1000&key=${encodeURIComponent(apiKey)}`,
+        headers: {},
+      };
+    }
+
+    // OpenAI-compatible listing for every other provider. Only the custom
+    // endpoint is allowed to list models without an API key.
+    if (!apiKey && providerKey !== 'local') return null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    return { url: `${baseUrl}/models`, headers };
+  }
+
+  /**
+   * Pull the model id list out of a provider's listing response.
+   */
+  extractModelIds(providerKey, data) {
+    if (providerKey === 'google') {
+      const models = Array.isArray(data?.models) ? data.models : [];
+      return this.dedupeModelIds(models.map(entry => String(entry?.name || '').replace(/^models\//, '')));
+    }
+
+    // OpenAI-compatible providers and Anthropic both answer with { data: [...] }
+    const entries = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+    return this.dedupeModelIds(entries.map(entry => (typeof entry === 'string' ? entry : entry?.id || entry?.name)));
+  }
+
+  dedupeModelIds(ids) {
+    const seen = new Set();
+    const result = [];
+    (ids || []).forEach(id => {
+      const value = typeof id === 'string' ? id.trim() : '';
+      if (!value || seen.has(value)) return;
+      seen.add(value);
+      result.push(value);
+    });
+    return result;
+  }
+
+  /**
+   * Fetch the live model list for a provider.
+   * @throws {Error} with code 'MODEL_LIST_UNSUPPORTED' when the provider has
+   *         no listing endpoint, so callers can keep the built-in list quietly.
+   */
+  async fetchProviderModels(providerKey, config = {}) {
+    const request = this.buildModelListRequest(providerKey, config);
+    if (!request) {
+      throw new Error('An API key and endpoint are required before models can be listed');
+    }
+
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), this.modelRefreshTimeoutMs) : null;
+
+    let response;
+    try {
+      response = await fetch(request.url, {
+        method: 'GET',
+        headers: request.headers,
+        signal: controller ? controller.signal : undefined,
+      });
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        throw new Error(`Timed out after ${Math.round(this.modelRefreshTimeoutMs / 1000)}s`);
+      }
+      throw error;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+
+    if (response.status === 404 || response.status === 405) {
+      const unsupported = new Error('This provider does not publish a model list endpoint');
+      unsupported.code = 'MODEL_LIST_UNSUPPORTED';
+      throw unsupported;
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(
+        `HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody.slice(0, 200)}` : ''}`
+      );
+    }
+
+    const data = await response.json();
+    const models = this.extractModelIds(providerKey, data);
+    if (models.length === 0) {
+      throw new Error('The provider returned an empty model list');
+    }
+    return models;
+  }
+
+  /**
+   * Order a refreshed list so the models shipped with the app come first (in
+   * their curated order), then everything else alphabetically, then curated
+   * models the provider did not report — a saved selection never disappears
+   * because a listing endpoint omitted it.
+   */
+  mergeModelLists(providerKey, fetchedModels) {
+    const builtIn = this.builtInModels[providerKey] || [];
+    const fetchedSet = new Set(fetchedModels);
+    const known = builtIn.filter(model => fetchedSet.has(model));
+    const knownSet = new Set(known);
+    const discovered = fetchedModels.filter(model => !knownSet.has(model)).sort((a, b) => a.localeCompare(b));
+    const missing = builtIn.filter(model => !fetchedSet.has(model));
+    return [...known, ...discovered, ...missing];
+  }
+
+  /**
+   * Fingerprint of the credentials a model list was fetched with, so changing
+   * the key or endpoint invalidates the cached list.
+   */
+  getProviderCredentialFingerprint(config = {}) {
+    const apiKey = (config.apiKey || '').trim();
+    const baseUrl = (config.baseUrl || '').trim().replace(/\/+$/, '');
+    // Only the tail of the key is kept — enough to notice a change, not enough
+    // to be a second copy of the secret in the config file.
+    return `${baseUrl}#${apiKey.length}:${apiKey.slice(-4)}`;
+  }
+
+  /**
+   * Current credentials for a provider: form values when the modal is open,
+   * otherwise the saved configuration.
+   */
+  getProviderFormConfig(providerKey) {
+    const provider = this.providers[providerKey] || {};
+    const config = { apiKey: provider.apiKey || '', baseUrl: provider.baseUrl || '' };
+
+    const apiKeyField = document.getElementById(`${providerKey}ApiKey`);
+    if (apiKeyField && apiKeyField.value) config.apiKey = apiKeyField.value;
+
+    const baseUrlField = document.getElementById(providerKey === 'local' ? 'localEndpoint' : `${providerKey}BaseUrl`);
+    if (baseUrlField && baseUrlField.value) config.baseUrl = baseUrlField.value;
+
+    return config;
+  }
+
+  getModelRefreshState(providerKey) {
+    if (!this.modelRefreshState[providerKey]) {
+      this.modelRefreshState[providerKey] = {
+        inFlight: null,
+        lastAttemptAt: 0,
+        lastError: null,
+        unsupported: false,
+      };
+    }
+    return this.modelRefreshState[providerKey];
+  }
+
+  /**
+   * Refresh one provider's model list from its API and update the UI.
+   * Never rejects: failures are reported through the returned result, the
+   * status line, and (for explicit refreshes) a notification.
+   * @param {string} providerKey
+   * @param {{silent?: boolean, persist?: boolean}} options
+   */
+  async refreshProviderModels(providerKey, options = {}) {
+    const provider = this.providers[providerKey];
+    if (!provider) {
+      return { success: false, error: `Unknown provider: ${providerKey}` };
+    }
+
+    const state = this.getModelRefreshState(providerKey);
+    if (state.inFlight) return state.inFlight;
+
+    const { silent = false, persist = true } = options;
+    const config = this.getProviderFormConfig(providerKey);
+
+    state.inFlight = (async () => {
+      state.lastAttemptAt = Date.now();
+      this.setModelRefreshBusy(providerKey, true);
+
+      try {
+        const models = await this.fetchProviderModels(providerKey, config);
+        const truncated = models.length > this.maxAvailableModels;
+
+        provider.remoteModels = models.slice(0, this.maxAvailableModels);
+        provider.availableModels = this.mergeModelLists(providerKey, provider.remoteModels);
+        provider.modelsSource = 'remote';
+        provider.modelsUpdatedAt = new Date().toISOString();
+        provider.modelsFingerprint = this.getProviderCredentialFingerprint(config);
+        provider.modelsTruncated = truncated;
+
+        state.lastError = null;
+        state.unsupported = false;
+
+        this.populateProviderModelSelect(providerKey);
+        if (persist) await this.persistProviderModelCache();
+        if (!silent) {
+          this.showNotification(
+            `${provider.name}: ${provider.remoteModels.length} model${provider.remoteModels.length === 1 ? '' : 's'} available`,
+            'success'
+          );
+        }
+        return { success: true, models: provider.remoteModels, truncated };
+      } catch (error) {
+        state.unsupported = error && error.code === 'MODEL_LIST_UNSUPPORTED';
+        state.lastError = error ? error.message : 'Unknown error';
+        if (!silent) {
+          this.showNotification(
+            `Could not refresh ${provider.name} models: ${state.lastError}`,
+            state.unsupported ? 'warning' : 'error'
+          );
+        }
+        return { success: false, error: state.lastError, unsupported: state.unsupported };
+      } finally {
+        state.inFlight = null;
+        this.setModelRefreshBusy(providerKey, false);
+      }
+    })();
+
+    return state.inFlight;
+  }
+
+  /**
+   * True when a provider's cached list should be re-fetched: it was never
+   * fetched, the credentials changed, or the cache aged past the TTL.
+   */
+  isModelListStale(providerKey) {
+    const provider = this.providers[providerKey];
+    if (!provider) return false;
+    if (provider.modelsSource !== 'remote') return true;
+
+    const fingerprint = this.getProviderCredentialFingerprint(this.getProviderFormConfig(providerKey));
+    if (provider.modelsFingerprint && provider.modelsFingerprint !== fingerprint) return true;
+
+    const updatedAt = Date.parse(provider.modelsUpdatedAt || '');
+    if (!Number.isFinite(updatedAt)) return true;
+
+    return Date.now() - updatedAt > this.modelRefreshTtlMs;
+  }
+
+  /**
+   * Auto-refresh entry point used by the passive triggers (opening the modal,
+   * switching provider tabs). Skips providers without credentials, lists that
+   * are still fresh, and providers attempted in the last few minutes so a
+   * failing endpoint is not hammered on every tab switch.
+   */
+  async maybeAutoRefreshProviderModels(providerKey) {
+    try {
+      const provider = this.providers[providerKey];
+      if (!provider) return { success: false, skipped: 'unknown-provider' };
+
+      if (!this.buildModelListRequest(providerKey, this.getProviderFormConfig(providerKey))) {
+        return { success: false, skipped: 'no-credentials' };
+      }
+
+      const state = this.getModelRefreshState(providerKey);
+      if (state.inFlight) return state.inFlight;
+      if (state.lastAttemptAt && Date.now() - state.lastAttemptAt < this.modelRefreshRetryMs) {
+        return { success: false, skipped: 'recently-attempted' };
+      }
+      if (!this.isModelListStale(providerKey)) return { success: false, skipped: 'fresh' };
+
+      return await this.refreshProviderModels(providerKey, { silent: true });
+    } catch (error) {
+      console.error(`Auto-refresh of ${providerKey} models failed:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Refresh every provider that has credentials. Used by the Model Selection
+   * tab, whose dropdowns are built from all providers at once.
+   */
+  async autoRefreshAllProviderModels() {
+    const results = await Promise.all(
+      Object.keys(this.providers).map(providerKey => this.maybeAutoRefreshProviderModels(providerKey))
+    );
+
+    // Rebuild the model type dropdowns if any list actually changed
+    if (results.some(result => result && result.success)) {
+      this.loadModelTypeSelectionToUI();
+    }
+    return results;
+  }
+
+  /**
+   * Persist refreshed model lists. Only touches provider state already in
+   * memory — form values are not swept in here.
+   */
+  async persistProviderModelCache() {
+    try {
+      if (this.configManager) {
+        await this.configManager.set('llm.providers', this.providers);
+        await this.configManager.saveConfig();
+      } else {
+        localStorage.setItem(
+          'llmConfiguration',
+          JSON.stringify({
+            providers: this.providers,
+            modelTypes: this.modelTypes,
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error persisting refreshed model lists:', error);
+    }
+  }
+
+  /**
+   * Element id helper: 'minimax_cn' -> 'Minimax_cn', matching the existing
+   * save<Provider>ProviderBtn convention.
+   */
+  capitalizeProviderKey(providerKey) {
+    return providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
+  }
+
+  hasModelOption(select, value) {
+    return Array.from(select.options).some(option => option.value === value);
+  }
+
+  /**
+   * Remember a provider's shipped <select> markup the first time we touch it,
+   * so every repopulation starts from the same baseline.
+   */
+  captureStaticModelOptions(providerKey, select) {
+    if (this.staticModelOptionsHtml[providerKey] === undefined) {
+      this.staticModelOptionsHtml[providerKey] = select.innerHTML;
+    }
+    return this.staticModelOptionsHtml[providerKey];
+  }
+
+  /**
+   * Rebuild a provider's model dropdown. Models the provider reported go into
+   * a group at the top (keeping the shipped label, e.g. pricing, where we have
+   * one); shipped options the provider also reported are dropped from the
+   * static section so nothing is listed twice.
+   */
+  populateProviderModelSelect(providerKey) {
+    const select = document.getElementById(`${providerKey}Model`);
+    if (!select) return;
+
+    const SAVED_CONFIGS_OPTGROUP = 'localSavedModelsOptgroup';
+    const provider = this.providers[providerKey] || {};
+    const remoteModels = Array.isArray(provider.remoteModels) ? provider.remoteModels : [];
+    const previousValue = select.value;
+
+    // Restore the shipped options, then layer the refreshed list on top
+    select.innerHTML = this.captureStaticModelOptions(providerKey, select);
+    if (providerKey === 'local') {
+      // This optgroup's contents come from localStorage, not from the markup
+      this.refreshLocalSavedConfigs();
+    }
+
+    if (remoteModels.length > 0) {
+      // Saved endpoint configurations are named presets, not plain model
+      // entries, so they are neither a label source nor a dedupe target.
+      const isSavedConfigOption = option => option.parentElement && option.parentElement.id === SAVED_CONFIGS_OPTGROUP;
+
+      const labels = new Map();
+      Array.from(select.options).forEach(option => {
+        if (!isSavedConfigOption(option)) labels.set(option.value, option.textContent);
+      });
+
+      const remoteSet = new Set(remoteModels);
+      Array.from(select.options).forEach(option => {
+        if (option.value === 'other' || isSavedConfigOption(option)) return;
+        if (remoteSet.has(option.value)) option.remove();
+      });
+      Array.from(select.querySelectorAll('optgroup')).forEach(group => {
+        if (group.id !== SAVED_CONFIGS_OPTGROUP && group.children.length === 0) {
+          group.style.display = 'none';
+        }
+      });
+
+      const group = document.createElement('optgroup');
+      group.id = `${providerKey}FetchedModelsOptgroup`;
+      group.label = `Available from ${provider.name || providerKey} (${remoteModels.length})`;
+      this.mergeModelLists(providerKey, remoteModels)
+        .filter(modelId => remoteSet.has(modelId))
+        .forEach(modelId => {
+          const option = document.createElement('option');
+          option.value = modelId;
+          option.textContent = labels.get(modelId) || modelId;
+          group.appendChild(option);
+        });
+      select.insertBefore(group, select.firstChild);
+    }
+
+    this.restoreModelSelection(providerKey, select, previousValue);
+    this.updateModelRefreshStatus(providerKey);
+  }
+
+  /**
+   * Re-apply a selection after the option list was rebuilt: keep what the user
+   * had selected, else the saved model, else fall back to the custom entry.
+   */
+  restoreModelSelection(providerKey, select, preferredValue) {
+    const provider = this.providers[providerKey] || {};
+    const otherInput = document.getElementById(`${providerKey}ModelOther`);
+    const otherGroup = document.getElementById(`${providerKey}ModelOtherGroup`);
+
+    if (preferredValue === 'other') {
+      select.value = 'other';
+    } else if (preferredValue && this.hasModelOption(select, preferredValue)) {
+      select.value = preferredValue;
+    } else if (provider.model && this.hasModelOption(select, provider.model)) {
+      select.value = provider.model;
+    } else if (provider.model && this.hasModelOption(select, 'other')) {
+      select.value = 'other';
+      if (otherInput && !otherInput.value) otherInput.value = provider.model;
+    }
+
+    if (otherGroup) {
+      otherGroup.style.display = select.value === 'other' ? 'block' : 'none';
+    }
+  }
+
+  /**
+   * Spinner state for a provider's refresh button.
+   */
+  setModelRefreshBusy(providerKey, busy) {
+    const button = document.getElementById(`refresh${this.capitalizeProviderKey(providerKey)}ModelsBtn`);
+    if (button) {
+      button.disabled = !!busy;
+      button.innerHTML = busy ? '<i class="fas fa-sync fa-spin"></i> Refresh' : '<i class="fas fa-sync"></i> Refresh';
+    }
+    this.updateModelRefreshStatus(providerKey);
+  }
+
+  /**
+   * Render the "where this model list came from" line under a provider's
+   * model dropdown.
+   */
+  updateModelRefreshStatus(providerKey) {
+    const statusEl = document.getElementById(`${providerKey}ModelsStatus`);
+    if (!statusEl) return;
+
+    const provider = this.providers[providerKey] || {};
+    const state = this.getModelRefreshState(providerKey);
+    statusEl.classList.remove('is-error', 'is-warning');
+
+    if (state.inFlight) {
+      statusEl.textContent = 'Refreshing model list…';
+      return;
+    }
+
+    if (state.lastError) {
+      statusEl.classList.add(state.unsupported ? 'is-warning' : 'is-error');
+      statusEl.textContent = state.unsupported
+        ? `${provider.name} does not publish a model list — using the built-in list.`
+        : `Model refresh failed: ${state.lastError}`;
+      return;
+    }
+
+    if (provider.modelsSource === 'remote' && provider.modelsUpdatedAt) {
+      const count = (provider.remoteModels || []).length;
+      const truncated = provider.modelsTruncated ? ` Showing the first ${this.maxAvailableModels}.` : '';
+      statusEl.textContent =
+        `${count} model${count === 1 ? '' : 's'} reported by ${provider.name}, ` +
+        `updated ${this.formatRelativeTime(provider.modelsUpdatedAt)}.${truncated}`;
+      return;
+    }
+
+    statusEl.textContent = 'Built-in model list. Models refresh automatically once credentials are saved.';
+  }
+
+  formatRelativeTime(timestamp) {
+    const time = Date.parse(timestamp);
+    if (!Number.isFinite(time)) return 'recently';
+
+    const seconds = Math.max(0, Math.round((Date.now() - time) / 1000));
+    if (seconds < 60) return 'just now';
+
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+
+    const days = Math.round(hours / 24);
+    if (days <= 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+
+    return new Date(time).toLocaleDateString();
   }
 
   async sendMessage(message, context = null, memoryContext = null) {

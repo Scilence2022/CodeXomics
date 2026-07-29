@@ -104,6 +104,14 @@ Options → Configure LLMs
 - **Google**: Get key from https://ai.google.dev/
 - **SiliconFlow**: Get key from https://siliconflow.cn/
 
+**Model Lists Stay Current:**
+
+- Each provider tab fetches its live model list once credentials are saved, so newly released models appear without an app update
+- Models reported by the provider are grouped at the top of the **Default Model** dropdown; the models shipped with CodeXomics remain available below it
+- The line under the dropdown shows how many models were reported and when the list was last updated
+- Lists refresh automatically when you open a provider tab (cached for 6 hours) and immediately after you change an API key or endpoint; **Refresh** re-fetches on demand
+- Providers without a model-list endpoint keep the built-in list and say so — nothing is lost when a refresh fails
+
 **Configure Multi-Agent Settings:**
 
 - Enable multi-agent mode for complex analysis

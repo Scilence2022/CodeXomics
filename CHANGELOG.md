@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - New `enableStreaming` ChatBox setting (Behavior tab, on by default) to toggle streamed responses.
+- Auto-refresh the model list of every LLM provider in Options → Configure LLMs. Each provider tab fetches its live catalogue from the provider's own listing endpoint — `/models` for OpenAI-compatible providers and the custom endpoint, `/v1/models` for Anthropic, `v1beta/models` for Google — so newly released models are selectable without shipping an app update. Lists refresh when a provider tab is opened (cached for 6 hours), immediately after an API key or endpoint changes, and on demand via a per-provider **Refresh** button; a status line reports the model count and age. Reported models are grouped at the top of the dropdown while the models shipped with the app stay available below, and a failed or unsupported refresh keeps the built-in list rather than emptying the selection.
 
 ### Documentation
 

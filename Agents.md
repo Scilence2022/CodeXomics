@@ -95,6 +95,16 @@ Current local facts to keep in mind:
 - Google tests use the `v1beta` API path to match `sendGoogleMessage`.
 - `testLocal()` validates the configured model against the local `/models` response.
 
+Model list auto-refresh (`LLMConfigManager`):
+
+- A new provider tab needs a `refresh{Provider}ModelsBtn` button and a `{provider}ModelsStatus` element beside its model select; button ids follow the same capitalization as `save{Provider}ProviderBtn`.
+- Add the listing endpoint to `buildModelListRequest()`. It returns `null` when credentials are missing, which is how auto-refresh skips unconfigured providers; only `local` may list models without an API key.
+- Parse new response shapes in `extractModelIds()`. Anthropic and OpenAI-compatible providers use `{ data: [{ id }] }`; Google uses `{ models: [{ name: 'models/...' }] }`.
+- A 404/405 from a listing endpoint means "provider has no model list", not a failure: `fetchProviderModels()` raises `MODEL_LIST_UNSUPPORTED` and the built-in list is kept.
+- `populateProviderModelSelect()` is the only writer of the provider model selects. It rebuilds from the markup snapshot in `staticModelOptionsHtml`, so shipped `<option>` labels and the `other` entry must stay in `index.html`.
+- Refreshed lists are cached in `provider.remoteModels` with `modelsSource: 'remote'`. `reconcileBuiltInModelLists()` discards any persisted list that did not come from a provider API, so shipped model updates are never shadowed by an old config file.
+- Auto-refresh triggers are passive only: opening the modal, switching tabs, and saving changed credentials. Do not add refresh calls on app start or to the message-sending path.
+
 ## 9. UI, Styling, And Theme Rules
 
 - Use vanilla CSS in `src/renderer/css/`. Do not add TailwindCSS, Bootstrap, or atomic CSS frameworks unless explicitly requested.

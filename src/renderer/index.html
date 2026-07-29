@@ -1762,7 +1762,13 @@
                                     Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="openaiModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="openaiModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshOpenaiModelsBtn" title="Refresh the model list from OpenAI">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="openaiModel" class="select">
                                 <option value="gpt-5.5-pro">GPT-5.5 Pro (Pro - $30/$180 per M)</option>
                                 <option value="gpt-5.5" selected>GPT-5.5 (Thinking / Standard - $5/$30 per M)</option>
@@ -1773,6 +1779,7 @@
                                 <option value="gpt-realtime-whisper">GPT-Realtime-Whisper</option>
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="openaiModelsStatus"></small>
                         </div>
                         <div class="form-group" id="openaiModelOtherGroup" style="display: none;">
                             <label for="openaiModelOther">Custom Model Name:</label>
@@ -1806,13 +1813,20 @@
                                     target="_blank">Anthropic Console</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="anthropicModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="anthropicModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshAnthropicModelsBtn" title="Refresh the model list from Anthropic">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="anthropicModel" class="select">
                                 <option value="claude-opus-4.7">Claude Opus 4.7 (Opus - $15/$75 per M)</option>
                                 <option value="claude-sonnet-4.6" selected>Claude Sonnet 4.6 (Balanced - $3/$15 per M)</option>
                                 <option value="claude-haiku-4.5">Claude Haiku 4.5 (Fast - $0.25/$1.25 per M)</option>
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="anthropicModelsStatus"></small>
                         </div>
                         <div class="form-group" id="anthropicModelOtherGroup" style="display: none;">
                             <label for="anthropicModelOther">Custom Model Name:</label>
@@ -1847,13 +1861,20 @@
                                     Studio</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="googleModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="googleModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshGoogleModelsBtn" title="Refresh the model list from Google">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="googleModel" class="select">
                                 <option value="gemini-3.5-flash" selected>Gemini 3.5 Flash (Flash - Best Value)</option>
                                 <option value="gemini-3.1-pro">Gemini 3.1 Pro (Pro - Best Reasoning)</option>
                                 <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Lite - Fast)</option>
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="googleModelsStatus"></small>
                         </div>
                         <div class="form-group" id="googleModelOtherGroup" style="display: none;">
                             <label for="googleModelOther">Custom Model Name:</label>
@@ -1887,7 +1908,13 @@
                                     target="_blank">DeepSeek Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="deepseekModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="deepseekModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshDeepseekModelsBtn" title="Refresh the model list from DeepSeek">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="deepseekModel" class="select">
                                 <option value="deepseek-v4-pro">DeepSeek V4 Pro (Flagship)</option>
                                 <option value="deepseek-v4-flash" selected>DeepSeek V4 Flash (Fast)</option>
@@ -1895,6 +1922,7 @@
                                 <option value="deepseek-reasoner">DeepSeek Reasoner (V4 Flash thinking)</option>
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="deepseekModelsStatus"></small>
                         </div>
                         <div class="form-group" id="deepseekModelOtherGroup" style="display: none;">
                             <label for="deepseekModelOther">Custom Model Name:</label>
@@ -1928,7 +1956,13 @@
                                     target="_blank">SiliconFlow Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="siliconflowModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="siliconflowModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshSiliconflowModelsBtn" title="Refresh the model list from SiliconFlow">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="siliconflowModel" class="select">
                                 <!-- Qwen Series -->
                                 <optgroup label="🤖 Qwen3.5 Series (Latest)">
@@ -2024,6 +2058,7 @@
                                 </optgroup>
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="siliconflowModelsStatus"></small>
                         </div>
                         <div class="form-group" id="siliconflowModelOtherGroup" style="display: none;">
                             <label for="siliconflowModelOther">Custom Model Name:</label>
@@ -2058,7 +2093,13 @@
                                     target="_blank">OpenRouter Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="openrouterModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="openrouterModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshOpenrouterModelsBtn" title="Refresh the model list from OpenRouter">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="openrouterModel" class="select">
                                 <!-- OpenAI GPT-5.5/GPT-5.4 Series (Latest) -->
                                 <optgroup label="OpenAI GPT-5.5/GPT-5.4 (Latest)">
@@ -2121,6 +2162,7 @@
                                 </optgroup>
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="openrouterModelsStatus"></small>
                         </div>
                         <div class="form-group" id="openrouterModelOtherGroup" style="display: none;">
                             <label for="openrouterModelOther">Custom Model Name:</label>
@@ -2155,7 +2197,13 @@
                                     target="_blank">MiniMax Developer Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="minimaxModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="minimaxModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshMinimaxModelsBtn" title="Refresh the model list from MiniMax">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="minimaxModel" class="select">
                                 <option value="MiniMax-M2.7" selected>MiniMax-M2.7 (Flagship)</option>
                                 <option value="MiniMax-M2.7-highspeed">MiniMax-M2.7-highspeed (Fast)</option>
@@ -2164,6 +2212,7 @@
                                 <option value="M2-her">M2-her</option>
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="minimaxModelsStatus"></small>
                         </div>
                         <div class="form-group" id="minimaxModelOtherGroup" style="display: none;">
                             <label for="minimaxModelOther">Custom Model Name:</label>
@@ -2198,7 +2247,13 @@
                                     target="_blank">MiniMax CN Developer Platform</a></small>
                         </div>
                         <div class="form-group">
-                            <label for="minimax_cnModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="minimax_cnModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshMinimax_cnModelsBtn" title="Refresh the model list from MiniMax CN">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="minimax_cnModel" class="select">
                                 <option value="MiniMax-M2.7" selected>MiniMax-M2.7 (Flagship)</option>
                                 <option value="MiniMax-M2.7-highspeed">MiniMax-M2.7-highspeed (Fast)</option>
@@ -2207,6 +2262,7 @@
                                 <option value="M2-her">M2-her</option>
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="minimax_cnModelsStatus"></small>
                         </div>
                         <div class="form-group" id="minimax_cnModelOtherGroup" style="display: none;">
                             <label for="minimax_cnModelOther">Custom Model Name:</label>
@@ -2241,7 +2297,13 @@
                             <small class="help-text">Custom API endpoint (Ollama, LM Studio, vLLM, remote compatible endpoints, etc.)</small>
                         </div>
                         <div class="form-group">
-                            <label for="localModel">Default Model:</label>
+                            <div class="model-field-header">
+                                <label for="localModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshLocalModelsBtn" title="Refresh the model list from this endpoint">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
                             <select id="localModel" class="select input-full">
                                 <!-- Qwen3 Series (Latest Generation) -->
                                 <optgroup label="Qwen3 Series (Latest)">
@@ -2280,6 +2342,7 @@
 
                                 <option value="other">Other (specify below)</option>
                             </select>
+                            <small class="help-text model-refresh-status" id="localModelsStatus"></small>
                         </div>
                         <div class="form-group" id="localModelOtherGroup" style="display: none;">
                             <label for="localModelOther">Custom Model Name:</label>

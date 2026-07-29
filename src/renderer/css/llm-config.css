@@ -188,6 +188,43 @@
   }
 }
 
+/* Per-provider model list refresh */
+.model-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.model-field-header label {
+  margin-bottom: 0;
+}
+
+.btn-refresh-models {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.btn-refresh-models i {
+  font-size: 11px;
+}
+
+.model-refresh-status {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.model-refresh-status.is-warning {
+  color: var(--warning-color);
+}
+
+.model-refresh-status.is-error {
+  color: var(--error-color);
+}
+
 /* Info box styles */
 .info-box {
   background: #f0f9ff;
