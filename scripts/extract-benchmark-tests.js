@@ -62,6 +62,36 @@ function extractTestsFromFile(filePath) {
     });
   }
 
+  return assignTestNumbers(tests, extractPreferredOrder(content));
+}
+
+/**
+ * A suite may pin an execution order (AutomaticComplexSuite.getPreferredTestOrder),
+ * in which case that - not declaration order - is what the suite numbers against.
+ */
+function extractPreferredOrder(content) {
+  const match = content.match(/getPreferredTestOrder\(\)\s*\{\s*return\s*\[([\s\S]*?)\];/);
+  if (!match) return null;
+
+  return [...match[1].matchAll(/'([^']+)'/g)].map(entry => entry[1]);
+}
+
+/**
+ * Stamp the number the benchmark UI shows for each test, so a failure reported
+ * as "#12" can be looked up here. Mirrors BenchmarkEvaluatorBase.numberTests.
+ */
+function assignTestNumbers(tests, preferredOrder) {
+  const rank = new Map((preferredOrder || []).map((id, index) => [id, index]));
+  const ordered = [...tests].sort(
+    (a, b) =>
+      (rank.has(a.id) ? rank.get(a.id) : Number.MAX_SAFE_INTEGER) -
+      (rank.has(b.id) ? rank.get(b.id) : Number.MAX_SAFE_INTEGER)
+  );
+
+  ordered.forEach((test, index) => {
+    test.number = index + 1;
+  });
+
   return tests;
 }
 
@@ -98,7 +128,7 @@ function main() {
 
       // Generate CSV for this suite
       const csvLines = [];
-      csvLines.push('Category,Test ID,Test Name,Instruction');
+      csvLines.push('Category,Test #,Test ID,Test Name,Instruction');
 
       // Sort categories alphabetically
       const sortedCategories = Object.keys(byCategory).sort();
@@ -109,6 +139,7 @@ function main() {
           csvLines.push(
             [
               escapeCSVField(category),
+              escapeCSVField(String(test.number)),
               escapeCSVField(test.id),
               escapeCSVField(test.name),
               escapeCSVField(test.instruction),

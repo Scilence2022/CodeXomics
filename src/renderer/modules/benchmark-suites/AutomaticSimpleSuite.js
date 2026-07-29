@@ -11,7 +11,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
     this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
     this.framework = null;
     this.defaultDirectory = null; // Will be set when framework provides configuration
-    this.tests = this.initializeTests();
+    this.tests = this.numberTests(this.initializeTests());
   }
 
   getName() {
@@ -35,7 +35,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       console.log(`📁 AutomaticSimpleSuite default directory set to: ${this.defaultDirectory}`);
 
       // Regenerate tests with updated paths
-      this.tests = this.initializeTests();
+      this.tests = this.numberTests(this.initializeTests());
     }
   }
 

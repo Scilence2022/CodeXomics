@@ -1219,7 +1219,7 @@ class BenchmarkUI {
       checkbox.addEventListener('change', () => this.updateTestSelectionCount());
 
       const textDiv = document.createElement('div');
-      textDiv.innerHTML = `<strong style="display: block; font-size: 13px;">${test.id}</strong><span style="font-size: 11px; color: #666;">${desc}</span>`;
+      textDiv.innerHTML = `<strong style="display: block; font-size: 13px;">${this.formatTestLabel(test, test.id)}</strong><span style="font-size: 11px; color: #666;">${desc}</span>`;
 
       item.appendChild(checkbox);
       item.appendChild(textDiv);
@@ -2051,7 +2051,7 @@ class BenchmarkUI {
                 <div class="manual-test-header">
                     <h2 class="manual-test-title">
                         <i class="fas fa-hand-paper"></i>
-                        ${testData.testName}
+                        ${this.formatTestLabel(testData, testData.testName)}
                         <span class="test-category">${testData.category}</span>
                         <span class="test-complexity">${testData.complexity}</span>
                     </h2>
@@ -2686,6 +2686,7 @@ class BenchmarkUI {
                 ...test.llmInteractionData,
                 testInfo: {
                   testId: test.testId,
+                  testNumber: test.testNumber,
                   testName: test.testName,
                   suiteId: test.suiteId,
                   score: test.score,
@@ -2719,6 +2720,7 @@ class BenchmarkUI {
                 },
                 testInfo: {
                   testId: test.testId,
+                  testNumber: test.testNumber,
                   testName: test.testName,
                   suiteId: test.suiteId,
                   score: test.score,
@@ -2826,6 +2828,7 @@ class BenchmarkUI {
       // Test context information
       testInfo: {
         testId: test.testId,
+        testNumber: test.testNumber,
         testName: test.testName,
         suiteId: test.suiteId,
         score: test.score,
@@ -2995,9 +2998,12 @@ class BenchmarkUI {
             interaction => `
             <div class="interaction">
                 <div class="interaction-header">
-                    <h3 style="margin: 0;">🧪 ${interaction.testInfo?.testName || interaction.testName}</h3>
+                    <h3 style="margin: 0;">🧪 ${this.formatTestLabel(
+                      interaction.testInfo?.testNumber ?? interaction.testNumber,
+                      interaction.testInfo?.testName || interaction.testName
+                    )}</h3>
                     <div style="font-size: 12px; opacity: 0.9;">
-                        Test ID: ${interaction.testInfo?.testId || interaction.testId} | 
+                        Test ID: ${interaction.testInfo?.testId || interaction.testId} |
                         Request ID: ${interaction.request?.requestId || 'N/A'} | 
                         Score: ${interaction.testInfo?.score || 'N/A'}/${interaction.testInfo?.maxScore || 100}
                     </div>
@@ -3714,8 +3720,8 @@ class BenchmarkUI {
       onProgress: (progress, suiteId, suiteResult) => {
         this.updateMainWindowProgress(progress, suiteId, suiteResult);
       },
-      onTestProgress: (progress, testId, testResult, suiteId) => {
-        this.updateMainWindowTestProgress(progress, testId, testResult, suiteId);
+      onTestProgress: (progress, testId, testResult, suiteId, testNumber) => {
+        this.updateMainWindowTestProgress(progress, testId, testResult, suiteId, testNumber);
       },
     };
 
@@ -3787,16 +3793,34 @@ class BenchmarkUI {
   }
 
   /**
+   * Format a test's stable suite number for display, e.g. "#12".
+   * Accepts a test/result object or a bare number, and returns '' when unnumbered.
+   */
+  formatTestNumber(testOrNumber) {
+    const number = typeof testOrNumber === 'number' ? testOrNumber : (testOrNumber?.testNumber ?? testOrNumber?.number);
+    return number ? `#${number}` : '';
+  }
+
+  /**
+   * Prefix a label with the test number, e.g. "#12 Set Working Directory".
+   */
+  formatTestLabel(testOrNumber, label) {
+    const number = this.formatTestNumber(testOrNumber);
+    return number ? `${number} ${label}` : String(label);
+  }
+
+  /**
    * Update test progress in main window with enhanced real-time tracking
    */
-  updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
+  updateMainWindowTestProgress(progress, testId, testResult, suiteId, testNumber) {
     const currentTest = document.getElementById('currentTest');
     const progressFill = document.getElementById('progressFill');
+    const testLabel = this.formatTestLabel(testNumber ?? testResult?.testNumber, testId);
 
     // Always update current test name when provided
     if (currentTest && testId) {
-      currentTest.textContent = testId || '-';
-      console.log(`🎯 [UI Test Update] Current test updated to: ${testId}`);
+      currentTest.textContent = testLabel || '-';
+      console.log(`🎯 [UI Test Update] Current test updated to: ${testLabel}`);
     }
 
     // Update progress bar with real-time test progress
@@ -3810,10 +3834,10 @@ class BenchmarkUI {
         progressPercentage.textContent = `${percentage.toFixed(1)}%`;
       }
 
-      console.log(`📊 [UI Test Progress] Real-time progress: ${percentage.toFixed(1)}% (Test: ${testId})`);
+      console.log(`📊 [UI Test Progress] Real-time progress: ${percentage.toFixed(1)}% (Test: ${testLabel})`);
     }
 
-    if (testId && this.runStats) this.runStats.currentTest = testId;
+    if (testId && this.runStats) this.runStats.currentTest = testLabel;
 
     // Update elapsed time
     const elapsedTime = document.getElementById('elapsedTime');
@@ -3826,11 +3850,11 @@ class BenchmarkUI {
     if (testResult && testResult.status !== 'running') {
       this.updateIndividualTestCount(testResult);
       console.log(
-        `✅ [UI Test Complete] Test ${testId} completed with status: ${testResult.status} (${testResult.success ? 'PASS' : 'FAIL'})`
+        `✅ [UI Test Complete] Test ${testLabel} completed with status: ${testResult.status} (${testResult.success ? 'PASS' : 'FAIL'})`
       );
     } else if (testResult === null) {
       // Test is starting - this is when we update the current test name
-      console.log(`🚀 [UI Test Start] Test ${testId} is starting...`);
+      console.log(`🚀 [UI Test Start] Test ${testLabel} is starting...`);
     }
 
     this.updateHeaderStatus();
@@ -4231,7 +4255,7 @@ class BenchmarkUI {
                               .map(
                                 prompt => `
                                 <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
-                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${prompt.testName || prompt.testId || 'Unknown prompt'}</span>
+                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.formatTestLabel(prompt, prompt.testName || prompt.testId || 'Unknown prompt')}</span>
                                     <span>${this.formatBenchmarkInteger(prompt.selectedToolCount)} tools</span>
                                     <span>${this.formatBenchmarkInteger(prompt.estimatedTokensSaved)} tokens saved</span>
                                 </div>
@@ -4324,9 +4348,10 @@ class BenchmarkUI {
                               .map(
                                 test => `
                                 <div style="padding: 12px; margin: 8px 0; border-radius: 6px; background: ${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid ${test.success ? '#28a745' : '#dc3545'};">
-                                    <div style="font-weight: bold; margin-bottom: 5px;">${test.testName}</div>
+                                    <div style="font-weight: bold; margin-bottom: 5px;">${this.formatTestLabel(test, test.testName)}</div>
                                     <div style="font-size: 13px; color: var(--text-secondary);">
-                                        Score: ${test.score}/${test.maxScore} | 
+                                        ${test.testId} |
+                                        Score: ${test.score}/${test.maxScore} |
                                         Duration: ${test.duration}ms | 
                                         Status: ${test.status}
                                     </div>
@@ -4861,6 +4886,7 @@ class BenchmarkUI {
                                         ...test.llmInteractionData,
                                         testInfo: {
                                             testId: test.testId,
+                                            testNumber: test.testNumber,
                                             testName: test.testName,
                                             suiteId: test.suiteId,
                                             score: test.score,
@@ -4894,6 +4920,7 @@ class BenchmarkUI {
                                         },
                                         testInfo: {
                                             testId: test.testId,
+                                            testNumber: test.testNumber,
                                             testName: test.testName,
                                             suiteId: test.suiteId,
                                             score: test.score,
@@ -4999,6 +5026,7 @@ class BenchmarkUI {
                     // Test context information
                     testInfo: {
                         testId: test.testId,
+                        testNumber: test.testNumber,
                         testName: test.testName,
                         suiteId: test.suiteId,
                         score: test.score,
@@ -5289,7 +5317,7 @@ class BenchmarkUI {
                         stopOnError: document.getElementById('stopOnError').checked,
                         timeout: parseInt(document.getElementById('testTimeout').value),
                         onProgress: (progress, suiteId, suiteResult) => this.updateMainWindowProgress(progress, suiteId, suiteResult),
-                        onTestProgress: (progress, testId, testResult, suiteId) => this.updateMainWindowTestProgress(progress, testId, testResult, suiteId)
+                        onTestProgress: (progress, testId, testResult, suiteId, testNumber) => this.updateMainWindowTestProgress(progress, testId, testResult, suiteId, testNumber)
                     };
 
                     console.log('🧪 Starting benchmark:', options);
@@ -5345,9 +5373,28 @@ class BenchmarkUI {
                 if (currentSuite) currentSuite.textContent = suiteId || '-';
             }
 
-            updateTestProgress(testId) {
+            updateTestProgress(testId, testNumber) {
                 const currentTest = document.getElementById('currentTest');
-                if (currentTest) currentTest.textContent = testId || '-';
+                if (currentTest) currentTest.textContent = this.formatTestLabel(testNumber, testId) || '-';
+            }
+
+            /**
+             * Format a test's stable suite number for display, e.g. "#12".
+             * Accepts a test/result object or a bare number, and returns '' when unnumbered.
+             */
+            formatTestNumber(testOrNumber) {
+                const number = typeof testOrNumber === 'number'
+                    ? testOrNumber
+                    : (testOrNumber?.testNumber ?? testOrNumber?.number);
+                return number ? '#' + number : '';
+            }
+
+            /**
+             * Prefix a label with the test number, e.g. "#12 Set Working Directory".
+             */
+            formatTestLabel(testOrNumber, label) {
+                const number = this.formatTestNumber(testOrNumber);
+                return number ? number + ' ' + label : String(label);
             }
 
             updateModelInfo() {
@@ -5443,13 +5490,13 @@ class BenchmarkUI {
                 }
             }
 
-            updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
+            updateMainWindowTestProgress(progress, testId, testResult, suiteId, testNumber) {
                 const currentTest = document.getElementById('currentTest');
                 const progressFill = document.getElementById('progressFill');
                 const progressPercentage = document.getElementById('progressPercentage');
 
                 if (currentTest && testId) {
-                    currentTest.textContent = testId;
+                    currentTest.textContent = this.formatTestLabel(testNumber ?? testResult?.testNumber, testId);
                 }
 
                 if (progressFill && typeof progress === 'number') {
@@ -5595,7 +5642,7 @@ class BenchmarkUI {
                                 <div style="margin-top: 10px; display: grid; gap: 8px;">
                                     \${topPrompts.slice(0, 5).map(prompt => \`
                                         <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
-                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${prompt.testName || prompt.testId || 'Unknown prompt'}</span>
+                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${this.formatTestLabel(prompt, prompt.testName || prompt.testId || 'Unknown prompt')}</span>
                                             <span>\${this.formatBenchmarkInteger(prompt.selectedToolCount)} tools</span>
                                             <span>\${this.formatBenchmarkInteger(prompt.estimatedTokensSaved)} tokens saved</span>
                                         </div>
@@ -5676,8 +5723,8 @@ class BenchmarkUI {
                                     <div style="padding: 15px; display: none;">
                                         \${filteredTests.map(test => \`
                                             <div style="padding: 8px; margin: 5px 0; border-radius: 4px; background: \${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid \${test.success ? '#28a745' : '#dc3545'};">
-                                                <strong>\${test.testName}</strong><br>
-                                                <small>Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms</small>
+                                                <strong>\${this.formatTestLabel(test, test.testName)}</strong><br>
+                                                <small>\${test.testId} | Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms</small>
                                                 \${test.errors.length > 0 ? \`<br><small style="color: #dc3545;">Errors: \${test.errors.join(', ')}</small>\` : ''}
                                             </div>
                                         \`).join('')}
