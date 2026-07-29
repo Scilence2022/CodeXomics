@@ -657,4 +657,184 @@ describe('ChatManager bounded model-turn recovery', () => {
       manager.buildRoundLimitResponse(20, [{ tool: 'select_gene', success: true }], [{ tool_name: 'select_gene' }])
     ).toContain('Last successful tool result:\nSelected lysC.');
   });
+
+  const ANNOTATION_CRUD =
+    "Create a new custom regulatory annotation named 'regulatory_region_A' on chromosome 'U00096' spanning " +
+    'start position 150000 to end position 150500, then update its note description to ' +
+    "'Highly conserved regulatory region', and list all annotations in that region to verify.";
+  const BLAST_WORKFLOW =
+    'Detect the type of sequence ATGAAAGCGCTGAAAGCGCTG, run blast_search against nt with blastn and max 5 ' +
+    'targets, filter the BLAST results to hits with at least 90 percent identity and at most 5 hits, then ' +
+    'export the BLAST results as CSV to /tmp/exported_files/benchmark_blast_results.csv. Always run the ' +
+    'filter and export steps on the search results, including when the search returns zero hits - an empty ' +
+    'filtered set and a header-only CSV are the expected outcome in that case.';
+
+  function stateFor(manager, message, tools) {
+    const state = manager.createToolExecutionState(message);
+    for (const tool of tools) state.records.push({ tool, status: 'success' });
+    return state;
+  }
+
+  it('completes a workflow whose closing step only lists or gets data', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    // A "list ... to verify" tail used to be actionable but unclassifiable, which
+    // made the request permanently unsatisfiable no matter what the model did.
+    expect(
+      manager.hasSuccessfulExecutionForRequest(
+        stateFor(manager, ANNOTATION_CRUD, ['create_annotation', 'update_annotation', 'list_annotations'])
+      )
+    ).toBe(true);
+    expect(
+      manager.hasSuccessfulExecutionForRequest(
+        stateFor(manager, ANNOTATION_CRUD, ['create_annotation', 'update_annotation'])
+      )
+    ).toBe(false);
+    expect(
+      manager.hasSuccessfulExecutionForRequest(
+        stateFor(
+          manager,
+          'Create a temporary CDS annotation named X at 160000-160900, bulk update that annotation to set its ' +
+            'description to Y, get its annotation history, and then list annotations in that region.',
+          ['create_annotation', 'bulk_update_annotations', 'get_annotation_history', 'list_annotations']
+        )
+      )
+    ).toBe(true);
+  });
+
+  it('treats a workflow led by an unlisted verb as an action request', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    // Whether the leading verb is known decides whether every state-changing call
+    // in the request is allowed to execute at all.
+    expect(manager.requestRequiresToolExecutionAnywhere(BLAST_WORKFLOW)).toBe(true);
+    expect(manager.requestRequiresToolExecutionAnywhere('What does the lysC gene do?')).toBe(false);
+    expect(manager.requestRequiresToolExecutionAnywhere('How do I use BLAST?')).toBe(false);
+  });
+
+  it('recognizes provider-namespaced tools as the steps a workflow asked for', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const complete = stateFor(manager, BLAST_WORKFLOW, [
+      'blast_detect_sequence_type',
+      'blast_search',
+      'blast_filter_results',
+      'blast_export_results',
+    ]);
+    const stoppedAfterSearch = stateFor(manager, BLAST_WORKFLOW, ['blast_detect_sequence_type', 'blast_search']);
+
+    expect(manager.hasSuccessfulExecutionForRequest(complete)).toBe(true);
+    expect(manager.hasSuccessfulExecutionForRequest(stoppedAfterSearch)).toBe(false);
+    expect(manager.getOutstandingRequestSteps(stoppedAfterSearch).map(step => step.capability)).toEqual([
+      'filter',
+      'export',
+    ]);
+  });
+
+  it('does not multiply a requirement because the splitter fragmented a sentence', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const { requirements } = manager.getSequentialActionRequirements(BLAST_WORKFLOW);
+    const exportRequirements = requirements.filter(requirement => requirement.capability === 'export');
+
+    expect(exportRequirements).toHaveLength(1);
+    expect(exportRequirements[0].count).toBe(1);
+    // An explicit repeat count is still honoured.
+    expect(
+      manager
+        .getSequentialActionRequirements('open three new tabs')
+        .requirements.find(requirement => requirement.capability === 'open_tab').count
+    ).toBe(3);
+  });
+
+  it('names the outstanding step in the repair prompt', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = stateFor(manager, ANNOTATION_CRUD, ['create_annotation', 'list_annotations']);
+    const decision = manager.getModelTurnRecoveryDecision(
+      { text: 'The annotation has been created and verified.', toolCalls: [], invalidToolCalls: [], isEmpty: false },
+      state,
+      3,
+      20
+    );
+
+    expect(decision.action).toBe('retry');
+    expect(decision.outstandingSteps.map(step => step.capability)).toEqual(['edit_annotation']);
+
+    const repair = manager.buildToolProtocolRecoveryMessage(decision.reason, decision.outstandingSteps);
+    // The user's own wording, not a tool name: update_annotation and edit_annotation
+    // both satisfy this step, so the prompt must not pick one for the model.
+    expect(repair).toContain("- update its note description to 'Highly conserved regulatory region'");
+    expect(repair).toContain('has to be performed separately');
+    expect(repair).not.toContain('e.g. edit_annotation');
+  });
+
+  it('recognizes namespaced tools across the whole effect table', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const workflows = [
+      [
+        "Create a new nucleotide BLAST database of currently loaded E. coli genome using name 'ecoli_nucl', then " +
+          'list the available BLAST databases to verify, and run a local blastn search against the database for ' +
+          "the query sequence 'TTAGTTGGC'.",
+        ['blast_create_db_from_genome', 'blast_list_databases', 'blast_search_local'],
+      ],
+      [
+        'Export the current visible genomic region to /tmp/benchmark_blast_input.fasta, create a nucleotide BLAST ' +
+          'database named benchmark_view_nucl from that FASTA file, validate the database, list databases, and ' +
+          'then delete benchmark_view_nucl with confirmation.',
+        [
+          'export_current_view_fasta',
+          'blast_create_database',
+          'blast_validate_database',
+          'blast_list_databases',
+          'blast_delete_database',
+        ],
+      ],
+    ];
+
+    for (const [message, tools] of workflows) {
+      expect(manager.hasSuccessfulExecutionForRequest(stateFor(manager, message, tools))).toBe(true);
+    }
+    // The verb identifying a tool is not always its first segment.
+    expect(manager.verbToolMatcher('export')('blast_export_results')).toBe(true);
+    expect(manager.verbToolMatcher('search')('blast_search_local')).toBe(true);
+    expect(manager.verbToolMatcher('get')('uniprot_get_annotation')).toBe(true);
+    expect(manager.verbToolMatcher('export')('exported_helper')).toBe(false);
+  });
+
+  it('reads a zoom multiplier as magnification rather than repetition', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    expect(
+      manager.hasSuccessfulExecutionForRequest(
+        stateFor(manager, 'Navigate to region 1230000 to 1300000 and then zoom in 10x to see the features.', [
+          'navigate_to_position',
+          'zoom_in',
+        ])
+      )
+    ).toBe(true);
+    // Spelled-out repetition is still a repeat count, for zoom and everything else.
+    expect(manager.getRequestedExecutionCountFallback('zoom in 3 times', 'zoom_in')).toBe(3);
+    expect(manager.getRequestedExecutionCountFallback('pan right 3x', 'pan_right')).toBe(3);
+  });
+
+  it('reports the steps that were never carried out when the repair budget runs out', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = stateFor(manager, ANNOTATION_CRUD, ['create_annotation', 'list_annotations']);
+    state.protocolRecoveryAttempts = 2;
+    const decision = manager.getModelTurnRecoveryDecision(
+      { text: 'The annotation has been created and verified.', toolCalls: [], invalidToolCalls: [], isEmpty: false },
+      state,
+      5,
+      20
+    );
+
+    expect(decision.action).toBe('fail');
+    expect(decision.finalResponse).toContain('never carried out: edit_annotation');
+  });
 });
