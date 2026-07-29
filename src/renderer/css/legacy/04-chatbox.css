@@ -444,21 +444,19 @@
 }
 
 .thinking-process {
-  border-left: 4px solid #667eea !important;
   background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%) !important;
   margin: 4px 0 !important;
   padding: 4px 8px !important;
-  border-radius: 0 10px 10px 0 !important;
+  border-radius: 10px !important;
   max-width: 100% !important;
 }
 
 .thinking-process.thinking-completed {
-  border-left: 4px solid #10b981 !important;
   background: linear-gradient(135deg, #f0fdf4 0%, #e6fffa 100%) !important;
   opacity: 0.9;
   margin: 4px 0 !important;
   padding: 4px 8px !important;
-  border-radius: 0 10px 10px 0 !important;
+  border-radius: 10px !important;
   max-width: 100% !important;
 }
 
@@ -548,7 +546,6 @@
 
 /* A run that ended with a failing tool reads as a warning, not a success. */
 .thinking-process.thinking-completed.activity-failed {
-  border-left-color: #f59e0b !important;
   background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
 }
 

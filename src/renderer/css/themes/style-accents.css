@@ -184,7 +184,6 @@
 }
 
 [data-ui-style] .gene-info-header,
-[data-ui-style] .thinking-process,
 [data-ui-style] .progress-item {
   border-left-color: var(--primary-color) !important;
 }

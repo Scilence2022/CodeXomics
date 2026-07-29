@@ -415,10 +415,6 @@
 }
 
 /* ===== THINKING PROCESS ===== */
-[data-ui-style='elegant'] .thinking-process {
-  border-left-color: var(--primary-color) !important;
-}
-
 [data-ui-style='elegant'] .thinking-header {
   color: var(--primary-color) !important;
 }
