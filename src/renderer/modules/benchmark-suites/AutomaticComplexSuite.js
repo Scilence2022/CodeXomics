@@ -803,13 +803,26 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {
               updates: [
                 {
-                  identifier: 'benchmark_bulk_gene',
+                  // create_annotation hands back the minted featureId, and bulk_update_annotations
+                  // resolves it exactly like the gene name, so a model that chains the returned id
+                  // is as correct as one that repeats the name.
+                  ...this.anyOfParameters(
+                    { identifier: 'benchmark_bulk_gene' },
+                    { identifier: '<created_annotation_id>' }
+                  ),
                   updates: {
-                    description: 'Bulk benchmark annotation',
+                    // _normaliseUpdateField aliases description onto the note qualifier, so both
+                    // field names write the same value and neither is the "wrong" one to pick.
+                    ...this.anyOfParameters(
+                      { description: 'Bulk benchmark annotation' },
+                      { note: 'Bulk benchmark annotation' }
+                    ),
                   },
                 },
               ],
             },
+            // get_annotation_history stays pinned to the name: its lookup is an exact match on the
+            // recorded annotationId, so the two identifiers are not interchangeable here.
             {
               identifier: 'benchmark_bulk_gene',
             },
@@ -1750,6 +1763,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       if (expectedValue === '<created_protein_database>') {
         if (actualValue === undefined || actualValue === null) return false;
         return /\b(protein|prot)\b|[_-](protein|prot)([_-]|$)/i.test(String(actualValue));
+      }
+      if (expectedValue === '<created_annotation_id>') {
+        // The id addUserDefinedFeature mints and create_annotation returns as featureId. Kept
+        // shape-specific so the expectation still rejects an unrelated identifier.
+        if (actualValue === undefined || actualValue === null) return false;
+        return /^user_\d+_[a-z0-9]+$/i.test(String(actualValue));
       }
       return actualValue !== undefined && actualValue !== null;
     }
