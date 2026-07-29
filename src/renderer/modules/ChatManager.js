@@ -58,6 +58,12 @@ class ChatManager {
     // tallies used to build the panel's one-line summary once it finishes.
     this.activityRoundState = null;
     this.activityTotals = null;
+    // The panel steps are currently appended to. Tracked as an element rather
+    // than resolved from the DOM every time because callers that bypass
+    // startConversation() — the benchmark runner drives sendToLLM() directly —
+    // have no request id to scope a lookup by.
+    this.activityPanelElement = null;
+    this.activityPanelSeq = 0;
 
     // Live token-streaming render state (null when no stream is in flight)
     this.streamingState = null;
@@ -11809,6 +11815,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       messagesContainer.appendChild(welcomeMessage);
     }
 
+    // The panel and round group just went with the transcript. Benchmark runs
+    // clear between tests, so leaving these set would point the next run's
+    // steps at detached nodes.
+    this.activityPanelElement = null;
+    this.activityRoundState = null;
+    this.activityTotals = null;
+
     // Clear chat input box
     const chatInput = document.getElementById('chatInput');
     if (chatInput) {
@@ -16239,13 +16252,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
     }
 
-    // Tallies belong to the panel that just closed; the next one starts fresh.
+    // Tallies belong to the panel that just closed; the next one starts fresh,
+    // and no further step should be filed into the sealed panel.
     this.activityTotals = null;
+    this.activityPanelElement = null;
   }
 
   /** Fade a finished activity panel out and drop it from the transcript. */
   removeActivityPanel(panel) {
     if (!panel) return;
+    if (this.activityPanelElement === panel) this.activityPanelElement = null;
     panel.style.transition = 'opacity 0.5s ease-out';
     panel.style.opacity = '0';
     setTimeout(() => panel.remove(), 500);
@@ -16742,8 +16758,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return;
     }
 
-    // Only remove the currently in-progress thinking process (if any)
-    const currentRequestId = this.conversationState.currentRequestId || Date.now();
+    // Only remove the currently in-progress thinking process (if any).
+    // Panels created outside a tracked request get a sequential id instead.
+    // Date.now() used to fill that slot, so two panels opened within the same
+    // millisecond shared an id and the second one deleted the first.
+    this.activityPanelSeq = (this.activityPanelSeq || 0) + 1;
+    const currentRequestId = this.conversationState.currentRequestId || `detached_${this.activityPanelSeq}`;
     const existingThinking = document.getElementById(`thinkingProcess_${currentRequestId}`);
     if (existingThinking) {
       existingThinking.remove();
@@ -16771,9 +16791,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     messagesContainer.appendChild(thinkingDiv);
 
-    // A fresh panel means a fresh set of round groups and tallies.
+    // A fresh panel means a fresh set of round groups and tallies, and it is
+    // now the panel later steps belong to.
     this.activityRoundState = null;
     this.activityTotals = { rounds: 0, tools: 0, failures: 0 };
+    this.activityPanelElement = thinkingDiv;
     this.bindActivityHeaderToggle(thinkingDiv);
 
     // Add to Evolution data structure
@@ -17132,10 +17154,27 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   // to a single summary line when the request finishes.
   // ---------------------------------------------------------------------------
 
-  /** Resolve the activity panel for this request, or any panel on screen. */
+  /** Resolve the activity panel for this request, or the newest one on screen. */
   findActivityPanelElement() {
-    const thinkingId = `thinkingProcess_${this.conversationState?.currentRequestId || Date.now()}`;
-    return document.getElementById(thinkingId) || document.querySelector('.thinking-process');
+    const requestId = this.conversationState?.currentRequestId;
+    if (requestId) {
+      const scoped = document.getElementById(`thinkingProcess_${requestId}`);
+      if (scoped) return scoped;
+    }
+
+    // No request id to scope by: the benchmark runner calls sendToLLM() without
+    // going through startConversation(), so currentRequestId stays null for the
+    // whole run. Fall back to the panel we last opened, then to the newest one
+    // in the transcript — never the oldest. Resolving with querySelector() sent
+    // every step to the first panel in the chat while addThinkingMessage() kept
+    // appending new panels at the bottom, so the log read out of order.
+    if (this.activityPanelElement?.isConnected) return this.activityPanelElement;
+
+    const live = document.querySelectorAll('.thinking-process:not(.thinking-completed)');
+    if (live.length) return live[live.length - 1];
+
+    const all = document.querySelectorAll('.thinking-process');
+    return all.length ? all[all.length - 1] : null;
   }
 
   /**
