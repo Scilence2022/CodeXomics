@@ -480,11 +480,6 @@
   color: var(--primary-color) !important;
 }
 
-/* ===== MULTI-AGENT ACTIVATION ===== */
-[data-ui-style='pastel'] .multi-agent-activation {
-  background: var(--btn-gradient) !important;
-}
-
 /* ===== DROPDOWN ICON ===== */
 [data-ui-style='pastel'] .dropdown-item i {
   color: var(--primary-color) !important;

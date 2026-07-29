@@ -16803,26 +16803,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const messagesContainer = document.getElementById('chatMessages');
     const activationDiv = document.createElement('div');
     activationDiv.className = 'message system-message multi-agent-activation';
-    activationDiv.innerHTML = `
-            <div class="message-content">
-                <div class="multi-agent-banner">
-                    <div class="multi-agent-icon">🤖</div>
-                    <div class="multi-agent-content">
-                        <div class="multi-agent-title">Multi-Agent System Activated</div>
-                        <div class="multi-agent-subtitle">Intelligent agent coordination enabled</div>
-                        <div class="multi-agent-features">
-                            <span class="feature-tag">8 Specialized Agents</span>
-                            <span class="feature-tag">Smart Coordination</span>
-                            <span class="feature-tag">Performance Optimized</span>
-                        </div>
-                    </div>
-                    <div class="multi-agent-status">
-                        <span class="status-indicator active"></span>
-                        <span class="status-text">Active</span>
-                    </div>
-                </div>
-            </div>
-        `;
+    // A quiet, centered status chip. This fires on every request while
+    // multi-agent mode is on, so it stays out of the way; the agent roster and
+    // coordination detail live in the Agent Activity panel instead.
+    activationDiv.innerHTML =
+      `<div class="multi-agent-chip">` +
+      `<i class="fas fa-users-cog" aria-hidden="true"></i>` +
+      `<span>Multi-Agent coordination active</span>` +
+      `</div>`;
 
     messagesContainer.appendChild(activationDiv);
 

@@ -54,7 +54,6 @@
 [data-ui-style] #newChatBtn,
 [data-ui-style] .toolbar-section #toggleChatBtn,
 [data-ui-style] .welcome-buttons .btn-primary,
-[data-ui-style] .multi-agent-activation,
 [data-ui-style] #addFeaturesBtn,
 [data-ui-style] #primerTrackBtn {
   background: var(--btn-gradient) !important;
