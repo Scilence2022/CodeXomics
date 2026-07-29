@@ -1365,6 +1365,41 @@ class ProteinService {
     return element;
   }
 
+  /**
+   * Abort signal for the conversation turn currently running, if any.
+   */
+  getConversationAbortSignal() {
+    return this.chatManager?.conversationState?.abortController?.signal || null;
+  }
+
+  isConversationAborted() {
+    return this.getConversationAbortSignal()?.aborted === true;
+  }
+
+  /**
+   * Sleep that returns early when the current turn is aborted, so a poll loop
+   * reacts to cancellation immediately instead of on its next tick.
+   */
+  waitUnlessAborted(ms) {
+    const signal = this.getConversationAbortSignal();
+    if (signal?.aborted) return Promise.resolve();
+
+    return new Promise(resolve => {
+      let timer = null;
+      const onAbort = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+
+      timer = setTimeout(() => {
+        signal?.removeEventListener?.('abort', onAbort);
+        resolve();
+      }, ms);
+
+      signal?.addEventListener?.('abort', onAbort, { once: true });
+    });
+  }
+
   async analyzeInterProDomains(parameters) {
     const {
       sequence,
@@ -1568,7 +1603,14 @@ class ProteinService {
         let status = 'RUNNING';
 
         while (status === 'RUNNING' && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+          await this.waitUnlessAborted(5000); // Wait 5 seconds
+
+          // This poll can outlast the turn that started it — five minutes is longer
+          // than a benchmark test is given — so give up as soon as the turn is
+          // cancelled rather than holding the queue until EBI answers.
+          if (this.isConversationAborted()) {
+            throw new Error(`InterPro analysis cancelled while waiting for job ${jobId}`);
+          }
 
           const statusUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/status/${jobId}`;
           const statusResponse = await fetch(statusUrl);

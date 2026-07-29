@@ -935,6 +935,12 @@ class LLMBenchmarkFramework {
         result.warnings.push(...evaluation.warnings);
       }
     } catch (error) {
+      // The timeout only settles the race — the conversation it was racing keeps
+      // running. Cancel it, or a model still looping over tool calls goes on
+      // executing them (re-opening viewers, re-hitting external APIs) underneath
+      // every test that follows.
+      this.abortTimedOutConversation(test, error);
+
       // An earlyReturn test is scored on tool submission, not completion, so a
       // long-running tool (online BLAST against nt, makeblastdb over a whole
       // genome) must not fail the test it already satisfied. The normal
@@ -1004,13 +1010,44 @@ class LLMBenchmarkFramework {
   }
 
   /**
+   * Cancel the conversation a timed-out test left running.
+   *
+   * `Promise.race` abandons the losing promise, it does not stop it. Without an
+   * explicit abort the ChatManager turn keeps looping — issuing LLM rounds and
+   * executing their tools for real — while the framework has already moved on to
+   * the next test, which then scores against a genome someone else's tools are
+   * still changing.
+   */
+  abortTimedOutConversation(test, error) {
+    if (!this.isTestTimeoutError(error)) return;
+
+    const chatManager = this.chatManager;
+    if (!chatManager?.conversationState?.isProcessing) return;
+
+    try {
+      if (typeof chatManager.abortCurrentConversation === 'function') {
+        chatManager.abortCurrentConversation();
+      } else {
+        chatManager.conversationState.abortController?.abort();
+      }
+      console.log(`🛑 [Benchmark] Aborted the conversation still running after ${test.id} timed out`);
+    } catch (abortError) {
+      console.warn(`Could not abort the conversation for ${test.id}:`, abortError);
+    }
+  }
+
+  isTestTimeoutError(error) {
+    return /^Test timeout after \d+ms$/.test(String(error?.message || ''));
+  }
+
+  /**
    * For an `earlyReturn` test that hit its timeout, report the tracked execution of an
    * expected tool if the model did submit one. Returns null for any other failure, so
    * genuine errors and non-earlyReturn timeouts still fail the test.
    */
   findEarlyReturnSubmission(test, error) {
     if (!test?.earlyReturn) return null;
-    if (!/^Test timeout after \d+ms$/.test(String(error?.message || ''))) return null;
+    if (!this.isTestTimeoutError(error)) return null;
 
     const expected = test.expectedResult || {};
     const expectedNames = (

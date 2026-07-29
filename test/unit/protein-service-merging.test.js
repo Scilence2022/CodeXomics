@@ -521,3 +521,75 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
     delete window.GenomeAnalysisService;
   });
 });
+
+describe('ProteinService - cancelling long polls', () => {
+  // The InterPro job poll waits up to five minutes, longer than a benchmark test
+  // is given. When the turn is cancelled the poll has to stop, otherwise it keeps
+  // the tool queue busy well into whatever runs next.
+  let service;
+  let mockChatManager;
+  let controller;
+
+  beforeEach(() => {
+    controller = new AbortController();
+    mockChatManager = { conversationState: { abortController: controller } };
+    service = createService({}, mockChatManager);
+  });
+
+  it('reports the turn as aborted once it is cancelled', () => {
+    expect(service.isConversationAborted()).toBe(false);
+    controller.abort();
+    expect(service.isConversationAborted()).toBe(true);
+  });
+
+  it('treats a turn with no abort controller as live', () => {
+    const bare = createService({}, { conversationState: {} });
+    expect(bare.getConversationAbortSignal()).toBeNull();
+    expect(bare.isConversationAborted()).toBe(false);
+  });
+
+  it('returns from the wait as soon as the turn is aborted', async () => {
+    vi.useFakeTimers();
+    try {
+      let settled = false;
+      const wait = service.waitUnlessAborted(5000).then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(10);
+      expect(settled).toBe(false);
+
+      controller.abort();
+      await wait;
+      expect(settled).toBe(true);
+      // The pending timer must not resolve a second time or leak.
+      await vi.advanceTimersByTimeAsync(5000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still waits the full interval when the turn stays live', async () => {
+    vi.useFakeTimers();
+    try {
+      let settled = false;
+      const wait = service.waitUnlessAborted(5000).then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await wait;
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('resolves immediately when the turn was already aborted', async () => {
+    controller.abort();
+    await expect(service.waitUnlessAborted(5000)).resolves.toBeUndefined();
+  });
+});
