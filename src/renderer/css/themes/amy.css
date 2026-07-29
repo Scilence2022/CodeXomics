@@ -206,7 +206,6 @@
 }
 
 [data-ui-style='amy'] .gene-info-header,
-[data-ui-style='amy'] .thinking-process,
 [data-ui-style='amy'] .progress-item {
   border-left-color: var(--primary-color) !important;
 }

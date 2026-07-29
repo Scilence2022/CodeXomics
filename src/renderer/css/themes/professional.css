@@ -483,10 +483,6 @@
 }
 
 /* ===== THINKING PROCESS ===== */
-[data-ui-style='professional'] .thinking-process {
-  border-left-color: var(--primary-color) !important;
-}
-
 [data-ui-style='professional'] .thinking-header {
   color: var(--primary-color) !important;
 }
