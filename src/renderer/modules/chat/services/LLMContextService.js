@@ -659,6 +659,8 @@ class LLMContextService {
       'scroll left',
       'move right',
       'move left',
+      'zoom in',
+      'zoom out',
       // Analysis patterns
       'codon usage analysis',
       'codon analysis',
@@ -785,6 +787,8 @@ class LLMContextService {
       'pan_left',
       'scroll_right',
       'scroll_left',
+      'zoom_in',
+      'zoom_out',
       // Highlight operations - complete actions that don't need follow-up
       'highlight_region',
       'remove_highlight',
@@ -829,6 +833,8 @@ class LLMContextService {
         'pan_left',
         'scroll_right',
         'scroll_left',
+        'zoom_in',
+        'zoom_out',
         // State information operations
         'get_genome_info',
         'get_current_state',
@@ -907,8 +913,13 @@ class LLMContextService {
 
     // Explicit repeat counts are multi-action requests too. Otherwise commands
     // such as "pan right 3x" or "open three tabs" stop after the first success.
+    // A zoom command's bare "4x" is the magnification a single zoom_out(factor: 4)
+    // already applies, not four sequential zooms, so it is stripped first — matching
+    // ChatManager.getRequestedExecutionCountFallback. Spelled-out repetition
+    // ("zoom in 3 times") still counts, and it survives the strip.
+    const repeatCountText = this.stripZoomMagnitudes(message);
     if (
-      /\b(?:[2-9]|1\d)\s*(?:x|times?|rounds?|steps?|tabs?|windows?)\b/.test(message) ||
+      /\b(?:[2-9]|1\d)\s*(?:x|times?|rounds?|steps?|tabs?|windows?)\b/.test(repeatCountText) ||
       /\b(?:twice|thrice)\b/.test(message) ||
       /\b(?:two|three|four|five|six|seven|eight|nine|ten)\s+(?:times?|rounds?|steps?|tabs?|windows?)\b/.test(message)
     ) {
@@ -949,6 +960,21 @@ class LLMContextService {
     }
 
     return false;
+  }
+
+  /**
+   * Blank out the "Nx" magnification a zoom command carries so repeat-count
+   * detection does not read it as a request for N sequential zooms. Only the
+   * multiplier attached to a zoom verb is removed; every other "3x" in the
+   * message ("pan right 3x") is left for the repeat-count checks.
+   * @param {string} message - already lower-cased user message
+   * @returns {string}
+   */
+  stripZoomMagnitudes(message) {
+    if (!message || typeof message !== 'string') return '';
+    return message
+      .replace(/\bzoom(?:\s+(?:in|out))?(?:\s+(?:by|to))?\s*\d+(?:\.\d+)?\s*x\b/g, 'zoom')
+      .replace(/\b\d+(?:\.\d+)?\s*x\s+zoom\b/g, 'zoom');
   }
 
   normalizeParams(params) {
