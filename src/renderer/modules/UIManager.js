@@ -1391,13 +1391,7 @@ class UIManager {
     const primerContent = primerElement?.querySelector('.track-content');
     if (!primerContent) return;
 
-    trackContent.innerHTML = '';
-    // The primer track sizes itself to the rows it just packed, so the height
-    // has to travel with the content or the mounted track keeps the old one.
-    trackContent.style.height = primerContent.style.height;
-    while (primerContent.firstChild) {
-      trackContent.appendChild(primerContent.firstChild);
-    }
+    this.genomeBrowser.trackRenderer.adoptPrimerTrackContent(trackContent, primerContent);
     console.log('🧬 Primer track SVG refreshed');
   }
 

@@ -14,6 +14,12 @@ const require = createRequire(import.meta.url);
 const TrackRenderer = require(TR_PATH);
 const jsdomDocument = globalThis.document;
 
+// Both are classic scripts in the app, so they see each other as globals.
+globalThis.TrackRenderer = TrackRenderer;
+globalThis.PrimerTrackSettingsPanel = require(
+  path.join(process.cwd(), 'src/renderer/modules/tracks/PrimerTrackSettingsPanel.js')
+);
+
 describe('TrackRenderer Structure', () => {
   let content;
 
@@ -513,9 +519,21 @@ describe('Primer Track Rendering', () => {
     // 20 bp of a 100 kb view is a fifth of a pixel: the glyph is inflated to the
     // legible minimum, stays centred on the site, and the head is a small
     // fraction of it rather than a marker scaled by stroke width.
-    expect(placement.glyphWidth).toBe(14);
+    expect(placement.glyphWidth).toBe(8);
     expect(placement.headLength).toBeLessThanOrEqual(9);
     expect(placement.glyphLeft + placement.glyphWidth / 2).toBeCloseTo(500, 0);
+  });
+
+  it('lets the track settings move the width below which arrows stop being to scale', () => {
+    const renderer = createPrimerRenderer();
+    const site = { type: 'primer', start: 50000, end: 50020, name: 'tiny', strand: 1 };
+    const viewport = { start: 0, end: 100000 };
+
+    expect(renderer.computePrimerPlacement(site, viewport, 1000, { minGlyphWidth: 20 }).glyphWidth).toBe(20);
+    // Out-of-range values fall back to the shipped geometry rather than to a
+    // glyph nobody can see or click.
+    expect(renderer.computePrimerPlacement(site, viewport, 1000, { minGlyphWidth: 0 }).glyphWidth).toBe(8);
+    expect(renderer.computePrimerPlacement(site, viewport, 1000, { minGlyphWidth: 500 }).glyphWidth).toBe(40);
   });
 
   it('packs rows by rendered pixel extent so labels do not collide', () => {
@@ -569,6 +587,72 @@ describe('Primer Track Rendering', () => {
 
     expect(placement.labelSide).toBe('inside');
     expect(label.getAttribute('fill')).toBe('#ffffff');
+  });
+
+  it('exposes the key primer knobs in the track settings panel and reads them back', () => {
+    const renderer = createPrimerRenderer();
+    const modal = document.createElement('div');
+    modal.innerHTML = renderer.createPrimersSettingsContent(renderer._getDefaultTrackSettings('primers'));
+
+    modal.querySelector('#primersGlyphHeight').value = '16';
+    modal.querySelector('#primersMinGlyphWidth').value = '20';
+    modal.querySelector('#primersMaxRows').value = '5';
+    modal.querySelector('#primersLayoutMode').value = 'singleRow';
+    modal.querySelector('#primersShowLabels').checked = false;
+    modal.querySelector('#primersShowPredicted').checked = false;
+    modal.querySelector('#primersShowAmplicons').checked = false;
+
+    expect(renderer.collectSettingsFromModal('primers', modal)).toMatchObject({
+      geneHeight: 16,
+      minGlyphWidth: 20,
+      maxRows: 5,
+      layoutMode: 'singleRow',
+      showLabels: false,
+      showPredicted: false,
+      showAmplicons: false,
+    });
+  });
+
+  it('drops predicted binding sites when the track settings ask it to', () => {
+    const renderer = createPrimerRenderer();
+    const sites = [
+      { type: 'primer', start: 100, end: 120, name: 'pinned', strand: 1, origin: 'pinned' },
+      { type: 'primer', start: 300, end: 320, name: 'guess', strand: 1, origin: 'predicted' },
+    ];
+    renderer.genomeBrowser.primerManager = { getRenderableBindingSites: () => sites };
+    const viewport = { start: 0, end: 1000 };
+
+    expect(renderer.getVisiblePrimerBindings('chr1', viewport, {})).toHaveLength(2);
+    expect(renderer.getVisiblePrimerBindings('chr1', viewport, { showPredicted: false })).toEqual([sites[0]]);
+  });
+
+  it('keeps names off when the user turns them off, without claiming the view is crowded', () => {
+    const renderer = createPrimerRenderer();
+    const placements = [{ type: 'primer', start: 100, end: 120, name: 'oligo', strand: 1 }].map(site =>
+      renderer.computePrimerPlacement(site, { start: 0, end: 1000 }, 800, {})
+    );
+
+    const packed = renderer.arrangePrimersInRows(placements, { showLabels: false });
+
+    expect(packed.labelsVisible).toBe(false);
+    expect(packed.labelsAutoHidden).toBe(false);
+    expect(placements[0].showLabel).toBe(false);
+  });
+
+  it('marks the derived track height so a full redraw does not carry the old one over', () => {
+    const renderer = createPrimerRenderer();
+    const trackContent = document.createElement('div');
+    trackContent.getBoundingClientRect = () => ({ width: 640 });
+
+    renderer.renderPrimerElements(
+      trackContent,
+      [{ type: 'primer', start: 110, end: 210, name: 'Primer A', strand: 1 }],
+      { start: 100, end: 300 },
+      {}
+    );
+
+    expect(trackContent.dataset.autoHeight).toBe('true');
+    expect(parseInt(trackContent.style.height, 10)).toBeGreaterThan(0);
   });
 
   it('joins a forward and reverse site of the same pair into their amplicon', () => {
