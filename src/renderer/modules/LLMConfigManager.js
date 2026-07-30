@@ -2377,7 +2377,7 @@ class LLMConfigManager {
       throw new Error('No LLM provider configured');
     }
 
-    const provider = this.providers[providerKey];
+    const provider = this.getProviderConfigForModelType('task');
 
     try {
       switch (providerKey) {
@@ -2414,11 +2414,11 @@ class LLMConfigManager {
    *   text as it arrives, for providers that stream it separately from the
    *   answer; `onStreamReset()` is invoked if a stream fails partway so the
    *   caller can discard partial text before the non-streaming retry;
-   *   `signal` aborts an in-flight stream.
+   *   `signal` aborts an in-flight stream. `modelType`, `providerOverride`,
+   *   and `modelOverride` can select a request-scoped ChatBox model.
    */
   async sendMessageWithHistory(conversationHistory, context = null, memoryContext = null, options = {}) {
-    // Get the best available provider for task model type
-    const primaryProvider = this.getProviderForModelType('task');
+    const { providerKey: primaryProvider, model: primaryModel } = this.getRequestModelSelection('task', options);
     if (!primaryProvider) {
       throw new Error('No LLM provider configured');
     }
@@ -2427,7 +2427,14 @@ class LLMConfigManager {
 
     // Try primary provider first
     try {
-      return await this.sendMessageWithProvider(primaryProvider, conversationHistory, context, memoryContext, options);
+      return await this.sendMessageWithProvider(
+        primaryProvider,
+        conversationHistory,
+        context,
+        memoryContext,
+        options,
+        primaryModel
+      );
     } catch (error) {
       lastError = error;
       console.warn(`Primary provider ${primaryProvider} failed:`, error.message);
@@ -2483,12 +2490,26 @@ class LLMConfigManager {
   /**
    * Send message using a specific provider
    */
-  async sendMessageWithProvider(providerKey, conversationHistory, context, memoryContext = null, options = {}) {
-    const provider = this.providers[providerKey];
+  async sendMessageWithProvider(
+    providerKey,
+    conversationHistory,
+    context,
+    memoryContext = null,
+    options = {},
+    modelOverride = null
+  ) {
+    const configuredProvider = this.providers[providerKey];
 
-    if (!provider || !provider.enabled) {
+    if (!configuredProvider || !configuredProvider.enabled) {
       throw new Error(`Provider ${providerKey} is not configured or enabled`);
     }
+
+    // Model Selection config is request-scoped. Do not mutate the provider's
+    // saved default, because a fallback provider must still use its own model.
+    const provider =
+      modelOverride && modelOverride !== 'auto'
+        ? { ...configuredProvider, model: modelOverride }
+        : configuredProvider;
 
     switch (providerKey) {
       case 'openai':
@@ -4232,18 +4253,72 @@ Current context summary:
     // For general tasks, reasoning, and code, use the main model configuration
     if (modelType === 'task' || modelType === 'reasoning' || modelType === 'code') {
       const mainConfig = this.modelTypes.main;
-      if (mainConfig && mainConfig.model !== 'auto') {
+      if (
+        mainConfig &&
+        mainConfig.model !== 'auto' &&
+        (mainConfig.provider === 'auto' || mainConfig.provider === providerKey)
+      ) {
         return mainConfig.model;
       }
     } else {
       // For specialized model types, check their specific configuration
-      if (this.modelTypes[modelType] && this.modelTypes[modelType].model !== 'auto') {
-        return this.modelTypes[modelType].model;
+      const modelTypeConfig = this.modelTypes[modelType];
+      if (
+        modelTypeConfig &&
+        modelTypeConfig.model !== 'auto' &&
+        (modelTypeConfig.provider === 'auto' || modelTypeConfig.provider === providerKey)
+      ) {
+        return modelTypeConfig.model;
       }
     }
 
     // Fallback to provider's default model
     return this.providers[providerKey].model;
+  }
+
+  /**
+   * Resolve a request-scoped provider configuration for a model type.
+   * The returned object may contain a selected model override, while the
+   * persisted provider configuration remains unchanged.
+   */
+  getProviderConfigForModelType(modelType) {
+    const providerKey = this.getProviderForModelType(modelType);
+    if (!providerKey) return null;
+
+    const provider = this.providers[providerKey];
+    const model = this.getModelForModelType(modelType);
+    if (!provider || !model || model === provider.model) return provider;
+
+    return { ...provider, model };
+  }
+
+  /**
+   * Resolve provider and model overrides for a single request. A provider-only
+   * override uses that provider's saved default model; a model override always
+   * wins. Invalid explicit providers fail clearly instead of silently routing
+   * the conversation somewhere else.
+   */
+  getRequestModelSelection(defaultModelType = 'task', options = {}) {
+    const modelType = options.modelType && options.modelType !== 'auto' ? options.modelType : defaultModelType;
+    const providerOverride =
+      options.providerOverride && options.providerOverride !== 'auto' ? options.providerOverride : null;
+
+    if (providerOverride) {
+      const provider = this.providers[providerOverride];
+      if (!provider || !provider.enabled) {
+        throw new Error(`Provider ${providerOverride} is not configured or enabled`);
+      }
+
+      const model = options.modelOverride && options.modelOverride !== 'auto' ? options.modelOverride : provider.model;
+      return { providerKey: providerOverride, model };
+    }
+
+    const providerKey = this.getProviderForModelType(modelType);
+    const model =
+      options.modelOverride && options.modelOverride !== 'auto'
+        ? options.modelOverride
+        : this.getModelForModelType(modelType);
+    return { providerKey, model };
   }
 
   // ==========================================

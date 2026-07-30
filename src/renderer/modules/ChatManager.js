@@ -5114,6 +5114,9 @@ class ChatManager {
             onReasoningToken: token => this.appendStreamingReasoningToken(token),
             onStreamReset: () => this.resetStreamingResponse(),
             signal: this.conversationState.abortController?.signal,
+            modelType: this.chatBoxSettingsManager?.getSetting('chatboxModelType', 'auto'),
+            providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
+            modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
           });
         } finally {
           // The completed message is rendered by the normal path below, so the
