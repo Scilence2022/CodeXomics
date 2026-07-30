@@ -1101,7 +1101,7 @@ class TrackRenderer {
     if (visiblePrimers.length === 0) {
       const noPrimersMsg = this.createNoDataMessage('No primers in this region', 'no-primers-message');
       trackContent.appendChild(noPrimersMsg);
-      trackContent.style.height = `${TrackRenderer.PRIMER_TRACK_STYLE.emptyTrackHeight}px`;
+      this.setPrimerTrackHeight(trackContent, TrackRenderer.PRIMER_TRACK_STYLE.emptyTrackHeight);
       return track;
     }
 
@@ -1112,12 +1112,16 @@ class TrackRenderer {
   }
 
   getVisiblePrimerBindings(chromosome, viewport, settings = {}) {
-    if (this.genomeBrowser.primerManager) {
-      return this.genomeBrowser.primerManager.getRenderableBindingSites(chromosome, viewport);
-    }
+    const sites = this.genomeBrowser.primerManager
+      ? this.genomeBrowser.primerManager.getRenderableBindingSites(chromosome, viewport)
+      : this.filterPrimerAnnotations(this.genomeBrowser.currentAnnotations?.[chromosome] || [], viewport, settings);
 
-    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
-    return this.filterPrimerAnnotations(annotations, viewport, settings);
+    // Real-time off-target predictions can outnumber the pinned sites by a lot,
+    // so they can be turned off from the track settings.
+    if (settings.showPredicted === false) {
+      return sites.filter(site => site.origin !== 'predicted');
+    }
+    return sites;
   }
 
   /**
@@ -1140,7 +1144,7 @@ class TrackRenderer {
     const amplicons = this.collectPrimerAmplicons(placements, settings);
     const layout = this.calculatePrimerTrackLayout(packing.rows, settings, { ampliconCount: amplicons.length });
 
-    trackContent.style.height = `${layout.totalHeight}px`;
+    this.setPrimerTrackHeight(trackContent, layout.totalHeight);
 
     const svg = this.createPrimerSVGNode('svg', {
       class: 'primer-binding-svg',
@@ -1182,6 +1186,35 @@ class TrackRenderer {
 
     trackContent.appendChild(svg);
     this.addPrimerTrackLegend(trackContent, placements, layout, { amplicons, packing });
+  }
+
+  /**
+   * The primer track sizes itself to the rows it just packed, which changes as
+   * you pan. Mark the height as derived so the full redraw does not carry the
+   * previous view's height over (see displayGenomeView) — a manual drag on the
+   * resize handle clears the flag and takes over.
+   */
+  setPrimerTrackHeight(trackContent, height) {
+    trackContent.style.height = `${height}px`;
+    trackContent.dataset.autoHeight = 'true';
+  }
+
+  /**
+   * Swap freshly rendered primer content into the mounted track. The derived
+   * height travels with the content — it is recomputed for every view, so the
+   * mounted track would otherwise keep the previous one.
+   */
+  adoptPrimerTrackContent(mountedContent, freshContent) {
+    mountedContent.innerHTML = '';
+    mountedContent.style.height = freshContent.style.height;
+    if (freshContent.dataset.autoHeight) {
+      mountedContent.dataset.autoHeight = freshContent.dataset.autoHeight;
+    } else {
+      delete mountedContent.dataset.autoHeight;
+    }
+    while (freshContent.firstChild) {
+      mountedContent.appendChild(freshContent.firstChild);
+    }
   }
 
   /** Create an SVG node and set its attributes in one call. */
@@ -1233,13 +1266,16 @@ class TrackRenderer {
     const scale = containerWidth / range;
     const footprintX = (visibleStart - viewport.start) * scale;
     const footprintWidth = (visibleEnd - visibleStart) * scale;
-    const glyphWidth = Math.max(footprintWidth, style.minGlyphWidth);
+    // Below this width the glyph stops being to scale. Lower it to keep more
+    // zoom levels proportional, raise it to keep tiny sites easier to hit.
+    const minGlyphWidth = Math.max(2, Math.min(40, Number(settings.minGlyphWidth) || style.minGlyphWidth));
+    const glyphWidth = Math.max(footprintWidth, minGlyphWidth);
     // When the footprint is inflated to the legible minimum, keep the glyph
     // centred on the site so it still points at the right base.
     const centered = footprintX + footprintWidth / 2 - glyphWidth / 2;
     const glyphLeft = Math.max(
       0,
-      Math.min(footprintWidth >= style.minGlyphWidth ? footprintX : centered, Math.max(0, containerWidth - glyphWidth))
+      Math.min(footprintWidth >= minGlyphWidth ? footprintX : centered, Math.max(0, containerWidth - glyphWidth))
     );
     const glyphRight = glyphLeft + glyphWidth;
 
@@ -1372,10 +1408,12 @@ class TrackRenderer {
       return rows;
     };
 
-    let labelsVisible = true;
-    let rows = pack(true);
-    if (rows.length > maxRows) {
+    let labelsVisible = settings.showLabels !== false;
+    let labelsAutoHidden = false;
+    let rows = pack(labelsVisible);
+    if (labelsVisible && rows.length > maxRows) {
       labelsVisible = false;
+      labelsAutoHidden = true;
       rows = pack(false);
     }
 
@@ -1391,7 +1429,7 @@ class TrackRenderer {
       placement.showLabel = labelsVisible;
     });
 
-    return { rows, labelsVisible, overlapping };
+    return { rows, labelsVisible, labelsAutoHidden, overlapping };
   }
 
   /**
@@ -1488,7 +1526,9 @@ class TrackRenderer {
   buildPrimerArrowPath(x, y, width, height, headLength, isReverse) {
     const round = value => Math.round(value * 100) / 100;
     const head = Math.min(headLength, width);
-    const flare = Math.min(3, height * 0.32);
+    // Tie the head's overhang to the width as well as the height, so a glyph at
+    // the minimum width does not end up taller than it is wide.
+    const flare = Math.min(3, height * 0.32, width * 0.25);
     const top = round(y);
     const bottom = round(y + height);
     const midY = round(y + height / 2);
@@ -1767,7 +1807,7 @@ class TrackRenderer {
     }
     if (phosphorylated > 0) chips.push({ text: `${phosphorylated} × 5′-phosphate`, swatch: '#0891b2' });
     if (context.packing?.overlapping > 0) chips.push({ text: `${context.packing.overlapping} stacked` });
-    if (context.packing && context.packing.labelsVisible === false && placements.length > 0) {
+    if (context.packing?.labelsAutoHidden && placements.length > 0) {
       chips.push({ text: 'names hidden — zoom in' });
     }
 
@@ -11438,6 +11478,14 @@ This action cannot be undone.`;
         }, 100);
         break;
 
+      case 'primers':
+        titleElement.textContent = 'Primers Track Settings';
+        bodyElement.innerHTML = this.createPrimersSettingsContent(currentSettings);
+        setTimeout(() => {
+          this.setupPrimersSettingsEventListeners(bodyElement);
+        }, 100);
+        break;
+
       default:
         titleElement.textContent = `${trackType} Track Settings`;
         bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
@@ -11766,6 +11814,14 @@ This action cannot be undone.`;
                 </div>
             </div>
         `;
+  }
+
+  /**
+   * Create primers track settings content. The panel itself lives in
+   * tracks/PrimerTrackSettingsPanel.js.
+   */
+  createPrimersSettingsContent(settings) {
+    return PrimerTrackSettingsPanel.content(this, settings);
   }
 
   /**
@@ -12554,6 +12610,12 @@ This action cannot be undone.`;
         showOperonsSameRow: false,
         height: 80,
         geneHeight: 10,
+        // Width in px below which an oligo arrow stops being drawn to scale.
+        // See TrackRenderer.PRIMER_TRACK_STYLE for the rest of the geometry.
+        minGlyphWidth: 8,
+        showLabels: true,
+        showPredicted: true,
+        showAmplicons: true,
         displayType: 'standard',
         fontSize: 11,
         geneNameColor: '#4a044e',
@@ -13053,6 +13115,10 @@ This action cannot be undone.`;
         settings.fontFamily = modal.querySelector('#actionsFontFamily')?.value || 'Arial, sans-serif';
         break;
 
+      case 'primers':
+        Object.assign(settings, PrimerTrackSettingsPanel.collect(this, modal));
+        break;
+
       case 'variants':
         // Display options
         settings.height = parseInt(modal.querySelector('#variantsHeight').value) || 80;
@@ -13217,27 +13283,7 @@ This action cannot be undone.`;
    * Setup event listeners for sequence line settings
    */
   setupSequenceLineSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.seqline-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.seqline-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.seqline-settings-tabs');
 
     const showProteinTranslationCheckbox = bodyElement.querySelector('#sequenceLineShowProteinTranslation');
     const translationModeGroup = bodyElement.querySelector('#sequenceLineTranslationModeGroup');
@@ -13732,12 +13778,7 @@ This action cannot be undone.`;
     const primerContent = primerTrackElement?.querySelector('.track-content');
     if (!primerContent) return;
 
-    trackContent.innerHTML = '';
-    // Row count (and so the height) is recomputed for every view.
-    trackContent.style.height = primerContent.style.height;
-    while (primerContent.firstChild) {
-      trackContent.appendChild(primerContent.firstChild);
-    }
+    this.adoptPrimerTrackContent(trackContent, primerContent);
 
     console.log('🧬 Primer track SVG updated');
   }
@@ -15223,31 +15264,7 @@ This action cannot be undone.`;
   }
 
   setupReadsSettingsEventListeners(bodyElement) {
-    // Set up tabs switching
-    const tabButtons = bodyElement.querySelectorAll('.reads-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.reads-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        // Remove active class from all buttons and panels
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        // Add active class to clicked button
-        button.classList.add('active');
-
-        // Show corresponding panel
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.reads-settings-tabs');
 
     // Sampling mode toggle
     const samplingModeSelect = bodyElement.querySelector('#readsSamplingMode');
@@ -15418,31 +15435,7 @@ This action cannot be undone.`;
    * Setup event listeners for variants track settings
    */
   setupVariantsSettingsEventListeners(bodyElement) {
-    // Set up tabs switching
-    const tabButtons = bodyElement.querySelectorAll('.variants-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.variants-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        // Remove active class from all buttons and panels
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        // Add active class to clicked button
-        button.classList.add('active');
-
-        // Show corresponding panel
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.variants-settings-tabs');
 
     // Color mode selection - show/hide custom color group
     const colorModeSelect = bodyElement.querySelector('#variantsColorMode');
@@ -15463,9 +15456,6 @@ This action cannot be undone.`;
    * Setup event listeners for sequence track settings
    */
   setupSequenceSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.sequence-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.sequence-settings-tabs .tab-content');
-
     // Reflect the current line height / spacing in the selects (static options).
     const seqSettings = this.getTrackSettings('sequence') || {};
     const seqUtils = this.genomeBrowser?.sequenceUtils;
@@ -15473,25 +15463,7 @@ This action cannot be undone.`;
     if (lineHeightSelect) lineHeightSelect.value = String(seqSettings.lineHeight ?? seqUtils?.lineHeight ?? 28);
     const lineSpacingSelect = bodyElement.querySelector('#sequenceLineSpacing');
     if (lineSpacingSelect) lineSpacingSelect.value = String(seqSettings.lineSpacing ?? seqUtils?.lineSpacing ?? 8);
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.sequence-settings-tabs');
 
     const colorModeSelect = bodyElement.querySelector('#sequenceColorMode');
     const uniformColorSettings = bodyElement.querySelector('#uniformColorSettings');
@@ -15512,79 +15484,48 @@ This action cannot be undone.`;
    * Setup event listeners for GC track settings
    */
   setupGCSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.gc-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.gc-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.gc-settings-tabs');
   }
 
   /**
    * Setup event listeners for WIG tracks settings
    */
   setupWIGTracksSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.wig-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.wig-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.wig-settings-tabs');
   }
 
   /**
    * Setup event listeners for Actions track settings
    */
   setupActionsSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.actions-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.actions-settings-tabs .tab-content');
+    this.setupSettingsTabs(bodyElement, '.actions-settings-tabs');
+  }
+
+  /**
+   * Setup event listeners for Primers track settings
+   */
+  setupPrimersSettingsEventListeners(bodyElement) {
+    this.setupSettingsTabs(bodyElement, '.primers-settings-tabs');
+  }
+
+  /**
+   * Wire the tab strip shared by the track settings panels: clicking a button
+   * activates its button and the matching `#<data-tab>-tab` panel.
+   */
+  setupSettingsTabs(bodyElement, containerSelector) {
+    const tabButtons = bodyElement.querySelectorAll(`${containerSelector} .tab-button`);
+    const tabPanels = bodyElement.querySelectorAll(`${containerSelector} .tab-content`);
 
     tabButtons.forEach(button => {
       button.addEventListener('click', e => {
         e.preventDefault();
         e.stopPropagation();
 
-        const targetTab = button.getAttribute('data-tab');
-
         tabButtons.forEach(btn => btn.classList.remove('active'));
         tabPanels.forEach(panel => panel.classList.remove('active'));
 
         button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
+        bodyElement.querySelector(`#${button.getAttribute('data-tab')}-tab`)?.classList.add('active');
       });
     });
   }
@@ -15593,27 +15534,7 @@ This action cannot be undone.`;
    * Setup event listeners for default / BLAST track settings
    */
   setupDefaultSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.default-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.default-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.default-settings-tabs');
   }
 
   /**
@@ -16111,7 +16032,7 @@ TrackRenderer.SEQUENCE_LETTER_MIN_PX_PER_BP = 8;
 // which turned every zoomed-out primer into a triangle the height of the track.
 TrackRenderer.PRIMER_TRACK_STYLE = {
   glyphHeight: 11, // arrow body height when the track settings do not override it
-  minGlyphWidth: 14, // smallest legible arrow; sub-pixel sites are inflated to this
+  minGlyphWidth: 8, // smallest legible arrow; sub-pixel sites are inflated to this
   minHeadLength: 4,
   maxHeadLength: 9,
   headFraction: 0.45, // head length as a share of the glyph, before the cap

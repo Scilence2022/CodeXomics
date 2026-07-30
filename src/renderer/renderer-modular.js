@@ -3994,6 +3994,11 @@ class GenomeBrowser {
       console.log('[displayGenomeView] Existing tracks found for height preservation:', existingTracks.length);
       existingTracks.forEach(track => {
         const trackContent = track.querySelector('.track-content');
+        // A track that sizes itself to its content (the primer track) recomputes
+        // its height for every view, so carrying the old one over would clip or
+        // pad the redraw. Dragging the resize handle clears the marker and hands
+        // control back to this preservation path.
+        if (trackContent?.dataset.autoHeight === 'true') return;
         if (trackContent && trackContent.style.height && trackContent.style.height !== '') {
           let baseType = null;
           for (const cls of track.classList) {
@@ -4615,6 +4620,8 @@ class GenomeBrowser {
       if (trackContent) {
         const newHeight = Math.max(50, startHeight + deltaY);
         trackContent.style.height = `${newHeight}px`;
+        // The user's drag beats any content-derived height from here on.
+        delete trackContent.dataset.autoHeight;
 
         // Save the new size to track state manager
         this.trackStateManager.saveTrackSize(trackType, `${newHeight}px`);

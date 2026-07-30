@@ -85,10 +85,12 @@
     "PluginTestManager": "readonly",
     "PluginUpdateManager": "readonly",
     "PluginUtils": "readonly",
+    "PrimerTrackSettingsPanel": "readonly",
     "ProjectXMLHandler": "readonly",
     "ResizableModalManager": "readonly",
     "SmartExecutor": "readonly",
     "ToolExecutionTracker": "readonly",
+    "TrackRenderer": "readonly",
     "VariantAnalyzer": "readonly",
     "WelcomeExamplesManager": "readonly"
   },
