@@ -295,45 +295,142 @@ svg {
   font-size: 8px;
 }
 
+/* ===== Primers track ===== */
+
 .primer-track .track-content {
-  border-left: 4px solid #7c3aed;
+  min-height: 0;
   overflow: hidden;
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.32) 0 3px, transparent 3px), #fcfcfd;
 }
 
 .primer-binding-svg {
   display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: 8;
+  overflow: visible;
 }
 
-.primer-binding-element line {
+/* Genome line each row of oligos sits on */
+.primer-row-baseline {
+  stroke: rgba(100, 116, 139, 0.22);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.primer-binding-element {
+  cursor: pointer;
+}
+
+.primer-arrow {
   transition:
-    stroke 0.15s ease,
-    stroke-width 0.15s ease;
+    filter 0.15s ease,
+    opacity 0.15s ease;
 }
 
-.primer-binding-element:hover line:first-of-type {
-  stroke: #4f46e5;
+.primer-binding-element.predicted .primer-arrow {
+  opacity: 0.85;
 }
 
-.primer-phosphate-flag {
-  fill: #0891b2;
-  font-family: Arial, sans-serif;
-  font-size: 10px;
-  font-weight: 800;
+.primer-binding-element:hover .primer-arrow {
+  filter: brightness(1.08) drop-shadow(0 1px 2px rgba(15, 23, 42, 0.35));
+  opacity: 1;
+}
+
+.primer-binding-element.selected .primer-arrow {
+  filter: drop-shadow(0 0 3px rgba(37, 99, 235, 0.9));
+}
+
+.primer-label {
+  font-weight: 600;
   paint-order: stroke;
   pointer-events: none;
-  stroke: #ecfeff;
+  stroke: rgba(255, 255, 255, 0.85);
   stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.primer-label.inside {
+  stroke: none;
+}
+
+.primer-mismatch-tick {
+  fill: #dc2626;
+  pointer-events: none;
+}
+
+.primer-phosphate-dot {
+  fill: #06b6d4;
+  stroke: #ffffff;
+  stroke-width: 1.2;
+}
+
+/* Amplicon a forward/reverse pair would produce */
+.primer-amplicon-span {
+  stroke: rgba(100, 116, 139, 0.65);
+  stroke-width: 1;
+  stroke-dasharray: 5 3;
+}
+
+.primer-amplicon-cap {
+  stroke: rgba(100, 116, 139, 0.85);
+  stroke-width: 1.4;
+}
+
+.primer-amplicon-label {
+  fill: #475569;
+  font-size: 10px;
+  font-weight: 600;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: #fcfcfd;
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
 }
 
 .primer-track-legend {
   position: absolute;
   left: 10px;
-  color: #475569;
-  font-size: 11px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 10.5px;
   line-height: 14px;
   pointer-events: none;
+  white-space: nowrap;
   z-index: 9;
+}
+
+.primer-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.primer-legend-chip.strong {
+  border-color: rgba(124, 58, 237, 0.25);
+  background: rgba(124, 58, 237, 0.08);
+  color: #6d28d9;
+  font-weight: 600;
+}
+
+.primer-legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.primer-track .no-primers-message {
+  font-size: 11.5px;
 }
 
 .primer-track .gene-stats {
@@ -624,6 +721,43 @@ svg {
     background: rgba(31, 41, 55, 0.9);
     border-color: var(--border-color);
     color: var(--text-primary);
+  }
+
+  /* Primers track dark mode */
+  .primer-track .track-content {
+    background: linear-gradient(90deg, rgba(167, 139, 250, 0.22) 0 3px, transparent 3px), var(--bg-secondary);
+  }
+
+  .primer-row-baseline {
+    stroke: rgba(148, 163, 184, 0.28);
+  }
+
+  .primer-label {
+    fill: var(--text-primary);
+    stroke: rgba(15, 23, 42, 0.75);
+  }
+
+  .primer-label.inside {
+    fill: #ffffff;
+  }
+
+  .primer-amplicon-label {
+    fill: var(--text-secondary);
+    stroke: var(--bg-secondary);
+  }
+
+  .primer-phosphate-dot {
+    stroke: var(--bg-secondary);
+  }
+
+  .primer-legend-chip {
+    border-color: rgba(148, 163, 184, 0.24);
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  .primer-legend-chip.strong {
+    background: rgba(167, 139, 250, 0.16);
+    color: #c4b5fd;
   }
 
   /* Circular checkbox dark mode */

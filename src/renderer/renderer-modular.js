@@ -5865,6 +5865,7 @@ class GenomeBrowser {
     this.selectedPrimer = primer;
     this.selectedGene = { gene: primer, operonInfo: null };
     this.highlightSelectedGene(primer);
+    this.trackRenderer?.highlightSelectedPrimerElement?.(primer);
     this.showPrimerSelectionFeedback(primer);
     this.populatePrimerDetails(primer);
     this.showPrimerDetailsPanel();
@@ -8940,7 +8941,9 @@ class GenomeBrowser {
     this.selectedPrimer = null;
 
     // Remove selection styling from all gene elements (both regular and SVG)
-    const selectedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
+    const selectedElements = document.querySelectorAll(
+      '.gene-element.selected, .svg-gene-element.selected, .primer-binding-element.selected'
+    );
     selectedElements.forEach(el => {
       el.classList.remove('selected', 'border-highlight');
     });

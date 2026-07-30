@@ -492,35 +492,98 @@ describe('Primer Track Rendering', () => {
     );
 
     const svg = trackContent.querySelector('.primer-binding-svg');
-    const stem = trackContent.querySelector('.primer-binding-element line');
+    const arrow = trackContent.querySelector('.primer-binding-element .primer-arrow');
 
     expect(svg.getAttribute('viewBox')).toMatch(/^0 0 640 /);
-    expect(stem.getAttribute('x1')).toBe('32');
-    expect(stem.getAttribute('x2')).toBe('352');
+    // Sites are 1-based inclusive, so the 110..210 footprint starts at base 109
+    // of a 200 bp view drawn 640 px wide, and spans 101 bases.
+    expect(arrow.getAttribute('d')).toContain('M 28.8 ');
+    expect(arrow.getAttribute('d')).toContain('L 352 ');
+  });
+
+  it('caps the arrow head so a sub-pixel primer stays an arrow, not a triangle', () => {
+    const renderer = createPrimerRenderer();
+    const placement = renderer.computePrimerPlacement(
+      { type: 'primer', start: 50000, end: 50020, name: 'tiny', strand: 1 },
+      { start: 0, end: 100000 },
+      1000,
+      {}
+    );
+
+    // 20 bp of a 100 kb view is a fifth of a pixel: the glyph is inflated to the
+    // legible minimum, stays centred on the site, and the head is a small
+    // fraction of it rather than a marker scaled by stroke width.
+    expect(placement.glyphWidth).toBe(14);
+    expect(placement.headLength).toBeLessThanOrEqual(9);
+    expect(placement.glyphLeft + placement.glyphWidth / 2).toBeCloseTo(500, 0);
+  });
+
+  it('packs rows by rendered pixel extent so labels do not collide', () => {
+    const renderer = createPrimerRenderer();
+    const viewport = { start: 0, end: 10000 };
+    const sites = [
+      { type: 'primer', start: 100, end: 120, name: 'first_oligo', strand: 1 },
+      { type: 'primer', start: 130, end: 150, name: 'second_oligo', strand: 1 },
+    ];
+    const placements = sites.map(site => renderer.computePrimerPlacement(site, viewport, 800, {}));
+
+    // Genomically these two barely overlap, but their labels do, so they must
+    // land on separate rows.
+    const packed = renderer.arrangePrimersInRows(placements, {});
+    expect(packed.rows).toHaveLength(2);
+    expect(packed.labelsVisible).toBe(true);
   });
 
   it('honors primer track size and label settings', () => {
     const renderer = createPrimerRenderer();
-    const layout = renderer.calculatePrimerTrackLayout([[{ type: 'primer', start: 1, end: 20 }]], {
-      geneHeight: 18,
-    });
-
-    const group = renderer.createSVGPrimerElement(
-      { type: 'primer', start: 10, end: 50, name: 'Custom Primer', strand: 1 },
-      { start: 0, end: 100 },
-      0,
-      layout,
-      { fontSize: 13, geneNameColor: '#123456', fontFamily: 'Verdana, sans-serif' },
-      500
+    const settings = { fontSize: 13, geneNameColor: '#123456', fontFamily: 'Verdana, sans-serif', geneHeight: 18 };
+    const layout = renderer.calculatePrimerTrackLayout([[{ type: 'primer', start: 1, end: 20 }]], settings);
+    const placement = renderer.computePrimerPlacement(
+      { type: 'primer', start: 4000, end: 4020, name: 'Custom Primer', strand: 1 },
+      { start: 0, end: 10000 },
+      500,
+      settings
     );
-    const stem = group.querySelector('line');
+
+    const group = renderer.createSVGPrimerElement(placement, 0, layout, settings);
     const label = group.querySelector('text');
 
     expect(layout.primerHeight).toBe(18);
-    expect(stem.getAttribute('stroke-width')).toBe('18');
+    expect(placement.labelSide).toBe('right');
     expect(label.getAttribute('font-size')).toBe('13');
     expect(label.getAttribute('fill')).toBe('#123456');
     expect(label.getAttribute('font-family')).toBe('Verdana, sans-serif');
+  });
+
+  it('moves the label inside the arrow once the primer is wide enough to hold it', () => {
+    const renderer = createPrimerRenderer();
+    const layout = renderer.calculatePrimerTrackLayout([[]], {});
+    const placement = renderer.computePrimerPlacement(
+      { type: 'primer', start: 10, end: 50, name: 'wide', strand: 1 },
+      { start: 0, end: 100 },
+      500,
+      {}
+    );
+
+    const label = renderer.createSVGPrimerElement(placement, 0, layout, {}).querySelector('text');
+
+    expect(placement.labelSide).toBe('inside');
+    expect(label.getAttribute('fill')).toBe('#ffffff');
+  });
+
+  it('joins a forward and reverse site of the same pair into their amplicon', () => {
+    const renderer = createPrimerRenderer();
+    const viewport = { start: 0, end: 4000 };
+    const placements = [
+      { type: 'primer', start: 500, end: 520, name: 'F', strand: 1, pairId: 'pair-1' },
+      { type: 'primer', start: 2400, end: 2420, name: 'R', strand: -1, pairId: 'pair-1' },
+      { type: 'primer', start: 3000, end: 3020, name: 'lone', strand: 1 },
+    ].map(site => renderer.computePrimerPlacement(site, viewport, 800, {}));
+
+    const amplicons = renderer.collectPrimerAmplicons(placements, {});
+
+    expect(amplicons).toHaveLength(1);
+    expect(amplicons[0].productBp).toBe(1921);
   });
 });
 
