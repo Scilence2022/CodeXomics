@@ -31,6 +31,7 @@ class SequenceUtils {
     this.proteinTranslationCache = new Map(); // Cache for CDS translations used by aligned protein rows
     this.colorCache = new Map(); // Cache for color calculations
     this.svgCache = new Map(); // Cache for SVG indicators
+    this.renderedOperonContexts = new Map(); // Reuse operons already calculated for visible sequence indicators
     this.lastRenderParams = null; // Track last render parameters
 
     // Virtual scrolling parameters - FIXED: Use actual line height + spacing
@@ -593,7 +594,13 @@ class SequenceUtils {
 
     const chromosome = target.dataset.chromosome || this.genomeBrowser.currentChromosome;
     const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
-    const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations, chromosome) : [];
+    const renderedContext = this.renderedOperonContexts.get(chromosome);
+    const operons =
+      renderedContext?.annotations === annotations && renderedContext.annotationCount === annotations.length
+        ? renderedContext.operons
+        : this.genomeBrowser.detectOperons
+          ? this.genomeBrowser.detectOperons(annotations, chromosome)
+          : [];
     const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
 
     if (this.genomeBrowser.trackRenderer?.showGeneDetails) {
@@ -1291,6 +1298,11 @@ class SequenceUtils {
     const subsequence = this.getViewportSequence(fullSequence, viewStart, viewEnd, chromosome);
     const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
     const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations, chromosome) : [];
+    this.renderedOperonContexts.set(chromosome, {
+      annotations,
+      annotationCount: annotations.length,
+      operons,
+    });
 
     // Get sequence track settings
     const sequenceSettings = this.getSequenceTrackSettings();
@@ -2927,18 +2939,13 @@ class SequenceUtils {
     const end = Math.max(selectionStart, selectionEnd);
     let highlightedCount = 0;
 
-    document.querySelectorAll('.sequence-bases span.gene-sequence-selected').forEach(baseElement => {
-      baseElement.classList.remove('sequence-selected');
-      baseElement.classList.remove('gene-sequence-selected');
-    });
-
-    document.querySelectorAll('.sequence-bases span').forEach(baseElement => {
+    const sequenceContainer = document.getElementById('sequenceContent') || document;
+    sequenceContainer.querySelectorAll('.sequence-bases span').forEach(baseElement => {
       const sourcePosition = this.getBaseElementSourcePosition(baseElement);
-      if (sourcePosition !== null && sourcePosition >= start && sourcePosition <= end) {
-        baseElement.classList.add('sequence-selected');
-        baseElement.classList.add('gene-sequence-selected');
-        highlightedCount++;
-      }
+      const isSelected = sourcePosition !== null && sourcePosition >= start && sourcePosition <= end;
+      baseElement.classList.toggle('sequence-selected', isSelected);
+      baseElement.classList.toggle('gene-sequence-selected', isSelected);
+      if (isSelected) highlightedCount++;
     });
 
     return highlightedCount;

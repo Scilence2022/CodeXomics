@@ -68,6 +68,25 @@ describe('Genes track sequence selection settings', () => {
     expect(genomeBrowser.scrollBottomSequenceToGene).not.toHaveBeenCalled();
   });
 
+  it('queues expensive Gene Details rendering when the app scheduler is available', () => {
+    const genomeBrowser = {
+      selectGene: vi.fn(),
+      scheduleGeneDetailsPanelUpdate: vi.fn(),
+      showGeneDetailsPanel: vi.fn(),
+      populateGeneDetails: vi.fn(),
+      scrollBottomSequenceToGene: vi.fn(),
+    };
+    const trackRenderer = new TrackRenderer(genomeBrowser);
+    const gene = { type: 'CDS', start: 2, end: 4, strand: 1, qualifiers: { gene: 'lacZ' } };
+
+    trackRenderer.showGeneDetails(gene, null, { scrollBottomSequence: false });
+
+    expect(genomeBrowser.selectGene).toHaveBeenCalledWith(gene, null);
+    expect(genomeBrowser.scheduleGeneDetailsPanelUpdate).toHaveBeenCalledWith(gene, null);
+    expect(genomeBrowser.populateGeneDetails).not.toHaveBeenCalled();
+    expect(genomeBrowser.showGeneDetailsPanel).not.toHaveBeenCalled();
+  });
+
   it('canonicalizes an overlapping gene feature to the qualifier-rich CDS for Gene Details', () => {
     const gene = { type: 'gene', start: 12, end: 120, strand: 1, qualifiers: { gene: 'thrA', locus_tag: 'b0002' } };
     const cds = {
