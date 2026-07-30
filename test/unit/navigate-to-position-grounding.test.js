@@ -112,6 +112,36 @@ describe('ChatManager.navigateToPosition', () => {
   });
 });
 
+describe('ChatManager.zoomOut', () => {
+  it('reports the failure instead of a "Zoomed out" success when nothing is loaded', async () => {
+    const manager = createChatManager({});
+
+    const result = await manager.zoomOut({ factor: 2 });
+
+    // NavigationManager refuses the zoom, but the handler used to hardcode
+    // success:true. The model saw a completed zoom that had changed nothing and
+    // kept re-issuing the call for the rest of the round budget.
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/chromosome|sequence/i);
+  });
+
+  it('reports the applied factor and the widened region on success', async () => {
+    const manager = createChatManager({ U00096: 'A'.repeat(4641652) });
+    manager.app.genomeNavigationBar = { update: vi.fn() };
+    manager.getCurrentState = () => ({
+      viewingRegion: { chromosome: 'U00096', ...manager.app.currentPosition },
+    });
+
+    const result = await manager.zoomOut({ factor: 4 });
+
+    expect(result.success).toBe(true);
+    expect(result.factor).toBe(4);
+    expect(result.message).toBe('Zoomed out by 4x');
+    expect(manager.app.currentPosition.end - manager.app.currentPosition.start).toBe(4000);
+    expect(result.newRange).toEqual({ chromosome: 'U00096', start: 0, end: 4000 });
+  });
+});
+
 describe('NavigationManager chromosome resolution', () => {
   it('refuses an unknown name and lists what is loaded', () => {
     const { nm } = createNavigationManager({ U00096: 'A'.repeat(1000) });

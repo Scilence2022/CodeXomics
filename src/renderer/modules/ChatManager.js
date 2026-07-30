@@ -5257,9 +5257,7 @@ class ChatManager {
             taskCompleted = true;
             const verifiedToolOnlyCompletion = this.canFinalizeFromSuccessfulToolResults(
               toolExecutionState,
-              lastSuccessfulResults,
-              lastSuccessfulTools,
-              message
+              lastSuccessfulResults
             );
             finalResponse = verifiedToolOnlyCompletion
               ? this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools)
@@ -5533,8 +5531,17 @@ class ChatManager {
                 }
                 return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeToolParams(result.tool, result.parameters))}: ${sanitizedStr}`;
               });
+              // The closing instruction is what keeps the model from re-issuing a call
+              // it just completed. Without it the next round re-reads a request that
+              // still reads as unfulfilled ("zoom out") and the obvious move is to run
+              // the same tool again; suppression then has to catch it after the fact.
               conversationHistory.push(
-                this.createToolExecutionFeedbackMessage(`[Tool Result]\n${successMessages.join('; ')}`)
+                this.createToolExecutionFeedbackMessage(
+                  `[Tool Result]\n${successMessages.join('; ')}\n` +
+                    'These steps are done. Calling one of them again with the same parameters will be rejected. ' +
+                    'If the request has remaining steps, reply with ONLY the next JSON tool call(s); ' +
+                    'otherwise reply with the final answer.'
+                )
               );
 
               // ENHANCED: Check for simple task completion after successful tool execution
@@ -7750,12 +7757,18 @@ class ChatManager {
       }));
   }
 
-  canFinalizeFromSuccessfulToolResults(toolExecutionState, successfulResults, successfulTools, originalMessage) {
-    return Boolean(
-      successfulResults.length > 0 &&
-      this.hasSuccessfulExecutionForRequest(toolExecutionState) &&
-      this.shouldTerminateAfterToolExecution(successfulTools, successfulResults, originalMessage)
-    );
+  /**
+   * Whether a turn that is already ending can report the work it completed.
+   *
+   * The bar is that every recognized effect the request asked for is covered by a
+   * successful execution — a check derived from the request itself. It used to also
+   * require shouldTerminateAfterToolExecution, whose hardcoded tool list decides
+   * something else entirely (whether the turn may end a round early). Any tool
+   * missing from that list therefore reported "the model repeated a tool call
+   * beyond the request limit" for work that had in fact succeeded.
+   */
+  canFinalizeFromSuccessfulToolResults(toolExecutionState, successfulResults) {
+    return Boolean(successfulResults.length > 0 && this.hasSuccessfulExecutionForRequest(toolExecutionState));
   }
 
   getRequestedExecutionCountFallback(originalMessage, toolName) {
@@ -8181,7 +8194,8 @@ class ChatManager {
     const executionFilter = this.filterExecutableToolInstances(
       detectedTools,
       successfulToolExecutionCounts,
-      originalMessage
+      originalMessage,
+      toolExecutionState
     );
     const pendingTools = [];
     const policyBlockedTools = [];
@@ -8234,7 +8248,12 @@ class ChatManager {
     };
   }
 
-  filterExecutableToolInstances(toolsToExecute, successfulToolExecutionCounts, originalMessage) {
+  filterExecutableToolInstances(
+    toolsToExecute,
+    successfulToolExecutionCounts,
+    originalMessage,
+    toolExecutionState = null
+  ) {
     const plannedToolExecutionCounts = new Map();
     const plannedToolNameCounts = new Map();
     const successfulToolNameCounts = new Map();
@@ -8262,22 +8281,35 @@ class ChatManager {
       const alreadyPlanned = useToolNameBudget
         ? plannedToolNameCounts.get(tool.tool_name) || 0
         : plannedToolExecutionCounts.get(toolKey) || 0;
-      const usedRequestBudget = useToolNameBudget ? alreadySucceeded + alreadyPlanned : alreadyPlanned;
+      // Successes from earlier rounds count against the budget for every tool, not
+      // only the ones budgeted by name. They used to be ignored here ("treat a
+      // new-round call as fresh"), which left an identical, already-successful call
+      // executable once per round for the whole round budget: the loop re-prompted
+      // the model with the request still standing, the model re-issued the same
+      // call, and each repeat applied the side effect again — "zoom out" zoomed the
+      // view out once per round until the rounds ran out. Nothing about that is
+      // specific to zoom; it applied to any tool the completion heuristics did not
+      // recognize. The escape hatch below keeps deliberate re-reads working.
+      const usedRequestBudget = alreadySucceeded + alreadyPlanned;
 
       if (usedRequestBudget >= requestedLimit) {
-        console.log(
-          `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
-            `(request budget ${usedRequestBudget}/${requestedLimit}, previous successes ${alreadySucceeded})`
-        );
-        suppressedTools.push(tool);
-        continue;
-      }
+        // A repeat can still return something new when the state it observes has
+        // moved on, which another tool's success since then is the generic evidence
+        // for ("navigate, then read the position again"). Requesting a repeat by
+        // name is an explicit count from the user, so it stays capped at that count.
+        const repeatCanObserveNewState =
+          !useToolNameBudget && alreadySucceeded > 0 && this.hasProgressSinceLastSuccess(toolExecutionState, toolKey);
 
-      if (alreadySucceeded > 0 && !useToolNameBudget) {
-        console.log(
-          `🔄 [ToolLoop] Treating new-round tool call as fresh: ${tool.tool_name} ` +
-            `(previous successes ${alreadySucceeded})`
-        );
+        if (!repeatCanObserveNewState) {
+          console.log(
+            `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
+              `(request budget ${usedRequestBudget}/${requestedLimit}, previous successes ${alreadySucceeded})`
+          );
+          suppressedTools.push(tool);
+          continue;
+        }
+
+        console.log(`🔄 [ToolLoop] Allowing repeat of ${tool.tool_name}: another tool succeeded since its last run`);
       }
 
       if (useToolNameBudget) {
@@ -8289,6 +8321,42 @@ class ChatManager {
     }
 
     return { executableTools, suppressedTools };
+  }
+
+  /**
+   * Whether any other tool has succeeded since this exact call last succeeded.
+   *
+   * Re-running a call that already succeeded can only produce something new if the
+   * state it observes has changed in the meantime, and another tool's success is
+   * the generic evidence for that. Deriving it from the execution record keeps the
+   * check free of any per-tool knowledge about which capabilities mutate state —
+   * a list like that is what let the repeat go unnoticed in the first place.
+   *
+   * @param {Object|null} toolExecutionState - execution state for the current request
+   * @param {string} toolKey - `getToolExecutionKey` output for the call being judged
+   * @returns {boolean}
+   */
+  hasProgressSinceLastSuccess(toolExecutionState, toolKey) {
+    const records = toolExecutionState?.records;
+    if (!Array.isArray(records) || records.length === 0) return false;
+
+    const keyOf = record => this.getToolExecutionKey(record.tool, record.parameters || {});
+
+    let lastSuccessIndex = -1;
+    for (let index = records.length - 1; index >= 0; index--) {
+      const record = records[index];
+      if (record.status === 'success' && keyOf(record) === toolKey) {
+        lastSuccessIndex = index;
+        break;
+      }
+    }
+    if (lastSuccessIndex === -1) return false;
+
+    for (let index = lastSuccessIndex + 1; index < records.length; index++) {
+      const record = records[index];
+      if (record.status === 'success' && keyOf(record) !== toolKey) return true;
+    }
+    return false;
   }
 
   async executePendingToolExecutionQueue(pendingToolExecutionQueue, referenceToolResults = []) {
@@ -10002,11 +10070,15 @@ ${coreTools}
     const factor = parameters.factor || 2;
     if (!this.app.navigationManager) throw new Error('NavigationManager not available');
     const result = this.app.navigationManager.zoomIn(factor);
+    if (result && result.success === false) {
+      return { success: false, error: result.error || 'Zoom in failed', factor };
+    }
     const state = this.getCurrentState();
+    const appliedFactor = result?.factor || factor;
     return {
       success: true,
-      factor: result.factor || factor,
-      message: `Zoomed in by ${factor}x`,
+      factor: appliedFactor,
+      message: `Zoomed in by ${appliedFactor}x`,
       newRange: state.viewingRegion,
     };
   }
@@ -10018,11 +10090,18 @@ ${coreTools}
     const factor = parameters.factor || 2;
     if (!this.app.navigationManager) throw new Error('NavigationManager not available');
     const result = this.app.navigationManager.zoomOut(factor);
+    // NavigationManager reports "no active chromosome or sequence loaded" as
+    // success:false. Reporting that as a success made a no-op zoom look completed,
+    // so the model kept re-issuing the call instead of surfacing the failure.
+    if (result && result.success === false) {
+      return { success: false, error: result.error || 'Zoom out failed', factor };
+    }
     const state = this.getCurrentState();
+    const appliedFactor = result?.factor || factor;
     return {
       success: true,
-      factor: result.factor || factor,
-      message: `Zoomed out by ${factor}x`,
+      factor: appliedFactor,
+      message: `Zoomed out by ${appliedFactor}x`,
       newRange: state.viewingRegion,
     };
   }
