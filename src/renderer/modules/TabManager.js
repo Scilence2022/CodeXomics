@@ -198,6 +198,9 @@ class TabManager {
       const tabSettings = await this.configManager.getTabSettings();
       this.isPersistenceEnabled = tabSettings.persistTabStates !== false;
 
+      // Restore the values edited in the Tab Behavior Settings modal
+      this.applyStoredTabSettings(tabSettings);
+
       if (this.isPersistenceEnabled) {
         console.log('Tab persistence enabled');
 
@@ -214,6 +217,24 @@ class TabManager {
     } catch (error) {
       console.error('Failed to initialize tab persistence:', error);
       this.createInitialTab();
+    }
+  }
+
+  /**
+   * Apply cache and position indicator settings persisted by a previous session
+   */
+  applyStoredTabSettings(tabSettings) {
+    if (!tabSettings) return;
+
+    if (tabSettings.cacheSettings) {
+      this.cacheSettings = { ...this.cacheSettings, ...tabSettings.cacheSettings };
+    }
+
+    if (tabSettings.positionIndicatorSettings) {
+      this.positionIndicatorSettings = {
+        ...this.positionIndicatorSettings,
+        ...tabSettings.positionIndicatorSettings,
+      };
     }
   }
 
@@ -1269,6 +1290,14 @@ class TabManager {
 
   /**
    * Cache current tab content
+   *
+   * The live nodes are moved into a DocumentFragment instead of being
+   * serialized to HTML. Re-parsing an HTML string produces fresh elements that
+   * have lost every listener TrackRenderer/NavigationManager bound to them, so
+   * a tab restored that way could no longer be dragged and its features could
+   * not be clicked (document-level handlers such as wheel zoom kept working,
+   * which is what made the breakage look partial). Moving the original nodes
+   * keeps listeners, canvas bitmaps and inline styling intact.
    */
   cacheTabContent(tabId) {
     if (!this.cacheSettings.enabled) return;
@@ -1276,16 +1305,34 @@ class TabManager {
     const genomeViewer = document.getElementById('genomeViewer');
     if (!genomeViewer) return;
 
-    // Clone the current content
-    const cachedContent = {
-      html: genomeViewer.innerHTML,
+    // Nothing rendered yet: never store an empty snapshot, it would restore a blank view
+    if (!genomeViewer.firstChild) {
+      this.tabCache.delete(tabId);
+      return;
+    }
+
+    // Scroll offsets reset while nodes live outside the document, so record
+    // them against the very elements that will be re-attached later.
+    const scrollPositions = [];
+    genomeViewer.querySelectorAll('div').forEach(element => {
+      if (element.scrollTop || element.scrollLeft) {
+        scrollPositions.push({ element, top: element.scrollTop, left: element.scrollLeft });
+      }
+    });
+
+    const fragment = document.createDocumentFragment();
+    while (genomeViewer.firstChild) {
+      fragment.appendChild(genomeViewer.firstChild);
+    }
+
+    // Store in cache
+    this.tabCache.set(tabId, {
+      fragment,
+      scrollPositions,
       timestamp: Date.now(),
       tabId: tabId,
       position: this.tabStates.get(tabId)?.currentPosition ? { ...this.tabStates.get(tabId).currentPosition } : null,
-    };
-
-    // Store in cache
-    this.tabCache.set(tabId, cachedContent);
+    });
 
     // Enforce cache size limit
     this.enforeCacheLimit();
@@ -1301,6 +1348,13 @@ class TabManager {
 
     const cached = this.tabCache.get(tabId);
     if (!cached) return false;
+
+    // A fragment is emptied when its children are moved back into the document,
+    // so an entry without children can no longer be replayed
+    if (!cached.fragment || !cached.fragment.firstChild) {
+      this.tabCache.delete(tabId);
+      return false;
+    }
 
     // Check if cache is still valid (not expired)
     if (Date.now() - cached.timestamp > this.cacheSettings.cacheTimeout) {
@@ -1324,10 +1378,19 @@ class TabManager {
     // Restore cached content
     const genomeViewer = document.getElementById('genomeViewer');
     if (genomeViewer) {
-      genomeViewer.innerHTML = cached.html;
+      // Moving the fragment's children back re-attaches the original elements
+      // together with their event listeners
+      genomeViewer.replaceChildren(cached.fragment);
 
-      // Update cached timestamp
-      cached.timestamp = Date.now();
+      // The entry is now spent; the next switch away re-caches the live nodes
+      this.tabCache.delete(tabId);
+
+      cached.scrollPositions.forEach(({ element, top, left }) => {
+        if (element.isConnected) {
+          element.scrollTop = top;
+          element.scrollLeft = left;
+        }
+      });
 
       // Restore UI state from tab state
       this.restoreUIStateOnly(tabId);
@@ -1406,6 +1469,16 @@ class TabManager {
 
       // Update track visibility controls in UI
       this.updateTrackVisibilityControls();
+
+      // The docked sequence panel and the statistics box live outside
+      // #genomeViewer, so the cached track DOM alone would leave them showing
+      // the previous tab's window.
+      const chromosome = tabState.currentChromosome;
+      const sequence = chromosome ? this.genomeBrowser.currentSequence?.[chromosome] : null;
+      if (sequence) {
+        this.genomeBrowser.updateStatistics?.(chromosome, sequence);
+        this.genomeBrowser.handleBottomSequencePanel?.(chromosome, sequence);
+      }
 
       // Force update rulers with correct position
       this.updateRulersForPosition(tabState.currentChromosome, tabState.currentPosition);
@@ -1967,6 +2040,13 @@ class TabManager {
       this.enforeCacheLimit();
     }
 
+    // Persist so the choice survives a restart
+    if (this.configManager) {
+      this.configManager
+        .setTabSettings({ cacheSettings: { ...this.cacheSettings } })
+        .catch(error => console.error('Failed to save cache settings:', error));
+    }
+
     console.log('Updated cache settings:', this.cacheSettings);
   }
 
@@ -2117,6 +2197,20 @@ class TabManager {
       });
     });
 
+    // Section navigation
+    modal.querySelectorAll('.tab-settings-nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.showTabSettingsPane(btn.dataset.pane);
+      });
+    });
+
+    // Escape closes the modal while it is on screen
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.style.display === 'flex') {
+        this.closeTabSettingsModal();
+      }
+    });
+
     // Reset position button functionality
     const resetPositionBtn = modal.querySelector('.reset-position-btn');
     if (resetPositionBtn) {
@@ -2134,7 +2228,7 @@ class TabManager {
     const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
     if (resetDefaultsBtn) {
       resetDefaultsBtn.addEventListener('click', () => {
-        this.resetTabSettingsToDefaults();
+        this.resetTabSettings();
       });
     }
 
@@ -2292,8 +2386,61 @@ class TabManager {
     // Update preview
     this.updatePreview();
 
+    // Show the section that was open last, defaulting to the cache section
+    this.showTabSettingsPane(this.activeTabSettingsPane || 'cache');
+
     // Show modal
     modal.style.display = 'flex';
+
+    // Keep the cache figures live while the modal stays open
+    this.startCacheStatsPolling();
+  }
+
+  /**
+   * Show one settings section and hide the others
+   */
+  showTabSettingsPane(paneName) {
+    const modal = document.getElementById('tabSettingsModal');
+    if (!modal || !paneName) return;
+
+    this.activeTabSettingsPane = paneName;
+
+    modal.querySelectorAll('.tab-settings-nav-btn').forEach(btn => {
+      const isActive = btn.dataset.pane === paneName;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    modal.querySelectorAll('.tab-settings-pane').forEach(pane => {
+      pane.classList.toggle('active', pane.dataset.pane === paneName);
+    });
+
+    // The docked preview only illustrates the appearance sections
+    const preview = document.getElementById('tabSettingsPreview');
+    if (preview) {
+      preview.hidden = paneName === 'cache';
+    }
+
+    // Scroll back to the top so a section never opens mid-way down
+    const body = modal.querySelector('.modal-body');
+    if (body) body.scrollTop = 0;
+  }
+
+  /**
+   * Refresh the cache figures periodically while the modal is open
+   */
+  startCacheStatsPolling() {
+    this.stopCacheStatsPolling();
+    this.cacheStatsInterval = setInterval(() => {
+      this.updateCacheStatsDisplay();
+    }, 2000);
+  }
+
+  stopCacheStatsPolling() {
+    if (this.cacheStatsInterval) {
+      clearInterval(this.cacheStatsInterval);
+      this.cacheStatsInterval = null;
+    }
   }
 
   /**
@@ -2302,6 +2449,7 @@ class TabManager {
   closeTabSettingsModal() {
     const modal = document.getElementById('tabSettingsModal');
     modal.style.display = 'none';
+    this.stopCacheStatsPolling();
   }
 
   /**
@@ -2311,13 +2459,14 @@ class TabManager {
     const cacheSettingsGroup = document.getElementById('cacheSettingsGroup');
     const cacheTimeoutGroup = document.getElementById('cacheTimeoutGroup');
 
-    if (isEnabled) {
-      cacheSettingsGroup.classList.remove('disabled');
-      cacheTimeoutGroup.classList.remove('disabled');
-    } else {
-      cacheSettingsGroup.classList.add('disabled');
-      cacheTimeoutGroup.classList.add('disabled');
-    }
+    [cacheSettingsGroup, cacheTimeoutGroup].forEach(group => {
+      if (!group) return;
+      group.classList.toggle('disabled', !isEnabled);
+      // Dimming alone still leaves the inputs reachable by keyboard
+      group.querySelectorAll('input').forEach(input => {
+        input.disabled = !isEnabled;
+      });
+    });
   }
 
   /**
@@ -2327,9 +2476,28 @@ class TabManager {
     const stats = this.getCacheStats();
     const cachedTabsCount = document.getElementById('cachedTabsCount');
     const cacheSizeInfo = document.getElementById('cacheSizeInfo');
+    const cacheOldestEntry = document.getElementById('cacheOldestEntry');
 
-    cachedTabsCount.textContent = stats.size;
-    cacheSizeInfo.textContent = `${stats.size}/${stats.maxSize}`;
+    if (cachedTabsCount) cachedTabsCount.textContent = stats.enabled ? stats.size : 'Off';
+    if (cacheSizeInfo) cacheSizeInfo.textContent = `${stats.size}/${stats.maxSize}`;
+
+    if (cacheOldestEntry) {
+      const oldestAge = stats.entries.reduce((max, entry) => Math.max(max, entry.age), 0);
+      cacheOldestEntry.textContent = stats.entries.length ? this.formatCacheAge(oldestAge) : '—';
+    }
+  }
+
+  /**
+   * Format a cache entry age (ms) as a short human readable string
+   */
+  formatCacheAge(ageMs) {
+    const seconds = Math.max(0, Math.round(ageMs / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+
+    return `${Math.round(minutes / 60)}h ago`;
   }
 
   /**
@@ -2400,46 +2568,25 @@ class TabManager {
     const enableChromosomeColors = document.getElementById('enableChromosomeColors');
     const enableAnimations = document.getElementById('enableAnimations');
 
+    // The inputs carry min/max attributes, so clamp rather than rejecting the
+    // whole save with a blocking alert
     const newCacheSettings = {
       enabled: tabCacheEnabled.checked,
-      maxCacheSize: parseInt(maxCacheSize.value),
-      cacheTimeout: parseInt(cacheTimeout.value) * 60 * 1000, // Convert to milliseconds
+      maxCacheSize: this.clampSetting(parseInt(maxCacheSize.value, 10), 1, 20, 10),
+      cacheTimeout: this.clampSetting(parseInt(cacheTimeout.value, 10), 1, 120, 30) * 60 * 1000,
     };
 
     const newPositionIndicatorSettings = {
-      height: parseInt(indicatorHeight.value),
+      height: this.clampSetting(parseInt(indicatorHeight.value, 10), 2, 8, 4),
       defaultColor: indicatorColor.value,
-      opacity: parseFloat(indicatorOpacity.value),
-      borderWidth: parseInt(indicatorBorderWidth.value),
+      opacity: this.clampSetting(parseFloat(indicatorOpacity.value), 0.3, 1.0, 0.8),
+      borderWidth: this.clampSetting(parseInt(indicatorBorderWidth.value, 10), 0, 4, 2),
       trackBackgroundColor: trackBackgroundColor.value,
       trackBorderColor: trackBorderColor.value,
-      trackBorderRadius: parseInt(trackBorderRadius.value),
+      trackBorderRadius: this.clampSetting(parseInt(trackBorderRadius.value, 10), 0, 6, 2),
       enableChromosomeColors: enableChromosomeColors.checked,
       enableAnimations: enableAnimations.checked,
     };
-
-    // Validate cache settings
-    if (newCacheSettings.maxCacheSize < 1 || newCacheSettings.maxCacheSize > 20) {
-      alert('Maximum cache size must be between 1 and 20');
-      return;
-    }
-
-    if (newCacheSettings.cacheTimeout < 60000 || newCacheSettings.cacheTimeout > 7200000) {
-      // 1 min to 120 min
-      alert('Cache timeout must be between 1 and 120 minutes');
-      return;
-    }
-
-    // Validate position indicator settings
-    if (newPositionIndicatorSettings.height < 2 || newPositionIndicatorSettings.height > 8) {
-      alert('Indicator height must be between 2 and 8 pixels');
-      return;
-    }
-
-    if (newPositionIndicatorSettings.opacity < 0.3 || newPositionIndicatorSettings.opacity > 1.0) {
-      alert('Indicator opacity must be between 0.3 and 1.0');
-      return;
-    }
 
     // Update settings
     this.updateCacheSettings(newCacheSettings);
@@ -2451,22 +2598,30 @@ class TabManager {
     // Close modal
     this.closeTabSettingsModal();
 
+    this.genomeBrowser?.showNotification?.('Tab settings saved', 'success');
     console.log('Tab settings saved successfully');
   }
 
   /**
-   * Reset tab settings to defaults
+   * Clamp a settings value into its supported range, falling back to the
+   * default when the field could not be parsed
    */
-  resetTabSettings() {
-    if (confirm('Are you sure you want to reset all tab settings to their default values?')) {
-      // Reset to default settings
-      this.cacheSettings = {
+  clampSetting(value, min, max, fallback) {
+    if (!Number.isFinite(value)) return fallback;
+    return Math.min(max, Math.max(min, value));
+  }
+
+  /**
+   * Default values for everything the tab settings modal edits
+   */
+  getDefaultTabSettings() {
+    return {
+      cacheSettings: {
         enabled: false,
         maxCacheSize: 10,
         cacheTimeout: 30 * 60 * 1000,
-      };
-
-      this.positionIndicatorSettings = {
+      },
+      positionIndicatorSettings: {
         height: 4,
         defaultColor: '#1a73e8',
         opacity: 0.8,
@@ -2476,11 +2631,25 @@ class TabManager {
         trackBorderRadius: 2,
         enableChromosomeColors: true,
         enableAnimations: true,
-      };
+      },
+    };
+  }
+
+  /**
+   * Reset tab settings to defaults
+   */
+  resetTabSettings() {
+    if (confirm('Are you sure you want to reset all tab settings to their default values?')) {
+      const defaults = this.getDefaultTabSettings();
+
+      this.updateCacheSettings(defaults.cacheSettings);
+      this.updatePositionIndicatorSettings(defaults.positionIndicatorSettings);
+      this.applyPositionIndicatorSettings();
 
       // Re-populate the modal with default values
       this.openTabSettingsModal();
 
+      this.genomeBrowser?.showNotification?.('Tab settings reset to defaults', 'success');
       console.log('Tab settings reset to defaults');
     }
   }
@@ -3019,50 +3188,12 @@ class TabManager {
     this.tabStates.clear();
     this.tabs.clear();
     this.clearAllCache();
+    this.stopCacheStatsPolling();
 
     // Remove event listeners
     document.removeEventListener('keydown', this.handleKeydown);
 
     console.log('TabManager disposed');
-  }
-
-  /**
-   * Reset tab settings to default values
-   */
-  resetTabSettingsToDefaults() {
-    if (confirm('Are you sure you want to reset tab settings to their default values? This action cannot be undone.')) {
-      // Reset tab cache settings to defaults
-      const defaults = {
-        tabCacheEnabled: true,
-        maxCacheSize: 50,
-        cacheTimeout: 300000, // 5 minutes
-        autoCleanup: true,
-      };
-
-      // Update form fields
-      const tabCacheEnabled = document.getElementById('tabCacheEnabled');
-      const maxCacheSize = document.getElementById('maxCacheSize');
-      const cacheTimeout = document.getElementById('cacheTimeout');
-
-      if (tabCacheEnabled) tabCacheEnabled.checked = defaults.tabCacheEnabled;
-      if (maxCacheSize) maxCacheSize.value = defaults.maxCacheSize;
-      if (cacheTimeout) cacheTimeout.value = defaults.cacheTimeout / 1000; // Convert to seconds for display
-
-      // Apply settings
-      this.cacheSettings = defaults;
-      this.tabCache.maxSize = defaults.maxCacheSize;
-      this.tabCache.timeout = defaults.cacheTimeout;
-
-      // Save to storage
-      if (typeof Storage !== 'undefined') {
-        localStorage.setItem('tabManagerSettings', JSON.stringify(defaults));
-      }
-
-      // Show notification
-      if (this.genomeBrowser && this.genomeBrowser.showNotification) {
-        this.genomeBrowser.showNotification('Tab settings reset to defaults successfully!', 'success');
-      }
-    }
   }
 }
 
