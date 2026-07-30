@@ -544,14 +544,29 @@
                 </select>
             </div>
             <div class="toolbar-section">
+                <!-- <label>Navigate:</label> -->
+                <button id="goToStartBtn" class="btn btn-sm" title="Jump to start of sequence">
+                    <i class="fas fa-fast-backward"></i>
+                </button>
+                <button id="pagePrevBtn" class="btn btn-sm" title="Previous page (one screen left)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="pageNextBtn" class="btn btn-sm" title="Next page (one screen right)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button id="goToEndBtn" class="btn btn-sm" title="Jump to end of sequence">
+                    <i class="fas fa-fast-forward"></i>
+                </button>
+            </div>
+            <div class="toolbar-section">
                 <!-- <label>Zoom:</label> -->
-                <button id="zoomInBtn" class="btn btn-sm">
+                <button id="zoomInBtn" class="btn btn-sm" title="Zoom in">
                     <i class="fas fa-search-plus"></i>
                 </button>
-                <button id="zoomOutBtn" class="btn btn-sm">
+                <button id="zoomOutBtn" class="btn btn-sm" title="Zoom out">
                     <i class="fas fa-search-minus"></i>
                 </button>
-                <button id="resetZoomBtn" class="btn btn-sm btn-outline-secondary"><i class="fas fa-undo"></i> Reset</button>
+                <button id="resetZoomBtn" class="btn btn-sm btn-outline-secondary" title="Reset view to the first 10 kb"><i class="fas fa-undo"></i> Reset</button>
             </div>
 
             <div class="toolbar-section">
