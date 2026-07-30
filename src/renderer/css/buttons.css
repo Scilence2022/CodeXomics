@@ -502,6 +502,7 @@
 
 /* Track Control Buttons */
 .track-btn {
+  position: relative;
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -514,6 +515,65 @@
   transition: all 0.2s ease;
   font-size: 10px;
   color: #6c757d;
+}
+
+/* Consistent functional hints for every track-title-bar control. Native
+ * `title` attributes remain in the markup as a fallback; this layer makes the
+ * hint immediate and visually consistent in Electron and across themes. */
+.track-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  z-index: 10000;
+  width: max-content;
+  max-width: 300px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--primary-color, #3b82f6) 45%, transparent);
+  border-radius: 5px;
+  background: rgba(23, 30, 42, 0.96);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-2px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease,
+    visibility 0s linear 0.12s;
+}
+
+.track-btn[data-tooltip]:hover::after,
+.track-btn[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 0.25s;
+}
+
+/* Right-aligned title-bar groups need right-anchored hints so the last buttons
+ * (minimize / close) never push their tooltip outside the window. */
+.track-buttons > .track-btn[data-tooltip]::after,
+.sequence-controls > .track-btn[data-tooltip]::after,
+.floating-header-btn[data-tooltip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(-2px);
+}
+
+.track-buttons > .track-btn[data-tooltip]:hover::after,
+.track-buttons > .track-btn[data-tooltip]:focus-visible::after,
+.sequence-controls > .track-btn[data-tooltip]:hover::after,
+.sequence-controls > .track-btn[data-tooltip]:focus-visible::after,
+.floating-header-btn[data-tooltip]:hover::after,
+.floating-header-btn[data-tooltip]:focus-visible::after {
+  transform: translateY(0);
 }
 
 .track-btn:hover {

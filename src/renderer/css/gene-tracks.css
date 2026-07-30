@@ -30,6 +30,8 @@
   border-top-left-radius: 6px;
   border-top-right-radius: 6px;
   position: relative;
+  z-index: 200;
+  overflow: visible;
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: 0;
