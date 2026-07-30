@@ -212,6 +212,8 @@ class TrackRenderer {
 
       const samplingInput = document.createElement('select');
       samplingInput.className = 'track-sampling-input';
+      samplingInput.title = 'Choose the percentage of aligned reads to display';
+      samplingInput.setAttribute('aria-label', 'Aligned reads sampling percentage');
       samplingInput.style.cssText = `
                 width: 60px;
                 height: 20px;
@@ -264,13 +266,13 @@ class TrackRenderer {
       readsTogglesContainer.className = 'track-reads-toggles';
       readsTogglesContainer.style.cssText = `display: inline-flex; align-items: center; margin-left: 15px; gap: 4px;`;
 
-      const coverageBtn = this.createReadsToggleButton('chart-area', 'Coverage', 'readsCoverage');
+      const coverageBtn = this.createReadsToggleButton('chart-area', 'Coverage', 'readsCoverage', fileId);
       readsTogglesContainer.appendChild(coverageBtn);
 
-      const referenceBtn = this.createReadsToggleButton('dna', 'Reference', 'readsReference');
+      const referenceBtn = this.createReadsToggleButton('dna', 'Reference', 'readsReference', fileId);
       readsTogglesContainer.appendChild(referenceBtn);
 
-      const readsBtn = this.createReadsToggleButton('align-left', 'Reads', 'readsReads');
+      const readsBtn = this.createReadsToggleButton('align-left', 'Reads', 'readsReads', fileId);
       readsTogglesContainer.appendChild(readsBtn);
 
       trackHeader.appendChild(readsTogglesContainer);
@@ -295,7 +297,7 @@ class TrackRenderer {
       const galleryBtn = document.createElement('button');
       galleryBtn.className = 'track-btn track-gallery-btn';
       galleryBtn.innerHTML = '<i class="fas fa-images"></i>';
-      galleryBtn.title = 'Feature Glyph Legend';
+      this.setTrackControlHint(galleryBtn, 'Open the feature glyph legend');
       galleryBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.openFeatureGlyphLegend();
@@ -326,9 +328,12 @@ class TrackRenderer {
       circularBtn.innerHTML = isCircular
         ? '<i class="fas fa-circle-notch"></i>'
         : '<i class="fas fa-long-arrow-alt-right"></i>';
-      circularBtn.title = isCircular
-        ? 'Circular Mode: ON (click to disable)'
-        : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+      this.setTrackControlHint(
+        circularBtn,
+        isCircular
+          ? 'Circular mode is on. Click to disable wraparound navigation.'
+          : 'Circular mode is off. Click to enable wraparound navigation.'
+      );
       if (isCircular) {
         circularBtn.classList.add('active');
       }
@@ -345,12 +350,13 @@ class TrackRenderer {
       const wiggleBtn = document.createElement('button');
       wiggleBtn.className = 'track-btn track-wiggle-btn';
       wiggleBtn.innerHTML = '<i class="fas fa-sliders-h"></i>';
-      wiggleBtn.title = 'Toggle Management Interface';
+      this.setTrackControlHint(wiggleBtn, 'Hide WIG track management controls');
 
       // Set initial state based on persistent storage
       if (!this.elementVisibilityStates.wigManagement) {
         wiggleBtn.classList.add('active');
         wiggleBtn.style.color = '#ccc';
+        this.setTrackControlHint(wiggleBtn, 'Show WIG track management controls');
       }
 
       wiggleBtn.addEventListener('click', e => {
@@ -373,6 +379,13 @@ class TrackRenderer {
             wiggleBtn.classList.add('active');
             wiggleBtn.style.color = '#ccc';
           }
+
+          this.setTrackControlHint(
+            wiggleBtn,
+            this.elementVisibilityStates.wigManagement
+              ? 'Hide WIG track management controls'
+              : 'Show WIG track management controls'
+          );
         }
       });
       buttonsContainer.appendChild(wiggleBtn);
@@ -388,7 +401,7 @@ class TrackRenderer {
       const baseCompBtn = document.createElement('button');
       baseCompBtn.className = 'track-btn track-base-composition-btn';
       baseCompBtn.innerHTML = '<i class="fas fa-chart-column"></i>';
-      baseCompBtn.title = 'Base composition at selected position';
+      this.setTrackControlHint(baseCompBtn, 'Analyze base composition at a selected position');
       baseCompBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.genomeBrowser.baseCompositionAnalyzer?.open({ fileId, chromosome: this.genomeBrowser.currentChromosome });
@@ -400,7 +413,7 @@ class TrackRenderer {
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'track-btn track-settings-btn';
     settingsBtn.innerHTML = '<i class="fas fa-cog"></i>';
-    settingsBtn.title = 'Track Settings';
+    this.setTrackControlHint(settingsBtn, `Open ${title} track settings`);
     settingsBtn.addEventListener('click', e => {
       e.stopPropagation();
       this.openTrackSettings(trackType, fileId);
@@ -413,7 +426,7 @@ class TrackRenderer {
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'track-btn track-toggle-btn';
     toggleBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
-    toggleBtn.title = 'Lock/Unlock Track Controls';
+    this.setTrackControlHint(toggleBtn, 'Lock track controls');
     toggleBtn.dataset.locked = 'false';
     toggleBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -430,7 +443,7 @@ class TrackRenderer {
     const hideHeaderBtn = document.createElement('button');
     hideHeaderBtn.className = 'track-btn track-hide-header-btn';
     hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
-    hideHeaderBtn.title = 'Minimize Track Header';
+    this.setTrackControlHint(hideHeaderBtn, 'Minimize the track header');
     hideHeaderBtn.addEventListener('click', e => {
       e.stopPropagation();
       this.toggleTrackHeader(trackType, hideHeaderBtn);
@@ -445,7 +458,7 @@ class TrackRenderer {
     if (fileId) {
       // File-specific track - show remove icon and update functionality
       closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-      closeBtn.title = 'Remove Track';
+      this.setTrackControlHint(closeBtn, `Remove ${title} track`);
       closeBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.removeFileTrack(fileId, trackType);
@@ -453,7 +466,7 @@ class TrackRenderer {
     } else {
       // Regular track - show hide icon
       closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-      closeBtn.title = 'Hide Track';
+      this.setTrackControlHint(closeBtn, `Hide ${title} track`);
       closeBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.closeTrack(trackType);
@@ -464,6 +477,13 @@ class TrackRenderer {
     trackHeader.appendChild(buttonsContainer);
 
     return trackHeader;
+  }
+
+  setTrackControlHint(control, hint) {
+    if (!control || !hint) return;
+    control.title = hint;
+    control.dataset.tooltip = hint;
+    control.setAttribute('aria-label', hint);
   }
 
   /**
@@ -856,7 +876,7 @@ class TrackRenderer {
       // Hide the header
       trackHeader.style.display = 'none';
       hideHeaderBtn.innerHTML = '<i class="fas fa-plus"></i>';
-      hideHeaderBtn.title = 'Show Track Header';
+      this.setTrackControlHint(hideHeaderBtn, 'Show the track header');
 
       // Add floating button
       this.createFloatingHeaderButton(trackElement, trackType);
@@ -2861,9 +2881,12 @@ class TrackRenderer {
     button.innerHTML = newCircularMode
       ? '<i class="fas fa-circle-notch"></i>'
       : '<i class="fas fa-long-arrow-alt-right"></i>';
-    button.title = newCircularMode
-      ? 'Circular Mode: ON (click to disable)'
-      : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+    this.setTrackControlHint(
+      button,
+      newCircularMode
+        ? 'Circular mode is on. Click to disable wraparound navigation.'
+        : 'Circular mode is off. Click to enable wraparound navigation.'
+    );
     button.classList.toggle('active', newCircularMode);
 
     // Update navigation manager with circular mode state
@@ -2894,9 +2917,12 @@ class TrackRenderer {
     circularBtn.innerHTML = isCircular
       ? '<i class="fas fa-circle-notch"></i>'
       : '<i class="fas fa-long-arrow-alt-right"></i>';
-    circularBtn.title = isCircular
-      ? 'Circular Mode: ON (click to disable)'
-      : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+    this.setTrackControlHint(
+      circularBtn,
+      isCircular
+        ? 'Circular mode is on. Click to disable wraparound navigation.'
+        : 'Circular mode is off. Click to enable wraparound navigation.'
+    );
     circularBtn.classList.toggle('active', isCircular);
   }
 
@@ -2911,7 +2937,7 @@ class TrackRenderer {
 
     buttonElement.innerHTML = `<i class="fas ${info.icon}"></i>`;
     // Tooltip states the currently active mode and what a click switches to
-    buttonElement.title = `Layout: ${info.label} (click to switch to ${nextLabel})`;
+    this.setTrackControlHint(buttonElement, `Layout: ${info.label}. Click to switch to ${nextLabel}.`);
     // Expose active mode for styling / inspection
     buttonElement.dataset.layoutMode = mode;
   }
@@ -4352,7 +4378,7 @@ class TrackRenderer {
         // the track for BOTH canvas and SVG modes, so they render identically
         // and stay pinned above the (scrollable) reads. The canvas reads
         // renderer draws only reads - it no longer draws these internally.
-        const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
+        const showCoverage = this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage');
         let coverageHeight = 0;
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
 
@@ -4362,7 +4388,7 @@ class TrackRenderer {
         }
 
         let referenceHeight = 0;
-        const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
+        const showReference = this.isReadsComponentVisible(settings, 'showReference', 'readsReference');
         if (showReference) {
           referenceHeight = parseInt(settings.referenceHeight) || 25;
           this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
@@ -4390,7 +4416,7 @@ class TrackRenderer {
 
           const renderingMode = settings.renderingMode || 'canvas';
 
-          if (this.elementVisibilityStates.readsReads) {
+          if (this.isReadsComponentVisible(settings, 'showReads', 'readsReads')) {
             if (renderingMode === 'canvas') {
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
@@ -4603,7 +4629,7 @@ class TrackRenderer {
 
         // Coverage and reference are fixed DOM bands at the top for both modes
         // (the canvas reads renderer draws only reads).
-        const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
+        const showCoverage = this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage');
         let coverageHeight = 0;
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
 
@@ -4613,7 +4639,7 @@ class TrackRenderer {
         }
 
         let referenceHeight = 0;
-        const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
+        const showReference = this.isReadsComponentVisible(settings, 'showReference', 'readsReference');
         if (showReference) {
           referenceHeight = parseInt(settings.referenceHeight) || 25;
           this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
@@ -4643,7 +4669,7 @@ class TrackRenderer {
 
           const renderingMode = settings.renderingMode || 'canvas';
 
-          if (this.elementVisibilityStates.readsReads) {
+          if (this.isReadsComponentVisible(settings, 'showReads', 'readsReads')) {
             if (renderingMode === 'canvas') {
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
@@ -4825,7 +4851,7 @@ class TrackRenderer {
 
         // Coverage and reference are fixed DOM bands at the top for both modes
         // (the canvas reads renderer draws only reads).
-        const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
+        const showCoverage = this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage');
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
         let coverageHeight = 0;
 
@@ -4834,7 +4860,7 @@ class TrackRenderer {
           this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
         }
 
-        const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
+        const showReference = this.isReadsComponentVisible(settings, 'showReference', 'readsReference');
         let referenceHeight = 0;
         if (showReference) {
           referenceHeight = parseInt(settings.referenceHeight) || 25;
@@ -4864,7 +4890,7 @@ class TrackRenderer {
           const renderingMode = settings.renderingMode || 'canvas';
 
           // Only render reads if toggle is on
-          if (this.elementVisibilityStates.readsReads) {
+          if (this.isReadsComponentVisible(settings, 'showReads', 'readsReads')) {
             if (renderingMode === 'canvas') {
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
@@ -4960,8 +4986,6 @@ class TrackRenderer {
    * Create scrollable reads track with vertical scrolling capability
    */
   createScrollableReadsTrack(trackContent, readRows, viewport, layout, settings) {
-    this.ensureReadsScrollDragHandlers();
-
     const { readHeight, rowSpacing, topPadding, bottomPadding, trackHeight } = layout;
     const rowHeight = readHeight + rowSpacing;
 
@@ -4973,6 +4997,13 @@ class TrackRenderer {
     trackContent.style.height = `${trackHeight}px`;
     trackContent.style.position = 'relative';
     trackContent.style.overflow = 'hidden';
+
+    // Keep coverage/reference visible, but skip all read rows when hidden.
+    if (!this.isReadsComponentVisible(settings, 'showReads', 'readsReads')) {
+      return;
+    }
+
+    this.ensureReadsScrollDragHandlers();
 
     // Full height of all rows (the scrollable content). Bands are NOT included
     // here - they live outside the scroll viewport.
@@ -8114,11 +8145,10 @@ class TrackRenderer {
   /**
    * Create a toggle button for Reads track components (Coverage, Reference, Reads)
    */
-  createReadsToggleButton(iconName, labelText, stateKey) {
+  createReadsToggleButton(iconName, labelText, stateKey, fileId = null) {
     const btn = document.createElement('button');
     btn.className = 'track-btn track-reads-toggle-btn';
     btn.innerHTML = `<i class="fas fa-${iconName}"></i>`;
-    btn.title = `Toggle ${labelText}`;
     btn.style.cssText = `padding: 2px 5px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; transition: background 0.2s, color 0.2s;`;
 
     // Map state keys to renderer options for lookup
@@ -8128,35 +8158,9 @@ class TrackRenderer {
       readsReads: 'showReads',
     };
     const optionKey = optionMap[stateKey];
-
-    // Initialize elementVisibilityStates based on trackSettings if available
-    if (this.trackSettings && this.trackSettings['reads'] && this.trackSettings['reads'][stateKey] !== undefined) {
-      // If setting exists, use it
-      this.elementVisibilityStates[stateKey] = this.trackSettings['reads'][stateKey] !== false;
-    }
-
-    // If we have a mapped setting key, check that too (it's the preferred key)
-    if (
-      optionKey &&
-      this.trackSettings &&
-      this.trackSettings['reads'] &&
-      this.trackSettings['reads'][optionKey] !== undefined
-    ) {
-      this.elementVisibilityStates[stateKey] = this.trackSettings['reads'][optionKey] !== false;
-    }
-
-    // Default to true if no setting is found
-    if (this.elementVisibilityStates[stateKey] === undefined) {
-      this.elementVisibilityStates[stateKey] = true;
-    }
-
-    if (!this.elementVisibilityStates[stateKey]) {
-      btn.style.background = '#eee';
-      btn.style.color = '#aaa';
-      btn.classList.remove('active');
-    } else {
-      btn.classList.add('active');
-    }
+    const currentSettings = this.getTrackSettings('reads', fileId);
+    const isVisible = this.isReadsComponentVisible(currentSettings, optionKey, stateKey);
+    this.updateReadsToggleButtonAppearance(btn, labelText, stateKey, isVisible);
 
     // Mark button for easy finding later
     btn.dataset.toggleType = stateKey;
@@ -8164,50 +8168,28 @@ class TrackRenderer {
     btn.addEventListener('click', e => {
       e.stopPropagation();
 
-      // Toggle state
-      this.elementVisibilityStates[stateKey] = !this.elementVisibilityStates[stateKey];
-      const newValue = this.elementVisibilityStates[stateKey];
-
-      // Update visuals
-      if (newValue) {
-        btn.style.background = 'white';
-        btn.style.color = '#333';
-        btn.classList.add('active');
-      } else {
-        btn.style.background = '#eee';
-        btn.style.color = '#aaa';
-        btn.classList.remove('active');
-      }
+      const newValue = !btn.classList.contains('active');
+      this.updateReadsToggleButtonAppearance(btn, labelText, stateKey, newValue);
 
       // Update settings if mapped
       if (optionKey) {
-        // Detect fileId from the track element for instance-level settings
         const trackElement = btn.closest('.reads-track');
-        const fileId = trackElement?.dataset?.fileId || null;
-        const settingsKey = fileId ? `reads::${fileId}` : 'reads';
+        const resolvedFileId = fileId || trackElement?.dataset?.fileId || null;
+        const settings = { ...this.getTrackSettings('reads', resolvedFileId) };
+        settings[optionKey] = newValue;
+        settings[stateKey] = newValue;
 
-        // Get current settings or init
-        if (!this.trackSettings) this.trackSettings = {};
-        if (!this.trackSettings[settingsKey]) {
-          // Initialize with type-level defaults merged
-          this.trackSettings[settingsKey] = { ...(this.trackSettings['reads'] || {}) };
+        if (!resolvedFileId) {
+          this.elementVisibilityStates[stateKey] = newValue;
         }
-
-        // Update and save
-        this.trackSettings[settingsKey][optionKey] = newValue;
-        // Also update the legacy key if it exists to be safe
-        this.trackSettings[settingsKey][stateKey] = newValue;
 
         // Persist settings
         if (typeof this.saveTrackSettings === 'function') {
-          this.saveTrackSettings('reads', this.trackSettings[settingsKey], fileId);
+          this.saveTrackSettings('reads', settings, resolvedFileId);
         }
-      }
 
-      // Update all active CanvasReadsRenderers
-      if (this.canvasRenderers) {
-        this.canvasRenderers.forEach(renderer => {
-          // Check if it has the updateOptions method (is a CanvasReadsRenderer)
+        trackElement?.querySelectorAll('.reads-canvas-container[data-track-id]').forEach(container => {
+          const renderer = this.canvasRenderers?.get(container.dataset.trackId);
           if (renderer && typeof renderer.updateOptions === 'function') {
             renderer.updateOptions({
               [optionKey]: newValue,
@@ -8225,6 +8207,32 @@ class TrackRenderer {
     });
 
     return btn;
+  }
+
+  isReadsComponentVisible(settings, optionKey, legacyStateKey = null) {
+    if (settings && optionKey && settings[optionKey] !== undefined) {
+      return settings[optionKey] !== false;
+    }
+
+    if (legacyStateKey && this.elementVisibilityStates?.[legacyStateKey] !== undefined) {
+      return this.elementVisibilityStates[legacyStateKey] !== false;
+    }
+
+    return true;
+  }
+
+  updateReadsToggleButtonAppearance(button, labelText, stateKey, isVisible) {
+    button.style.background = isVisible ? 'white' : '#eee';
+    button.style.color = isVisible ? '#333' : '#aaa';
+    button.classList.toggle('active', isVisible);
+    button.setAttribute('aria-pressed', isVisible.toString());
+
+    const hints = {
+      readsCoverage: isVisible ? 'Hide the coverage graph' : 'Show the coverage graph',
+      readsReference: isVisible ? 'Hide the reference sequence' : 'Show the reference sequence',
+      readsReads: isVisible ? 'Hide aligned reads (coverage and reference remain visible)' : 'Show aligned reads',
+    };
+    this.setTrackControlHint(button, hints[stateKey] || `${isVisible ? 'Hide' : 'Show'} ${labelText}`);
   }
 
   genesOverlap(gene1, gene2) {
@@ -8271,7 +8279,7 @@ class TrackRenderer {
     const selectionBtn = document.createElement('button');
     selectionBtn.className = 'track-btn coordinate-ruler-selection-btn';
     selectionBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
-    selectionBtn.title = 'Toggle sequence selection mode on the ruler';
+    this.setTrackControlHint(selectionBtn, 'Enable sequence selection on the coordinate ruler');
     selectionBtn.style.cssText = `
             position: absolute;
             top: 4px;
@@ -10573,7 +10581,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
     button.dataset.locked = newLocked.toString();
     button.innerHTML = newLocked ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-lock-open"></i>';
-    button.title = newLocked ? 'Unlock Track Controls' : 'Lock Track Controls';
+    this.setTrackControlHint(button, newLocked ? 'Unlock track controls' : 'Lock track controls');
 
     // Find the track element using multiple strategies
     let trackElement = button.closest('[class*="-track"]');
@@ -10706,7 +10714,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       // Show header
       trackHeader.style.display = '';
       button.innerHTML = '<i class="fas fa-minus"></i>';
-      button.title = 'Hide Track Header';
+      this.setTrackControlHint(button, 'Minimize the track header');
 
       // Update state
       this.headerStates.set(trackType, false);
@@ -10720,7 +10728,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       // Hide header
       trackHeader.style.display = 'none';
       button.innerHTML = '<i class="fas fa-plus"></i>';
-      button.title = 'Show Track Header';
+      this.setTrackControlHint(button, 'Show the track header');
 
       // Update state
       this.headerStates.set(trackType, true);
@@ -10765,6 +10773,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       if (selectionBtn) {
         selectionBtn.style.background = 'rgba(255, 255, 255, 0.8)';
         selectionBtn.style.color = '#6c757d';
+        selectionBtn.setAttribute('aria-pressed', 'false');
+        this.setTrackControlHint(selectionBtn, 'Enable sequence selection on the coordinate ruler');
       }
 
       console.log('Secondary ruler selection mode disabled - dragging re-enabled');
@@ -10780,6 +10790,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       if (selectionBtn) {
         selectionBtn.style.background = '#ef4444';
         selectionBtn.style.color = '#ffffff';
+        selectionBtn.setAttribute('aria-pressed', 'true');
+        this.setTrackControlHint(selectionBtn, 'Disable sequence selection on the coordinate ruler');
       }
 
       console.log('Secondary ruler selection mode enabled - dragging disabled');
@@ -11093,9 +11105,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }
 
     const floatingBtn = document.createElement('button');
-    floatingBtn.className = 'floating-header-btn';
+    floatingBtn.className = 'track-btn floating-header-btn';
     floatingBtn.innerHTML = '<i class="fas fa-plus"></i>';
-    floatingBtn.title = 'Show Track Header';
+    this.setTrackControlHint(floatingBtn, 'Show the track header');
     floatingBtn.style.cssText = `
             position: absolute;
             top: 5px;
@@ -11129,7 +11141,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         const hideHeaderBtn = trackHeader.querySelector('.track-hide-header-btn');
         if (hideHeaderBtn) {
           hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
-          hideHeaderBtn.title = 'Hide Track Header';
+          this.setTrackControlHint(hideHeaderBtn, 'Minimize the track header');
         }
 
         // Adjust track content
@@ -12672,6 +12684,8 @@ This action cannot be undone.`;
         coverageHeight: 50,
         coverageColor: '#4a90e2',
         coverageStrokeColor: '#2c5aa0',
+        // Main aligned-read rectangles (independent of coverage/reference)
+        showReads: true,
         // Reference sequence settings
         showReference: true,
         referenceHeight: 25,
@@ -13376,7 +13390,7 @@ This action cannot be undone.`;
 
     // Sync UI Buttons (specifically for Reads track)
     if (trackType === 'reads') {
-      this.syncReadsToggleButtons(settings);
+      this.syncReadsToggleButtons(settings, fileId);
 
       // Sync sampling header UI when sampling settings change
       if (settings.samplingPercentage !== undefined) {
@@ -15955,7 +15969,7 @@ This action cannot be undone.`;
   /**
    * Sync header toggle buttons with current settings
    */
-  syncReadsToggleButtons(settings) {
+  syncReadsToggleButtons(settings, fileId = null) {
     // Map settings keys to toggle types
     const settingToToggle = {
       showCoverage: 'readsCoverage',
@@ -15965,38 +15979,38 @@ This action cannot be undone.`;
 
     Object.keys(settingToToggle).forEach(settingKey => {
       const toggleType = settingToToggle[settingKey];
-      // Find buttons with this toggle type
+      // Find buttons with this toggle type, then scope instance settings to the
+      // matching file-backed track instead of changing every BAM header.
       const buttons = document.querySelectorAll(`.track-reads-toggle-btn[data-toggle-type="${toggleType}"]`);
 
       buttons.forEach(btn => {
-        // Determine state: default to true if undefined, otherwise use setting value
-        const isActive = settings[settingKey] !== false;
+        const buttonFileId = btn.closest('.reads-track')?.dataset?.fileId || null;
+        if ((fileId || null) !== buttonFileId) return;
 
-        // Update internal state
-        this.elementVisibilityStates[toggleType] = isActive;
+        const isActive = this.isReadsComponentVisible(settings, settingKey, toggleType);
 
-        // Update visual state
-        if (isActive) {
-          btn.style.background = 'white';
-          btn.style.color = '#333';
-          btn.classList.add('active');
-        } else {
-          btn.style.background = '#eee';
-          btn.style.color = '#aaa';
-          btn.classList.remove('active');
+        if (!fileId) {
+          this.elementVisibilityStates[toggleType] = isActive;
         }
+
+        const labels = {
+          readsCoverage: 'Coverage',
+          readsReference: 'Reference',
+          readsReads: 'Reads',
+        };
+        this.updateReadsToggleButtonAppearance(btn, labels[toggleType], toggleType, isActive);
       });
     });
 
-    // Also update any active renderers to ensure they match current settings
-    // This handles the case where settings change from the panel -> renderers need update
-    if (this.canvasRenderers) {
-      this.canvasRenderers.forEach(renderer => {
-        if (renderer && typeof renderer.updateOptions === 'function') {
-          renderer.updateOptions(settings);
-        }
+    const targetTracks = Array.from(document.querySelectorAll('.reads-track')).filter(
+      track => (track.dataset.fileId || null) === (fileId || null)
+    );
+    targetTracks.forEach(track => {
+      track.querySelectorAll('.reads-canvas-container[data-track-id]').forEach(container => {
+        const renderer = this.canvasRenderers?.get(container.dataset.trackId);
+        renderer?.updateOptions?.(settings);
       });
-    }
+    });
   }
 
   refreshTrack(trackType) {

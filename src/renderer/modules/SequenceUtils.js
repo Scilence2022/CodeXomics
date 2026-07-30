@@ -959,12 +959,24 @@ class SequenceUtils {
   }
 
   syncSequenceHeaderToggleButtons(settings = this.getSequenceTrackSettings()) {
+    const setButtonHint = (button, hint) => {
+      if (!button) return;
+      const trackRenderer = this.genomeBrowser.trackRenderer;
+      if (trackRenderer?.setTrackControlHint) {
+        trackRenderer.setTrackControlHint(button, hint);
+        return;
+      }
+      button.title = hint;
+      button.dataset.tooltip = hint;
+      button.setAttribute('aria-label', hint);
+    };
+
     const toggleButton = (id, isActive, onTitle, offTitle) => {
       const button = document.getElementById(id);
       if (!button) return;
       button.classList.toggle('active', Boolean(isActive));
       button.setAttribute('aria-pressed', Boolean(isActive).toString());
-      button.title = isActive ? onTitle : offTitle;
+      setButtonHint(button, isActive ? onTitle : offTitle);
     };
 
     toggleButton(
@@ -991,9 +1003,12 @@ class SequenceUtils {
       const copyAsFasta = settings.copyFormat === 'fasta';
       copyFormatButton.classList.toggle('active', copyAsFasta);
       copyFormatButton.setAttribute('aria-pressed', copyAsFasta.toString());
-      copyFormatButton.title = copyAsFasta
-        ? 'Copy format: FASTA (includes a header line). Click to switch to a clean sequence.'
-        : 'Copy format: clean sequence (bases only). Click to switch to FASTA.';
+      setButtonHint(
+        copyFormatButton,
+        copyAsFasta
+          ? 'Copy format: FASTA (includes a header line). Click to switch to a clean sequence.'
+          : 'Copy format: clean sequence (bases only). Click to switch to FASTA.'
+      );
       const label = copyFormatButton.querySelector('span');
       if (label) {
         label.textContent = copyAsFasta ? 'FASTA' : 'Clean';
@@ -1121,9 +1136,17 @@ class SequenceUtils {
       if (icon) icon.className = shouldCollapse ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
       if (label) label.textContent = shouldCollapse ? 'Expand' : 'Collapse';
       button.setAttribute('aria-expanded', (!shouldCollapse).toString());
-      button.title = shouldCollapse
+      const hint = shouldCollapse
         ? 'Expand the sequence track to show the sequence content again'
         : 'Collapse the sequence track (keep only the header visible)';
+      const trackRenderer = this.genomeBrowser.trackRenderer;
+      if (trackRenderer?.setTrackControlHint) {
+        trackRenderer.setTrackControlHint(button, hint);
+      } else {
+        button.title = hint;
+        button.dataset.tooltip = hint;
+        button.setAttribute('aria-label', hint);
+      }
     }
 
     // Let dependent layouts (canvas widths, virtual scroll) recompute.
