@@ -643,6 +643,8 @@ class NavigationManager {
           const primerContent = primerElement.querySelector('.track-content');
           if (primerContent) {
             primerTrack.innerHTML = '';
+            // Height is recomputed per view (row count varies), so carry it over.
+            primerTrack.style.height = primerContent.style.height;
             while (primerContent.firstChild) {
               primerTrack.appendChild(primerContent.firstChild);
             }
