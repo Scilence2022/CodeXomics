@@ -1224,6 +1224,12 @@ class GenomeBrowser {
     document.getElementById('prevBtnGenome').addEventListener('click', () => this.navigationManager.navigatePrevious());
     document.getElementById('nextBtnGenome').addEventListener('click', () => this.navigationManager.navigateNext());
 
+    // Navigation controls (toolbar)
+    document.getElementById('goToStartBtn').addEventListener('click', () => this.navigationManager.navigateToStart());
+    document.getElementById('pagePrevBtn').addEventListener('click', () => this.navigationManager.navigatePrevious());
+    document.getElementById('pageNextBtn').addEventListener('click', () => this.navigationManager.navigateNext());
+    document.getElementById('goToEndBtn').addEventListener('click', () => this.navigationManager.navigateToEnd());
+
     // Zoom controls
     document.getElementById('zoomInBtn').addEventListener('click', () => this.navigationManager.zoomIn());
     document.getElementById('zoomOutBtn').addEventListener('click', () => this.navigationManager.zoomOut());
