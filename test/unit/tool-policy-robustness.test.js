@@ -792,6 +792,59 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(round2.suppressedTools).toHaveLength(1);
   });
 
+  it('stops a genome-wide analysis from re-running every round', () => {
+    const manager = new MockChatManager();
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = () => true;
+
+    // Reported scenario: "genome wide codon usage analysis" ran four times with
+    // identical parameters. The message matches the "codon usage analysis" phrase
+    // list and the list names codon_usage_analysis, but the tool the model actually
+    // picked is genome_codon_usage_analysis, which no list mentions.
+    const call = { tool_name: 'genome_codon_usage_analysis', parameters: { clientId: 'U00096' } };
+    const state = manager.createToolExecutionState('genome wide codon usage analysis');
+    const successfulCounts = new Map();
+
+    const round1 = manager.createPendingToolExecutionQueue(
+      [call],
+      successfulCounts,
+      state.originalMessage,
+      [],
+      1,
+      state
+    );
+    expect(round1.pendingTools).toHaveLength(1);
+
+    manager.markToolExecutionResults(
+      state,
+      round1.pendingTools,
+      [
+        {
+          tool: call.tool_name,
+          parameters: call.parameters,
+          success: true,
+          result: { success: true, totalGenes: 3878, totalCodons: 1343883 },
+          error: null,
+        },
+      ],
+      1
+    );
+    successfulCounts.set(manager.getToolExecutionKey(call.tool_name, call.parameters), 1);
+
+    const round2 = manager.createPendingToolExecutionQueue(
+      [call],
+      successfulCounts,
+      state.originalMessage,
+      [],
+      2,
+      state
+    );
+
+    expect(round2.pendingTools).toHaveLength(0);
+    expect(round2.suppressedTools).toHaveLength(1);
+  });
+
   it('should update execution state with success/failure results and inject it as a user-visible state message', () => {
     const manager = new MockChatManager();
     manager.showThinkingProcess = false;
