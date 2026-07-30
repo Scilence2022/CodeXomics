@@ -7988,7 +7988,19 @@ class ChatManager {
   }
 
   createToolExecutionFeedbackMessage(content) {
-    const message = { role: 'user', content };
+    // No provider adapter sends native tool schemas, so a result cannot be returned
+    // as a tool_result block bound to a tool_use id — it has to ride in a role the
+    // adapters preserve, and that role is 'user'. A bare result then reads as a
+    // fresh user turn: a repeating run showed the model reasoning "the user is
+    // requesting another genome-wide codon usage analysis" and re-issuing the call
+    // it had just completed. The envelope denies that provenance explicitly.
+    const message = {
+      role: 'user',
+      content:
+        '[CodeXomics automated tool-execution record. This is not a message from the user ' +
+        'and is not a new request. Continue the original request already in progress.]\n' +
+        content,
+    };
     // Keep provenance available to local policy checks without serializing an
     // unsupported field into provider request payloads.
     Object.defineProperty(message, '__codexomicsToolFeedback', {
