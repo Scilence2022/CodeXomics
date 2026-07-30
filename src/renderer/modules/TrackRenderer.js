@@ -7591,10 +7591,18 @@ class TrackRenderer {
     // taking precedence when it exists.
     gene = this._canonicalGeneDetailsFeature(gene);
 
-    // Call the main CodeXomics's gene selection methods
+    // Update the lightweight selection visuals immediately. Building the Gene
+    // Details sidebar is substantially more expensive, so the real app queues
+    // that work until after the selection has had a chance to paint. Test and
+    // embedding callers without the scheduler retain the synchronous fallback.
     this.genomeBrowser.selectGene(gene, operonInfo);
-    this.genomeBrowser.showGeneDetailsPanel();
-    this.genomeBrowser.populateGeneDetails(gene, operonInfo);
+
+    if (typeof this.genomeBrowser.scheduleGeneDetailsPanelUpdate === 'function') {
+      this.genomeBrowser.scheduleGeneDetailsPanelUpdate(gene, operonInfo);
+    } else {
+      this.genomeBrowser.populateGeneDetails(gene, operonInfo);
+      this.genomeBrowser.showGeneDetailsPanel();
+    }
 
     const genesSettings = this.getTrackSettings('genes');
     if (options.scrollBottomSequence !== false && genesSettings.autoScrollBottomSequenceOnGeneSelect !== false) {

@@ -135,6 +135,7 @@ describe('SequenceUtils circular bottom sequence track', () => {
   it('restores active gene sequence highlighting on newly rendered virtualized rows', () => {
     const lineElement = utils.renderSequenceLine('ACGTACGTAC', 20, 'chr1', [], [], 10, {}, new Map());
     document.getElementById('sequenceContent').appendChild(lineElement);
+    lineElement.querySelector('[data-position="20"]').classList.add('sequence-selected', 'gene-sequence-selected');
 
     utils.genomeBrowser.sequenceSelection = {
       start: 22,
@@ -151,6 +152,7 @@ describe('SequenceUtils circular bottom sequence track', () => {
       base => Number(base.dataset.position) + 1
     );
     expect(highlightedPositions).toEqual([22, 23, 24]);
+    expect(lineElement.querySelector('[data-position="20"]').classList.contains('sequence-selected')).toBe(false);
   });
 
   it('highlights source-coordinate search matches after the origin', () => {
@@ -259,6 +261,40 @@ describe('SequenceUtils circular bottom sequence track', () => {
 
     expect(showGeneDetails).toHaveBeenCalledTimes(1);
     expect(showGeneDetails).toHaveBeenCalledWith(gene, null, { scrollBottomSequence: false });
+  });
+
+  it('reuses operons calculated during sequence rendering when an indicator is clicked', () => {
+    const gene = { type: 'CDS', start: 2, end: 4, strand: 1, qualifiers: { gene: 'cached' } };
+    const operons = [{ name: 'cached-operon', genes: [gene] }];
+    const operonInfo = { isInOperon: true, operonName: 'cached-operon', color: '#123456' };
+    const detectOperons = vi.fn(() => []);
+    const getGeneOperonInfo = vi.fn(() => operonInfo);
+    const showGeneDetails = vi.fn();
+    utils.genomeBrowser.currentAnnotations.chr1 = [gene];
+    utils.genomeBrowser.detectOperons = detectOperons;
+    utils.genomeBrowser.getGeneOperonInfo = getGeneOperonInfo;
+    utils.genomeBrowser.trackRenderer = { showGeneDetails };
+    utils.renderedOperonContexts.set('chr1', {
+      annotations: utils.genomeBrowser.currentAnnotations.chr1,
+      annotationCount: 1,
+      operons,
+    });
+
+    const target = document.createElement('span');
+    Object.assign(target.dataset, {
+      chromosome: 'chr1',
+      geneStart: '2',
+      geneEnd: '4',
+      geneType: 'CDS',
+      geneName: 'cached',
+      locusTag: '',
+    });
+
+    utils.handleGeneIndicatorClick(target);
+
+    expect(detectOperons).not.toHaveBeenCalled();
+    expect(getGeneOperonInfo).toHaveBeenCalledWith(gene, operons);
+    expect(showGeneDetails).toHaveBeenCalledWith(gene, operonInfo, { scrollBottomSequence: false });
   });
 
   it('scrolls the virtualized bottom sequence view when auto-scrolling to a selected gene', () => {
