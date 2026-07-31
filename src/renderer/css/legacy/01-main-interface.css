@@ -533,21 +533,41 @@
 .toolbar {
   background: linear-gradient(to bottom, #ffffff, #f8f9fa);
   border-bottom: 2px solid var(--border-color);
-  padding: 12px 20px;
+  padding: 10px 16px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 25px;
+  column-gap: 10px;
+  row-gap: 8px;
   flex-wrap: wrap;
 }
 
 .toolbar-section {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 0 0 auto;
   flex-wrap: nowrap;
   position: relative;
+}
+
+/* Navigation buttons read as one compact control cluster. The divider keeps
+ * them visually separate from commands without restoring the old wide gaps. */
+.toolbar-navigation-section,
+.toolbar-zoom-section {
+  gap: 2px;
+}
+
+.toolbar-navigation-section .btn,
+.toolbar-zoom-section .btn {
+  min-width: 32px;
+  padding-inline: 8px;
+}
+
+.toolbar-zoom-section {
+  margin-right: 2px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border-color);
 }
 
 .toolbar-section label {
