@@ -55,6 +55,12 @@ class StrictAutomaticEvaluator {
     this.toolEquivalents = {
       blast_create_db_from_genome: ['blast_create_quick_db_for_current_genome'],
       blast_create_quick_db_for_current_genome: ['blast_create_db_from_genome'],
+      // Both tools run a BLAST sequence search; blast_search_online targets
+      // NCBI online databases (e.g. "nt"), which the oracle also accepts via
+      // blast_search's database parameter. For a request naming an online
+      // database either tool completes the task.
+      blast_search: ['blast_search_online'],
+      blast_search_online: ['blast_search'],
     };
 
     // Completion-mode parameter fallbacks: when the oracle expects key K but

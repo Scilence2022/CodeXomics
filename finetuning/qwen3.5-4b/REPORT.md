@@ -338,6 +338,29 @@ DeepSeek 的 6 条修正：`nav_auto_12`、`search_auto_02`、`track_auto_03`（
 - **复杂套件**：DeepSeek 完成度口径 62.1%（18/29），11 条剩余失败全部是**任务未做完**（漏 `bookmark_position`、漏 `translate_dna`/`calculate_molecular_weight`、漏 `simulate_gel_electrophoresis`、漏 `update_task`/`delete_task`、漏 `save_primer`、漏 `analyze_interpro_domains`）。测试并非"本身有问题"，而是**多步执行持久性**是包括 DeepSeek 在内的所有模型的真实短板；严格口径额外误杀了 3 条有效方案。
 - **训练数据影响**：数据集的多步记录之所以 0/14 通过强模型回放，一部分正是同一契约过严造成的——有效替代方案被记作失败并被门禁丢弃。修复方向：`acceptable_calls` 支持每步多方案（benchmarkAnyOf/等价工具），回放门改用任务完成等价判定，再重放多步语料。
 
+### 修复评测环境后的复测（domain-shaped 工具结果，2026-08-02）
+
+进一步审计发现离线 harness 还有两个环境缺陷，会**系统性压低所有模型的分数**：
+
+1. **工具结果桩只有 `{acknowledged: true, domain_result_available: false}`**，依赖步骤无法继续：`translate_dna`/`calculate_entropy` 拿不到序列、`simulate_gel_electrophoresis` 拿不到 `fragmentDetails`、`update_task`/`delete_task` 拿不到 task id、`save_primer` 拿不到引物坐标、`analyze_interpro_domains` 拿不到条目——模型物理上无法正确完成这些多步任务。
+2. **`max_tokens: 512` 截断长参数**：`restrict_auto_01` 的 `completion_tokens` 恰好 512，存储参数是被切断的 JSON（尾部字符串无闭合括号），模型调用本身是正确方向。
+
+修复：新增 `scripts/lib/contract-tool-results.js`（确定性域形状结果，fixture 可执行时用真实夹具输出，否则按工具 schema 生成含引用字段的结果），两个 harness 接入并把 `max_tokens` 提到 4096（DeepSeek）/`num_predict` 8192（Ollama），记录 `truncated_turns`。等价工具表补充 `blast_search ↔ blast_search_online`（指令针对 NCBI nt 库时两者都成立）。
+
+DeepSeek V4 Flash 复测（无 thinking，temperature 0，seed 固定）：
+
+| 阶段           |        严格总体 |          完成度总体 |    简单 |      复杂 |
+| -------------- | --------------: | ------------------: | ------: | --------: |
+| 原 harness     | 149/172 (86.6%) |     155/172 (90.1%) | 134/143 |     15/29 |
+| 修复后 harness | 152/172 (88.4%) | **158/172 (91.9%)** | 138/143 | **20/29** |
+
+修复后剩余 14 条失败归因：
+
+- **5 条简单 = 真实模型错误**：`anal_auto_04`/`edit_auto_02`/`annot_auto_05` 选错工具（应分别调 codon usage/paste/update）、`track_auto_19` 参数 `visible:"toggle"` 非法、`settings_auto_07` 键名错（`showGeneStartMarkers` vs `showStartMarkers`）。即使评测环境完美，DeepSeek 简单也只能到 ~96.5%，达不到 100%。
+- **9 条复杂**：6 条真实未完成（漏 `bookmark_position`、漏 `simulate_gel_electrophoresis`、漏 `analyze_interpro_domains`、漏 `blast_search_local`、漏 `blast_delete_database`、`file_auto_complex_02` 无视指令给定路径、`analysis_auto_complex_05` 引用参数使用失败 + 3 次截断）；2 条边界判断（`annotation_auto_complex_02` 用创建返回的 id 查历史——套件有意钉住名字并有注释说明；`primer_auto_complex_02` 全链正确但重复调了一次 `save_primer`，按"多余状态变更"规则判失败）；`gel_auto_workflow_02` 未完成。
+
+**结论修正**：DeepSeek 成绩低的归因 = 评测环境缺陷（原严格口径 23 条失败中约 9 条来自桩结果/截断/契约误杀）+ 真实模型短板（简单 5 条工具选择与参数，复杂 6-7 条多步未完成）。"测试本身有问题"对约四成失败成立；其余六成是模型真实行为，训练数据修复（多方案 oracle + 完成度回放门）与模型能力提升仍需并行。
+
 ### 制品
 
 - 重评脚本：`scripts/rescore-task-completion.js`（`--input` 旧 metrics JSON → `--output` 完成度 JSON）。

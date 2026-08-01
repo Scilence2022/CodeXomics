@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const DynamicToolsSnapshotAdapter = require('../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
 const StrictAutomaticEvaluator = require('../src/renderer/modules/benchmark-suites/StrictAutomaticEvaluator.js');
+const { buildContractToolResult } = require('./lib/contract-tool-results.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'tools_registry', 'generated', 'tool-registry-manifest.json');
@@ -113,7 +114,9 @@ async function deepSeekChat(options, messages, tools) {
     tools,
     tool_choice: 'auto',
     stream: false,
-    max_tokens: options.thinking === 'enabled' ? 4096 : 512,
+    // 512 tokens truncated long tool arguments (e.g. a virtual_digest call
+    // carrying a full sequence), producing invalid JSON and false failures.
+    max_tokens: options.thinking === 'enabled' ? 4096 : 4096,
     thinking: { type: options.thinking },
   };
   if (options.thinking === 'enabled') requestBody.reasoning_effort = options.reasoningEffort;
@@ -192,7 +195,7 @@ function buildSummary(options, records, startedAt, completedAt) {
       max_tokens: options.thinking === 'enabled' ? 4096 : 512,
       candidate_limit: CANDIDATE_LIMIT,
     },
-    tool_result_mode: 'contract-acknowledgement-only',
+      tool_result_mode: 'domain-shaped-contract',
     benchmark_scope: { automatic_simple: 143, automatic_complex: 29, manual_tests_included: 0 },
     overall: summarize(records),
     automatic_simple: summarize(records.filter(record => record.suite_id === 'automatic_simple')),
@@ -224,6 +227,7 @@ async function evaluateTest(test, options, adapter, evaluator) {
   let reasoningTokens = 0;
   let cacheHitTokens = 0;
   let cacheMissTokens = 0;
+  let truncatedTurns = 0;
   const started = Date.now();
   let apiError = null;
 
@@ -239,6 +243,7 @@ async function evaluateTest(test, options, adapter, evaluator) {
       cacheMissTokens += Number(response.usage?.prompt_cache_miss_tokens || 0);
 
       const rawAssistant = response.choices?.[0]?.message || { role: 'assistant', content: '' };
+      if (response.choices?.[0]?.finish_reason === 'length') truncatedTurns += 1;
       const assistant = {
         role: 'assistant',
         content: rawAssistant.content ?? null,
@@ -261,11 +266,7 @@ async function evaluateTest(test, options, adapter, evaluator) {
           role: 'tool',
           tool_call_id: toolCall.id || `call_${turn}_${callIndex}`,
           name: toolName,
-          content: JSON.stringify({
-            acknowledged: validation.valid,
-            assessment_tier: 'native-function-contract',
-            domain_result_available: false,
-          }),
+          content: JSON.stringify(buildContractToolResult(toolName, parameters)),
         });
       }
       if (calls.length >= expectedCount) break;
@@ -298,6 +299,7 @@ async function evaluateTest(test, options, adapter, evaluator) {
     selected_tools: selected.map(tool => tool.name),
     calls,
     api_error: apiError,
+    truncated_turns: truncatedTurns,
     evaluation,
   };
 }

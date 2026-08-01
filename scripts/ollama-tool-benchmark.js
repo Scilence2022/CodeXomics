@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const DynamicToolsSnapshotAdapter = require('../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
 const StrictAutomaticEvaluator = require('../src/renderer/modules/benchmark-suites/StrictAutomaticEvaluator.js');
+const { buildContractToolResult } = require('./lib/contract-tool-results.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'tools_registry', 'generated', 'tool-registry-manifest.json');
@@ -132,6 +133,7 @@ function buildSummary(model, records, startedAt, completedAt) {
     model,
     started_at: startedAt,
     completed_at: completedAt,
+    tool_result_mode: 'domain-shaped-contract',
     deterministic_options: {
       temperature: 0,
       seed: 42,
@@ -167,6 +169,7 @@ async function evaluateTest(test, model, adapter, evaluator) {
   const calls = [];
   let promptEvalCount = 0;
   let evalCount = 0;
+  let truncatedTurns = 0;
   const started = Date.now();
   let apiError = null;
 
@@ -176,6 +179,7 @@ async function evaluateTest(test, model, adapter, evaluator) {
       const response = await ollamaChat(model, messages, tools);
       promptEvalCount += Number(response.prompt_eval_count || 0);
       evalCount += Number(response.eval_count || 0);
+      if (response.done_reason === 'length') truncatedTurns += 1;
       const assistant = response.message || { role: 'assistant', content: '' };
       messages.push(assistant);
       const responseCalls = assistant.tool_calls || [];
@@ -189,11 +193,7 @@ async function evaluateTest(test, model, adapter, evaluator) {
         messages.push({
           role: 'tool',
           tool_name: toolName,
-          content: JSON.stringify({
-            acknowledged: validation.valid,
-            assessment_tier: 'native-function-contract',
-            domain_result_available: false,
-          }),
+          content: JSON.stringify(buildContractToolResult(toolName, parameters)),
         });
       }
       if (calls.length >= expectedCount + 1 || calls.length >= expectedCount) break;
@@ -222,6 +222,7 @@ async function evaluateTest(test, model, adapter, evaluator) {
     selected_tools: selected.map(tool => tool.name),
     calls,
     api_error: apiError,
+    truncated_turns: truncatedTurns,
     evaluation,
   };
 }
