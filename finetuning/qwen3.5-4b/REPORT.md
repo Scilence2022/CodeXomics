@@ -284,6 +284,22 @@ thinking 开启运行（`qwen3.5_4b-codexomics-tools-v2-thinking.json`）的 18 
 
 结论：thinking 开关不改变工具调用准确率（净 0），但生成 token 从约 1.08 万增至 5.44 万（约 5 倍）；平均延迟 10772ms → 9967ms。reasoning 可保留，且对话中思考内容照常进入 thinking 面板。
 
+## v3 多轮轨迹微调（2026-08-02）
+
+针对自动复杂短板（v2 只有单轮监督样本：多步记录全部被强模型回放门禁过滤，DeepSeek 多步回放 0/14），构建了 v3 多轮轨迹训练集并重新微调：
+
+- **数据**：`data-v3/` = 原 82/63/21 单轮合格样本 + 8/3/3 条夹具可执行多步 release 记录（oracle 金标 + 真实夹具输出）+ 合成链式轨迹（train 260 / dev 46，13 类模板，覆盖"查找基因→取序列→计算"、"序列→翻译→分子量"、"列表→详情"、"UniProt 搜索→条目"等，依赖参数使用 `{tool_name.path}` 跨轮引用语法）；全部经过 172 条基准泄漏过滤，渲染后 max 2581 tokens（上限 3072）。
+- **训练**：`config/qlora-v3.yaml`（200 iters，iter 200 最优，Val loss 0.018，Test loss 0.036 / ppl 1.037，峰值内存 165GB 含换页）。
+- **部署**：`qwen3.5:4b-codexomics-tools-v3`（Q4_K_M，2.7GB）。
+
+| 套件     |   v2（thinking） |   v3（thinking） | 变化 |
+| -------- | ---------------: | ---------------: | ---: |
+| 自动简单 | 139/143 (97.20%) | 138/143 (96.50%) |   -1 |
+| 自动复杂 |   15/29 (51.72%) |   16/29 (55.17%) |   +1 |
+| 总体     | 154/172 (89.53%) | 154/172 (89.53%) |    0 |
+
+复杂套件新通过：`analysis_auto_01`（GC + BED 导出）、`blast_auto_complex_03`（5 步 blast 链）；`gel_auto_01` 已选对 `simulate_gel_electrophoresis` 但参数 `ladderType` 出现双重编码（`"\"1kb\""`），`export_auto_complex_02` 与 `primer_auto_complex_02` 为新增回退。剩余 13 条失败仍集中在：近义工具替换（`blast_create_database` vs `blast_create_db_from_genome`、`advanced_uniprot_search` vs `analyze_interpro_domains`）、跨轮引用未泛化（`switch_to_tab` 仍缺 `{open_new_tab.tab_id}`）、参数键错误（`updates.note` vs `updates.description`、缺 `mode`/`position`）。下一轮方向：为非夹具工具（tab/task/annotation/blast/primer）构造"模拟结果 + 跨轮引用"轨迹，并加入近义工具对判别样本。
+
 ## 生产结论与下一轮方案
 
 1. **发布 `qwen3.5:4b-codexomics-tools-v2` 为推荐候选。** 154/172 (89.53%) 通过全部发布门禁，且超过基座与 DeepSeek V4 Flash 对照；应用侧默认模型切换按产品流程单独执行。
@@ -305,6 +321,7 @@ thinking 开启运行（`qwen3.5_4b-codexomics-tools-v2-thinking.json`）的 18 
 - 新候选基准：`metrics/tuned-v2.json`（154/172）；旧 iter 250：`metrics/tuned-rescored-v2.json`。
 - thinking 开启复测：`metrics/qwen3.5_4b-codexomics-tools-v2-thinking.json`（154/172，逐条对比见“多轮循环终止与 thinking 模式评测”）。
 - 复测命令：`node scripts/ollama-tool-benchmark.js --model qwen3.5:4b-codexomics-tools-v2 --suite all --tag thinking`。
+- v3 多轮轨迹复测：`metrics/qwen3.5_4b-codexomics-tools-v3-thinking-v3.json`（复杂 16/29、简单 138/143，总体 154/172）；训练日志 `training-v3.log`；配置 `config/qlora-v3.yaml`；部署配方 `ollama/Modelfile-v3`。
 - Adapter：`selected-adapter/`（iter 50）；旧 Adapter 备份：`adapters-legacy-rejected/`。
 - 部署配方：`ollama/Modelfile`；规范权重：`fused-hf/`。
 
