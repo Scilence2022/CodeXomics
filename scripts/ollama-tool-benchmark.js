@@ -36,8 +36,11 @@ function parseArgs(argv) {
   if (!Number.isInteger(options.concurrency) || options.concurrency < 1) throw new Error('Invalid concurrency');
   if (!options.output) {
     const safeModel = options.model.replace(/[^a-zA-Z0-9._-]+/g, '_');
+    // Simple and complex runs share the same model+tag, so the suite must be
+    // part of the default filename or one run silently overwrites the other.
+    const suiteSuffix = options.suite === 'all' ? '' : `-${options.suite}`;
     const suffix = options.tag ? `-${options.tag}` : '';
-    options.output = path.join(DEFAULT_OUTPUT_ROOT, `${safeModel}${suffix}.json`);
+    options.output = path.join(DEFAULT_OUTPUT_ROOT, `${safeModel}${suiteSuffix}${suffix}.json`);
   }
   return options;
 }

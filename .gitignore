@@ -234,6 +234,7 @@ docs/reports/dynamic-tool-registry-multiagent-integration-report.md
 finetuning/*/base-model/*
 !finetuning/*/base-model/UPSTREAM.json
 finetuning/*/adapters/*.safetensors
+finetuning/*/adapters-v*/*.safetensors
 finetuning/*/adapters-legacy-rejected/
 finetuning/*/selected-adapter*/adapters.safetensors
 finetuning/*/fused-hf*/

@@ -300,6 +300,50 @@ thinking 开启运行（`qwen3.5_4b-codexomics-tools-v2-thinking.json`）的 18 
 
 复杂套件新通过：`analysis_auto_01`（GC + BED 导出）、`blast_auto_complex_03`（5 步 blast 链）；`gel_auto_01` 已选对 `simulate_gel_electrophoresis` 但参数 `ladderType` 出现双重编码（`"\"1kb\""`），`export_auto_complex_02` 与 `primer_auto_complex_02` 为新增回退。剩余 13 条失败仍集中在：近义工具替换（`blast_create_database` vs `blast_create_db_from_genome`、`advanced_uniprot_search` vs `analyze_interpro_domains`）、跨轮引用未泛化（`switch_to_tab` 仍缺 `{open_new_tab.tab_id}`）、参数键错误（`updates.note` vs `updates.description`、缺 `mode`/`position`）。下一轮方向：为非夹具工具（tab/task/annotation/blast/primer）构造"模拟结果 + 跨轮引用"轨迹，并加入近义工具对判别样本。
 
+## 任务完成导向评测（task-completion-v1，2026-08-02）
+
+### 动机
+
+严格契约要求"工具序列与 oracle 完全一致 + 参数规范等价"，会把**能完成任务的其他方案**判失败。审计 DeepSeek V4 Flash 的 23 条严格失败后确认了四类契约问题：
+
+1. **等价工具被拒**：`blast_auto_complex_01` 要求"为当前已加载基因组建库"，oracle 只认 `blast_create_db_from_genome`，但工具文档写明整基因组建库的默认/快捷方式是 `blast_create_quick_db_for_current_genome`——DeepSeek 选后者是合理方案。
+2. **等价参数键被拒**：`switch_to_tab` schema 本身允许 `tab_id`/`tab_name`/`tab_index` 三选一，oracle 只认 `tab_id`，DeepSeek 用 `tab_index:1` 是合法调用。
+3. **良性只读多余调用被拒**：`nav_auto_12`/`search_auto_02` 在正确调用后追加了只读查询（`get_gene_details`、`search_annotations`），任务已完成。
+4. **评测器 bug**：嵌套 `benchmarkAnyOf`（数组元素内部的 anyOf）未被递归解析（`annotation_auto_complex_02`）；`toggle_track` 的 `track_name: "gc"` 别名在 schema 校验阶段被拒（评测器自己的别名表只在参数比较阶段生效）。
+
+### 规则（completion 模式）
+
+在 `StrictAutomaticEvaluator` 增加 `assessmentMode: 'completion'`（task-completion-contract 审计层，不替代严格门禁）：
+
+- 覆盖式匹配：期望工具全部出现即可，步骤顺序自由（任务往往有多条合法顺序）；
+- 等价工具表：`blast_create_db_from_genome` ↔ `blast_create_quick_db_for_current_genome`；
+- 只读多余调用忽略；其余多余调用仍判失败；
+- 占位符/引用参数（`<current_chromosome>`、`{open_new_tab.tab_id}`）在调用本身 schema 合法时可省略，并接受替代参数键（`switch_to_tab.tab_index`、blast 的 `genomeName`）；
+- 所有 observed 调用必须 schema 合法（缺失必填参数、损坏参数仍失败）；
+- 嵌套 `benchmarkAnyOf` 递归修复（全模式生效）；completion 模式在 schema 校验前做 `track_name` 别名与 JSON 双重编码字符串归一化。
+
+### 重评结果（复用已存 observed calls，无新增 API 调用）
+
+| 模型              |        严格总体 |          完成度总体 | 简单（严格→完成度） | 复杂（严格→完成度） |
+| ----------------- | --------------: | ------------------: | ------------------: | ------------------: |
+| DeepSeek V4 Flash | 149/172 (86.6%) | **155/172 (90.1%)** |           134 → 137 |             15 → 18 |
+| 微调 v2           | 154/172 (89.5%) | **156/172 (90.7%)** |           139 → 139 |             15 → 17 |
+| 微调 v3           | 154/172 (89.5%) | **156/172 (90.7%)** |           138 → 138 |             16 → 18 |
+
+DeepSeek 的 6 条修正：`nav_auto_12`、`search_auto_02`、`track_auto_03`（简单，契约问题）、`annotation_auto_complex_02`（嵌套 anyOf bug）、`ui_auto_complex_02`（tab_index 合法替代）、`blast_auto_complex_01`（等价工具 + genomeName）。
+
+### 结论：测试与模型各占一半
+
+- **简单套件**：DeepSeek 即使按任务完成口径也只有 137/143（95.8%），剩余 6 条是真实失败——选错工具（`anal_auto_04` 应为 `genome_codon_usage_analysis`、`edit_auto_02/06` 应为 paste/cut）、缺必填参数（`annot_auto_01` 缺 `chromosome`）、参数损坏（`restrict_auto_01` 双重编码 JSON）、键名错误（`settings_auto_07`）。因此"DeepSeek 简单应接近 100%"不成立：测试不是唯一原因，但 3 条契约误杀应修正。
+- **复杂套件**：DeepSeek 完成度口径 62.1%（18/29），11 条剩余失败全部是**任务未做完**（漏 `bookmark_position`、漏 `translate_dna`/`calculate_molecular_weight`、漏 `simulate_gel_electrophoresis`、漏 `update_task`/`delete_task`、漏 `save_primer`、漏 `analyze_interpro_domains`）。测试并非"本身有问题"，而是**多步执行持久性**是包括 DeepSeek 在内的所有模型的真实短板；严格口径额外误杀了 3 条有效方案。
+- **训练数据影响**：数据集的多步记录之所以 0/14 通过强模型回放，一部分正是同一契约过严造成的——有效替代方案被记作失败并被门禁丢弃。修复方向：`acceptable_calls` 支持每步多方案（benchmarkAnyOf/等价工具），回放门改用任务完成等价判定，再重放多步语料。
+
+### 制品
+
+- 重评脚本：`scripts/rescore-task-completion.js`（`--input` 旧 metrics JSON → `--output` 完成度 JSON）。
+- 完成度结果：`metrics/deepseek-v4-flash-task-completion.json`、`metrics/qwen3.5_4b-codexomics-tools-v2-task-completion.json`、`metrics/qwen3.5_4b-codexomics-tools-v3-complex-task-completion.json`。
+- completion 模式单测：`test/unit/strict-automatic-evaluator.test.js`（17 项，含嵌套 anyOf、等价工具、替代参数键、只读多余调用、别名归一化、必填缺失仍失败）。
+
 ## 生产结论与下一轮方案
 
 1. **发布 `qwen3.5:4b-codexomics-tools-v2` 为推荐候选。** 154/172 (89.53%) 通过全部发布门禁，且超过基座与 DeepSeek V4 Flash 对照；应用侧默认模型切换按产品流程单独执行。

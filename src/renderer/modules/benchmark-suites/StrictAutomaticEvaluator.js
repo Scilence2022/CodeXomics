@@ -11,14 +11,21 @@
  * `contract` mode intentionally stops after (4). It is suitable for offline
  * native-function-calling benchmarks, but must never be reported as executable
  * accuracy. `execution` is the default and additionally requires (5).
+ *
+ * `completion` mode is a task-completion supplement, not a stricter gate: it
+ * accepts any schema-valid plan that covers every expected capability, even
+ * when the plan uses an equivalent tool, an alternative-but-equivalent
+ * parameter key, a different step order, or extra read-only calls. It is used
+ * to audit whether failures are genuine task failures or oracle strictness.
  */
 class StrictAutomaticEvaluator {
   constructor(options = {}) {
     this.validateToolCall = options.validateToolCall || (() => ({ valid: true, errors: [] }));
     this.assessmentMode = options.assessmentMode || 'execution';
-    if (!['contract', 'execution'].includes(this.assessmentMode)) {
-      throw new TypeError("assessmentMode must be either 'contract' or 'execution'");
+    if (!['contract', 'execution', 'completion'].includes(this.assessmentMode)) {
+      throw new TypeError("assessmentMode must be 'contract', 'execution', or 'completion'");
     }
+    this.completionMode = this.assessmentMode === 'completion';
 
     // These aliases describe genuinely interchangeable API spellings. Case,
     // snake_case, camelCase, and kebab-case are normalized before this map is used.
@@ -41,6 +48,95 @@ class StrictAutomaticEvaluator {
       includeCoords: ['includeCoordinates', 'includeCoordinate'],
       ...options.parameterAliases,
     };
+
+    // Tools that accomplish the same task when the request targets the loaded
+    // genome as a whole. Kept minimal and direction-safe: no pair is listed
+    // unless the two tools are documented as interchangeable for that request.
+    this.toolEquivalents = {
+      blast_create_db_from_genome: ['blast_create_quick_db_for_current_genome'],
+      blast_create_quick_db_for_current_genome: ['blast_create_db_from_genome'],
+    };
+
+    // Completion-mode parameter fallbacks: when the oracle expects key K but
+    // the tool schema accepts alternative keys for the same concept, any
+    // concrete alternative satisfies the requirement.
+    this.completionParameterAlternatives = {
+      switch_to_tab: { tabId: ['tabName', 'tabIndex'] },
+      blast_create_quick_db_for_current_genome: { dbName: ['genomeName'] },
+    };
+
+    // Read-only tools never mutate state, so an extra call to one of them does
+    // not undo or endanger a completed task. Completion mode ignores extras
+    // from this set; every other extra call still fails the audit.
+    this.readOnlyToolNames = new Set(
+      [
+        'get_current_state',
+        'get_genome_info',
+        'get_chromosome_list',
+        'get_loaded_files_list',
+        'get_file_info',
+        'get_track_status',
+        'get_all_track_settings',
+        'get_track_settings_schema',
+        'get_gene_details',
+        'get_sequence',
+        'get_coding_sequence',
+        'get_clipboard_content',
+        'get_action_list',
+        'get_annotation',
+        'get_annotation_history',
+        'get_bookmarks',
+        'get_operons',
+        'get_benchmark_status',
+        'get_dna_marker_info',
+        'get_interpro_entry_details',
+        'list_available_tools',
+        'list_annotations',
+        'list_highlights',
+        'list_tasks',
+        'list_primers',
+        'list_restriction_enzymes',
+        'list_dna_markers',
+        'list_annotation_quality_candidates',
+        'list_annotation_research_history',
+        'search_features',
+        'search_annotations',
+        'search_uniprot_database',
+        'search_pdb_structures',
+        'search_alphafold_structures',
+        'search_sequence_motif',
+        'search_pattern',
+        'find_gene_by_name',
+        'find_primer_binding_sites',
+        'find_restriction_sites',
+        'get_nearby_features',
+        'get_uniprot_entry',
+        'compute_gc',
+        'calc_region_gc',
+        'reverse_complement',
+        'translate_dna',
+        'translate_sequence',
+        'calculate_entropy',
+        'calculate_molecular_weight',
+        'calculate_primer_properties',
+        'genome_codon_usage_analysis',
+        'predict_promoter',
+        'assess_annotation_quality',
+        'advanced_uniprot_search',
+        'analyze_interpro_domains',
+        'virtual_digest',
+        'blast_get_installation_status',
+        'blast_list_databases',
+        'blast_search',
+        'blast_search_local',
+        'blast_validate_database',
+        'show_action_list',
+      ].map(name => this.normalizeToolName(name))
+    );
+  }
+
+  isReadOnlyTool(toolName) {
+    return this.readOnlyToolNames.has(this.normalizeToolName(toolName));
   }
 
   normalizeToolName(value) {
@@ -54,7 +150,58 @@ class StrictAutomaticEvaluator {
 
   toolMatches(actual, expected) {
     if (Array.isArray(expected)) return expected.some(candidate => this.toolMatches(actual, candidate));
-    return this.normalizeToolName(actual) === this.normalizeToolName(expected);
+    if (this.normalizeToolName(actual) === this.normalizeToolName(expected)) return true;
+    if (!this.completionMode) return false;
+    const actualName = this.normalizeToolName(actual);
+    const expectedName = this.normalizeToolName(expected);
+    return (
+      (this.toolEquivalents[actualName] || []).includes(expectedName) ||
+      (this.toolEquivalents[expectedName] || []).includes(actualName)
+    );
+  }
+
+  /** JSON-unescape a string that the model double-encoded, or null. */
+  unquoteJsonString(value) {
+    if (typeof value !== 'string' || value.length < 2) return null;
+    if (value.startsWith('"') && value.endsWith('"')) {
+      try {
+        const parsed = JSON.parse(value);
+        if (typeof parsed === 'string') return parsed;
+      } catch (_error) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Completion-mode alias normalization applied before schema validation:
+   * track names and double-encoded JSON strings are repaired so that a
+   * plan which would execute correctly is not rejected by a spelling quirk.
+   */
+  normalizeObservedAliases(toolName, parameters) {
+    const source = parameters || {};
+    if (toolName === 'toggle_track') {
+      const clone = { ...source };
+      const key = Object.hasOwn(clone, 'track_name') ? 'track_name' : 'trackName';
+      if (typeof clone[key] === 'string') {
+        const normalized = String(clone[key])
+          .trim()
+          .toLowerCase()
+          .replace(/[\s_-]+/g, '');
+        if (normalized === 'gc' || normalized === 'gccontent') clone[key] = 'gc_content';
+      }
+      return clone;
+    }
+    if (source && typeof source === 'object' && !Array.isArray(source)) {
+      const clone = { ...source };
+      for (const [key, value] of Object.entries(clone)) {
+        const unquoted = this.unquoteJsonString(value);
+        if (unquoted !== null) clone[key] = unquoted;
+      }
+      return clone;
+    }
+    return source;
   }
 
   formatExpectedTool(expected) {
@@ -213,6 +360,10 @@ class StrictAutomaticEvaluator {
       if (/[\\/]/.test(actualText) || /[\\/]/.test(expectedText)) {
         return this.normalizePath(actualText).toLowerCase() === this.normalizePath(expectedText).toLowerCase();
       }
+      if (this.completionMode) {
+        const unquoted = this.unquoteJsonString(actualText);
+        if (unquoted !== null && unquoted === expectedText) return true;
+      }
       return false;
     }
     if (Array.isArray(expectedValue)) {
@@ -224,6 +375,15 @@ class StrictAutomaticEvaluator {
     }
     if (expectedValue && typeof expectedValue === 'object') {
       if (!actual || typeof actual !== 'object' || Array.isArray(actual)) return false;
+      const alternatives = expectedValue.benchmarkAnyOf;
+      if (Array.isArray(alternatives) && alternatives.length > 0) {
+        const ordinary = Object.entries(expectedValue).filter(([key]) => !this.isAnyOfKey(key));
+        const ordinaryMatches = ordinary.every(([key, value]) =>
+          this.valuesMatch(actual[key], value, { ...context, parameterKey: this.normalizeParameterKey(key) })
+        );
+        if (!ordinaryMatches) return false;
+        return alternatives.some(alternative => this.valuesMatch(actual, alternative, context));
+      }
       return Object.entries(expectedValue).every(([key, value]) =>
         this.valuesMatch(actual[key], value, { ...context, parameterKey: this.normalizeParameterKey(key) })
       );
@@ -302,7 +462,7 @@ class StrictAutomaticEvaluator {
     const actual = this.normalizeParameters(this.normalizeArguments(actualParameters));
     const expected = this.normalizeParameters(expectedParameters || {});
     const alternatives = expected.benchmarkAnyOf;
-    const mismatches = [];
+    let mismatches = [];
     const aliasMatches = [];
     const defaultOmissions = [];
     const contextMatches = [];
@@ -370,6 +530,26 @@ class StrictAutomaticEvaluator {
       }
     }
 
+    if (this.completionMode && mismatches.some(mismatch => mismatch.reason === 'missing')) {
+      const rawActual = this.normalizeArguments(actualParameters);
+      const schemaValid = (this.validateToolCall(toolName, rawActual) || {}).valid === true;
+      const tolerated = [];
+      for (const mismatch of mismatches) {
+        if (mismatch.reason !== 'missing') continue;
+        // A context placeholder ("<current_chromosome>") or a cross-round
+        // reference ("{open_new_tab.tab_id}") does not have to be spelled out
+        // when the observed call is schema-valid and resolves the same concept
+        // through an alternative key (tab_index, genomeName, ...).
+        const placeholderTolerated = schemaValid && this.isPlaceholder(mismatch.expected);
+        const alternativeTolerated = this.completionAlternativeSatisfied(toolName, mismatch.parameter, actual);
+        if (placeholderTolerated || alternativeTolerated) tolerated.push(mismatch);
+      }
+      if (tolerated.length > 0) {
+        mismatches = mismatches.filter(mismatch => !tolerated.includes(mismatch));
+        matched += tolerated.length;
+      }
+    }
+
     return {
       match: mismatches.length === 0 && alternativeMatched,
       checked,
@@ -379,6 +559,17 @@ class StrictAutomaticEvaluator {
       defaultOmissions,
       contextMatches,
     };
+  }
+
+  completionAlternativeSatisfied(toolName, expectedKey, actual) {
+    const normalizedTool = this.normalizeToolName(toolName);
+    const alternatives =
+      this.completionParameterAlternatives[normalizedTool]?.[this.normalizeParameterKey(expectedKey)];
+    if (!Array.isArray(alternatives)) return false;
+    return alternatives.some(key => {
+      const candidate = this.getActualParameter(actual, key, toolName);
+      return candidate.found && this.isConcreteContextValue(candidate.value, null);
+    });
   }
 
   parametersMatch(actualParameters, expectedParameters, toolName = '') {
@@ -643,7 +834,10 @@ class StrictAutomaticEvaluator {
 
   validateObservedCall(call) {
     try {
-      const result = this.validateToolCall(call.tool_name, call.parameters || {}) || {};
+      const parameters = this.completionMode
+        ? this.normalizeObservedAliases(call.tool_name, call.parameters || {})
+        : call.parameters || {};
+      const result = this.validateToolCall(call.tool_name, parameters) || {};
       return {
         valid: result.valid === true,
         errors: Array.isArray(result.errors) ? result.errors.map(String) : result.errors ? [String(result.errors)] : [],
@@ -707,13 +901,24 @@ class StrictAutomaticEvaluator {
     const calls = this.extractCurrentCalls(testResult);
     const expectedTools = this.getExpectedTools(test);
     const expectedParameters = this.getExpectedParameters(test, expectedTools.length);
-    const orderInsensitiveTools = test?.expectedResult?.orderInsensitiveTools || [];
+    // Completion mode is coverage-based: any valid step order that covers every
+    // expected capability counts, because a task can often be completed in
+    // more than one order (list before search, save before navigate, ...).
+    const orderInsensitiveTools = this.completionMode
+      ? expectedTools
+      : test?.expectedResult?.orderInsensitiveTools || [];
     const sequence = this.matchToolSequence(calls, expectedTools, orderInsensitiveTools);
     const argumentMatches = this.matchArguments(calls, sequence.matches, expectedParameters);
     const parameterMatches = argumentMatches.filter(match => match.parametersMatch).length;
     const schemaChecks = calls.map(call => this.validateObservedCall(call));
     const schemaValidCount = schemaChecks.filter(check => check.valid).length;
-    const unexpectedCalls = sequence.unexpectedIndexes.map(index => calls[index]);
+    // Extra read-only calls (a status check, a list, a search) do not endanger
+    // a completed task; completion mode ignores them. Extra state-changing
+    // calls still fail the audit.
+    const unexpectedIndexes = this.completionMode
+      ? sequence.unexpectedIndexes.filter(index => !this.isReadOnlyTool(calls[index]?.tool_name))
+      : sequence.unexpectedIndexes;
+    const unexpectedCalls = unexpectedIndexes.map(index => calls[index]);
     const expectedObservedCalls = sequence.matches.filter(match => match.callObserved);
     const executionObservedCount = expectedObservedCalls.filter(
       match => calls[match.actualIndex].executionObserved
@@ -728,7 +933,7 @@ class StrictAutomaticEvaluator {
       match => !calls[match.actualIndex].executionObserved || calls[match.actualIndex].executionSuccess === null
     ).length;
 
-    const exactSequence = sequence.exact;
+    const exactSequence = this.completionMode ? sequence.matchedCount === expectedTools.length : sequence.exact;
     const argumentsExact = expectedTools.length > 0 && parameterMatches === expectedTools.length;
     const schemasExact = calls.length > 0 && schemaValidCount === calls.length;
     const executionExact =
@@ -738,7 +943,13 @@ class StrictAutomaticEvaluator {
       executionSuccessCount === expectedTools.length;
     const contractSatisfied = exactSequence && argumentsExact && schemasExact;
     const executionSatisfied = contractSatisfied && executionExact;
-    const success = assessmentMode === 'contract' ? contractSatisfied : executionSatisfied;
+    const completionSatisfied = contractSatisfied && unexpectedCalls.length === 0;
+    const success =
+      assessmentMode === 'completion'
+        ? completionSatisfied
+        : assessmentMode === 'contract'
+          ? contractSatisfied
+          : executionSatisfied;
 
     const denominator = Math.max(expectedTools.length, 1);
     const toolRatio = sequence.matchedCount / denominator;
@@ -764,7 +975,7 @@ class StrictAutomaticEvaluator {
             `'${this.formatExpectedTool(match.expectedTool)}' was not observed in order`
         );
       }
-      for (const index of sequence.unexpectedIndexes) {
+      for (const index of unexpectedIndexes) {
         errors.push(`Tool sequence mismatch: unexpected observed call ${index + 1} '${calls[index].tool_name}'`);
       }
       if (sequence.matchedCount === expectedTools.length && sequence.unexpectedIndexes.length === 0) {
@@ -836,7 +1047,12 @@ class StrictAutomaticEvaluator {
       details: {
         scoringMode: 'strict-automatic-v2',
         assessmentMode,
-        assessmentTier: assessmentMode === 'contract' ? 'native-function-contract' : 'real-tool-execution',
+        assessmentTier:
+          assessmentMode === 'completion'
+            ? 'task-completion-contract'
+            : assessmentMode === 'contract'
+              ? 'native-function-contract'
+              : 'real-tool-execution',
         executionRequired: assessmentMode === 'execution',
         expectedTools,
         actualTools: calls.map(call => call.tool_name),
