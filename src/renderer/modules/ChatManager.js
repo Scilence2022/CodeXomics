@@ -5076,6 +5076,7 @@ class ChatManager {
       const toolReferenceResults = [];
       let lastSuccessfulResults = [];
       let lastSuccessfulTools = [];
+      let consecutiveEmptyResponseRounds = 0;
 
       // Iterative function calling loop
       while (currentRound < maxRounds && !taskCompleted) {
@@ -5178,6 +5179,11 @@ class ChatManager {
         // structured calls while retaining the text-JSON compatibility protocol.
         const detectedTools = responseAnalysis.toolCalls;
         const detectedToolCount = detectedTools.length;
+        if (detectedToolCount > 0) {
+          // A round that produced a tool call is by definition not empty; reset
+          // the guard so only consecutive empty prose rounds count toward it.
+          consecutiveEmptyResponseRounds = 0;
+        }
 
         if (detectedToolCount > 0 && this.shouldRecoverBeforeToolExecution(responseAnalysis)) {
           const recoveryDecision = this.getModelTurnRecoveryDecision(
@@ -5289,6 +5295,28 @@ class ChatManager {
         // Previous assistant messages may contain already-executed calls and must not seed a new queue.
 
         if (detectedToolCount === 0) {
+          // Bounded empty-response guard. getModelTurnRecoveryDecision retries
+          // empty rounds through its protocol-repair budget, but a model that
+          // streams reasoning without any visible answer (or returns nothing
+          // at all) must not be given an unbounded share of the round budget.
+          // Two consecutive empty rounds end the turn with a deterministic
+          // message instead of being misread as a finished conversational reply.
+          if (responseAnalysis.isEmpty || responseText.trim() === '') {
+            consecutiveEmptyResponseRounds += 1;
+            if (consecutiveEmptyResponseRounds >= 2) {
+              console.log('=== REPEATED EMPTY MODEL RESPONSES ===');
+              console.log('Terminating after', consecutiveEmptyResponseRounds, 'consecutive empty rounds');
+              console.log('=======================================');
+
+              taskCompleted = true;
+              finalResponse = this.buildEmptyResponseMessage(currentRound, maxRounds);
+              toolExecutionState.terminationReason = 'repeated empty model responses';
+              break;
+            }
+          } else {
+            consecutiveEmptyResponseRounds = 0;
+          }
+
           const recoveryDecision = this.getModelTurnRecoveryDecision(
             responseAnalysis,
             toolExecutionState,
@@ -5319,11 +5347,36 @@ class ChatManager {
             toolExecutionState.terminationReason = recoveryDecision.reason;
             break;
           }
+
+          // Explicit end-of-turn marker (trained protocol for local small
+          // models, e.g. <end_of_turn>). When present it is a deterministic,
+          // detectable completion signal that beats prose heuristics. The
+          // marker is stripped from the visible answer.
+          const endTurnMarker = this.extractEndTurnMarker(responseText);
+          if (endTurnMarker) {
+            console.log('=== EXPLICIT END-OF-TURN MARKER DETECTED ===');
+            console.log('Marker:', endTurnMarker);
+            console.log('===========================================');
+
+            taskCompleted = true;
+            finalResponse = this.stripEndTurnMarker(responseText) || 'I have completed the request.';
+            toolExecutionState.terminationReason = 'explicit end-of-turn marker';
+            break;
+          }
         }
 
         // Check for task completion signals if early completion is enabled
         // BUT ONLY if there are NO tool calls to execute
-        if (enableEarlyCompletion && toolsToExecute.length === 0) {
+        // The prose heuristic is a fallback, not the primary signal: it is only
+        // honored when the provider stop reason is clean (or absent) and the
+        // response does not itself announce a follow-up action ("I will ...").
+        if (
+          enableEarlyCompletion &&
+          toolsToExecute.length === 0 &&
+          this.isCleanCompletionStop(responseAnalysis) &&
+          responseText.trim() !== '' &&
+          !this.isInterimActionResponse(responseText)
+        ) {
           const completionResult = this.checkTaskCompletion(responseText);
           if (completionResult.isCompleted) {
             console.log('=== TASK COMPLETION DETECTED (NO TOOL CALLS) ===');
@@ -5689,8 +5742,26 @@ class ChatManager {
           console.log('===============================');
 
           // No tool call detected - this is our final response
-          finalResponse = responseText;
-          toolExecutionState.terminationReason = 'final conversational response';
+          // The primary completion signal is the provider stop reason: a clean
+          // stop (or an absent stop reason from adapters that collapse clean
+          // completions into plain strings) means the model ended its turn on
+          // its own. A provider-reported abnormal stop must never be presented
+          // as a completed answer, even if recovery above did not catch it.
+          if (!this.isCleanCompletionStop(responseAnalysis)) {
+            const abnormalStop = String(responseAnalysis?.stopReason || 'unknown');
+            console.warn('=== ABNORMAL PROVIDER STOP NOT RECOVERED ===');
+            console.warn('Stop reason:', abnormalStop);
+            console.warn('===========================================');
+
+            taskCompleted = true;
+            finalResponse =
+              `I stopped responding abnormally (${abnormalStop}) before the request was complete. ` +
+              `No further action was taken; please rephrase or retry the request.`;
+            toolExecutionState.terminationReason = `abnormal provider stop (${abnormalStop})`;
+          } else {
+            finalResponse = responseText;
+            toolExecutionState.terminationReason = 'final conversational response';
+          }
           break;
         }
       }
@@ -7882,6 +7953,66 @@ class ChatManager {
         const policyName = capabilityPolicy?.getPolicyForTool?.(toolName)?.name;
         return safePolicyNames.has(policyName);
       })
+    );
+  }
+
+  /**
+   * Whether the provider stop reason means the model ended its turn cleanly.
+   *
+   * A missing stop reason counts as clean: adapters that collapse clean
+   * OpenAI-compatible completions into plain strings drop the finish reason
+   * before ChatManager sees it, so null must keep the legacy behavior instead
+   * of being treated as abnormal. Known abnormal reasons (length, refusal,
+   * tool protocol errors, ...) are handled earlier by
+   * getModelTurnRecoveryDecision; this helper backs the loop's final guard.
+   */
+  isCleanCompletionStop(responseAnalysis) {
+    const stopReason = String(responseAnalysis?.stopReason || '')
+      .trim()
+      .toLowerCase();
+    if (!stopReason) return true;
+    return new Set([
+      'stop',
+      'end_turn',
+      'end-turn',
+      'stop_sequence',
+      'stopsequence',
+      'eos',
+      'complete',
+      'completed',
+      'done',
+      'finish',
+      'finished',
+    ]).has(stopReason);
+  }
+
+  /**
+   * Return the explicit end-of-turn marker when the model emitted one.
+   *
+   * This is the deterministic, detectable completion signal used to train
+   * local small models (SWE-agent style). Markers are checked only after the
+   * provider stop reason and protocol recovery have already passed, so they
+   * can only complete a turn that was already ending cleanly.
+   */
+  extractEndTurnMarker(responseText) {
+    const match = String(responseText || '').match(/<\|?end_of_turn\|?>|\[end_of_turn\]/i);
+    return match ? match[0] : null;
+  }
+
+  /** Remove the explicit end-of-turn marker from the visible answer. */
+  stripEndTurnMarker(responseText) {
+    return String(responseText || '')
+      .replace(/<\|?end_of_turn\|?>|\[end_of_turn\]/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  /** Deterministic message for a turn ended by repeated empty model responses. */
+  buildEmptyResponseMessage(currentRound, maxRounds) {
+    return (
+      `The model returned an empty response for two consecutive rounds ` +
+      `(rounds ${Math.max(1, currentRound - 1)}–${currentRound} of ${maxRounds}), so the request could not be ` +
+      `completed and no action was taken. Please rephrase the request or switch to a different model.`
     );
   }
 
