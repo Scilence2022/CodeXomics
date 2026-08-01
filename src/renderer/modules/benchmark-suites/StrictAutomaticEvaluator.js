@@ -1,0 +1,904 @@
+/**
+ * Strict scorer for the 143 automatic-simple and 29 automatic-complex cases.
+ *
+ * Every evidence channel is evaluated independently:
+ *   1. a native tool call was observed;
+ *   2. the observed tool sequence matches the oracle;
+ *   3. the arguments are canonically equivalent to the oracle;
+ *   4. each observed call is valid against the production JSON Schema; and
+ *   5. real execution was observed and completed successfully.
+ *
+ * `contract` mode intentionally stops after (4). It is suitable for offline
+ * native-function-calling benchmarks, but must never be reported as executable
+ * accuracy. `execution` is the default and additionally requires (5).
+ */
+class StrictAutomaticEvaluator {
+  constructor(options = {}) {
+    this.validateToolCall = options.validateToolCall || (() => ({ valid: true, errors: [] }));
+    this.assessmentMode = options.assessmentMode || 'execution';
+    if (!['contract', 'execution'].includes(this.assessmentMode)) {
+      throw new TypeError("assessmentMode must be either 'contract' or 'execution'");
+    }
+
+    // These aliases describe genuinely interchangeable API spellings. Case,
+    // snake_case, camelCase, and kebab-case are normalized before this map is used.
+    // Directional aliases avoid turning every path-like field into every other one.
+    this.parameterAliases = {
+      filename: ['fileName', 'filePath', 'path', 'outputPath'],
+      fileName: ['filename', 'filePath', 'path', 'outputPath'],
+      filePath: ['filename', 'fileName', 'path', 'outputPath'],
+      outputPath: ['filename', 'fileName', 'filePath', 'path'],
+      inputFile: ['filePath', 'filename', 'fileName', 'path'],
+      database: ['dbName', 'databaseName'],
+      dbName: ['database', 'databaseName'],
+      databaseName: ['database', 'dbName'],
+      tabIndex: ['index', 'tab'],
+      sequence: ['primerSequence', 'dna'],
+      primerSequence: ['sequence'],
+      dna: ['sequence'],
+      includeCoordinates: ['includeCoordinate', 'includeCoords'],
+      includeCoordinate: ['includeCoordinates', 'includeCoords'],
+      includeCoords: ['includeCoordinates', 'includeCoordinate'],
+      ...options.parameterAliases,
+    };
+  }
+
+  normalizeToolName(value) {
+    return String(value || '')
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/[\s-]+/g, '_')
+      .replace(/_+/g, '_')
+      .toLowerCase();
+  }
+
+  toolMatches(actual, expected) {
+    if (Array.isArray(expected)) return expected.some(candidate => this.toolMatches(actual, candidate));
+    return this.normalizeToolName(actual) === this.normalizeToolName(expected);
+  }
+
+  formatExpectedTool(expected) {
+    return Array.isArray(expected) ? expected.join(' | ') : String(expected || '');
+  }
+
+  normalizeParameterKey(key) {
+    const words = String(key || '')
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/[\s-]+/g, '_')
+      .split('_')
+      .filter(Boolean);
+    if (words.length === 0) return '';
+    return (
+      words[0].toLowerCase() +
+      words
+        .slice(1)
+        .map(word => {
+          const lower = word.toLowerCase();
+          return lower.charAt(0).toUpperCase() + lower.slice(1);
+        })
+        .join('')
+    );
+  }
+
+  normalizeParameters(value) {
+    if (Array.isArray(value)) return value.map(item => this.normalizeParameters(item));
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [this.normalizeParameterKey(key), this.normalizeParameters(child)])
+    );
+  }
+
+  normalizeArguments(value) {
+    if (typeof value !== 'string') return value && typeof value === 'object' ? value : {};
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  isSchemaDefault(value) {
+    return (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === 1 &&
+      Object.prototype.hasOwnProperty.call(value, 'benchmarkDefaultValue')
+    );
+  }
+
+  isAnyOfKey(key) {
+    return this.normalizeParameterKey(key) === 'benchmarkAnyOf';
+  }
+
+  isAnglePlaceholder(value) {
+    return typeof value === 'string' && /^<[^<>]+>$/.test(value.trim());
+  }
+
+  isToolResultReference(value) {
+    if (typeof value !== 'string') return false;
+    return /^\{\{?\s*[A-Za-z][\w.-]*(?:\[[^\]]+\])?(?:\.[A-Za-z_$][\w$-]*(?:\[[^\]]+\])?)+\s*\}?\}$/.test(value.trim());
+  }
+
+  isPlaceholder(value) {
+    return this.isAnglePlaceholder(value) || this.isToolResultReference(value);
+  }
+
+  isConcreteContextValue(value, placeholder) {
+    if (value === undefined || value === null || this.isPlaceholder(value)) return false;
+    if (typeof value === 'string' && value.trim() === '') return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+
+    const normalizedPlaceholder = String(placeholder || '')
+      .trim()
+      .toLowerCase();
+    if (normalizedPlaceholder === '<created_annotation_id>') {
+      return /^user_\d+_[a-z0-9]+$/i.test(String(value));
+    }
+    if (normalizedPlaceholder === '<created_protein_database>') {
+      return /\b(protein|prot)\b|[_-](protein|prot)([_-]|$)/i.test(String(value));
+    }
+    return true;
+  }
+
+  normalizeTrackName(value) {
+    const normalized = String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '');
+    const aliases = {
+      gc: 'gc',
+      gccontent: 'gc',
+      gene: 'genes',
+      genes: 'genes',
+      variant: 'variants',
+      variants: 'variants',
+      read: 'reads',
+      reads: 'reads',
+      protein: 'proteins',
+      proteins: 'proteins',
+      primer: 'primers',
+      primers: 'primers',
+      wig: 'wigtracks',
+      wigtrack: 'wigtracks',
+      wigtracks: 'wigtracks',
+    };
+    return aliases[normalized] || normalized;
+  }
+
+  visibilityValue(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim().toLowerCase();
+    if (['show', 'on', 'enable', 'display', 'visible', 'true'].includes(normalized)) return true;
+    if (['hide', 'off', 'disable', 'hidden', 'false'].includes(normalized)) return false;
+    return null;
+  }
+
+  normalizePath(value) {
+    return String(value)
+      .trim()
+      .replace(/\\/g, '/')
+      .replace(/\/\.\//g, '/')
+      .replace(/\/{2,}/g, '/');
+  }
+
+  valuesMatch(actual, expected, context = {}) {
+    const expectedValue = this.isSchemaDefault(expected) ? expected.benchmarkDefaultValue : expected;
+    if (this.isPlaceholder(expectedValue)) return this.isConcreteContextValue(actual, expectedValue);
+    if (Object.is(actual, expectedValue)) return true;
+
+    if (context.toolName === 'toggle_track' && context.parameterKey === 'trackName') {
+      return this.normalizeTrackName(actual) === this.normalizeTrackName(expectedValue);
+    }
+    if (context.toolName === 'toggle_track' && ['visible', 'action'].includes(context.parameterKey)) {
+      const actualVisibility = this.visibilityValue(actual);
+      const expectedVisibility = this.visibilityValue(expectedValue);
+      return actualVisibility !== null && expectedVisibility !== null && actualVisibility === expectedVisibility;
+    }
+
+    if (typeof expectedValue === 'number') {
+      const numericActual = Number(actual);
+      return Number.isFinite(numericActual) && numericActual === expectedValue;
+    }
+    if (typeof expectedValue === 'boolean' && typeof actual === 'string') {
+      return actual.trim().toLowerCase() === String(expectedValue);
+    }
+    if (typeof actual === 'string' && typeof expectedValue === 'string') {
+      const actualText = actual.trim();
+      const expectedText = expectedValue.trim();
+      if (actualText.toLowerCase() === expectedText.toLowerCase()) return true;
+      if (/[\\/]/.test(actualText) || /[\\/]/.test(expectedText)) {
+        return this.normalizePath(actualText).toLowerCase() === this.normalizePath(expectedText).toLowerCase();
+      }
+      return false;
+    }
+    if (Array.isArray(expectedValue)) {
+      return (
+        Array.isArray(actual) &&
+        actual.length === expectedValue.length &&
+        expectedValue.every((item, index) => this.valuesMatch(actual[index], item, context))
+      );
+    }
+    if (expectedValue && typeof expectedValue === 'object') {
+      if (!actual || typeof actual !== 'object' || Array.isArray(actual)) return false;
+      return Object.entries(expectedValue).every(([key, value]) =>
+        this.valuesMatch(actual[key], value, { ...context, parameterKey: this.normalizeParameterKey(key) })
+      );
+    }
+    return false;
+  }
+
+  getParameterAliasCandidates(expectedKey) {
+    const normalizedKey = this.normalizeParameterKey(expectedKey);
+    const aliases = this.parameterAliases[normalizedKey] || this.parameterAliases[expectedKey] || [];
+    return [...new Set([normalizedKey, ...aliases.map(alias => this.normalizeParameterKey(alias))])];
+  }
+
+  getActualParameter(actual, expectedKey, toolName) {
+    const normalizedKey = this.normalizeParameterKey(expectedKey);
+    for (const candidate of this.getParameterAliasCandidates(normalizedKey)) {
+      if (Object.prototype.hasOwnProperty.call(actual, candidate)) {
+        return { found: true, key: candidate, value: actual[candidate], alias: candidate !== normalizedKey };
+      }
+    }
+
+    // toggle_track exposes two equivalent visibility representations.
+    if (toolName === 'toggle_track' && normalizedKey === 'visible' && Object.hasOwn(actual, 'action')) {
+      return { found: true, key: 'action', value: actual.action, alias: true };
+    }
+    if (toolName === 'toggle_track' && normalizedKey === 'action' && Object.hasOwn(actual, 'visible')) {
+      return { found: true, key: 'visible', value: actual.visible, alias: true };
+    }
+
+    // The legacy currentViewOnly boolean and the canonical sequenceType enum
+    // describe the same export scope. This mapping is intentionally tool-limited.
+    if (toolName === 'export_fasta_sequence' && normalizedKey === 'currentViewOnly') {
+      if (Object.hasOwn(actual, 'sequenceType')) {
+        return { found: true, key: 'sequenceType', value: actual.sequenceType === 'current_view', alias: true };
+      }
+    }
+    if (toolName === 'export_fasta_sequence' && normalizedKey === 'sequenceType') {
+      if (Object.hasOwn(actual, 'currentViewOnly')) {
+        return {
+          found: true,
+          key: 'currentViewOnly',
+          value: actual.currentViewOnly ? 'current_view' : 'all',
+          alias: true,
+        };
+      }
+    }
+
+    return { found: false, key: null, value: undefined, alias: false };
+  }
+
+  parameterAlternativeMatches(actual, alternative, toolName) {
+    if (!alternative || typeof alternative !== 'object' || Array.isArray(alternative)) return false;
+    const ordinaryKeys = Object.keys(alternative).filter(key => !this.isAnyOfKey(key));
+    if (ordinaryKeys.length === 0) return false;
+    const supplied = ordinaryKeys.every(key => {
+      const expectedValue = alternative[key];
+      return this.isSchemaDefault(expectedValue) || this.getActualParameter(actual, key, toolName).found;
+    });
+    return supplied && this.compareParameters(actual, alternative, toolName).match;
+  }
+
+  describeValue(value) {
+    if (value === undefined) return '<missing>';
+    let serialized;
+    try {
+      serialized = JSON.stringify(value);
+    } catch (_error) {
+      serialized = String(value);
+    }
+    if (serialized === undefined) serialized = String(value);
+    return serialized.length > 160 ? serialized.slice(0, 157) + '...' : serialized;
+  }
+
+  compareParameters(actualParameters, expectedParameters, rawToolName = '') {
+    const toolName = this.normalizeToolName(rawToolName);
+    const actual = this.normalizeParameters(this.normalizeArguments(actualParameters));
+    const expected = this.normalizeParameters(expectedParameters || {});
+    const alternatives = expected.benchmarkAnyOf;
+    const mismatches = [];
+    const aliasMatches = [];
+    const defaultOmissions = [];
+    const contextMatches = [];
+    let checked = 0;
+    let matched = 0;
+
+    for (const [expectedKey, expectedValue] of Object.entries(expected)) {
+      if (this.isAnyOfKey(expectedKey)) continue;
+      checked += 1;
+      const actualCandidate = this.getActualParameter(actual, expectedKey, toolName);
+      if (!actualCandidate.found) {
+        if (this.isSchemaDefault(expectedValue)) {
+          matched += 1;
+          defaultOmissions.push(expectedKey);
+          continue;
+        }
+        mismatches.push({
+          parameter: expectedKey,
+          reason: 'missing',
+          expected: this.isSchemaDefault(expectedValue) ? expectedValue.benchmarkDefaultValue : expectedValue,
+          actual: undefined,
+        });
+        continue;
+      }
+
+      const valueMatches = this.valuesMatch(actualCandidate.value, expectedValue, {
+        toolName,
+        parameterKey: expectedKey,
+      });
+      if (!valueMatches) {
+        mismatches.push({
+          parameter: expectedKey,
+          actualParameter: actualCandidate.key,
+          reason: 'different_value',
+          expected: this.isSchemaDefault(expectedValue) ? expectedValue.benchmarkDefaultValue : expectedValue,
+          actual: actualCandidate.value,
+        });
+        continue;
+      }
+
+      matched += 1;
+      if (actualCandidate.alias) aliasMatches.push({ expected: expectedKey, actual: actualCandidate.key });
+      if (
+        this.isPlaceholder(this.isSchemaDefault(expectedValue) ? expectedValue.benchmarkDefaultValue : expectedValue)
+      ) {
+        contextMatches.push(expectedKey);
+      }
+    }
+
+    let alternativeMatched = true;
+    if (Array.isArray(alternatives) && alternatives.length > 0) {
+      checked += 1;
+      alternativeMatched = alternatives.some(alternative =>
+        this.parameterAlternativeMatches(actual, alternative, toolName)
+      );
+      if (alternativeMatched) {
+        matched += 1;
+      } else {
+        mismatches.push({
+          parameter: 'benchmarkAnyOf',
+          reason: 'no_alternative_matched',
+          expected: alternatives,
+          actual,
+        });
+      }
+    }
+
+    return {
+      match: mismatches.length === 0 && alternativeMatched,
+      checked,
+      matched,
+      mismatches,
+      aliasMatches,
+      defaultOmissions,
+      contextMatches,
+    };
+  }
+
+  parametersMatch(actualParameters, expectedParameters, toolName = '') {
+    return this.compareParameters(actualParameters, expectedParameters, toolName).match;
+  }
+
+  hasExecutionEvidence(call, sourceExecutionObserved = false) {
+    if (sourceExecutionObserved || call?.executionObserved === true || call?.execution_observed === true) return true;
+    if (call?.executed === true) return true;
+    const method = String(call?.detectionMethod || call?.detection_method || '').toLowerCase();
+    if (method.includes('execution')) return true;
+    const status = String(call?.status || '').toLowerCase();
+    return ['completed', 'succeeded', 'success', 'failed', 'error'].includes(status);
+  }
+
+  getExecutionSuccess(call, executionObserved) {
+    if (!executionObserved) return null;
+    if (typeof call?.executionSuccess === 'boolean') return call.executionSuccess;
+    if (typeof call?.execution_success === 'boolean') return call.execution_success;
+    if (typeof call?.success === 'boolean') return call.success;
+    if (call?.error) return false;
+    const status = String(call?.status || '').toLowerCase();
+    if (['completed', 'succeeded', 'success'].includes(status)) return true;
+    if (['failed', 'error'].includes(status)) return false;
+    return null;
+  }
+
+  normalizeCall(call, source, sourceExecutionObserved = false) {
+    const toolName = call?.tool_name || call?.toolName || call?.tool || call?.function?.name || call?.name;
+    if (!toolName) return null;
+    const parameters = this.normalizeArguments(
+      call?.parameters ?? call?.arguments ?? call?.function?.arguments ?? call?.params ?? {}
+    );
+    const executionObserved = this.hasExecutionEvidence(call, sourceExecutionObserved);
+    const executionSuccess = this.getExecutionSuccess(call, executionObserved);
+    return {
+      tool_name: toolName,
+      parameters,
+      callObserved: true,
+      executionObserved,
+      executionSuccess,
+      executed: executionObserved,
+      success: executionSuccess,
+      status:
+        call?.status || (executionSuccess === true ? 'completed' : executionSuccess === false ? 'failed' : 'unknown'),
+      source,
+      callId: call?.id || call?.call_id || call?.tool_call_id || null,
+    };
+  }
+
+  extractCurrentCalls(testResult) {
+    const actual = testResult?.actualResult;
+    let candidates = [];
+    let source = null;
+    let sourceExecutionObserved = false;
+
+    if (Array.isArray(actual?.executedFunctionCalls)) {
+      candidates = actual.executedFunctionCalls;
+      source = 'actualResult.executedFunctionCalls';
+      sourceExecutionObserved = true;
+    } else if (Array.isArray(actual)) {
+      candidates = actual.filter(call => this.hasExecutionEvidence(call));
+      source = 'actualResult[]';
+    } else if (Array.isArray(actual?.nativeFunctionCalls)) {
+      candidates = actual.nativeFunctionCalls;
+      source = 'actualResult.nativeFunctionCalls';
+    } else if (Array.isArray(actual?.toolCalls)) {
+      candidates = actual.toolCalls;
+      source = 'actualResult.toolCalls';
+    } else if (Array.isArray(actual?.tool_calls)) {
+      candidates = actual.tool_calls;
+      source = 'actualResult.tool_calls';
+    } else if (actual?.tool_name && this.hasExecutionEvidence(actual)) {
+      candidates = [actual];
+      source = 'actualResult';
+    } else {
+      candidates = testResult?.llmInteractionData?.response?.functionCalls || [];
+      source = 'llmInteractionData.response.functionCalls';
+    }
+
+    const calls = candidates.map(call => this.normalizeCall(call, source, sourceExecutionObserved)).filter(Boolean);
+
+    const pendingExecutions = [...(testResult?.llmInteractionData?.response?.toolExecutions || [])];
+    for (const call of calls) {
+      let executionIndex = -1;
+      if (call.callId) {
+        executionIndex = pendingExecutions.findIndex(execution =>
+          [execution?.id, execution?.call_id, execution?.tool_call_id].filter(Boolean).includes(call.callId)
+        );
+      }
+      if (executionIndex === -1) {
+        executionIndex = pendingExecutions.findIndex(execution =>
+          this.toolMatches(execution?.tool_name || execution?.tool || execution?.name, call.tool_name)
+        );
+      }
+      if (executionIndex === -1) continue;
+      const execution = pendingExecutions.splice(executionIndex, 1)[0];
+      call.executionObserved = true;
+      call.executed = true;
+      call.executionSuccess = this.getExecutionSuccess(execution, true);
+      call.success = call.executionSuccess;
+      call.status =
+        execution?.status ||
+        (call.executionSuccess === true ? 'completed' : call.executionSuccess === false ? 'failed' : 'unknown');
+    }
+    return calls;
+  }
+
+  getExpectedTools(test) {
+    const expected = test?.expectedResult || {};
+    if (Array.isArray(expected.tool_sequence)) return expected.tool_sequence;
+    if (!expected.tool_name) return [];
+    const repeatedCount = Number(expected.expectedCallCount ?? expected.expectedTabsIncrease ?? 1);
+    if (Number.isInteger(repeatedCount) && repeatedCount > 1) {
+      return Array.from({ length: repeatedCount }, () => expected.tool_name);
+    }
+    return [expected.tool_name];
+  }
+
+  getExpectedParameters(test, count) {
+    const parameters = test?.expectedResult?.parameters;
+    if (Array.isArray(parameters)) return parameters;
+    if (count === 1) return [parameters || {}];
+    return Array.from({ length: count }, () => ({}));
+  }
+
+  isOrderInsensitiveTool(expectedTool, orderInsensitiveTools = []) {
+    return orderInsensitiveTools.some(tool => {
+      if (Array.isArray(expectedTool)) return expectedTool.some(candidate => this.toolMatches(candidate, tool));
+      return this.toolMatches(expectedTool, tool);
+    });
+  }
+
+  isExactToolSequence(calls, expectedTools, orderInsensitiveTools = []) {
+    if (calls.length !== expectedTools.length || expectedTools.length === 0) return false;
+    let index = 0;
+    while (index < expectedTools.length) {
+      if (!this.isOrderInsensitiveTool(expectedTools[index], orderInsensitiveTools)) {
+        if (!this.toolMatches(calls[index].tool_name, expectedTools[index])) return false;
+        index += 1;
+        continue;
+      }
+
+      let end = index + 1;
+      while (end < expectedTools.length && this.isOrderInsensitiveTool(expectedTools[end], orderInsensitiveTools)) {
+        end += 1;
+      }
+      const unused = calls.slice(index, end).map((call, offset) => ({ call, index: index + offset, used: false }));
+      for (let expectedIndex = index; expectedIndex < end; expectedIndex += 1) {
+        const match = unused.find(
+          item => !item.used && this.toolMatches(item.call.tool_name, expectedTools[expectedIndex])
+        );
+        if (!match) return false;
+        match.used = true;
+      }
+      index = end;
+    }
+    return true;
+  }
+
+  matchToolSequence(calls, expectedTools, orderInsensitiveTools = []) {
+    const used = new Set();
+    const matches = [];
+    let cursor = 0;
+
+    expectedTools.forEach((expectedTool, expectedIndex) => {
+      const orderInsensitive = this.isOrderInsensitiveTool(expectedTool, orderInsensitiveTools);
+      const start = orderInsensitive ? 0 : cursor;
+      let actualIndex = -1;
+      for (let index = start; index < calls.length; index += 1) {
+        if (!used.has(index) && this.toolMatches(calls[index].tool_name, expectedTool)) {
+          actualIndex = index;
+          break;
+        }
+      }
+      if (actualIndex === -1) {
+        matches.push({
+          expectedIndex,
+          expectedTool,
+          actualIndex: null,
+          matched: false,
+          callObserved: false,
+          orderInsensitive,
+        });
+        return;
+      }
+      used.add(actualIndex);
+      if (!orderInsensitive) cursor = actualIndex + 1;
+      matches.push({
+        expectedIndex,
+        expectedTool,
+        actualIndex,
+        matched: true,
+        callObserved: true,
+        orderInsensitive,
+      });
+    });
+
+    const unexpectedIndexes = calls.map((_call, index) => index).filter(index => !used.has(index));
+    return {
+      matches,
+      matchedCount: matches.filter(match => match.callObserved).length,
+      unexpectedIndexes,
+      exact: this.isExactToolSequence(calls, expectedTools, orderInsensitiveTools),
+    };
+  }
+
+  matchArguments(calls, sequenceMatches, expectedParameters) {
+    const used = new Set();
+    return sequenceMatches.map(sequenceMatch => {
+      if (!sequenceMatch.callObserved) {
+        return {
+          ...sequenceMatch,
+          parametersMatch: false,
+          comparison: {
+            match: false,
+            checked: 0,
+            matched: 0,
+            mismatches: [],
+            aliasMatches: [],
+            defaultOmissions: [],
+            contextMatches: [],
+          },
+        };
+      }
+
+      let actualIndex = sequenceMatch.actualIndex;
+      if (sequenceMatch.orderInsensitive) {
+        const candidates = calls
+          .map((call, index) => ({ call, index }))
+          .filter(item => !used.has(item.index) && this.toolMatches(item.call.tool_name, sequenceMatch.expectedTool));
+        const exactCandidate = candidates.find(item =>
+          this.parametersMatch(
+            item.call.parameters,
+            expectedParameters[sequenceMatch.expectedIndex] || {},
+            item.call.tool_name
+          )
+        );
+        actualIndex = (exactCandidate || candidates[0] || { index: actualIndex }).index;
+      }
+      used.add(actualIndex);
+      const call = calls[actualIndex];
+      const comparison = this.compareParameters(
+        call.parameters,
+        expectedParameters[sequenceMatch.expectedIndex] || {},
+        call.tool_name
+      );
+      return {
+        ...sequenceMatch,
+        actualIndex,
+        parametersMatch: comparison.match,
+        executionSuccess: call.executionSuccess,
+        comparison,
+      };
+    });
+  }
+
+  matchCalls(calls, expectedTools, expectedParameters, orderInsensitiveTools = []) {
+    const sequence = this.matchToolSequence(calls, expectedTools, orderInsensitiveTools);
+    return this.matchArguments(calls, sequence.matches, expectedParameters);
+  }
+
+  validateObservedCall(call) {
+    try {
+      const result = this.validateToolCall(call.tool_name, call.parameters || {}) || {};
+      return {
+        valid: result.valid === true,
+        errors: Array.isArray(result.errors) ? result.errors.map(String) : result.errors ? [String(result.errors)] : [],
+      };
+    } catch (error) {
+      return { valid: false, errors: [`Schema validator threw: ${error.message}`] };
+    }
+  }
+
+  getRetrievalMetrics(test, testResult) {
+    const selected = testResult?.llmInteractionData?.request?.dynamicToolsAnalysis?.selectedToolNames || [];
+    const expected = this.getExpectedTools(test);
+    const covered = expected.filter(tool => selected.some(name => this.toolMatches(name, tool))).length;
+    return {
+      selectedToolCount: selected.length,
+      expectedToolCount: expected.length,
+      expectedToolsCovered: covered,
+      recall: expected.length > 0 ? covered / expected.length : 1,
+    };
+  }
+
+  formatArgumentErrors(argumentMatches, calls) {
+    const errors = [];
+    for (const match of argumentMatches) {
+      if (!match.callObserved || match.parametersMatch) continue;
+      const expectedPosition = match.expectedIndex + 1;
+      const actualPosition = match.actualIndex + 1;
+      const tool = this.formatExpectedTool(match.expectedTool);
+      for (const mismatch of match.comparison.mismatches) {
+        if (mismatch.reason === 'missing') {
+          errors.push(
+            `Argument mismatch for expected call ${expectedPosition} '${tool}' (observed call ${actualPosition}): ` +
+              `missing parameter '${mismatch.parameter}' (expected ${this.describeValue(mismatch.expected)})`
+          );
+        } else if (mismatch.reason === 'no_alternative_matched') {
+          errors.push(
+            `Argument mismatch for expected call ${expectedPosition} '${tool}' (observed call ${actualPosition}): ` +
+              'none of the permitted parameter alternatives matched'
+          );
+        } else {
+          errors.push(
+            `Argument mismatch for expected call ${expectedPosition} '${tool}' (observed call ${actualPosition}): ` +
+              `parameter '${mismatch.parameter}' expected ${this.describeValue(mismatch.expected)}, ` +
+              `received ${this.describeValue(mismatch.actual)}`
+          );
+        }
+      }
+      if (match.comparison.mismatches.length === 0) {
+        errors.push(
+          `Argument mismatch for expected call ${expectedPosition} '${tool}' (observed call ${actualPosition})`
+        );
+      }
+      if (!calls[match.actualIndex]) break;
+    }
+    return errors;
+  }
+
+  evaluate(test, testResult) {
+    const maxScore = test.maxScore || (test.complexity === 'complex' ? 10 : 5);
+    const assessmentMode = test.assertCallOnly === true ? 'contract' : this.assessmentMode;
+    const calls = this.extractCurrentCalls(testResult);
+    const expectedTools = this.getExpectedTools(test);
+    const expectedParameters = this.getExpectedParameters(test, expectedTools.length);
+    const orderInsensitiveTools = test?.expectedResult?.orderInsensitiveTools || [];
+    const sequence = this.matchToolSequence(calls, expectedTools, orderInsensitiveTools);
+    const argumentMatches = this.matchArguments(calls, sequence.matches, expectedParameters);
+    const parameterMatches = argumentMatches.filter(match => match.parametersMatch).length;
+    const schemaChecks = calls.map(call => this.validateObservedCall(call));
+    const schemaValidCount = schemaChecks.filter(check => check.valid).length;
+    const unexpectedCalls = sequence.unexpectedIndexes.map(index => calls[index]);
+    const expectedObservedCalls = sequence.matches.filter(match => match.callObserved);
+    const executionObservedCount = expectedObservedCalls.filter(
+      match => calls[match.actualIndex].executionObserved
+    ).length;
+    const executionSuccessCount = expectedObservedCalls.filter(
+      match => calls[match.actualIndex].executionObserved && calls[match.actualIndex].executionSuccess === true
+    ).length;
+    const executionFailureCount = expectedObservedCalls.filter(
+      match => calls[match.actualIndex].executionObserved && calls[match.actualIndex].executionSuccess === false
+    ).length;
+    const executionUnknownCount = expectedObservedCalls.filter(
+      match => !calls[match.actualIndex].executionObserved || calls[match.actualIndex].executionSuccess === null
+    ).length;
+
+    const exactSequence = sequence.exact;
+    const argumentsExact = expectedTools.length > 0 && parameterMatches === expectedTools.length;
+    const schemasExact = calls.length > 0 && schemaValidCount === calls.length;
+    const executionExact =
+      expectedTools.length > 0 &&
+      sequence.matchedCount === expectedTools.length &&
+      executionObservedCount === expectedTools.length &&
+      executionSuccessCount === expectedTools.length;
+    const contractSatisfied = exactSequence && argumentsExact && schemasExact;
+    const executionSatisfied = contractSatisfied && executionExact;
+    const success = assessmentMode === 'contract' ? contractSatisfied : executionSatisfied;
+
+    const denominator = Math.max(expectedTools.length, 1);
+    const toolRatio = sequence.matchedCount / denominator;
+    const parameterRatio = parameterMatches / denominator;
+    const schemaRatio = calls.length > 0 ? schemaValidCount / calls.length : 0;
+    const executionObservedRatio = executionObservedCount / denominator;
+    const executionSuccessRatio = executionSuccessCount / denominator;
+    const weightedRatio =
+      assessmentMode === 'contract'
+        ? 0.45 * toolRatio + 0.35 * parameterRatio + 0.2 * schemaRatio
+        : 0.35 * toolRatio +
+          0.25 * parameterRatio +
+          0.15 * schemaRatio +
+          0.1 * executionObservedRatio +
+          0.15 * executionSuccessRatio;
+
+    const errors = [];
+    if (calls.length === 0) errors.push('No authoritative tool calls were captured for this test');
+    if (!exactSequence) {
+      for (const match of sequence.matches.filter(item => !item.callObserved)) {
+        errors.push(
+          `Tool sequence mismatch: expected call ${match.expectedIndex + 1} ` +
+            `'${this.formatExpectedTool(match.expectedTool)}' was not observed in order`
+        );
+      }
+      for (const index of sequence.unexpectedIndexes) {
+        errors.push(`Tool sequence mismatch: unexpected observed call ${index + 1} '${calls[index].tool_name}'`);
+      }
+      if (sequence.matchedCount === expectedTools.length && sequence.unexpectedIndexes.length === 0) {
+        const mismatchIndex = expectedTools.findIndex(
+          (tool, index) => !this.toolMatches(calls[index]?.tool_name, tool)
+        );
+        if (mismatchIndex !== -1) {
+          errors.push(
+            `Tool sequence mismatch at position ${mismatchIndex + 1}: expected ` +
+              `'${this.formatExpectedTool(expectedTools[mismatchIndex])}', observed '${calls[mismatchIndex]?.tool_name || '<none>'}'`
+          );
+        }
+      }
+    }
+    errors.push(...this.formatArgumentErrors(argumentMatches, calls));
+    schemaChecks.forEach((check, index) => {
+      if (!check.valid) {
+        const reasons = check.errors.length > 0 ? check.errors.join('; ') : 'registered JSON Schema rejected the call';
+        errors.push(`Schema invalid for observed call ${index + 1} '${calls[index].tool_name}': ${reasons}`);
+      }
+    });
+    if (assessmentMode === 'execution') {
+      for (const match of expectedObservedCalls) {
+        const call = calls[match.actualIndex];
+        if (!call.executionObserved) {
+          errors.push(
+            `Execution not observed for expected call ${match.expectedIndex + 1} ` +
+              `'${this.formatExpectedTool(match.expectedTool)}' (observed call ${match.actualIndex + 1})`
+          );
+        } else if (call.executionSuccess === null) {
+          errors.push(
+            `Execution outcome unknown for expected call ${match.expectedIndex + 1} ` +
+              `'${this.formatExpectedTool(match.expectedTool)}' (observed call ${match.actualIndex + 1})`
+          );
+        } else if (call.executionSuccess === false) {
+          errors.push(
+            `Execution failed for expected call ${match.expectedIndex + 1} ` +
+              `'${this.formatExpectedTool(match.expectedTool)}' (observed call ${match.actualIndex + 1})`
+          );
+        }
+      }
+    }
+
+    const warnings = unexpectedCalls.map(call => `Unexpected call: ${call.tool_name}`);
+    if (
+      assessmentMode === 'contract' &&
+      expectedObservedCalls.some(match => !calls[match.actualIndex].executionObserved)
+    ) {
+      warnings.push('Contract tier evaluates native call structure only; tool execution was not assessed');
+    }
+
+    const callDetails = calls.map((call, index) => ({
+      index,
+      toolName: call.tool_name,
+      source: call.source,
+      call_observed: true,
+      schema_valid: schemaChecks[index].valid,
+      schema_errors: schemaChecks[index].errors,
+      execution_observed: call.executionObserved,
+      execution_success: call.executionSuccess,
+    }));
+
+    return {
+      success,
+      score: success ? maxScore : Math.min(maxScore - 1, Math.floor(maxScore * weightedRatio)),
+      maxScore,
+      errors,
+      warnings,
+      details: {
+        scoringMode: 'strict-automatic-v2',
+        assessmentMode,
+        assessmentTier: assessmentMode === 'contract' ? 'native-function-contract' : 'real-tool-execution',
+        executionRequired: assessmentMode === 'execution',
+        expectedTools,
+        actualTools: calls.map(call => call.tool_name),
+        matchedCount: sequence.matchedCount,
+        parameterMatches,
+        schemaValidCount,
+        executionMatches: executionSuccessCount,
+        executionObservedCount,
+        executionSuccessCount,
+        executionFailureCount,
+        executionUnknownCount,
+        unexpectedCalls: unexpectedCalls.map(call => call.tool_name),
+        exactSequence,
+        argumentsExact,
+        schemasExact,
+        executionExact,
+        contractSatisfied,
+        executionSatisfied,
+        metrics: {
+          call_observed: {
+            observed_count: calls.length,
+            expected_count: expectedTools.length,
+            expected_matched_count: sequence.matchedCount,
+            exact_sequence: exactSequence,
+          },
+          arguments: {
+            matched_count: parameterMatches,
+            expected_count: expectedTools.length,
+            exact: argumentsExact,
+          },
+          schema_valid: {
+            observed_count: calls.length,
+            valid_count: schemaValidCount,
+            invalid_count: calls.length - schemaValidCount,
+            all_observed_valid: calls.length > 0 ? schemasExact : null,
+          },
+          execution_observed: {
+            observed_count: executionObservedCount,
+            expected_matched_count: expectedObservedCalls.length,
+            all_expected_observed: expectedTools.length > 0 ? executionObservedCount === expectedTools.length : null,
+          },
+          execution_success: {
+            success_count: executionSuccessCount,
+            failure_count: executionFailureCount,
+            unknown_count: executionUnknownCount,
+            all_expected_succeeded: expectedTools.length > 0 ? executionExact : null,
+          },
+        },
+        matches: argumentMatches.map(match => ({
+          expectedIndex: match.expectedIndex,
+          expectedTool: this.formatExpectedTool(match.expectedTool),
+          actualIndex: match.actualIndex,
+          callObserved: match.callObserved,
+          parametersMatch: match.parametersMatch,
+          argumentDiagnostics: match.comparison,
+        })),
+        calls: callDetails,
+        retrieval: this.getRetrievalMetrics(test, testResult),
+      },
+    };
+  }
+}
+
+if (typeof window !== 'undefined') window.StrictAutomaticEvaluator = StrictAutomaticEvaluator;
+if (typeof module !== 'undefined') module.exports = StrictAutomaticEvaluator;

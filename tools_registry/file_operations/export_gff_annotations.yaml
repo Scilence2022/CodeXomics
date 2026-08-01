@@ -32,9 +32,6 @@ parameters:
         - '/Users/user/output/genome_annotations.gff3'
         - 'selected_features.gff3'
         - '/tmp/chromosome_1.gff3'
-    filePath:
-      type: string
-      description: Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath.
     auto_save:
       type: boolean
       description: >-

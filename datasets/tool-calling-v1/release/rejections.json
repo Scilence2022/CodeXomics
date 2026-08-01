@@ -1,0 +1,42 @@
+[
+  {
+    "family_id_hash": "c201b48cdb51e55b6016de6edd1c3f899ffffe5a2656c7ae0aba7379d53661cc",
+    "reason": "token_similarity",
+    "errors": []
+  },
+  {
+    "family_id_hash": "9cccb5adfae9eb0bd1022aab91df7b3de3276e6281c7be18291f4dd250ff36d5",
+    "reason": "exact_prompt_hash",
+    "errors": []
+  },
+  {
+    "family_id_hash": "0db82f9b99b3b355dbf84608f777ca8ad56d8ab254880dc0def451cd2cc081e1",
+    "reason": "exact_prompt_hash",
+    "errors": []
+  },
+  {
+    "family_id_hash": "e0de04d0675c74ca2917de13b6840dc460bab22311e70f7ae7b537f9516a9302",
+    "reason": "token_similarity",
+    "errors": []
+  },
+  {
+    "family_id_hash": "d4846b3721d3b7385450c88138384be5bf2b248f820cd713904b499a3862f5d5",
+    "reason": "token_similarity",
+    "errors": []
+  },
+  {
+    "family_id_hash": "654d77053278c74d1324a2fdf77ae590594cc30225f19a27c92e5cb8e02a495d",
+    "reason": "token_similarity",
+    "errors": []
+  },
+  {
+    "family_id_hash": "d0810b5439cdb35e4c0cfbf44b52f4b203330d7ace6a3b72ce7a733512d51b43",
+    "reason": "exact_prompt_hash",
+    "errors": []
+  },
+  {
+    "family_id_hash": "8f7dbb23f17b971ac32dc54a51bafcf2221b6ec9b465d67da3edef19c311ad8c",
+    "reason": "token_similarity",
+    "errors": []
+  }
+]

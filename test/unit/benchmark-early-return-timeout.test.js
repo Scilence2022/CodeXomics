@@ -28,6 +28,14 @@ function makeFramework(executions) {
     toolExecutionTracker: {
       getTestExecutions: () => executions,
     },
+    dynamicTools: {
+      validateToolCall: () => ({ valid: true, errors: [] }),
+    },
+  };
+  framework.strictAutomaticEvaluator = {
+    getExpectedParameters: (_test, count) => Array.from({ length: count }, () => ({})),
+    matchCalls: (calls, expectedTools) =>
+      expectedTools.map((tool, index) => ({ matched: calls[index]?.tool_name === tool })),
   };
   return framework;
 }
@@ -81,7 +89,10 @@ describe('earlyReturn tests that outlive their timeout', () => {
   });
 
   it('supports workflow tests declared with a tool_sequence', () => {
-    const framework = makeFramework([{ toolName: 'blast_create_quick_db_for_current_genome', status: 'running' }]);
+    const framework = makeFramework([
+      { toolName: 'blast_create_quick_db_for_current_genome', status: 'completed' },
+      { toolName: 'blast_search_local', status: 'running' },
+    ]);
     const workflowTest = {
       id: 'blast_auto_03',
       earlyReturn: true,
@@ -89,6 +100,17 @@ describe('earlyReturn tests that outlive their timeout', () => {
     };
 
     expect(framework.findEarlyReturnSubmission(workflowTest, timeout)).not.toBeNull();
+  });
+
+  it('does not rescue a workflow timeout after only one expected step', () => {
+    const framework = makeFramework([{ toolName: 'blast_create_quick_db_for_current_genome', status: 'running' }]);
+    const workflowTest = {
+      id: 'blast_auto_03',
+      earlyReturn: true,
+      expectedResult: { tool_sequence: ['blast_create_quick_db_for_current_genome', 'blast_search_local'] },
+    };
+
+    expect(framework.findEarlyReturnSubmission(workflowTest, timeout)).toBeNull();
   });
 
   it('is inert when no tracker is available', () => {

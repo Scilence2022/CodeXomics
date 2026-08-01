@@ -66,6 +66,7 @@ playwright/.cache/
 .parcel-cache
 .node_repl_history
 .yarn-integrity
+**/__pycache__/
 
 # Instrumented libs
 lib-cov
@@ -228,3 +229,15 @@ manuscript/
 
 # Generated documentation reports (keep source, ignore generated)
 docs/reports/dynamic-tool-registry-multiagent-integration-report.md
+
+# Local fine-tuning weights and fused model builds (keep configs, metrics, and manifests)
+finetuning/*/base-model/*
+!finetuning/*/base-model/UPSTREAM.json
+finetuning/*/adapters/*.safetensors
+finetuning/*/adapters-legacy-rejected/
+finetuning/*/selected-adapter*/adapters.safetensors
+finetuning/*/fused-hf*/
+finetuning/*/fused-mlx*/
+
+# Dataset pipeline release backups (keep only the current release)
+datasets/tool-calling-v1/release-legacy-*/

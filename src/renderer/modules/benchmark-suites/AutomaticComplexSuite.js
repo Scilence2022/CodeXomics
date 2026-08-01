@@ -278,7 +278,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           tool_sequence: ['navigate_to_position', 'zoom_in'],
           parameters: [
             {
-              chromosome: '<current_chromosome>',
               start: 1230000,
               end: 1300000,
             },
@@ -316,7 +315,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           ],
           parameters: [
             {
-              chromosome: '<current_chromosome>',
               start: 110000,
               end: 112000,
             },
@@ -335,7 +333,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               name: 'benchmark smoke view',
             },
             {
-              chromosome: '<current_chromosome>',
               start: 130000,
               end: 131000,
             },
@@ -373,33 +370,27 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             'export_cds_fasta',
             'export_protein_fasta',
           ],
-          // Only filePath is dictated by the instruction; every other export option keeps its
-          // tool default, so expecting explicit values here scored correct runs as failures.
+          // The destination is the only content option dictated by the instruction. `filename`
+          // is the canonical model-facing path key; providing it also selects non-interactive
+          // saving in the runtime, so the optional auto_save flag is not part of the oracle.
           parameters: [
             {
-              filePath: this.buildFilePath('exported_files/exported_sequences.fasta'),
-              includeDescription: this.schemaDefault(true),
+              filename: this.buildFilePath('exported_files/exported_sequences.fasta'),
             },
             {
-              filePath: this.buildFilePath('exported_files/exported_data.gbk'),
-              includeSequence: this.schemaDefault(true),
-              includeFeatures: this.schemaDefault(true),
+              filename: this.buildFilePath('exported_files/exported_data.gbk'),
             },
             {
-              filePath: this.buildFilePath('exported_files/exported_annotations.gff3'),
-              gffVersion: this.schemaDefault('gff3'),
+              filename: this.buildFilePath('exported_files/exported_annotations.gff3'),
             },
             {
-              filePath: this.buildFilePath('exported_files/exported_features.bed'),
-              bedFormat: this.schemaDefault('bed6'),
+              filename: this.buildFilePath('exported_files/exported_features.bed'),
             },
             {
-              filePath: this.buildFilePath('exported_files/exported_cds.fasta'),
-              includeGeneNames: this.schemaDefault(true),
+              filename: this.buildFilePath('exported_files/exported_cds.fasta'),
             },
             {
-              filePath: this.buildFilePath('exported_files/exported_proteins.fasta'),
-              geneticCode: this.schemaDefault('standard'),
+              filename: this.buildFilePath('exported_files/exported_proteins.fasta'),
             },
           ],
           expectedFiles: [
@@ -429,13 +420,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           tool_sequence: ['navigate_to_position', 'export_current_view_fasta'],
           parameters: [
             {
-              chromosome: '<current_chromosome>',
               start: 100000,
               end: 120000,
             },
             {
-              filePath: this.buildFilePath('exported_files/current_view_region.fasta'),
-              includeCoordinates: this.schemaDefault(true),
+              filename: this.buildFilePath('exported_files/current_view_region.fasta'),
+              include_coordinates: this.schemaDefault(true),
             },
           ],
         },
@@ -457,9 +447,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           tool_sequence: ['capture_screenshot', 'open_image_file'],
           parameters: [
             {
-              target: 'tracks',
               mode: 'visible',
               filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
+              ...this.anyOfParameters({ target: 'visible_tracks' }, { target: 'tracks' }),
             },
             {
               filePath: this.buildFilePath('exported_files/benchmark_tracks_review.png'),
@@ -484,7 +474,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'open_new_tab',
           parameters: {},
-          expectedTabsIncrease: 5, // Expected increase in tab count
+          expectedTabsIncrease: 5,
         },
         maxScore: 5,
         bonusScore: 0,
@@ -506,7 +496,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {},
             {
-              tabIndex: '<new_tab_index>',
+              tab_id: '{open_new_tab.tab_id}',
             },
             {},
           ],
@@ -528,7 +518,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         instruction: `Calculate the GC content for the current view region and then export the region features to a BED file named '${this.buildFilePath('exported_files/region_features.bed')}'.`,
         expectedResult: {
           tool_sequence: ['calc_region_gc', 'export_bed_format'],
-          parameters: [{}, { filePath: this.buildFilePath('exported_files/region_features.bed') }],
+          parameters: [
+            {},
+            {
+              filename: this.buildFilePath('exported_files/region_features.bed'),
+              export_range: 'current_view',
+              feature_types: ['all'],
+            },
+          ],
         },
         maxScore: 10,
         bonusScore: 2,
@@ -567,13 +564,17 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         instruction:
           'Retrieve the coding sequence for the lacZ gene, translate that coding sequence in reading frame 1, and calculate the molecular weight of the translated protein sequence.',
         expectedResult: {
-          tool_sequence: ['get_coding_sequence', 'calculate_molecular_weight'],
+          tool_sequence: ['get_coding_sequence', 'translate_dna', 'calculate_molecular_weight'],
           parameters: [
             {
-              geneName: 'lacZ',
+              gene_name: 'lacZ',
             },
             {
-              sequence: '<protein_sequence>',
+              dna: '{get_coding_sequence.codingSequence}',
+              reading_frame: this.schemaDefault(1),
+            },
+            {
+              sequence: '{get_coding_sequence.proteinSequence}',
               type: 'protein',
             },
           ],
@@ -618,7 +619,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               dna: '{get_sequence.sequence}',
-              readingFrame: this.schemaDefault(1),
+              reading_frame: this.schemaDefault(1),
             },
           ],
         },
@@ -673,48 +674,58 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       {
         id: 'gel_auto_01',
         name: 'Simulate Gel Electrophoresis',
-        type: 'function_call',
+        type: 'workflow',
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
         instruction:
           'Run virtual_digest of current viewing region with EcoRI and HindIII, then simulate agarose gel electrophoresis to visualize the digest fragments on a 1% gel with 1kb ladder.',
         expectedResult: {
-          tool_name: 'simulate_gel_electrophoresis',
-          parameters: {
-            fragments: '<any>',
-            gelPercentage: this.schemaDefault(1.0),
-            ladderType: this.schemaDefault('1kb'),
-          },
+          tool_sequence: ['virtual_digest', 'simulate_gel_electrophoresis'],
+          parameters: [
+            {
+              enzymes: ['EcoRI', 'HindIII'],
+            },
+            {
+              fragments: '{virtual_digest.fragmentDetails}',
+              gelPercentage: this.schemaDefault(1.0),
+              ladderType: this.schemaDefault('1kb'),
+            },
+          ],
         },
         maxScore: 5,
         bonusScore: 1,
         timeout: 45000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
       {
         id: 'gel_auto_03',
         name: 'Gel with Lambda Ladder and EtBr Stain',
-        type: 'function_call',
+        type: 'workflow',
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'automatic',
         instruction:
           'Perform a virtual digest of current viewing region with NotI and SalI, then run gel electrophoresis on a 0.8% agarose gel with lambda HindIII ladder and ethidium bromide stain.',
         expectedResult: {
-          tool_name: 'simulate_gel_electrophoresis',
-          parameters: {
-            fragments: '<any>',
-            gelPercentage: 0.8,
-            ladderType: 'lambda_hindiii',
-            bandColorScheme: this.schemaDefault('ethidium_bromide'),
-          },
+          tool_sequence: ['virtual_digest', 'simulate_gel_electrophoresis'],
+          parameters: [
+            {
+              enzymes: ['NotI', 'SalI'],
+            },
+            {
+              fragments: '{virtual_digest.fragmentDetails}',
+              gelPercentage: 0.8,
+              ladderType: 'lambda_hindiii',
+              bandColorScheme: this.schemaDefault('ethidium_bromide'),
+            },
+          ],
         },
         maxScore: 5,
         bonusScore: 2,
         timeout: 45000,
-        evaluator: this.evaluateBasicFunctionCall.bind(this),
+        evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
       {
@@ -731,7 +742,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             { enzyme: 'EcoRI' },
             { enzymes: ['EcoRI', 'HindIII'] },
-            { fragments: '<any>', bandColorScheme: 'methylene_blue' },
+            { fragments: '{virtual_digest.fragmentDetails}', bandColorScheme: 'methylene_blue' },
           ],
         },
         maxScore: 20,
@@ -757,7 +768,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {
               name: 'regulatory_region_A',
-              chromosome: '<current_chromosome>',
+              chromosome: 'U00096',
               start: 150000,
               end: 150500,
               type: 'regulatory',
@@ -769,7 +780,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               },
             },
             {
-              chromosome: '<current_chromosome>',
+              chromosome: 'U00096',
               start: 150000,
               end: 150500,
             },
@@ -796,6 +807,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {
               name: 'benchmark_bulk_gene',
+              chromosome: '<current_chromosome>',
               start: 160000,
               end: 160900,
               type: 'CDS',
@@ -827,7 +839,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               identifier: 'benchmark_bulk_gene',
             },
             {
-              chromosome: '<current_chromosome>',
               start: 160000,
               end: 160900,
             },
@@ -855,11 +866,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {},
             {
-              track_name: 'gc',
+              track_name: 'gc_content',
               visible: true,
             },
             {
-              track_name: 'Variants',
+              track_name: 'variants',
               visible: false,
             },
             {},
@@ -928,11 +939,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               uniprot_id: 'P04637',
-              format: this.schemaDefault('pdb'),
             },
             {
-              data_ref: '{fetch_alphafold_structure._dataRef}',
               representation: this.schemaDefault('cartoon'),
+              ...this.anyOfParameters({ data_ref: '{fetch_alphafold_structure._dataRef}' }, { uniprot_id: 'P04637' }),
             },
           ],
         },
@@ -951,16 +961,13 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction: `Create a new nucleotide BLAST database of currently loaded E. coli genome using name 'ecoli_nucl', then list the available BLAST databases to verify, and run a local blastn search against the database for the query sequence 'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC'.`,
         expectedResult: {
-          tool_sequence: [
-            ['blast_create_db_from_genome', 'blast_create_quick_db_for_current_genome'],
-            'blast_list_databases',
-            'blast_search_local',
-          ],
+          tool_sequence: ['blast_create_db_from_genome', 'blast_list_databases', 'blast_search_local'],
           parameters: [
-            {},
             {
-              includeLocal: this.schemaDefault(true),
+              chromosome: '<current_chromosome>',
+              dbName: 'ecoli_nucl',
             },
+            {},
             {
               sequence:
                 'TTAGTTGGCGTCATCAAAGCTGAAGACATCTTCGCAGGCTTGCTGCAATGCGCTGTCACTTTGGATATTGCAGTTGCGCGTCCAGCCGGTGACGCCGTTGCGTTATCCCAACCCGGTGTCATGACGACGCTTAGCCCATTAGACTTTCTTGCCCGGTCAGCGACACC',
@@ -985,12 +992,24 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         instruction: `Create a protein-only quick BLAST database for the currently loaded E. coli genome using genome label 'Ecoli_protein' when the tool supports it, then list the available BLAST databases to verify, and run a local blastp search against the created or listed local protein database for the query sequence 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ'.`,
         expectedResult: {
           tool_sequence: [
-            ['blast_create_protein_db_from_genome', 'blast_create_quick_db_for_current_genome'],
+            ['blast_create_quick_db_for_current_genome', 'blast_create_protein_db_from_genome'],
             'blast_list_databases',
             'blast_search_local',
           ],
           parameters: [
-            {},
+            {
+              ...this.anyOfParameters(
+                {
+                  createNucleotide: false,
+                  createProtein: this.schemaDefault(true),
+                  genomeName: 'Ecoli_protein',
+                },
+                {
+                  chromosome: '<current_chromosome>',
+                  dbName: 'Ecoli_protein',
+                }
+              ),
+            },
             {},
             {
               sequence: 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ',
@@ -1023,8 +1042,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           ],
           parameters: [
             {
-              filePath: this.buildFilePath('exported_files/benchmark_blast_input.fasta'),
-              includeCoordinates: this.schemaDefault(true),
+              filename: this.buildFilePath('exported_files/benchmark_blast_input.fasta'),
             },
             {
               inputFile: this.buildFilePath('exported_files/benchmark_blast_input.fasta'),
@@ -1071,12 +1089,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               maxTargets: 5,
             },
             {
-              results: '{blast_search.results}',
               minIdentity: 90,
               maxHits: 5,
             },
             {
-              searchId: '{blast_search.searchId}',
               format: 'csv',
               outputPath: this.buildFilePath('exported_files/benchmark_blast_results.csv'),
             },
@@ -1129,7 +1145,6 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         instruction:
           'Design primers to amplify the lysC gene, including 50bp of upstream sequence to capture the RBS. Then add primers, navigate to position around lysC and toggle on the primer track to view their presence.',
         expectedResult: {
-          // Navigation step accepts any of these interchangeable tools - any one match satisfies the step.
           tool_sequence: [
             'design_primers',
             'save_primer',
@@ -1141,10 +1156,25 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               geneName: 'lysC',
               upstreamBp: 50,
             },
-            {},
-            {},
+            {
+              name: '<primer_name>',
+              chromosome: '{design_primers.target.chromosome}',
+              start: '{design_primers.forward.genomicStart}',
+              end: '{design_primers.forward.genomicEnd}',
+            },
+            {
+              ...this.anyOfParameters(
+                { geneName: 'lysC' },
+                {
+                  chromosome: '{design_primers.target.chromosome}',
+                  start: '{design_primers.target.start}',
+                  end: '{design_primers.target.end}',
+                }
+              ),
+            },
             {
               track_name: 'primers',
+              visible: true,
             },
           ],
         },

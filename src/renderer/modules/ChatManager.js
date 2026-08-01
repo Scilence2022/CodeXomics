@@ -122,6 +122,7 @@ class ChatManager {
     // Initialize Dynamic Tools Registry System
     this.dynamicTools = null;
     this.dynamicToolsEnabled = true;
+    this.currentNativeTools = [];
     this.builtInTools = null;
     this.builtInToolsMap = new Map();
     this.lastSystemPromptMetadata = null;
@@ -1868,11 +1869,13 @@ class ChatManager {
   }
 
   getDynamicToolsSelectionLimit() {
-    const shouldLimit = this.configManager.get('chatboxSettings.limitDynamicToolsSelection', false);
+    if (this.benchmarkAutomationActive === true) return 24;
+
+    const shouldLimit = this.configManager.get('chatboxSettings.limitDynamicToolsSelection', true);
     if (!shouldLimit) return Infinity;
 
-    const configuredLimit = Number(this.configManager.get('chatboxSettings.dynamicToolsSelectionLimit', 35));
-    if (!Number.isFinite(configuredLimit) || configuredLimit < 1) return 35;
+    const configuredLimit = Number(this.configManager.get('chatboxSettings.dynamicToolsSelectionLimit', 24));
+    if (!Number.isFinite(configuredLimit) || configuredLimit < 1) return 24;
 
     return Math.floor(configuredLimit);
   }
@@ -5117,6 +5120,14 @@ class ChatManager {
             modelType: this.chatBoxSettingsManager?.getSetting('chatboxModelType', 'auto'),
             providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
             modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
+            tools: this.currentNativeTools,
+            nativeFunctionCalling: this.configManager.get('chatboxSettings.enableNativeFunctionCalling', true),
+            constrainedToolOutput: this.configManager.get('chatboxSettings.enableConstrainedToolOutput', true),
+            toolChoice: 'auto',
+            parallelToolCalls: true,
+            temperatureOverride: this.benchmarkAutomationActive === true ? 0 : undefined,
+            disableFallback: this.benchmarkAutomationActive === true,
+            disableStreaming: this.benchmarkAutomationActive === true,
           });
         } finally {
           // The completed message is rendered by the normal path below, so the
@@ -6120,6 +6131,7 @@ class ChatManager {
 
   async buildSystemMessage() {
     this.lastSystemPromptMetadata = null;
+    this.currentNativeTools = [];
 
     // [MCP Integration] Check for specific MCP server prompts first
     if (this.mcpServerManager && this.mcpServerManager.serverPrompts) {
@@ -6237,6 +6249,7 @@ class ChatManager {
         const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context, {
           selectionLimit: this.getDynamicToolsSelectionLimit(),
         });
+        this.currentNativeTools = Array.isArray(promptData.nativeTools) ? promptData.nativeTools : [];
         console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
 
         // Apply section configuration filtering to dynamic prompt
@@ -6301,7 +6314,11 @@ class ChatManager {
   }
 
   async createSystemPromptMetadata({ mode, prompt, promptData, context, userQuery }) {
-    const tools = Array.isArray(promptData?.toolsUsed) ? promptData.toolsUsed : [];
+    const tools = Array.isArray(promptData?.toolDefinitions)
+      ? promptData.toolDefinitions
+      : Array.isArray(promptData?.toolsUsed)
+        ? promptData.toolsUsed
+        : [];
     const selectedTools = tools.map(tool => ({
       name: tool.name || String(tool),
       category: tool.category || 'uncategorized',
@@ -6982,9 +6999,21 @@ class ChatManager {
         const mismatchReason = this.getToolCallRequestMismatchReason(toolCall, originalMessage);
         if (mismatchReason) {
           invalidToolCalls.push({ ...toolCall, reason: mismatchReason });
-        } else {
-          requestConsistentCalls.push(toolCall);
+          continue;
         }
+        if (this.dynamicTools && typeof this.dynamicTools.validateToolCall === 'function') {
+          const normalizedParameters = this.normalizeToolParams(toolCall.tool_name, toolCall.parameters || {});
+          const validation = this.dynamicTools.validateToolCall(toolCall.tool_name, normalizedParameters);
+          if (!validation.valid) {
+            invalidToolCalls.push({
+              ...toolCall,
+              reason: `Tool arguments failed schema validation: ${validation.errors.join('; ')}`,
+            });
+            continue;
+          }
+          toolCall.parameters = normalizedParameters;
+        }
+        requestConsistentCalls.push(toolCall);
       }
       toolCalls = requestConsistentCalls;
       const text = String(analyzed.displayText ?? analyzed.text ?? analyzed.content ?? '');
@@ -8389,14 +8418,18 @@ class ChatManager {
 
       try {
         executionParameters = this.resolveToolParameterReferences(recordedParameters, referenceContext);
+        const executionStart = Date.now();
         const result = await this.executeToolByName(tool.tool_name, executionParameters);
         const explicitFailure = result && typeof result === 'object' && result.success === false;
+        const executionTime = Date.now() - executionStart;
         const toolResult = {
           tool: tool.tool_name,
+          tool_name: tool.tool_name,
           parameters: recordedParameters,
           success: !explicitFailure,
           result: explicitFailure ? null : result,
           error: explicitFailure ? result.error || result.message || 'Tool reported an unsuccessful result' : null,
+          executionTime,
         };
         toolResults.push(toolResult);
         if (toolResult.success) {
@@ -8405,10 +8438,12 @@ class ChatManager {
       } catch (error) {
         toolResults.push({
           tool: tool.tool_name,
+          tool_name: tool.tool_name,
           parameters: recordedParameters,
           success: false,
           result: null,
           error: error.message,
+          executionTime: 0,
         });
       }
     }

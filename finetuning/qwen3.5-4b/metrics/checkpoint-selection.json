@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "selection_metric": "executable_holdout_exact_accuracy",
+  "tie_breakers": ["tool_name_accuracy", "earliest_iteration"],
+  "scope": {
+    "holdout_records": 21,
+    "benchmark_records": 0,
+    "manual_tests_included": 0
+  },
+  "candidates": [
+    { "iteration": 0, "model": "qwen3.5:4b", "exact": 6, "tool_names": 16 },
+    { "iteration": 50, "model": "qwen3.5:4b-codexomics-tools-ckpt0050", "exact": 7, "tool_names": 21 },
+    { "iteration": 100, "model": "qwen3.5:4b-codexomics-tools-ckpt0100", "exact": 7, "tool_names": 21 },
+    { "iteration": 150, "model": "qwen3.5:4b-codexomics-tools-ckpt0150", "exact": 9, "tool_names": 21 },
+    { "iteration": 200, "model": "qwen3.5:4b-codexomics-tools-ckpt0200", "exact": 9, "tool_names": 21 },
+    { "iteration": 250, "model": "qwen3.5:4b-codexomics-tools-v1", "exact": 8, "tool_names": 20 }
+  ],
+  "selected_iteration": 150,
+  "status": "diagnostic_rejected_after_final_gate",
+  "production_candidate_iteration": 250,
+  "production_candidate_basis": "minimum_validation_loss_before_final_benchmark",
+  "release_status": "rejected_keep_base_model"
+}

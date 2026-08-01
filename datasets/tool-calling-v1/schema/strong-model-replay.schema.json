@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codexomics.org/schemas/strong-model-replay-v1.json",
+  "title": "CodeXomics strong-model semantic replay sidecar",
+  "type": "object",
+  "required": [
+    "example_id",
+    "registry_hash",
+    "canonical_oracle_hash",
+    "canonical_calls",
+    "terminal_predicates",
+    "status",
+    "reason_code",
+    "semantic_verdict",
+    "model_family",
+    "model_id",
+    "observed_calls",
+    "fixture_outputs",
+    "terminal_predicate_results",
+    "provenance"
+  ],
+  "properties": {
+    "example_id": { "type": "string", "minLength": 8 },
+    "registry_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "canonical_oracle_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "canonical_calls": { "type": "array" },
+    "terminal_predicates": { "type": "array" },
+    "status": { "enum": ["not_run", "passed", "failed", "blocked"] },
+    "reason_code": {
+      "enum": [
+        "not_run",
+        "passed",
+        "schema_mismatch",
+        "tool_selection_mismatch",
+        "argument_semantic_mismatch",
+        "fixture_missing",
+        "fixture_resolution_failed",
+        "fixture_execution_failed",
+        "terminal_predicate_failed",
+        "provider_error",
+        "rate_limited",
+        "manual_review_required"
+      ]
+    },
+    "semantic_verdict": { "enum": ["not_run", "passed", "failed", "blocked"] },
+    "model_family": { "type": "string", "minLength": 1 },
+    "model_id": { "type": "string", "minLength": 1 },
+    "observed_calls": { "type": "array" },
+    "fixture_outputs": { "type": "array" },
+    "terminal_predicate_results": { "type": "array" },
+    "provenance": {
+      "type": "object",
+      "required": ["runner", "runner_version", "generated_at", "request_hash", "response_hash"],
+      "properties": {
+        "runner": { "type": "string", "minLength": 1 },
+        "runner_version": { "type": "string", "minLength": 1 },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "request_hash": { "type": "string", "minLength": 1 },
+        "response_hash": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,29 @@
+{
+  "selectionPolicy": "minimum_fixed_validation_loss_with_patience_2",
+  "selectedIteration": 250,
+  "selectedValidationLoss": 0.094,
+  "validationHistory": [
+    { "iteration": 1, "loss": 0.628 },
+    { "iteration": 50, "loss": 0.245 },
+    { "iteration": 100, "loss": 0.178 },
+    { "iteration": 150, "loss": 0.156 },
+    { "iteration": 200, "loss": 0.15 },
+    { "iteration": 250, "loss": 0.094 },
+    { "iteration": 300, "loss": 0.174 },
+    { "iteration": 350, "loss": 0.107 }
+  ],
+  "earlyStop": {
+    "stoppedAfterIteration": 350,
+    "patienceCheckpoints": 2,
+    "reason": "Iterations 300 and 350 did not improve on iteration 250."
+  },
+  "holdout": {
+    "records": 21,
+    "baseLoss": 2.83,
+    "selectedLoss": 2.666,
+    "basePerplexity": 16.948,
+    "selectedPerplexity": 14.386
+  },
+  "adapterSha256": "5cfc4f601b1d897e78bfc4394133121a373e9ce0bdcf09c1fefdc45db55e028d",
+  "manualTestsIncluded": 0
+}

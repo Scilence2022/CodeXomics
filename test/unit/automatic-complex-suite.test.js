@@ -152,8 +152,8 @@ describe('AutomaticComplexSuite', () => {
       expect(chainedSequenceTest.expectedResult.parameters[2].sequence).toBe('{get_sequence.sequence}');
       expect(chainedSequenceTest.expectedResult.parameters[4]).toEqual({
         dna: '{get_sequence.sequence}',
-        // readingFrame 1 is the tool default, so omitting it must not count against the run.
-        readingFrame: suite.schemaDefault(1),
+        // reading_frame 1 is the tool default, so omitting it must not count against the run.
+        reading_frame: suite.schemaDefault(1),
       });
 
       const taskLifecycleTest = tests.find(t => t.id === 'task_auto_complex_01');

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codexomics.org/schemas/tool-calling-preference-v2.json",
+  "title": "CodeXomics promoted semantic preference pair",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "preference_id",
+    "scenario_family_id",
+    "split",
+    "prompt",
+    "chosen",
+    "rejected",
+    "rejected_error_type",
+    "verification"
+  ],
+  "properties": {
+    "schema_version": { "const": "2.0" },
+    "preference_id": { "type": "string" },
+    "scenario_family_id": { "type": "string" },
+    "split": { "enum": ["train", "dev"] },
+    "prompt": { "type": "array" },
+    "chosen": { "type": "object" },
+    "rejected": { "type": "object" },
+    "rejected_error_type": {
+      "enum": ["wrong_tool", "semantic_argument_mismatch"]
+    },
+    "verification": {
+      "type": "object",
+      "required": [
+        "chosen_schema_valid",
+        "rejected_schema_valid",
+        "semantic_mismatch",
+        "source_validation_tier",
+        "source_strong_replay_status",
+        "training_eligible"
+      ],
+      "properties": {
+        "chosen_schema_valid": { "const": true },
+        "rejected_schema_valid": { "const": true },
+        "rejected_errors": { "type": "array" },
+        "semantic_mismatch": { "const": true },
+        "fixture_executable": { "type": "boolean" },
+        "state_verified": { "type": "boolean" },
+        "source_validation_tier": {
+          "enum": ["schema_valid", "fixture_executable", "state_verified"]
+        },
+        "source_strong_replay_status": { "const": "passed" },
+        "training_eligible": { "const": true }
+      }
+    }
+  },
+  "additionalProperties": false
+}

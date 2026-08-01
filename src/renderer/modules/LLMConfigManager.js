@@ -2440,7 +2440,7 @@ class LLMConfigManager {
       console.warn(`Primary provider ${primaryProvider} failed:`, error.message);
 
       // Only try fallback if it's a service unavailable error and fallback is enabled
-      if (this.shouldTryFallback(error)) {
+      if (!options.disableFallback && this.shouldTryFallback(error)) {
         const fallbackProvider = this.getFallbackProvider(primaryProvider);
 
         if (fallbackProvider) {
@@ -2507,9 +2507,7 @@ class LLMConfigManager {
     // Model Selection config is request-scoped. Do not mutate the provider's
     // saved default, because a fallback provider must still use its own model.
     const provider =
-      modelOverride && modelOverride !== 'auto'
-        ? { ...configuredProvider, model: modelOverride }
-        : configuredProvider;
+      modelOverride && modelOverride !== 'auto' ? { ...configuredProvider, model: modelOverride } : configuredProvider;
 
     switch (providerKey) {
       case 'openai':
@@ -2778,6 +2776,104 @@ class LLMConfigManager {
     return this.formatProviderText(visibleText, reasoningText);
   }
 
+  getRequestTemperature(options = {}) {
+    return Number.isFinite(options.temperatureOverride) ? options.temperatureOverride : this.getTemperature();
+  }
+
+  getNativeFunctionTools(options = {}) {
+    if (options.nativeFunctionCalling === false || !Array.isArray(options.tools)) return [];
+    return options.tools.filter(
+      tool =>
+        tool?.type === 'function' &&
+        typeof tool?.function?.name === 'string' &&
+        tool.function.parameters &&
+        typeof tool.function.parameters === 'object'
+    );
+  }
+
+  buildConstrainedToolResponseFormat(options = {}) {
+    if (options.constrainedToolOutput !== true || options.nativeFunctionCalling !== false) return null;
+    const tools = Array.isArray(options.tools) ? options.tools : [];
+    const names = tools.map(tool => tool?.function?.name).filter(Boolean);
+    if (names.length === 0) return null;
+    return {
+      type: 'json_schema',
+      json_schema: {
+        name: 'codexomics_tool_decision',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            decision: {
+              type: 'string',
+              enum: ['call', 'no_call', 'ask_clarification', 'refuse', 'unavailable_tool'],
+            },
+            tool_calls: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  tool_name: { type: 'string', enum: names },
+                  parameters: { type: 'object', additionalProperties: true },
+                },
+                required: ['tool_name', 'parameters'],
+                additionalProperties: false,
+              },
+            },
+            final_answer: { type: ['string', 'null'] },
+          },
+          required: ['decision', 'tool_calls', 'final_answer'],
+          additionalProperties: false,
+        },
+      },
+    };
+  }
+
+  buildOpenAICompatiblePayload(provider, conversationHistory, options = {}, extra = {}) {
+    const payload = {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getRequestTemperature(options),
+      ...extra,
+    };
+    const nativeTools = this.getNativeFunctionTools(options);
+    if (nativeTools.length > 0) {
+      payload.tools = nativeTools;
+      payload.tool_choice = options.toolChoice || 'auto';
+      payload.parallel_tool_calls = options.parallelToolCalls !== false;
+    } else {
+      const responseFormat = this.buildConstrainedToolResponseFormat(options);
+      if (responseFormat) payload.response_format = responseFormat;
+    }
+    return payload;
+  }
+
+  buildAnthropicTools(options = {}) {
+    return this.getNativeFunctionTools(options).map(tool => ({
+      name: tool.function.name,
+      description: tool.function.description,
+      input_schema: tool.function.parameters,
+    }));
+  }
+
+  buildGoogleFunctionDeclarations(options = {}) {
+    const toGoogleSchema = value => {
+      if (Array.isArray(value)) return value.map(toGoogleSchema);
+      if (!value || typeof value !== 'object') return value;
+      return Object.fromEntries(
+        Object.entries(value)
+          .filter(([key]) => !['additionalProperties', '$schema', '$id'].includes(key))
+          .map(([key, child]) => [key, toGoogleSchema(child)])
+      );
+    };
+    return this.getNativeFunctionTools(options).map(tool => ({
+      name: tool.function.name,
+      description: tool.function.description,
+      parameters: toGoogleSchema(tool.function.parameters),
+    }));
+  }
+
   // ---------------------------------------------------------------------------
   // Token streaming
   //
@@ -2817,7 +2913,7 @@ class LLMConfigManager {
    */
   shouldAttemptStream(options) {
     const hasSink = Boolean(options?.onToken || options?.onReasoningToken);
-    return hasSink && this.isStreamingEnabled() && Boolean(this.getStreamClient());
+    return !options?.disableStreaming && hasSink && this.isStreamingEnabled() && Boolean(this.getStreamClient());
   }
 
   /**
@@ -2861,13 +2957,9 @@ class LLMConfigManager {
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: this.buildChatCompletionsHeaders(providerKey, provider),
-        body: JSON.stringify({
-          model: provider.model,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-          stream: true,
-        }),
+        body: JSON.stringify(
+          this.buildOpenAICompatiblePayload(provider, conversationHistory, options, { stream: true })
+        ),
         signal: options.signal || undefined,
       });
 
@@ -2904,11 +2996,16 @@ class LLMConfigManager {
       const payload = {
         model: provider.model,
         max_tokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
+        temperature: this.getRequestTemperature(options),
         messages: conversationHistory.filter(msg => msg.role !== 'system'),
         stream: true,
       };
       if (systemMessage) payload.system = systemMessage.content;
+      const anthropicTools = this.buildAnthropicTools(options);
+      if (anthropicTools.length > 0) {
+        payload.tools = anthropicTools;
+        payload.tool_choice = { type: options.toolChoice || 'auto' };
+      }
 
       const response = await fetch(`${provider.baseUrl}/v1/messages`, {
         method: 'POST',
@@ -2961,11 +3058,16 @@ class LLMConfigManager {
         contents,
         generationConfig: {
           maxOutputTokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
+          temperature: this.getRequestTemperature(options),
         },
       };
       if (systemMessage?.content) {
         payload.systemInstruction = { parts: [{ text: systemMessage.content }] };
+      }
+      const functionDeclarations = this.buildGoogleFunctionDeclarations(options);
+      if (functionDeclarations.length > 0) {
+        payload.tools = [{ functionDeclarations }];
+        payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
       }
 
       const apiUrl =
@@ -3036,7 +3138,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     return await this.makeRequestWithRetry(
@@ -3047,12 +3150,7 @@ class LLMConfigManager {
             Authorization: `Bearer ${provider.apiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: provider.model,
-            messages: conversationHistory,
-            max_tokens: this.getMaxTokens(provider),
-            temperature: this.getTemperature(),
-          }),
+          body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
         });
 
         if (!response.ok) {
@@ -3119,12 +3217,17 @@ class LLMConfigManager {
     const payload = {
       model: provider.model,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
       messages: messages,
     };
 
     if (systemMessage) {
       payload.system = systemMessage.content;
+    }
+    const anthropicTools = this.buildAnthropicTools(options);
+    if (anthropicTools.length > 0) {
+      payload.tools = anthropicTools;
+      payload.tool_choice = { type: options.toolChoice || 'auto' };
     }
 
     console.log('Sending to Anthropic - Request Payload:', payload);
@@ -3222,7 +3325,7 @@ class LLMConfigManager {
       contents: contents,
       generationConfig: {
         maxOutputTokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
+        temperature: this.getRequestTemperature(options),
       },
     };
 
@@ -3236,6 +3339,11 @@ class LLMConfigManager {
       console.warn(
         'Google API: No system message found in conversation history - tools and system prompt will be missing!'
       );
+    }
+    const functionDeclarations = this.buildGoogleFunctionDeclarations(options);
+    if (functionDeclarations.length > 0) {
+      payload.tools = [{ functionDeclarations }];
+      payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
     }
 
     console.log('Sending to Google - Request Payload:', payload);
@@ -3299,7 +3407,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -3308,12 +3417,7 @@ class LLMConfigManager {
         Authorization: `Bearer ${provider.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: provider.model,
-        messages: conversationHistory,
-        max_tokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
-      }),
+      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
     });
 
     if (!response.ok) {
@@ -3450,7 +3554,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     return await this.makeRequestWithRetry(
@@ -3461,12 +3566,7 @@ class LLMConfigManager {
             Authorization: `Bearer ${provider.apiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: provider.model,
-            messages: conversationHistory,
-            max_tokens: this.getMaxTokens(provider),
-            temperature: this.getTemperature(),
-          }),
+          body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
         });
 
         if (!response.ok) {
@@ -3596,7 +3696,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     const doRequest = async modelToUse => {
@@ -3608,12 +3709,9 @@ class LLMConfigManager {
           'HTTP-Referer': window.location.origin,
           'X-Title': 'GenomeExplorer',
         },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        }),
+        body: JSON.stringify(
+          this.buildOpenAICompatiblePayload({ ...provider, model: modelToUse }, conversationHistory, options)
+        ),
       });
       return resp;
     };
@@ -3623,7 +3721,7 @@ class LLMConfigManager {
     if (!response.ok) {
       const status = response.status;
       const errorText = await response.text().catch(() => '');
-      if (status === 403 || status === 404) {
+      if (!options.disableFallback && (status === 403 || status === 404)) {
         const fallbackModel = this.getOpenRouterFallbackModel(provider.model);
         if (fallbackModel && fallbackModel !== provider.model) {
           console.warn(`OpenRouter model unavailable (${provider.model}). Falling back to ${fallbackModel}.`);
@@ -3743,7 +3841,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -3752,12 +3851,7 @@ class LLMConfigManager {
         Authorization: `Bearer ${provider.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: provider.model,
-        messages: conversationHistory,
-        max_tokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
-      }),
+      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
     });
 
     if (!response.ok) {
@@ -3809,7 +3903,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -3818,12 +3913,7 @@ class LLMConfigManager {
         Authorization: `Bearer ${provider.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: provider.model,
-        messages: conversationHistory,
-        max_tokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
-      }),
+      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
     });
 
     if (!response.ok) {
@@ -3899,13 +3989,7 @@ class LLMConfigManager {
       role: msg.role === 'system' ? 'system' : msg.role,
     }));
 
-    const payload = {
-      model: provider.model,
-      messages: messages,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
-      stream: false,
-    };
+    const payload = this.buildOpenAICompatiblePayload(provider, messages, options, { stream: false });
 
     console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
     console.log('Sending to Local LLM - Request Payload:', payload);
