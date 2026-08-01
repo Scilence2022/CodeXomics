@@ -1,6 +1,6 @@
 # Qwen3.5 4B CodeXomics 工具调用微调报告
 
-生成时间：2026-08-01T06:48:21.534Z
+生成时间：2026-08-01T18:40:00.000Z
 
 ## 执行摘要
 
@@ -48,6 +48,8 @@
 | DeepSeek V4 Flash 对照            |     86.63% (149) |     93.71% (134) |     51.72% (15) |            — |  1823 ms |
 
 新候选在自动简单上接近满分，复杂链路（多步串联）是剩余主要短板；DeepSeek 对照同样在复杂用例上只有 15/29，说明这是 4B 级模型与多步任务共有的难点，而不是数据集标签错误。
+
+**thinking 模式复测（2026-08-02）：** 保持模型 reasoning 开启、`num_predict` 提到 8192 后重跑全量 172 条，仍为 **154/172 (89.53%)**（简单 139/143、复杂 15/29），与关闭 thinking 的结果完全一致；逐条对比有 8 条翻转（4 升 4 降，净 0）。结论：**thinking 不影响工具调用准确率，reasoning 可以按产品要求保留**（详见下文专节）。
 
 ## 范围与防泄漏控制
 
@@ -179,7 +181,9 @@ lora_parameters:
 ## 原生 function calling 与部署
 
 - 训练目标使用 Qwen3.5 原生 chat template 和 `tool_calls`，参数在数据入口统一为 JSON object。
-- 推理使用 Ollama `/api/chat` 的 `tools` 字段、`think: false`、temperature 0、seed 42；不依赖正则提取伪 JSON。
+- 推理使用 Ollama `/api/chat` 的 `tools` 字段、temperature 0、seed 42、`num_predict` 8192；不依赖正则提取伪 JSON。
+- **thinking 保持开启（产品要求）。** Ollama 0.32.5 不支持 Modelfile `PARAMETER think`，`/v1/chat/completions` 也会忽略 `think:false`（仅原生 `/api/chat` 支持该字段），因此模型 reasoning 默认保留，对话中思考过程照常展示。
+- 本地端点 `max_tokens` 下限提到 8192（ConfigManager 默认值与 `getMaxTokens` 本地兜底），避免 thinking 阶段把工具调用截断；云 provider 保持各自配置。
 - Ollama Modelfile 显式设置 `RENDERER qwen3.5` 与 `PARSER qwen3.5`，最终能力包含 tools/thinking。
 - 融合导出：426 个规范 HF 张量，2 个 shard，7.83 GiB；架构 `Qwen3_5ForConditionalGeneration`。
 - 部署链：MLX LoRA 反量化融合 → 还原 Hugging Face 张量布局 → Ollama 官方 Qwen3.5 转换器 → Q4_K_M。
@@ -227,21 +231,63 @@ lora_parameters:
 
 ## 严格失败分类
 
-| 失败信号                    | 基座 (strict-v2) |                新 iter 50 |
-| --------------------------- | ---------------: | ------------------------: |
-| 未通过测试                  |               28 |                        18 |
-| 未调用工具                  |                4 |                         2 |
-| 工具序列错误/多余调用       |               16 |                        14 |
-| 参数不匹配                  |                7 |                         7 |
-| JSON Schema 无效            |                1 | 2（均为多步链路中的单步） |
-| 执行未完成（contract 模拟） |               28 |                        18 |
+| 失败信号                    | 基座 (strict-v2) | 新 iter 50 |
+| --------------------------- | ---------------: | ---------: |
+| 未通过测试                  |               28 |         18 |
+| 未调用工具                  |                4 |          0 |
+| 工具序列错误/多余调用       |               16 |         10 |
+| 参数不匹配（含缺参）        |                7 |          8 |
+| JSON Schema 无效            |                1 |          3 |
+| 执行未完成（contract 模拟） |               28 |         18 |
 
-新候选 18 个失败里，自动简单只有 4 个（load_auto_05 参数形态、settings_auto_07 设置值反转、annot_auto_08 未调用、db_auto_01 queryFields 键名），其余 14 个都在自动复杂：主要是多步链路中途停止（analysis_auto_complex_03/05）、近义工具替换（blast_create_database vs blast_create_db_from_genome、blast_search_online vs blast_search、advanced_uniprot_search vs search_uniprot_database+get_uniprot_entry、protein_auto_complex_02 重复调用同一工具）。剩余短板是长链工具编排，不是工具检索或参数 grounding。
+thinking 开启运行（`qwen3.5_4b-codexomics-tools-v2-thinking.json`）的 18 个失败里，自动简单 4 个：`load_auto_05`（`filePaths` 给了数组、oracle 期望单字符串，契约口径问题）、`nav_auto_01`（缺 `position` 参数）、`settings_auto_07`（选错工具 `get_track_settings_schema` vs `set_track_settings`）、`db_auto_02`（缺 `searchTerm`）。其余 14 个都在自动复杂，三类模式：
+
+1. **近义工具替换/序列错位**（10 条）：`batch_create_annotations` vs `create_annotation`、`blast_create_database` vs `blast_create_db_from_genome`、`advanced_uniprot_search` vs `analyze_interpro_domains`、`virtual_digest` 重复两次 vs `simulate_gel_electrophoresis`、多步链路中途换成无关工具（`analysis_auto_complex_03/05`、`task_auto_complex_01`）。
+2. **跨轮参数引用丢失**：`ui_auto_complex_02` 的 `switch_to_tab` 未写 `{open_new_tab.tab_id}` 引用。
+3. **参数键/枚举错误**（8 条含缺参）：`update_annotation` 的 `updates.note` vs `updates.description`、`capture_screenshot` 缺 `mode`、`export_current_view_fasta` 的 `sequence_type` 越界、`export_bed_format` 缺 `featureTypes`。
+
+剩余短板是长链工具编排与跨工具结果参数引用，不是工具检索或单步 grounding。
+
+## 多轮循环终止与 thinking 模式评测（2026-08-02）
+
+### 多轮对话循环终止逻辑（ChatManager）
+
+任务级终止以“最终助手消息不再包含工具调用”为主信号（与 Claude Code / Codex CLI 一致），并增加四道防线：
+
+1. **stop_reason 主信号**：干净停止（`stop` / `end_turn` / `stop_sequence` 等）或缺失（适配器把干净完成折叠成纯字符串）才允许结束回合；异常停止（`length`、`tool_calls` 协议不一致、未知原因）即使绕过协议恢复也会被兜底判为未完成，不再冒充正常回答。
+2. **空响应有界终止**：连续两轮“干净停止 + 空正文”（例如只输出 thinking、没有可见内容）以确定性消息终止；`finish_reason=length` 的截断轮次不计入，仍走协议重试，避免误杀 thinking 模型。
+3. **关键词启发式降级**：`checkTaskCompletion` 只在 stop_reason 干净、正文非空、且回复不是“我接下来要…”这类续行动作时才生效。
+4. **显式 `<end_of_turn>` 标记：评估后放弃。** 它只解决纯文本协议的解析问题；CodeXomics 使用结构化 `tool_calls`，任务级终止已由“无工具调用的最终消息”确定，标记只会给本地模型增加“忘记打标记→误判未完成”的失败模式。DeepSeek/Claude/GPT 等 API 模型本身也不会输出该标记，它们依赖 `finish_reason` / `stop_reason`。
+
+### thinking 开启评测（172 条全量）
+
+运行条件：Ollama `/api/chat`、temperature 0、seed 42、`num_predict` 8192、thinking 开启；约 28 分钟。
+
+| 套件     | think:false 基线 |    thinking 开启 | 变化 |
+| -------- | ---------------: | ---------------: | ---: |
+| 自动简单 | 139/143 (97.20%) | 139/143 (97.20%) |    0 |
+| 自动复杂 |   15/29 (51.72%) |   15/29 (51.72%) |    0 |
+| 总体     | 154/172 (89.53%) | 154/172 (89.53%) |    0 |
+
+逐条对比（`tuned-v2.json` vs `qwen3.5_4b-codexomics-tools-v2-thinking.json`）共 8 条翻转，4 升 4 降：
+
+| 用例                  |          变化 | 失败原因                 |
+| --------------------- | ------------: | ------------------------ |
+| nav_auto_01           |   10/10 → 3/5 | 缺 `position` 参数       |
+| db_auto_02            |     5/5 → 3/5 | 缺 `searchTerm` 参数     |
+| task_auto_complex_01  | 15/15 → 13/15 | `list_tasks` 出现位置错  |
+| blast_auto_complex_03 | 20/20 → 19/20 | `sequence_type` 枚举越界 |
+| annot_auto_08         |     0/5 → 5/5 | 修复                     |
+| db_auto_01            |     3/5 → 5/5 | 修复                     |
+| nav_auto_complex_02   | 18/20 → 20/20 | 满分                     |
+| blast_auto_complex_04 | 12/15 → 15/15 | 满分                     |
+
+结论：thinking 开关不改变工具调用准确率（净 0），但生成 token 从约 1.08 万增至 5.44 万（约 5 倍）；平均延迟 10772ms → 9967ms。reasoning 可保留，且对话中思考内容照常进入 thinking 面板。
 
 ## 生产结论与下一轮方案
 
 1. **发布 `qwen3.5:4b-codexomics-tools-v2` 为推荐候选。** 154/172 (89.53%) 通过全部发布门禁，且超过基座与 DeepSeek V4 Flash 对照；应用侧默认模型切换按产品流程单独执行。
-2. **多步链路是下一轮重点。** 自动复杂 15/29 已比基座（12/29）提升，但 14 个失败几乎全部是多步中途停止或近义工具替换。优先扩样 dependent workflow（DeepSeek 回放中多步 0/14 也指向同一短板），并为容易混淆的工具对（blast_create_database/blast_create_db_from_genome、blast_search/blast_search_online、search_uniprot_database/advanced_uniprot_search）增加判别性提示与负例。
+2. **多步链路是下一轮重点。** 自动复杂 15/29 已比基座（12/29）提升，但 14 个失败几乎全部是多步序列错位、近义工具替换或跨轮参数引用丢失。优先把 SFT 数据从“单轮工具调用”升级为“工具结果 → 下一步调用/最终总结”的多轮轨迹（现有 166 条强模型通过 replay 已带 fixture outputs，可直接构造），并把 `{tool_call_id.param}` 参数引用格式写进训练样本；同时为容易混淆的工具对（blast_create_database/blast_create_db_from_genome、virtual_digest/simulate_gel_electrophoresis、create_annotation/batch_create_annotations、search_uniprot_database/advanced_uniprot_search）增加判别性提示与负例。
 3. **模型规模。** 4B 单步已达 97.2%；若要把复杂链路推到 75%+，7B/14B 或带思考的模型更合适，但仍需先在夹具 dev 上验证再下载。
 4. **DPO/偏好数据。** 运行语义负例回放后，将 `candidate-preferences.jsonl`（623 条）中通过负例验证的行提升为 `preferences.jsonl`，再做第二轮偏好优化。
 5. **评测纪律。** 训练期只使用私有夹具 dev/holdout；172 条最终测试仅作一次验收，不再承担模型选择职责。
@@ -257,6 +303,8 @@ lora_parameters:
 - 数据集回放结论：`metrics/deepseek-v4-flash-dataset-v3.jsonl` 与 `metrics/deepseek-v4-flash-dataset-v3.jsonl.summary.json`。
 - 基线：`metrics/baseline.json`、`metrics/baseline-rescored-v2.json`。
 - 新候选基准：`metrics/tuned-v2.json`（154/172）；旧 iter 250：`metrics/tuned-rescored-v2.json`。
+- thinking 开启复测：`metrics/qwen3.5_4b-codexomics-tools-v2-thinking.json`（154/172，逐条对比见“多轮循环终止与 thinking 模式评测”）。
+- 复测命令：`node scripts/ollama-tool-benchmark.js --model qwen3.5:4b-codexomics-tools-v2 --suite all --tag thinking`。
 - Adapter：`selected-adapter/`（iter 50）；旧 Adapter 备份：`adapters-legacy-rejected/`。
 - 部署配方：`ollama/Modelfile`；规范权重：`fused-hf/`。
 
