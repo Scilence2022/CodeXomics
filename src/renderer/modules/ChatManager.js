@@ -5297,11 +5297,19 @@ class ChatManager {
         if (detectedToolCount === 0) {
           // Bounded empty-response guard. getModelTurnRecoveryDecision retries
           // empty rounds through its protocol-repair budget, but a model that
-          // streams reasoning without any visible answer (or returns nothing
-          // at all) must not be given an unbounded share of the round budget.
-          // Two consecutive empty rounds end the turn with a deterministic
-          // message instead of being misread as a finished conversational reply.
-          if (responseAnalysis.isEmpty || responseText.trim() === '') {
+          // ends its turn cleanly without any visible answer (for example a
+          // reasoning model that streams thinking but never produces prose)
+          // must not be given an unbounded share of the round budget. Two
+          // consecutive cleanly-stopped empty rounds end the turn with a
+          // deterministic message instead of being misread as a finished
+          // conversational reply. Truncated rounds (stop_reason length) are
+          // intentionally excluded: while a thinking model is mid-reasoning
+          // the visible answer is empty by design, and truncation is repaired
+          // by the protocol-recovery path below.
+          if (
+            (responseAnalysis.isEmpty || responseText.trim() === '') &&
+            this.isCleanCompletionStop(responseAnalysis)
+          ) {
             consecutiveEmptyResponseRounds += 1;
             if (consecutiveEmptyResponseRounds >= 2) {
               console.log('=== REPEATED EMPTY MODEL RESPONSES ===');
@@ -5345,22 +5353,6 @@ class ChatManager {
             taskCompleted = true;
             finalResponse = recoveryDecision.finalResponse;
             toolExecutionState.terminationReason = recoveryDecision.reason;
-            break;
-          }
-
-          // Explicit end-of-turn marker (trained protocol for local small
-          // models, e.g. <end_of_turn>). When present it is a deterministic,
-          // detectable completion signal that beats prose heuristics. The
-          // marker is stripped from the visible answer.
-          const endTurnMarker = this.extractEndTurnMarker(responseText);
-          if (endTurnMarker) {
-            console.log('=== EXPLICIT END-OF-TURN MARKER DETECTED ===');
-            console.log('Marker:', endTurnMarker);
-            console.log('===========================================');
-
-            taskCompleted = true;
-            finalResponse = this.stripEndTurnMarker(responseText) || 'I have completed the request.';
-            toolExecutionState.terminationReason = 'explicit end-of-turn marker';
             break;
           }
         }
@@ -7984,27 +7976,6 @@ class ChatManager {
       'finish',
       'finished',
     ]).has(stopReason);
-  }
-
-  /**
-   * Return the explicit end-of-turn marker when the model emitted one.
-   *
-   * This is the deterministic, detectable completion signal used to train
-   * local small models (SWE-agent style). Markers are checked only after the
-   * provider stop reason and protocol recovery have already passed, so they
-   * can only complete a turn that was already ending cleanly.
-   */
-  extractEndTurnMarker(responseText) {
-    const match = String(responseText || '').match(/<\|?end_of_turn\|?>|\[end_of_turn\]/i);
-    return match ? match[0] : null;
-  }
-
-  /** Remove the explicit end-of-turn marker from the visible answer. */
-  stripEndTurnMarker(responseText) {
-    return String(responseText || '')
-      .replace(/<\|?end_of_turn\|?>|\[end_of_turn\]/gi, '')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
   }
 
   /** Deterministic message for a turn ended by repeated empty model responses. */

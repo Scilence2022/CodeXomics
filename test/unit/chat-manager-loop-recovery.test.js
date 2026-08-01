@@ -1097,18 +1097,6 @@ describe('ChatManager requirements match the tools that carry them out', () => {
       }
     });
 
-    it('detects and strips explicit end-of-turn markers', () => {
-      expect(manager.extractEndTurnMarker('Done.<end_of_turn>')).toBe('<end_of_turn>');
-      expect(manager.extractEndTurnMarker('Done.<|end_of_turn|>')).toBe('<|end_of_turn|>');
-      expect(manager.extractEndTurnMarker('Done.[end_of_turn]')).toBe('[end_of_turn]');
-      expect(manager.extractEndTurnMarker('No marker here')).toBeNull();
-
-      expect(manager.stripEndTurnMarker('  Done. <end_of_turn>  ')).toBe('Done.');
-      expect(manager.stripEndTurnMarker('Done.<|end_of_turn|>')).toBe('Done.');
-      expect(manager.stripEndTurnMarker('Done.[end_of_turn]')).toBe('Done.');
-      expect(manager.stripEndTurnMarker('<end_of_turn>')).toBe('');
-    });
-
     it('builds a deterministic empty-response message naming the rounds', () => {
       const message = manager.buildEmptyResponseMessage(4, 10);
 
