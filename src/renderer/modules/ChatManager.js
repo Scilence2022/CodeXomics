@@ -5480,6 +5480,7 @@ class ChatManager {
                 this.lastExecutionData.functionCalls.push({
                   tool_name: tool.tool_name,
                   parameters: tool.parameters,
+                  id: tool.tool_call_id ?? tool.id ?? null,
                   round: currentRound,
                   timestamp: new Date().toISOString(),
                 });
@@ -8272,6 +8273,7 @@ class ChatManager {
       const queuedTool = {
         tool_name: tool.tool_name,
         parameters: this.cloneToolParameters(tool.parameters),
+        tool_call_id: tool.id ?? tool.tool_call_id ?? tool.call_id ?? null,
       };
       if (executionRecord) {
         queuedTool.executionId = executionRecord.id;
@@ -8425,6 +8427,7 @@ class ChatManager {
         const toolResult = {
           tool: tool.tool_name,
           tool_name: tool.tool_name,
+          tool_call_id: tool.tool_call_id ?? tool.id ?? null,
           parameters: recordedParameters,
           success: !explicitFailure,
           result: explicitFailure ? null : result,
@@ -8439,6 +8442,7 @@ class ChatManager {
         toolResults.push({
           tool: tool.tool_name,
           tool_name: tool.tool_name,
+          tool_call_id: tool.tool_call_id ?? tool.id ?? null,
           parameters: recordedParameters,
           success: false,
           result: null,
