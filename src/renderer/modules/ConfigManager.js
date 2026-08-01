@@ -172,7 +172,10 @@ class ConfigManager {
             baseUrl: 'http://localhost:11434/v1',
             streamingSupport: true,
             enabled: false,
-            maxTokens: 4096,
+            // Local reasoning models spend a large share of the generation
+            // budget on <think> blocks before the visible answer or tool call;
+            // 4096 is frequently truncated mid-reasoning.
+            maxTokens: 8192,
             temperature: 0.7,
           },
           custom: {

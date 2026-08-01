@@ -1074,4 +1074,34 @@ describe('ChatManager requirements match the tools that carry them out', () => {
 
     expect(requirements.map(requirement => requirement.capability)).toContain('gene_selection');
   });
+
+  describe('turn termination signals', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    it('treats a missing stop reason as a clean completion', () => {
+      expect(manager.isCleanCompletionStop({})).toBe(true);
+      expect(manager.isCleanCompletionStop({ stopReason: null })).toBe(true);
+      expect(manager.isCleanCompletionStop({ stopReason: '' })).toBe(true);
+    });
+
+    it('treats provider clean stops as completions', () => {
+      for (const stopReason of ['stop', 'end_turn', 'end-turn', 'stop_sequence', 'eos', 'complete']) {
+        expect(manager.isCleanCompletionStop({ stopReason })).toBe(true);
+      }
+    });
+
+    it('rejects abnormal stop reasons as completions', () => {
+      for (const stopReason of ['length', 'max_tokens', 'tool_calls', 'content_filter', 'unknown']) {
+        expect(manager.isCleanCompletionStop({ stopReason })).toBe(false);
+      }
+    });
+
+    it('builds a deterministic empty-response message naming the rounds', () => {
+      const message = manager.buildEmptyResponseMessage(4, 10);
+
+      expect(message).toContain('empty response');
+      expect(message).toContain('rounds 3–4 of 10');
+    });
+  });
 });

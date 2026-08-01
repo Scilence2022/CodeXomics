@@ -956,17 +956,23 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(results).toEqual([
       {
         tool: 'search_uniprot_database',
+        tool_name: 'search_uniprot_database',
+        tool_call_id: null,
         parameters: { search_query: 'DNA polymerase I' },
         success: true,
         result: { ok: true, toolName: 'search_uniprot_database' },
         error: null,
+        executionTime: expect.any(Number),
       },
       {
         tool: 'search_uniprot_database',
+        tool_name: 'search_uniprot_database',
+        tool_call_id: null,
         parameters: { search_query: 'fail' },
         success: false,
         result: null,
         error: 'simulated failure',
+        executionTime: expect.any(Number),
       },
     ]);
   });
@@ -982,10 +988,13 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(results).toEqual([
       {
         tool: 'select_gene',
+        tool_name: 'select_gene',
+        tool_call_id: null,
         parameters: { geneName: 'lysC' },
         success: false,
         result: null,
         error: 'Gene lysC was not found',
+        executionTime: expect.any(Number),
       },
     ]);
     expect(referenceContext).toHaveLength(0);
@@ -1066,10 +1075,13 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(results).toEqual([
       {
         tool: 'calculate_entropy',
+        tool_name: 'calculate_entropy',
+        tool_call_id: null,
         parameters: { sequence: '{get_sequence.sequence}' },
         success: false,
         result: null,
         error: 'Unresolved tool result reference: {get_sequence.sequence}',
+        executionTime: 0,
       },
     ]);
   });

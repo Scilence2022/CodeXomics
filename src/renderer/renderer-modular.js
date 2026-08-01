@@ -1017,6 +1017,7 @@ class GenomeBrowser {
       'modules/BenchmarkStatistics.js',
       'modules/BenchmarkReportGenerator.js',
       'modules/benchmark-suites/BenchmarkEvaluatorBase.js',
+      'modules/benchmark-suites/StrictAutomaticEvaluator.js',
       'modules/benchmark-suites/AutomaticComplexSuite.js',
       'modules/benchmark-suites/AutomaticSimpleSuite.js',
       'modules/benchmark-suites/ManualComplexSuite.js',

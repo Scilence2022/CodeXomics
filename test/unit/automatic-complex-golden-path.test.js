@@ -58,7 +58,14 @@ const GOLDEN_RUNS = {
   ],
   analysis_auto_01: [
     ['calc_region_gc', {}],
-    ['export_bed_format', { filePath: DIR + 'exported_files/region_features.bed' }],
+    [
+      'export_bed_format',
+      {
+        filename: DIR + 'exported_files/region_features.bed',
+        export_range: 'current_view',
+        feature_types: ['all'],
+      },
+    ],
   ],
   analysis_auto_02: [
     ['get_genome_info', {}],
@@ -67,7 +74,7 @@ const GOLDEN_RUNS = {
   ],
   analysis_auto_complex_03: [
     ['get_coding_sequence', { geneName: 'lacZ' }],
-    ['translate_dna', { dna: 'ATGACCATG', readingFrame: 1 }],
+    ['translate_dna', { dna: 'ATGACCATG', reading_frame: 1 }],
     ['calculate_molecular_weight', { sequence: 'MTM', type: 'protein' }],
   ],
   analysis_auto_complex_05: [
@@ -555,7 +562,19 @@ describe('AutomaticComplexSuite expectations match the tool registry', () => {
   const expectedShapes = params => {
     const nested = Array.isArray(params?.benchmarkAnyOf) ? params.benchmarkAnyOf : [];
     const own = Object.fromEntries(Object.entries(params || {}).filter(([key]) => key !== 'benchmarkAnyOf'));
-    return [own, ...nested];
+    return nested.length > 0 ? nested.map(shape => ({ ...own, ...shape })) : [own];
+  };
+
+  const registeredAlternatives = alternatives =>
+    alternatives.map(name => lookupTool(name, toolsByName)).filter(Boolean);
+
+  const unknownKeysForTool = (tool, shape, aliases) => {
+    const properties = tool?.parameters?.properties || {};
+    const propertyKeys = new Set(Object.keys(properties).map(normalizeKey));
+    return Object.keys(shape).filter(key => {
+      const normalized = normalizeKey(key);
+      return !propertyKeys.has(normalized) && !aliases.has(normalized);
+    });
   };
 
   it('only expects tools that exist in the registry', () => {
@@ -587,17 +606,15 @@ describe('AutomaticComplexSuite expectations match the tool registry', () => {
     const unknown = [];
 
     forEachStep(suite, (test, alternatives, params) => {
-      const tool = alternatives.map(name => lookupTool(name, toolsByName)).find(Boolean);
-      const properties = tool?.parameters?.properties;
-      if (!properties) return;
-
-      const propertyKeys = new Set(Object.keys(properties).map(normalizeKey));
+      const tools = registeredAlternatives(alternatives);
+      if (tools.length === 0) return;
       for (const shape of expectedShapes(params)) {
-        for (const key of Object.keys(shape)) {
-          const normalized = normalizeKey(key);
-          if (!propertyKeys.has(normalized) && !aliases.has(normalized)) {
-            unknown.push(`${test.id}: ${tool.name}.${key}`);
-          }
+        const candidates = tools.map(tool => ({ tool, keys: unknownKeysForTool(tool, shape, aliases) }));
+        if (candidates.some(candidate => candidate.keys.length === 0)) continue;
+
+        const closest = candidates.sort((left, right) => left.keys.length - right.keys.length)[0];
+        for (const key of closest.keys) {
+          unknown.push(`${test.id}: ${closest.tool.name}.${key}`);
         }
       }
     });

@@ -1,0 +1,248 @@
+{
+  "schema_version": "2.0",
+  "generator_version": "2.0.0",
+  "generated_at": "2026-08-01T11:22:52.654Z",
+  "benchmark_scope": {
+    "automatic_simple": 143,
+    "automatic_complex": 29,
+    "manual_tests_included": 0,
+    "use": "leakage_fingerprints_only",
+    "fingerprint_hash": "a0de19c4b02dc0128b65e96cf5113dcb093291281cfdcc5ee3fd30472f929476"
+  },
+  "registry_hash": "16b2912e67d79645722c1bbe0b341e2b0fded49ca89494c8fed22b11d46edb81",
+  "candidate_limit": 24,
+  "candidate_curriculum": {
+    "decision": [8, 12],
+    "single_call": [8, 8, 12, 12],
+    "multi_step": [16, 16, 24, 24]
+  },
+  "candidate_count_histogram": {
+    "8": 281,
+    "12": 278,
+    "16": 70,
+    "24": 49
+  },
+  "input_sources": 686,
+  "accepted_examples": 678,
+  "rejected_examples": 8,
+  "rejection_counts": {
+    "token_similarity": 5,
+    "exact_prompt_hash": 3
+  },
+  "splits": {
+    "train": {
+      "count": 476,
+      "sha256": "26d7e7e4fa7a6436a150df996504d951e0a66e6eb745084c3cf5ac0277bdcc3b"
+    },
+    "dev": {
+      "count": 159,
+      "sha256": "88a05deaf67bf7baf56be96a3811151aebaef247e2641b960efc0007c7693601"
+    },
+    "holdout": {
+      "count": 43,
+      "sha256": "bb7d4d6dfd54400be5cdf53348c34150784ccad9643714a4bfb7b07e2dce1ab5"
+    }
+  },
+  "preferences": {
+    "count": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "use": "promoted_training_only"
+  },
+  "candidate_preferences": {
+    "count": 623,
+    "sha256": "6710c3139ec736a7c4edbea7b987d8b734eb7b9452dd496bc5ab30725cf3736d",
+    "use": "replay_queue_not_training",
+    "schema_valid_semantic_negative_rate": 1
+  },
+  "validation_tier_counts": {
+    "schema_valid": 484,
+    "fixture_executable": 194
+  },
+  "deterministic_fixture_corpus": {
+    "runner": "codexomics-pinned-readonly-fixture-v1",
+    "generated_records": 189,
+    "fixture_executable_stateless_single_calls": 180,
+    "dependent_workflows": 9,
+    "covered_tool_count": 18,
+    "covered_tools": [
+      "calculate_entropy",
+      "calculate_molecular_weight",
+      "calculate_primer_properties",
+      "compute_gc",
+      "find_gene_by_name",
+      "find_primer_binding_sites",
+      "find_restriction_sites",
+      "get_annotation",
+      "get_gene_details",
+      "get_nearby_features",
+      "get_sequence",
+      "get_uniprot_entry",
+      "list_annotations",
+      "list_restriction_enzymes",
+      "reverse_complement",
+      "search_uniprot_database",
+      "translate_dna",
+      "virtual_digest"
+    ],
+    "target_core_tools": [
+      "get_sequence",
+      "find_gene_by_name",
+      "list_annotations",
+      "get_annotation",
+      "get_gene_details",
+      "get_nearby_features",
+      "reverse_complement",
+      "translate_dna",
+      "compute_gc",
+      "calculate_entropy",
+      "calculate_molecular_weight",
+      "calculate_primer_properties",
+      "find_primer_binding_sites",
+      "find_restriction_sites",
+      "virtual_digest",
+      "list_restriction_enzymes",
+      "search_uniprot_database",
+      "get_uniprot_entry"
+    ],
+    "splits": {
+      "train": {
+        "records": 85,
+        "single_call": 82,
+        "dependent_workflows": 3,
+        "tools": [
+          "calculate_entropy",
+          "calculate_molecular_weight",
+          "calculate_primer_properties",
+          "find_gene_by_name",
+          "find_primer_binding_sites",
+          "get_annotation",
+          "get_nearby_features",
+          "get_sequence",
+          "get_uniprot_entry",
+          "list_annotations",
+          "list_restriction_enzymes",
+          "reverse_complement",
+          "search_uniprot_database",
+          "translate_dna",
+          "virtual_digest"
+        ]
+      },
+      "dev": {
+        "records": 76,
+        "single_call": 73,
+        "dependent_workflows": 3,
+        "tools": [
+          "calculate_entropy",
+          "calculate_molecular_weight",
+          "calculate_primer_properties",
+          "compute_gc",
+          "find_gene_by_name",
+          "find_primer_binding_sites",
+          "find_restriction_sites",
+          "get_annotation",
+          "get_gene_details",
+          "get_nearby_features",
+          "get_sequence",
+          "get_uniprot_entry",
+          "list_annotations",
+          "reverse_complement",
+          "search_uniprot_database",
+          "translate_dna",
+          "virtual_digest"
+        ]
+      },
+      "holdout": {
+        "records": 28,
+        "single_call": 25,
+        "dependent_workflows": 3,
+        "tools": [
+          "calculate_entropy",
+          "calculate_molecular_weight",
+          "calculate_primer_properties",
+          "compute_gc",
+          "find_gene_by_name",
+          "find_primer_binding_sites",
+          "find_restriction_sites",
+          "get_annotation",
+          "get_gene_details",
+          "get_nearby_features",
+          "get_sequence",
+          "get_uniprot_entry",
+          "list_annotations",
+          "reverse_complement",
+          "search_uniprot_database",
+          "translate_dna",
+          "virtual_digest"
+        ]
+      }
+    },
+    "declared_outputs_recomputed": true,
+    "stateful_tools_verified": 0
+  },
+  "statefulness": {
+    "stateful": 348,
+    "stateless": 330,
+    "quarantined": 348
+  },
+  "strong_model_replays": {
+    "supplied": true,
+    "passed": 166,
+    "failed": 40,
+    "blocked": 0,
+    "not_run": 472
+  },
+  "tool_catalog_sha256": "6cdba8dc9fa1d5d635be69c2d9f739f85383598c987e851670c88966a8d059c9",
+  "training_eligible_by_split": {
+    "train": 82,
+    "dev": 63,
+    "holdout": 21
+  },
+  "release_gates": {
+    "schema_valid_rate": 1,
+    "fixture_executable_rate": 0.2861356932153392,
+    "state_verified_rate": 0,
+    "strong_model_replay_pass_rate": 0.2448377581120944,
+    "leakage_pass_rate": 1,
+    "atomic_component_split_overlap": 0,
+    "training_promotion_ready": true
+  },
+  "replay_contract": {
+    "comparison_mode": "semantic_canonical_equivalence",
+    "statuses": ["not_run", "passed", "failed", "blocked"],
+    "reason_codes": [
+      "not_run",
+      "passed",
+      "schema_mismatch",
+      "tool_selection_mismatch",
+      "argument_semantic_mismatch",
+      "fixture_missing",
+      "fixture_resolution_failed",
+      "fixture_execution_failed",
+      "terminal_predicate_failed",
+      "provider_error",
+      "rate_limited",
+      "manual_review_required"
+    ],
+    "required_fields": [
+      "example_id",
+      "registry_hash",
+      "canonical_oracle_hash",
+      "canonical_calls",
+      "observed_calls",
+      "fixture_outputs",
+      "terminal_predicates",
+      "provenance",
+      "status",
+      "reason_code",
+      "semantic_verdict"
+    ],
+    "strong_model_required_for_training_promotion": true
+  },
+  "promotion_contract": {
+    "tool_call_requires_fixture_execution": true,
+    "tool_call_requires_strong_model_semantic_replay": true,
+    "stateful_requires_state_verification": true,
+    "no_call_requires_fixture_execution": false,
+    "schema_only_rows_are_candidates_not_training": true
+  }
+}

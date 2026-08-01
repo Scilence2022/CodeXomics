@@ -122,6 +122,7 @@ class ChatManager {
     // Initialize Dynamic Tools Registry System
     this.dynamicTools = null;
     this.dynamicToolsEnabled = true;
+    this.currentNativeTools = [];
     this.builtInTools = null;
     this.builtInToolsMap = new Map();
     this.lastSystemPromptMetadata = null;
@@ -1868,11 +1869,13 @@ class ChatManager {
   }
 
   getDynamicToolsSelectionLimit() {
-    const shouldLimit = this.configManager.get('chatboxSettings.limitDynamicToolsSelection', false);
+    if (this.benchmarkAutomationActive === true) return 24;
+
+    const shouldLimit = this.configManager.get('chatboxSettings.limitDynamicToolsSelection', true);
     if (!shouldLimit) return Infinity;
 
-    const configuredLimit = Number(this.configManager.get('chatboxSettings.dynamicToolsSelectionLimit', 35));
-    if (!Number.isFinite(configuredLimit) || configuredLimit < 1) return 35;
+    const configuredLimit = Number(this.configManager.get('chatboxSettings.dynamicToolsSelectionLimit', 24));
+    if (!Number.isFinite(configuredLimit) || configuredLimit < 1) return 24;
 
     return Math.floor(configuredLimit);
   }
@@ -5073,6 +5076,7 @@ class ChatManager {
       const toolReferenceResults = [];
       let lastSuccessfulResults = [];
       let lastSuccessfulTools = [];
+      let consecutiveEmptyResponseRounds = 0;
 
       // Iterative function calling loop
       while (currentRound < maxRounds && !taskCompleted) {
@@ -5117,6 +5121,14 @@ class ChatManager {
             modelType: this.chatBoxSettingsManager?.getSetting('chatboxModelType', 'auto'),
             providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
             modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
+            tools: this.currentNativeTools,
+            nativeFunctionCalling: this.configManager.get('chatboxSettings.enableNativeFunctionCalling', true),
+            constrainedToolOutput: this.configManager.get('chatboxSettings.enableConstrainedToolOutput', true),
+            toolChoice: 'auto',
+            parallelToolCalls: true,
+            temperatureOverride: this.benchmarkAutomationActive === true ? 0 : undefined,
+            disableFallback: this.benchmarkAutomationActive === true,
+            disableStreaming: this.benchmarkAutomationActive === true,
           });
         } finally {
           // The completed message is rendered by the normal path below, so the
@@ -5167,6 +5179,11 @@ class ChatManager {
         // structured calls while retaining the text-JSON compatibility protocol.
         const detectedTools = responseAnalysis.toolCalls;
         const detectedToolCount = detectedTools.length;
+        if (detectedToolCount > 0) {
+          // A round that produced a tool call is by definition not empty; reset
+          // the guard so only consecutive empty prose rounds count toward it.
+          consecutiveEmptyResponseRounds = 0;
+        }
 
         if (detectedToolCount > 0 && this.shouldRecoverBeforeToolExecution(responseAnalysis)) {
           const recoveryDecision = this.getModelTurnRecoveryDecision(
@@ -5278,6 +5295,36 @@ class ChatManager {
         // Previous assistant messages may contain already-executed calls and must not seed a new queue.
 
         if (detectedToolCount === 0) {
+          // Bounded empty-response guard. getModelTurnRecoveryDecision retries
+          // empty rounds through its protocol-repair budget, but a model that
+          // ends its turn cleanly without any visible answer (for example a
+          // reasoning model that streams thinking but never produces prose)
+          // must not be given an unbounded share of the round budget. Two
+          // consecutive cleanly-stopped empty rounds end the turn with a
+          // deterministic message instead of being misread as a finished
+          // conversational reply. Truncated rounds (stop_reason length) are
+          // intentionally excluded: while a thinking model is mid-reasoning
+          // the visible answer is empty by design, and truncation is repaired
+          // by the protocol-recovery path below.
+          if (
+            (responseAnalysis.isEmpty || responseText.trim() === '') &&
+            this.isCleanCompletionStop(responseAnalysis)
+          ) {
+            consecutiveEmptyResponseRounds += 1;
+            if (consecutiveEmptyResponseRounds >= 2) {
+              console.log('=== REPEATED EMPTY MODEL RESPONSES ===');
+              console.log('Terminating after', consecutiveEmptyResponseRounds, 'consecutive empty rounds');
+              console.log('=======================================');
+
+              taskCompleted = true;
+              finalResponse = this.buildEmptyResponseMessage(currentRound, maxRounds);
+              toolExecutionState.terminationReason = 'repeated empty model responses';
+              break;
+            }
+          } else {
+            consecutiveEmptyResponseRounds = 0;
+          }
+
           const recoveryDecision = this.getModelTurnRecoveryDecision(
             responseAnalysis,
             toolExecutionState,
@@ -5312,7 +5359,16 @@ class ChatManager {
 
         // Check for task completion signals if early completion is enabled
         // BUT ONLY if there are NO tool calls to execute
-        if (enableEarlyCompletion && toolsToExecute.length === 0) {
+        // The prose heuristic is a fallback, not the primary signal: it is only
+        // honored when the provider stop reason is clean (or absent) and the
+        // response does not itself announce a follow-up action ("I will ...").
+        if (
+          enableEarlyCompletion &&
+          toolsToExecute.length === 0 &&
+          this.isCleanCompletionStop(responseAnalysis) &&
+          responseText.trim() !== '' &&
+          !this.isInterimActionResponse(responseText)
+        ) {
           const completionResult = this.checkTaskCompletion(responseText);
           if (completionResult.isCompleted) {
             console.log('=== TASK COMPLETION DETECTED (NO TOOL CALLS) ===');
@@ -5469,6 +5525,7 @@ class ChatManager {
                 this.lastExecutionData.functionCalls.push({
                   tool_name: tool.tool_name,
                   parameters: tool.parameters,
+                  id: tool.tool_call_id ?? tool.id ?? null,
                   round: currentRound,
                   timestamp: new Date().toISOString(),
                 });
@@ -5677,8 +5734,26 @@ class ChatManager {
           console.log('===============================');
 
           // No tool call detected - this is our final response
-          finalResponse = responseText;
-          toolExecutionState.terminationReason = 'final conversational response';
+          // The primary completion signal is the provider stop reason: a clean
+          // stop (or an absent stop reason from adapters that collapse clean
+          // completions into plain strings) means the model ended its turn on
+          // its own. A provider-reported abnormal stop must never be presented
+          // as a completed answer, even if recovery above did not catch it.
+          if (!this.isCleanCompletionStop(responseAnalysis)) {
+            const abnormalStop = String(responseAnalysis?.stopReason || 'unknown');
+            console.warn('=== ABNORMAL PROVIDER STOP NOT RECOVERED ===');
+            console.warn('Stop reason:', abnormalStop);
+            console.warn('===========================================');
+
+            taskCompleted = true;
+            finalResponse =
+              `I stopped responding abnormally (${abnormalStop}) before the request was complete. ` +
+              `No further action was taken; please rephrase or retry the request.`;
+            toolExecutionState.terminationReason = `abnormal provider stop (${abnormalStop})`;
+          } else {
+            finalResponse = responseText;
+            toolExecutionState.terminationReason = 'final conversational response';
+          }
           break;
         }
       }
@@ -6120,6 +6195,7 @@ class ChatManager {
 
   async buildSystemMessage() {
     this.lastSystemPromptMetadata = null;
+    this.currentNativeTools = [];
 
     // [MCP Integration] Check for specific MCP server prompts first
     if (this.mcpServerManager && this.mcpServerManager.serverPrompts) {
@@ -6237,6 +6313,7 @@ class ChatManager {
         const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context, {
           selectionLimit: this.getDynamicToolsSelectionLimit(),
         });
+        this.currentNativeTools = Array.isArray(promptData.nativeTools) ? promptData.nativeTools : [];
         console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
 
         // Apply section configuration filtering to dynamic prompt
@@ -6301,7 +6378,11 @@ class ChatManager {
   }
 
   async createSystemPromptMetadata({ mode, prompt, promptData, context, userQuery }) {
-    const tools = Array.isArray(promptData?.toolsUsed) ? promptData.toolsUsed : [];
+    const tools = Array.isArray(promptData?.toolDefinitions)
+      ? promptData.toolDefinitions
+      : Array.isArray(promptData?.toolsUsed)
+        ? promptData.toolsUsed
+        : [];
     const selectedTools = tools.map(tool => ({
       name: tool.name || String(tool),
       category: tool.category || 'uncategorized',
@@ -6982,9 +7063,21 @@ class ChatManager {
         const mismatchReason = this.getToolCallRequestMismatchReason(toolCall, originalMessage);
         if (mismatchReason) {
           invalidToolCalls.push({ ...toolCall, reason: mismatchReason });
-        } else {
-          requestConsistentCalls.push(toolCall);
+          continue;
         }
+        if (this.dynamicTools && typeof this.dynamicTools.validateToolCall === 'function') {
+          const normalizedParameters = this.normalizeToolParams(toolCall.tool_name, toolCall.parameters || {});
+          const validation = this.dynamicTools.validateToolCall(toolCall.tool_name, normalizedParameters);
+          if (!validation.valid) {
+            invalidToolCalls.push({
+              ...toolCall,
+              reason: `Tool arguments failed schema validation: ${validation.errors.join('; ')}`,
+            });
+            continue;
+          }
+          toolCall.parameters = normalizedParameters;
+        }
+        requestConsistentCalls.push(toolCall);
       }
       toolCalls = requestConsistentCalls;
       const text = String(analyzed.displayText ?? analyzed.text ?? analyzed.content ?? '');
@@ -7855,6 +7948,45 @@ class ChatManager {
     );
   }
 
+  /**
+   * Whether the provider stop reason means the model ended its turn cleanly.
+   *
+   * A missing stop reason counts as clean: adapters that collapse clean
+   * OpenAI-compatible completions into plain strings drop the finish reason
+   * before ChatManager sees it, so null must keep the legacy behavior instead
+   * of being treated as abnormal. Known abnormal reasons (length, refusal,
+   * tool protocol errors, ...) are handled earlier by
+   * getModelTurnRecoveryDecision; this helper backs the loop's final guard.
+   */
+  isCleanCompletionStop(responseAnalysis) {
+    const stopReason = String(responseAnalysis?.stopReason || '')
+      .trim()
+      .toLowerCase();
+    if (!stopReason) return true;
+    return new Set([
+      'stop',
+      'end_turn',
+      'end-turn',
+      'stop_sequence',
+      'stopsequence',
+      'eos',
+      'complete',
+      'completed',
+      'done',
+      'finish',
+      'finished',
+    ]).has(stopReason);
+  }
+
+  /** Deterministic message for a turn ended by repeated empty model responses. */
+  buildEmptyResponseMessage(currentRound, maxRounds) {
+    return (
+      `The model returned an empty response for two consecutive rounds ` +
+      `(rounds ${Math.max(1, currentRound - 1)}–${currentRound} of ${maxRounds}), so the request could not be ` +
+      `completed and no action was taken. Please rephrase the request or switch to a different model.`
+    );
+  }
+
   getModelTurnRecoveryDecision(responseAnalysis, toolExecutionState, currentRound, maxRounds) {
     const stopReason = String(responseAnalysis?.stopReason || '').toLowerCase();
     const responseText = String(responseAnalysis?.text || '');
@@ -8243,6 +8375,7 @@ class ChatManager {
       const queuedTool = {
         tool_name: tool.tool_name,
         parameters: this.cloneToolParameters(tool.parameters),
+        tool_call_id: tool.id ?? tool.tool_call_id ?? tool.call_id ?? null,
       };
       if (executionRecord) {
         queuedTool.executionId = executionRecord.id;
@@ -8389,14 +8522,19 @@ class ChatManager {
 
       try {
         executionParameters = this.resolveToolParameterReferences(recordedParameters, referenceContext);
+        const executionStart = Date.now();
         const result = await this.executeToolByName(tool.tool_name, executionParameters);
         const explicitFailure = result && typeof result === 'object' && result.success === false;
+        const executionTime = Date.now() - executionStart;
         const toolResult = {
           tool: tool.tool_name,
+          tool_name: tool.tool_name,
+          tool_call_id: tool.tool_call_id ?? tool.id ?? null,
           parameters: recordedParameters,
           success: !explicitFailure,
           result: explicitFailure ? null : result,
           error: explicitFailure ? result.error || result.message || 'Tool reported an unsuccessful result' : null,
+          executionTime,
         };
         toolResults.push(toolResult);
         if (toolResult.success) {
@@ -8405,10 +8543,13 @@ class ChatManager {
       } catch (error) {
         toolResults.push({
           tool: tool.tool_name,
+          tool_name: tool.tool_name,
+          tool_call_id: tool.tool_call_id ?? tool.id ?? null,
           parameters: recordedParameters,
           success: false,
           result: null,
           error: error.message,
+          executionTime: 0,
         });
       }
     }

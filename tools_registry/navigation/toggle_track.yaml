@@ -23,61 +23,41 @@ parameters:
   properties:
     track_name:
       type: string
-      description: 'Name of the track to toggle'
+      description: 'Canonical track identifier. Use gc_content for the GC-content track.'
       examples:
         - 'genes'
-        - 'gc'
-        - 'GC Content'
+        - 'gc_content'
         - 'sequence'
         - 'variants'
         - 'reads'
         - 'proteins'
         - 'primers'
       enum:
-        [
-          'genes',
-          'gc',
-          'gc_content',
-          'GC Content',
-          'sequence',
-          'variants',
-          'reads',
-          'proteins',
-          'primers',
-          'actions',
-          'wigTracks',
-          'blast',
-        ]
-    trackName:
-      type: string
-      description: 'Name of the track to toggle (camelCase alternative to track_name)'
-      examples:
-        - 'genes'
-        - 'gc_content'
-        - 'GC Content'
-        - 'Variants'
+        ['genes', 'gc_content', 'sequence', 'variants', 'reads', 'proteins', 'primers', 'actions', 'wigTracks', 'blast']
     visible:
       type: boolean
-      description: 'Whether to show or hide the track. true shows the track; false hides it.'
+      description: 'Canonical show/hide control. true shows the track; false hides it.'
     action:
       type: string
-      description: 'Action to perform on the track. Synonyms such as on/off, enable/disable, and display/hidden are normalized.'
-      enum: ['show', 'hide', 'toggle', 'on', 'off', 'enable', 'disable', 'display', 'visible', 'hidden']
-      default: 'toggle'
+      description: 'Use only when the user explicitly asks to invert the current state.'
+      enum: ['toggle']
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
   required:
     - track_name
+  anyOf:
+    - required: [track_name, visible]
+    - required: [track_name, action]
 sample_usages:
   - user_query: 'Hide the gene track'
-    tool_call: "toggle_track(track_name='genes', action='hide')"
+    tool_call: "toggle_track(track_name='genes', visible=false)"
     thought: 'User wants to hide the genes track from the browser view'
     expected_result: 'Genes track becomes invisible in the browser'
 
   - user_query: 'Show GC content'
-    tool_call: "toggle_track(track_name='gc', action='show')"
+    tool_call: "toggle_track(track_name='gc_content', visible=true)"
     thought: 'User wants to display the GC content track'
     expected_result: 'GC content track becomes visible in the browser'
 

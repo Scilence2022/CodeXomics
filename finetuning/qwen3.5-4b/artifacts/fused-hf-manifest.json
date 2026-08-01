@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "architecture": "Qwen3_5ForConditionalGeneration",
+  "model_type": "qwen3_5",
+  "tensor_count": 426,
+  "total_size": 8411504128,
+  "shards": 2,
+  "quantization": null,
+  "mtp_num_hidden_layers": 0
+}

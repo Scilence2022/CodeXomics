@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-28T02:57:38.371Z",
-  "registryHash": "46072819febdca08493d8ecdccef880ffbfce25d7345a37c3e05fafd5861e476",
+  "generatedAt": "2026-08-01T08:13:05.009Z",
+  "registryHash": "16b2912e67d79645722c1bbe0b341e2b0fded49ca89494c8fed22b11d46edb81",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -10026,10 +10026,6 @@
             "default": "features.bed",
             "examples": ["/Users/user/output/genes.bed", "selected_features.bed", "/tmp/chromosome_1.bed"]
           },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
-          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.",
@@ -10241,10 +10237,6 @@
             "default": "cds_sequences.fasta",
             "examples": ["/Users/user/output/all_cds.fasta", "selected_cds.fasta", "/tmp/chromosome_cds.fasta"]
           },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
-          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.",
@@ -10411,10 +10403,6 @@
               "current_chromosome.fasta",
               "/tmp/view_sequences.fasta"
             ]
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -10589,10 +10577,6 @@
             "default": "sequences.fasta",
             "examples": ["/Users/user/output/genome_sequences.fasta", "selected_genes.fasta", "/tmp/chromosome_1.fasta"]
           },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
-          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution. The file will be written to the current working directory or the path specified in filename.",
@@ -10735,10 +10719,6 @@
             "description": "Output file path for the exported GenBank file. Supports absolute paths (e.g., \"/Users/user/output/genome.gbk\") and relative paths (e.g., \"genome.gbk\"). Relative paths are resolved against the current working directory.",
             "default": "genome.gbk",
             "examples": ["/Users/user/output/annotated_genome.gbk", "chromosome_1.gbk", "/tmp/selected_region.gbk"]
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -10891,10 +10871,6 @@
               "selected_features.gff3",
               "/tmp/chromosome_1.gff3"
             ]
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -11068,10 +11044,6 @@
               "selected_proteins.fasta",
               "/tmp/chromosome_proteins.fasta"
             ]
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -15094,13 +15066,11 @@
         "properties": {
           "track_name": {
             "type": "string",
-            "description": "Name of the track to toggle",
-            "examples": ["genes", "gc", "GC Content", "sequence", "variants", "reads", "proteins", "primers"],
+            "description": "Canonical track identifier. Use gc_content for the GC-content track.",
+            "examples": ["genes", "gc_content", "sequence", "variants", "reads", "proteins", "primers"],
             "enum": [
               "genes",
-              "gc",
               "gc_content",
-              "GC Content",
               "sequence",
               "variants",
               "reads",
@@ -15111,20 +15081,14 @@
               "blast"
             ]
           },
-          "trackName": {
-            "type": "string",
-            "description": "Name of the track to toggle (camelCase alternative to track_name)",
-            "examples": ["genes", "gc_content", "GC Content", "Variants"]
-          },
           "visible": {
             "type": "boolean",
-            "description": "Whether to show or hide the track. true shows the track; false hides it."
+            "description": "Canonical show/hide control. true shows the track; false hides it."
           },
           "action": {
             "type": "string",
-            "description": "Action to perform on the track. Synonyms such as on/off, enable/disable, and display/hidden are normalized.",
-            "enum": ["show", "hide", "toggle", "on", "off", "enable", "disable", "display", "visible", "hidden"],
-            "default": "toggle"
+            "description": "Use only when the user explicitly asks to invert the current state.",
+            "enum": ["toggle"]
           },
           "clientId": {
             "type": "string",
@@ -15132,18 +15096,26 @@
             "default": "default"
           }
         },
-        "required": ["track_name"]
+        "required": ["track_name"],
+        "anyOf": [
+          {
+            "required": ["track_name", "visible"]
+          },
+          {
+            "required": ["track_name", "action"]
+          }
+        ]
       },
       "sample_usages": [
         {
           "user_query": "Hide the gene track",
-          "tool_call": "toggle_track(track_name='genes', action='hide')",
+          "tool_call": "toggle_track(track_name='genes', visible=false)",
           "thought": "User wants to hide the genes track from the browser view",
           "expected_result": "Genes track becomes invisible in the browser"
         },
         {
           "user_query": "Show GC content",
-          "tool_call": "toggle_track(track_name='gc', action='show')",
+          "tool_call": "toggle_track(track_name='gc_content', visible=true)",
           "thought": "User wants to display the GC content track",
           "expected_result": "GC content track becomes visible in the browser"
         },
@@ -32494,10 +32466,6 @@
             "default": "features.bed",
             "examples": ["/Users/user/output/genes.bed", "selected_features.bed", "/tmp/chromosome_1.bed"]
           },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
-          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.",
@@ -32709,10 +32677,6 @@
             "default": "cds_sequences.fasta",
             "examples": ["/Users/user/output/all_cds.fasta", "selected_cds.fasta", "/tmp/chromosome_cds.fasta"]
           },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
-          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.",
@@ -32879,10 +32843,6 @@
               "current_chromosome.fasta",
               "/tmp/view_sequences.fasta"
             ]
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -33057,10 +33017,6 @@
             "default": "sequences.fasta",
             "examples": ["/Users/user/output/genome_sequences.fasta", "selected_genes.fasta", "/tmp/chromosome_1.fasta"]
           },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
-          },
           "auto_save": {
             "type": "boolean",
             "description": "When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution. The file will be written to the current working directory or the path specified in filename.",
@@ -33203,10 +33159,6 @@
             "description": "Output file path for the exported GenBank file. Supports absolute paths (e.g., \"/Users/user/output/genome.gbk\") and relative paths (e.g., \"genome.gbk\"). Relative paths are resolved against the current working directory.",
             "default": "genome.gbk",
             "examples": ["/Users/user/output/annotated_genome.gbk", "chromosome_1.gbk", "/tmp/selected_region.gbk"]
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -33359,10 +33311,6 @@
               "selected_features.gff3",
               "/tmp/chromosome_1.gff3"
             ]
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -33536,10 +33484,6 @@
               "selected_proteins.fasta",
               "/tmp/chromosome_proteins.fasta"
             ]
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath."
           },
           "auto_save": {
             "type": "boolean",
@@ -37106,13 +37050,11 @@
         "properties": {
           "track_name": {
             "type": "string",
-            "description": "Name of the track to toggle",
-            "examples": ["genes", "gc", "GC Content", "sequence", "variants", "reads", "proteins", "primers"],
+            "description": "Canonical track identifier. Use gc_content for the GC-content track.",
+            "examples": ["genes", "gc_content", "sequence", "variants", "reads", "proteins", "primers"],
             "enum": [
               "genes",
-              "gc",
               "gc_content",
-              "GC Content",
               "sequence",
               "variants",
               "reads",
@@ -37123,20 +37065,14 @@
               "blast"
             ]
           },
-          "trackName": {
-            "type": "string",
-            "description": "Name of the track to toggle (camelCase alternative to track_name)",
-            "examples": ["genes", "gc_content", "GC Content", "Variants"]
-          },
           "visible": {
             "type": "boolean",
-            "description": "Whether to show or hide the track. true shows the track; false hides it."
+            "description": "Canonical show/hide control. true shows the track; false hides it."
           },
           "action": {
             "type": "string",
-            "description": "Action to perform on the track. Synonyms such as on/off, enable/disable, and display/hidden are normalized.",
-            "enum": ["show", "hide", "toggle", "on", "off", "enable", "disable", "display", "visible", "hidden"],
-            "default": "toggle"
+            "description": "Use only when the user explicitly asks to invert the current state.",
+            "enum": ["toggle"]
           },
           "clientId": {
             "type": "string",
@@ -37144,18 +37080,26 @@
             "default": "default"
           }
         },
-        "required": ["track_name"]
+        "required": ["track_name"],
+        "anyOf": [
+          {
+            "required": ["track_name", "visible"]
+          },
+          {
+            "required": ["track_name", "action"]
+          }
+        ]
       },
       "sample_usages": [
         {
           "user_query": "Hide the gene track",
-          "tool_call": "toggle_track(track_name='genes', action='hide')",
+          "tool_call": "toggle_track(track_name='genes', visible=false)",
           "thought": "User wants to hide the genes track from the browser view",
           "expected_result": "Genes track becomes invisible in the browser"
         },
         {
           "user_query": "Show GC content",
-          "tool_call": "toggle_track(track_name='gc', action='show')",
+          "tool_call": "toggle_track(track_name='gc_content', visible=true)",
           "thought": "User wants to display the GC content track",
           "expected_result": "GC content track becomes visible in the browser"
         },

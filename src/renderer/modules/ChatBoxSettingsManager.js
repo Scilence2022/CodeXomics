@@ -42,8 +42,10 @@ class ChatBoxSettingsManager {
       enableAbortButton: true,
       useOptimizedPrompt: true, // Use optimized system prompt
       enableDynamicToolsRegistry: true, // Enable Dynamic Tools Registry
-      limitDynamicToolsSelection: false, // Limit dynamically selected tools per request
-      dynamicToolsSelectionLimit: 35, // Maximum selected tools when limiting is enabled
+      limitDynamicToolsSelection: true, // Bound the candidate set for small-model reliability
+      dynamicToolsSelectionLimit: 24, // High-recall default for automatic workflows
+      enableNativeFunctionCalling: true,
+      enableConstrainedToolOutput: true,
 
       // Tool priority settings
       toolPriority: ['local', 'genomics', 'plugins', 'mcp'], // Tool priority order
@@ -289,8 +291,10 @@ class ChatBoxSettingsManager {
       enableAbortButton: true,
       useOptimizedPrompt: true,
       enableDynamicToolsRegistry: true,
-      limitDynamicToolsSelection: false,
-      dynamicToolsSelectionLimit: 35,
+      limitDynamicToolsSelection: true,
+      dynamicToolsSelectionLimit: 24,
+      enableNativeFunctionCalling: true,
+      enableConstrainedToolOutput: true,
 
       // Tool priority settings
       toolPriority: ['local', 'genomics', 'plugins', 'mcp'],
@@ -1055,13 +1059,29 @@ class ChatBoxSettingsManager {
                                         <input type="checkbox" id="limitDynamicToolsSelection" class="setting-checkbox">
                                         Limit dynamic tools selected per request
                                     </label>
-                                    <small class="help-text">Cap the number of dynamically selected tools sent to the model. Disabled by default so all relevant registry matches can be included.</small>
+                                    <small class="help-text">Keep a high-recall candidate set small enough for local and compact models.</small>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="dynamicToolsSelectionLimit">Dynamic tools selection limit:</label>
                                     <input type="number" id="dynamicToolsSelectionLimit" class="input-full" min="1" max="500" step="1">
-                                    <small class="help-text">Maximum selected tools when the limit option is enabled. The previous default cap was 35.</small>
+                                    <small class="help-text">Maximum selected tools when the limit option is enabled. The production default is 24.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableNativeFunctionCalling" class="setting-checkbox">
+                                        Enable native function calling
+                                    </label>
+                                    <small class="help-text">Send selected tool JSON Schemas through the provider's native tool protocol.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableConstrainedToolOutput" class="setting-checkbox">
+                                        Enable constrained tool output
+                                    </label>
+                                    <small class="help-text">Use strict argument schemas, or JSON Schema output when native tools are disabled.</small>
                                 </div>
                                 
                                 <div class="form-group">
@@ -2303,6 +2323,8 @@ class ChatBoxSettingsManager {
       enableDynamicToolsRegistry: 'Enable Dynamic Tools Registry',
       limitDynamicToolsSelection: 'Limit Dynamic Tools Selection',
       dynamicToolsSelectionLimit: 'Dynamic Tools Selection Limit',
+      enableNativeFunctionCalling: 'Enable Native Function Calling',
+      enableConstrainedToolOutput: 'Enable Constrained Tool Output',
       debugMode: 'Debug Mode',
       logToolCalls: 'Log Tool Calls',
       chatboxModelType: 'Primary Model Type',

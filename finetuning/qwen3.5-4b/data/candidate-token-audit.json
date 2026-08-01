@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0",
+  "model": "finetuning/qwen3.5-4b/base-model",
+  "release": "datasets/tool-calling-v1/release",
+  "manual_tests_included": 0,
+  "thresholds": [2048, 4096, 8192, 16384],
+  "splits": {
+    "train": {
+      "source_records": 403,
+      "examples": 408,
+      "min_tokens": 3361,
+      "mean_tokens": 6788.08,
+      "p50_tokens": 6850,
+      "p95_tokens": 9262,
+      "p99_tokens": 9728,
+      "max_tokens": 10533,
+      "max_prompt_offset": 10328,
+      "records_over_threshold": {
+        "2048": 408,
+        "4096": 399,
+        "8192": 77,
+        "16384": 0
+      },
+      "targets_starting_after_threshold": {
+        "2048": 408,
+        "4096": 396,
+        "8192": 75,
+        "16384": 0
+      }
+    },
+    "dev": {
+      "source_records": 67,
+      "examples": 67,
+      "min_tokens": 3641,
+      "mean_tokens": 6750.84,
+      "p50_tokens": 6847,
+      "p95_tokens": 9001,
+      "p99_tokens": 9546,
+      "max_tokens": 9605,
+      "max_prompt_offset": 9515,
+      "records_over_threshold": {
+        "2048": 67,
+        "4096": 65,
+        "8192": 13,
+        "16384": 0
+      },
+      "targets_starting_after_threshold": {
+        "2048": 67,
+        "4096": 65,
+        "8192": 12,
+        "16384": 0
+      }
+    },
+    "holdout": {
+      "source_records": 19,
+      "examples": 19,
+      "min_tokens": 3337,
+      "mean_tokens": 6795.0,
+      "p50_tokens": 7334,
+      "p95_tokens": 8868,
+      "p99_tokens": 8868,
+      "max_tokens": 9258,
+      "max_prompt_offset": 9178,
+      "records_over_threshold": {
+        "2048": 19,
+        "4096": 18,
+        "8192": 4,
+        "16384": 0
+      },
+      "targets_starting_after_threshold": {
+        "2048": 19,
+        "4096": 18,
+        "8192": 3,
+        "16384": 0
+      }
+    }
+  },
+  "overall": {
+    "examples": 494,
+    "min_tokens": 3337,
+    "mean_tokens": 6783.3,
+    "p50_tokens": 6870,
+    "p95_tokens": 9258,
+    "p99_tokens": 9728,
+    "max_tokens": 10533,
+    "max_prompt_offset": 10328,
+    "records_over_threshold": {
+      "2048": 494,
+      "4096": 482,
+      "8192": 94,
+      "16384": 0
+    },
+    "targets_starting_after_threshold": {
+      "2048": 494,
+      "4096": 479,
+      "8192": 90,
+      "16384": 0
+    }
+  },
+  "candidate_tool_count_histogram": {
+    "20": 163,
+    "22": 144,
+    "24": 182
+  }
+}

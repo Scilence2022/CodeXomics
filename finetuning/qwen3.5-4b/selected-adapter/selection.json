@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "selected_iteration": 50,
+  "selection_criterion": "minimum_validation_loss_with_early_stop",
+  "validation_loss_trajectory": {
+    "iter_25": 0.025,
+    "iter_50": 0.014,
+    "iter_75": 0.022
+  },
+  "early_stop_reason": "validation loss rose at iter 75 (0.022 > 0.014) and peak memory reached 144.4GB; stopped at best checkpoint",
+  "train_loss_at_selection": 0.004,
+  "peak_memory_gb": 110.7,
+  "training_config": {
+    "max_seq_length": 3072,
+    "iters_configured": 200,
+    "learning_rate": 1e-5,
+    "lora_rank": 16,
+    "candidate_tools": 6,
+    "schema_profile": "compact-v1",
+    "data_splits": {
+      "train": 82,
+      "valid": 63,
+      "test": 21
+    }
+  },
+  "status": "selected_pending_benchmark_eval"
+}

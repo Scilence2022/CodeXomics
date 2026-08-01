@@ -17,7 +17,34 @@ const DYNAMIC_TOOL_STOP_WORDS = new Set([
   'show',
   'about',
   'your',
+  'then',
+  'using',
+  'make',
+  'perform',
+  'current',
 ]);
+
+const RETRIEVAL_ACTION_ALIASES = {
+  load: ['open', 'import', 'read'],
+  open: ['load', 'view'],
+  find: ['search', 'locate', 'lookup'],
+  search: ['find', 'locate', 'lookup'],
+  navigate: ['jump', 'goto', 'position'],
+  jump: ['navigate', 'goto', 'position'],
+  calculate: ['compute', 'analyze', 'analysis'],
+  compute: ['calculate', 'analyze', 'analysis'],
+  analyze: ['analysis', 'calculate', 'compute', 'inspect'],
+  show: ['display', 'view', 'list'],
+  hide: ['toggle', 'disable'],
+  delete: ['remove', 'clear', 'uninstall'],
+  remove: ['delete', 'clear'],
+  save: ['export', 'write', 'download'],
+  export: ['save', 'write', 'download'],
+  create: ['add', 'design', 'build'],
+  add: ['create', 'insert'],
+  translate: ['translation', 'protein'],
+  blast: ['alignment', 'similarity'],
+};
 
 /**
  * Renderer-side adapter for main-process tool registry snapshots.
@@ -28,18 +55,21 @@ const DYNAMIC_TOOL_STOP_WORDS = new Set([
 class DynamicToolsSnapshotAdapter {
   constructor(snapshot, chatManager) {
     this.chatManager = chatManager;
+    const rawTools = Array.isArray(snapshot?.tools) ? snapshot.tools : Object.values(snapshot?.toolsByName || {});
+    const uniqueTools = this.mergeDuplicateToolDefinitions(rawTools);
     this.snapshot = {
       ...snapshot,
-      tools: Array.isArray(snapshot?.tools) ? snapshot.tools : Object.values(snapshot?.toolsByName || {}),
+      tools: uniqueTools,
       builtInTools: Array.isArray(snapshot?.builtInTools) ? snapshot.builtInTools : [],
       categories: snapshot?.categories || { categories: {} },
-      counts: snapshot?.counts || {},
+      counts: { ...(snapshot?.counts || {}), tools: uniqueTools.length },
       diagnostics: snapshot?.diagnostics || [],
     };
 
     this.toolsByName = new Map(
       this.snapshot.tools.map(tool => [this.getToolName(tool), tool]).filter(([name]) => name)
     );
+    this.retrievalIndex = this.buildRetrievalIndex(this.snapshot.tools);
     this.usageStats = new Map();
     this.pluginManager = null;
     this.pluginToolsCache = null;
@@ -61,6 +91,59 @@ class DynamicToolsSnapshotAdapter {
       getRelevantPluginTools: (query, maxTools = 10) => this.getRelevantPluginTools(query, maxTools),
       generatePluginToolsPromptSection: query => this.generatePluginToolsPromptSection(query),
     };
+  }
+
+  mergeDuplicateToolDefinitions(tools) {
+    const grouped = new Map();
+    for (const tool of Array.isArray(tools) ? tools : []) {
+      const name = this.getToolName(tool);
+      if (!name) continue;
+      if (!grouped.has(name)) grouped.set(name, []);
+      grouped.get(name).push(tool);
+    }
+
+    const score = tool => {
+      const schema = this.normalizeToolSchema(tool);
+      return (
+        Object.keys(schema?.properties || {}).length * 100 +
+        (Array.isArray(schema?.required) ? schema.required.length * 10 : 0) +
+        (Array.isArray(tool?.sample_usages) ? tool.sample_usages.length : 0) +
+        String(tool?.description || '').length / 1000
+      );
+    };
+    const dedupeObjects = values => {
+      const seen = new Set();
+      return values.filter(value => {
+        const key = JSON.stringify(value);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+
+    return [...grouped.values()].map(definitions => {
+      if (definitions.length === 1) return definitions[0];
+      const preferred = [...definitions].sort((left, right) => score(right) - score(left))[0];
+      const schemas = definitions.map(tool => this.normalizeToolSchema(tool));
+      const mergedProperties = Object.assign({}, ...schemas.map(schema => schema?.properties || {}));
+      Object.assign(mergedProperties, this.normalizeToolSchema(preferred)?.properties || {});
+      const mergedRequired = [
+        ...new Set(schemas.flatMap(schema => (Array.isArray(schema?.required) ? schema.required : []))),
+      ];
+      return {
+        ...definitions.reduce((merged, tool) => ({ ...merged, ...tool }), {}),
+        ...preferred,
+        keywords: [...new Set(definitions.flatMap(tool => tool?.keywords || []))],
+        sample_usages: dedupeObjects(definitions.flatMap(tool => tool?.sample_usages || [])),
+        parameters: {
+          ...this.normalizeToolSchema(preferred),
+          type: 'object',
+          properties: mergedProperties,
+          required: mergedRequired,
+        },
+        duplicateSources: definitions.map(tool => tool.sourceFile || tool.source || tool.name),
+      };
+    });
   }
 
   getToolName(tool) {
@@ -193,6 +276,75 @@ class DynamicToolsSnapshotAdapter {
         required: [],
       }
     );
+  }
+
+  tokenizeSearchText(value) {
+    return String(value || '')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .map(token => token.trim())
+      .filter(token => token.length > 2 && !DYNAMIC_TOOL_STOP_WORDS.has(token));
+  }
+
+  expandSearchTerms(tokens) {
+    const expanded = new Set(tokens);
+    for (const token of tokens) {
+      for (const alias of RETRIEVAL_ACTION_ALIASES[token] || []) expanded.add(alias);
+      if (token.endsWith('s') && token.length > 3) expanded.add(token.slice(0, -1));
+      if (token.endsWith('ing') && token.length > 5) expanded.add(token.slice(0, -3));
+    }
+    return [...expanded];
+  }
+
+  getToolSearchFields(tool) {
+    const schema = this.normalizeToolSchema(tool);
+    const parameterNames = Object.keys(schema?.properties || {});
+    const keywordText = Array.isArray(tool?.keywords) ? tool.keywords.join(' ') : '';
+    return {
+      name: this.tokenizeSearchText(tool?.name),
+      keywords: this.tokenizeSearchText(keywordText),
+      description: this.tokenizeSearchText(tool?.description),
+      category: this.tokenizeSearchText(`${tool?.category || ''} ${tool?.subcategory || ''}`),
+      parameters: this.tokenizeSearchText(parameterNames.join(' ')),
+    };
+  }
+
+  buildRetrievalIndex(tools) {
+    const documents = new Map();
+    const documentFrequency = new Map();
+    const validTools = (Array.isArray(tools) ? tools : []).filter(tool => tool?.name);
+
+    for (const tool of validTools) {
+      const fields = this.getToolSearchFields(tool);
+      documents.set(tool.name, fields);
+      const uniqueTokens = new Set(Object.values(fields).flat());
+      for (const token of uniqueTokens) {
+        documentFrequency.set(token, (documentFrequency.get(token) || 0) + 1);
+      }
+    }
+
+    return {
+      documents,
+      documentFrequency,
+      documentCount: Math.max(validTools.length, 1),
+    };
+  }
+
+  getInverseDocumentFrequency(token) {
+    const frequency = this.retrievalIndex?.documentFrequency?.get(token) || 0;
+    const count = this.retrievalIndex?.documentCount || 1;
+    return Math.log(1 + (count + 1) / (frequency + 1));
+  }
+
+  splitRetrievalClauses(query) {
+    const text = String(query || '').trim();
+    if (!text) return [];
+    const clauses = text
+      .split(/(?:\b(?:and\s+then|then|after\s+that|next|finally)\b|[;\n])/i)
+      .map(clause => clause.trim())
+      .filter(Boolean);
+    return clauses.length > 1 ? clauses : [text];
   }
 
   normalizeMcpTool(tool) {
@@ -335,10 +487,7 @@ class DynamicToolsSnapshotAdapter {
       .join(' ')
       .toLowerCase();
 
-    const terms = text
-      .split(/[^a-z0-9_]+/)
-      .map(term => term.trim())
-      .filter(term => term.length > 2 && !DYNAMIC_TOOL_STOP_WORDS.has(term));
+    const terms = this.expandSearchTerms(this.tokenizeSearchText(text));
 
     let score = 0;
     const toolName = String(tool.name || '').toLowerCase();
@@ -348,8 +497,11 @@ class DynamicToolsSnapshotAdapter {
     if (normalizedToolName && text.includes(normalizedToolName)) score += 6;
 
     const nameParts = toolName.split(/[^a-z0-9]+/).filter(part => part.length > 2);
+    const matchedNameParts = nameParts.filter(part => this.tokenizeSearchText(text).includes(part));
+    score += matchedNameParts.length * 4;
+    if (nameParts[0] && matchedNameParts.includes(nameParts[0])) score += 6;
     if (nameParts.length > 0 && nameParts.every(part => text.includes(part))) {
-      score += 4;
+      score += 12;
     }
 
     for (const keyword of tool.keywords || []) {
@@ -364,6 +516,27 @@ class DynamicToolsSnapshotAdapter {
       // Treat free-text field matches as weak evidence; two matching terms are
       // enough to pass selection, while exact names and keywords remain strong.
       if (fields.includes(term)) score += 0.35;
+    }
+
+    const indexedFields = this.retrievalIndex?.documents?.get(tool.name) || this.getToolSearchFields(tool);
+    const fieldWeights = {
+      name: 3.2,
+      keywords: 2.4,
+      parameters: 1.5,
+      category: 0.9,
+      description: 0.7,
+    };
+    for (const term of terms) {
+      const idf = this.getInverseDocumentFrequency(term);
+      for (const [fieldName, tokens] of Object.entries(indexedFields)) {
+        if (tokens.includes(term)) score += idf * fieldWeights[fieldName];
+      }
+    }
+
+    const normalizedQuery = this.tokenizeSearchText(text).join(' ');
+    for (const keyword of tool.keywords || []) {
+      const phrase = this.tokenizeSearchText(keyword).join(' ');
+      if (phrase && normalizedQuery.includes(phrase)) score += 4;
     }
 
     if (tool.execution?.requires_data && context.hasData === false) score -= 1.5;
@@ -390,18 +563,58 @@ class DynamicToolsSnapshotAdapter {
     return score;
   }
 
-  selectRelevantTools(query, context = {}, limit = Infinity) {
+  rankRelevantTools(query, context = {}) {
     const allowCoordination = this.isAgentSystemEnabled(context);
     const validTools = this.mergeToolsByName([...this.snapshot.tools, ...this.collectMcpTools()]).filter(tool => {
       if (!tool || !tool.name) return false;
       if (tool.category === 'coordination' && !allowCoordination) return false;
       return true;
     });
+    const clauses = this.splitRetrievalClauses(query);
+    const hasEvidence = tool => {
+      const queryText = String(query || '').toLowerCase();
+      const queryTerms = this.expandSearchTerms(this.tokenizeSearchText(queryText));
+      const fields = this.retrievalIndex?.documents?.get(tool.name) || this.getToolSearchFields(tool);
+      const allFieldTokens = new Set(Object.values(fields).flat());
+      const matchedTerms = queryTerms.filter(term => allFieldTokens.has(term));
+      const toolName = String(tool.name || '').toLowerCase();
+      const normalizedName = this.tokenizeSearchText(toolName).join(' ');
+      const directNameMatch =
+        queryText.includes(toolName) || (normalizedName.length > 2 && queryText.includes(normalizedName));
+      const keywordPhraseMatch = (tool.keywords || []).some(keyword => {
+        const phrase = this.tokenizeSearchText(keyword).join(' ');
+        return phrase.length > 2 && this.tokenizeSearchText(queryText).join(' ').includes(phrase);
+      });
+      const matchedNameTerms = fields.name.filter(term => queryTerms.includes(term));
+      return (
+        directNameMatch ||
+        keywordPhraseMatch ||
+        matchedTerms.length >= 2 ||
+        (matchedNameTerms.length > 0 && matchedNameTerms.length === fields.name.length)
+      );
+    };
+    const ranked = validTools
+      .map(tool => {
+        const globalScore = this.scoreTool(tool, query, context);
+        const clauseScores = clauses.map(clause => this.scoreTool(tool, clause, context));
+        const bestClauseScore = clauseScores.length > 0 ? Math.max(...clauseScores) : 0;
+        const matchedClauses = clauseScores.filter(score => score > 0.6).length;
+        return {
+          tool,
+          score: globalScore + bestClauseScore * 0.35 + matchedClauses * 0.15,
+          globalScore,
+          clauseScores,
+        };
+      })
+      .filter(entry => entry.score > 0.6 && hasEvidence(entry.tool))
+      .sort((a, b) => b.score - a.score || a.tool.name.localeCompare(b.tool.name));
 
-    let scoredTools = validTools
-      .map(tool => ({ tool, score: this.scoreTool(tool, query, context) }))
-      .filter(entry => entry.score > 0.6)
-      .sort((a, b) => b.score - a.score);
+    return { ranked, clauses };
+  }
+
+  selectRelevantTools(query, context = {}, limit = Infinity) {
+    const retrieval = this.rankRelevantTools(query, context);
+    let scoredTools = retrieval.ranked;
 
     const originalQueryText = String(query || '');
     const queryText = originalQueryText.toLowerCase();
@@ -449,7 +662,30 @@ class DynamicToolsSnapshotAdapter {
       );
     }
 
-    const selected = scoredTools.map(entry => entry.tool);
+    const selected = [];
+    const selectedNames = new Set();
+
+    // Multi-step requests need at least one candidate from every clause before
+    // the global ranking fills the remaining budget. This avoids a dominant
+    // first action crowding later workflow steps out of a small-model prompt.
+    if (retrieval.clauses.length > 1 && Number.isFinite(limit)) {
+      for (let clauseIndex = 0; clauseIndex < retrieval.clauses.length; clauseIndex++) {
+        const clauseCandidates = scoredTools
+          .filter(entry => (entry.clauseScores[clauseIndex] || 0) > 0.6)
+          .sort((a, b) => (b.clauseScores[clauseIndex] || 0) - (a.clauseScores[clauseIndex] || 0));
+        for (const entry of clauseCandidates.slice(0, 2)) {
+          if (selectedNames.has(entry.tool.name) || selected.length >= limit) continue;
+          selected.push(entry.tool);
+          selectedNames.add(entry.tool.name);
+        }
+      }
+    }
+
+    for (const entry of scoredTools) {
+      if (selectedNames.has(entry.tool.name) || selected.length >= limit) continue;
+      selected.push(entry.tool);
+      selectedNames.add(entry.tool.name);
+    }
 
     // Fallback tools keep a completely unmatched prompt usable. They must not
     // pad a strong, unambiguous result set with competing capabilities.
@@ -473,6 +709,184 @@ class DynamicToolsSnapshotAdapter {
       if (deduped.length >= limit) break;
     }
     return deduped;
+  }
+
+  sanitizeNativeSchema(schema, isRoot = false) {
+    if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+      return { type: 'object', properties: {}, required: [], additionalProperties: false };
+    }
+    const allowed = new Set([
+      'type',
+      'description',
+      'properties',
+      'required',
+      'items',
+      'enum',
+      'const',
+      'oneOf',
+      'anyOf',
+      'allOf',
+      'minimum',
+      'maximum',
+      'exclusiveMinimum',
+      'exclusiveMaximum',
+      'minLength',
+      'maxLength',
+      'minItems',
+      'maxItems',
+      'pattern',
+      'additionalProperties',
+    ]);
+    const sanitized = {};
+    const inlineRequiredProperties = [];
+    for (const [key, value] of Object.entries(schema)) {
+      if (!allowed.has(key)) continue;
+      if (key === 'properties' && value && typeof value === 'object') {
+        sanitized.properties = Object.fromEntries(
+          Object.entries(value).map(([name, propertySchema]) => {
+            if (propertySchema?.required === true) inlineRequiredProperties.push(name);
+            const normalizedProperty = this.sanitizeNativeSchema(propertySchema, false);
+            // Some legacy registry schemas put `required: true|false` on a
+            // property. JSON Schema and native tool APIs require an array on
+            // the containing object, and Ollama rejects the boolean form.
+            if (typeof normalizedProperty.required === 'boolean') delete normalizedProperty.required;
+            return [name, normalizedProperty];
+          })
+        );
+      } else if (key === 'items') {
+        sanitized.items = this.sanitizeNativeSchema(value, false);
+      } else if (['oneOf', 'anyOf', 'allOf'].includes(key) && Array.isArray(value)) {
+        sanitized[key] = value.map(item => this.sanitizeNativeSchema(item, false));
+      } else {
+        sanitized[key] = value;
+      }
+    }
+    if (!sanitized.type && sanitized.properties) sanitized.type = 'object';
+    if (sanitized.type === 'object') {
+      sanitized.properties = sanitized.properties || {};
+      sanitized.required = [
+        ...new Set([...(Array.isArray(sanitized.required) ? sanitized.required : []), ...inlineRequiredProperties]),
+      ];
+      if (sanitized.additionalProperties === undefined) {
+        sanitized.additionalProperties = isRoot || Object.keys(sanitized.properties).length > 0 ? false : true;
+      }
+    }
+    return sanitized;
+  }
+
+  toNativeFunctionTool(tool) {
+    const name = this.getToolName(tool);
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(name)) return null;
+    const parameters = this.sanitizeNativeSchema(this.normalizeToolSchema(tool), true);
+    const propertyNames = Object.keys(parameters.properties || {});
+    const requiredNames = new Set(parameters.required || []);
+    const strictCompatible =
+      parameters.additionalProperties === false && propertyNames.every(propertyName => requiredNames.has(propertyName));
+    return {
+      type: 'function',
+      function: {
+        name,
+        description: String(tool?.description || `${name} CodeXomics tool`).slice(0, 1024),
+        parameters,
+        strict: strictCompatible,
+      },
+    };
+  }
+
+  validateSchemaValue(value, schema, path = '$') {
+    if (!schema || typeof schema !== 'object') return [];
+    const errors = [];
+    const compositionKeyword = Array.isArray(schema.oneOf) ? 'oneOf' : Array.isArray(schema.anyOf) ? 'anyOf' : null;
+    const schemas = compositionKeyword ? schema[compositionKeyword] : null;
+    if (schemas) {
+      // JSON Schema composition keywords are evaluated together with their sibling
+      // constraints. The old validator returned here after checking only the branch,
+      // which silently skipped parent properties, enums, required fields and
+      // additionalProperties. That allowed schema-invalid benchmark and training calls
+      // to be labelled valid whenever an anyOf/oneOf branch happened to match.
+      const baseSchema = { ...schema };
+      delete baseSchema.oneOf;
+      delete baseSchema.anyOf;
+      errors.push(...this.validateSchemaValue(value, baseSchema, path));
+      const alternatives = schemas.map(candidate => this.validateSchemaValue(value, candidate, path));
+      const matchingAlternatives = alternatives.filter(candidateErrors => candidateErrors.length === 0).length;
+      if (compositionKeyword === 'oneOf' && matchingAlternatives !== 1) {
+        errors.push(`${path} must match exactly one allowed schema (matched ${matchingAlternatives})`);
+      } else if (compositionKeyword === 'anyOf' && matchingAlternatives === 0) {
+        errors.push(`${path} does not match any allowed schema`);
+      }
+      return errors;
+    }
+
+    if (Array.isArray(schema.allOf)) {
+      for (const candidate of schema.allOf) errors.push(...this.validateSchemaValue(value, candidate, path));
+    }
+    const types = Array.isArray(schema.type) ? schema.type : schema.type ? [schema.type] : [];
+    const matchesType = type =>
+      (type === 'object' && value !== null && typeof value === 'object' && !Array.isArray(value)) ||
+      (type === 'array' && Array.isArray(value)) ||
+      (type === 'string' && typeof value === 'string') ||
+      (type === 'number' && typeof value === 'number' && Number.isFinite(value)) ||
+      (type === 'integer' && Number.isInteger(value)) ||
+      (type === 'boolean' && typeof value === 'boolean') ||
+      (type === 'null' && value === null);
+    const typeMatches = types.length === 0 || types.some(matchesType);
+    if (!typeMatches) return [`${path} must be ${types.join(' or ')}`];
+
+    if (Array.isArray(schema.enum) && !schema.enum.some(candidate => Object.is(candidate, value))) {
+      errors.push(`${path} must be one of ${schema.enum.join(', ')}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(schema, 'const') && !Object.is(schema.const, value)) {
+      errors.push(`${path} must equal ${JSON.stringify(schema.const)}`);
+    }
+    if (typeof value === 'number') {
+      if (Number.isFinite(schema.minimum) && value < schema.minimum) errors.push(`${path} is below minimum`);
+      if (Number.isFinite(schema.maximum) && value > schema.maximum) errors.push(`${path} is above maximum`);
+    }
+    if (typeof value === 'string') {
+      if (Number.isFinite(schema.minLength) && value.length < schema.minLength) errors.push(`${path} is too short`);
+      if (Number.isFinite(schema.maxLength) && value.length > schema.maxLength) errors.push(`${path} is too long`);
+      if (schema.pattern) {
+        try {
+          if (!new RegExp(schema.pattern).test(value)) errors.push(`${path} does not match required pattern`);
+        } catch (error) {
+          errors.push(`${path} has an invalid registry pattern`);
+        }
+      }
+    }
+    if (Array.isArray(value)) {
+      if (Number.isFinite(schema.minItems) && value.length < schema.minItems) errors.push(`${path} has too few items`);
+      if (Number.isFinite(schema.maxItems) && value.length > schema.maxItems) errors.push(`${path} has too many items`);
+      value.forEach((item, index) => errors.push(...this.validateSchemaValue(item, schema.items, `${path}[${index}]`)));
+    }
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      const properties = schema.properties || {};
+      for (const required of schema.required || []) {
+        if (!Object.prototype.hasOwnProperty.call(value, required)) errors.push(`${path}.${required} is required`);
+      }
+      for (const [key, propertyValue] of Object.entries(value)) {
+        if (properties[key]) {
+          errors.push(...this.validateSchemaValue(propertyValue, properties[key], `${path}.${key}`));
+        } else if (schema.additionalProperties === false) {
+          errors.push(`${path}.${key} is not allowed`);
+        } else if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
+          errors.push(...this.validateSchemaValue(propertyValue, schema.additionalProperties, `${path}.${key}`));
+        }
+      }
+    }
+    return errors;
+  }
+
+  validateToolCall(toolName, parameters) {
+    const tool =
+      this.toolsByName.get(toolName) || this.collectMcpTools().find(candidate => candidate.name === toolName);
+    if (!tool) return { valid: false, errors: [`Unknown tool: ${toolName}`] };
+    if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
+      return { valid: false, errors: ['Tool parameters must be a JSON object'] };
+    }
+    const schema = this.sanitizeNativeSchema(this.normalizeToolSchema(tool), true);
+    const errors = this.validateSchemaValue(parameters, schema);
+    return { valid: errors.length === 0, errors, schema };
   }
 
   getFallbackToolNames() {
@@ -932,9 +1346,12 @@ For multiple independent tool calls, respond with one JSON array of canonical to
 
   async generateDynamicSystemPrompt(userQuery, context = {}, options = {}) {
     const selectedTools = this.selectRelevantTools(userQuery, context, options.selectionLimit);
+    const nativeTools = selectedTools.map(tool => this.toNativeFunctionTool(tool)).filter(Boolean);
     return {
       systemPrompt: this.buildPrompt(selectedTools, context),
       toolsUsed: selectedTools.map(tool => tool.name),
+      toolDefinitions: selectedTools,
+      nativeTools,
       toolCount: selectedTools.length,
       builtInToolsIncluded: selectedTools.filter(
         tool => tool.isBuiltIn || this.builtInTools.builtInToolsMap.has(tool.name)

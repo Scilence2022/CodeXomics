@@ -1,4 +1,5 @@
 // @ts-check
+/* global StrictAutomaticEvaluator */
 /**
  * LLM Benchmark Framework - Comprehensive system for testing LLM instruction following capabilities
  */
@@ -16,6 +17,14 @@ class LLMBenchmarkFramework {
     this.totalDelayTime = 0; // Track total delay time to subtract from final duration
     this.statisticsEngine = new BenchmarkStatistics();
     this.reportGenerator = new BenchmarkReportGenerator();
+    this.strictAutomaticEvaluator = new StrictAutomaticEvaluator({
+      validateToolCall: (toolName, parameters) => {
+        if (this.chatManager?.dynamicTools?.validateToolCall) {
+          return this.chatManager.dynamicTools.validateToolCall(toolName, parameters);
+        }
+        return { valid: false, errors: ['Dynamic tool schema registry is unavailable'] };
+      },
+    });
 
     // MEMORY OPTIMIZATION: Add memory monitoring with tighter thresholds
     this.memoryMonitor = {
@@ -196,6 +205,8 @@ class LLMBenchmarkFramework {
     const startTime = Date.now();
     let benchmarkRunSessionId = null;
     const previousBenchmarkAutomationActive = this.chatManager?.benchmarkAutomationActive === true;
+    const previousAgentSystemEnabled = this.chatManager?.agentSystemEnabled;
+    const previousSmartExecutionEnabled = this.chatManager?.isSmartExecutionEnabled;
 
     // Set timeout from options if provided
     // If timeout is null, it means use individual test timeouts
@@ -227,6 +238,8 @@ class LLMBenchmarkFramework {
     try {
       if (this.chatManager) {
         this.chatManager.benchmarkAutomationActive = true;
+        this.chatManager.agentSystemEnabled = false;
+        this.chatManager.isSmartExecutionEnabled = false;
         if (this.chatManager.toolExecutionTracker) {
           benchmarkRunSessionId = `benchmark_run_${startTime}`;
           this.chatManager.toolExecutionTracker.startSession(benchmarkRunSessionId, {
@@ -391,6 +404,8 @@ class LLMBenchmarkFramework {
       }
       if (this.chatManager) {
         this.chatManager.benchmarkAutomationActive = previousBenchmarkAutomationActive;
+        this.chatManager.agentSystemEnabled = previousAgentSystemEnabled;
+        this.chatManager.isSmartExecutionEnabled = previousSmartExecutionEnabled;
       }
       this.isRunning = false;
     }
@@ -1070,10 +1085,8 @@ class LLMBenchmarkFramework {
     if (!this.isTestTimeoutError(error)) return null;
 
     const expected = test.expectedResult || {};
-    const expectedNames = (
-      Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name]
-    ).filter(name => typeof name === 'string' && name);
-    if (expectedNames.length === 0) return null;
+    const expectedTools = Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name];
+    if (expectedTools.length === 0 || expectedTools.some(name => !name)) return null;
 
     const tracker = this.chatManager?.toolExecutionTracker;
     if (!tracker || typeof tracker.getTestExecutions !== 'function') return null;
@@ -1086,13 +1099,33 @@ class LLMBenchmarkFramework {
       return null;
     }
 
-    // 'running' is the expected state here: the tool was dispatched and is still
-    // in flight. 'completed' can also appear if the timeout landed on a later round.
-    return (
-      executions.find(
-        exec => expectedNames.includes(exec?.toolName) && (exec.status === 'running' || exec.status === 'completed')
-      ) || null
+    // 'running' is admissible for early-return tools because the benchmark is
+    // asserting submission. Tool name, order, parameters, and schema must still
+    // be correct; a same-name call with wrong arguments cannot pass on timeout.
+    const submittedCalls = executions
+      .filter(exec => exec && (exec.status === 'running' || exec.status === 'completed'))
+      .sort((left, right) => Number(left.startTime || 0) - Number(right.startTime || 0))
+      .map(exec => ({
+        tool_name: exec.toolName,
+        parameters: exec.parameters || {},
+        success: true,
+        executed: true,
+        execution: exec,
+      }));
+    const expectedParameters = this.strictAutomaticEvaluator.getExpectedParameters(test, expectedTools.length);
+    const matches = this.strictAutomaticEvaluator.matchCalls(
+      submittedCalls,
+      expectedTools,
+      expectedParameters,
+      expected.orderInsensitiveTools || []
     );
+    const allMatched = matches.length === expectedTools.length && matches.every(match => match.matched);
+    const noUnexpectedCalls = submittedCalls.length === expectedTools.length;
+    const schemasValid = submittedCalls.every(
+      call => this.chatManager?.dynamicTools?.validateToolCall?.(call.tool_name, call.parameters)?.valid
+    );
+    if (!allMatched || !noUnexpectedCalls || !schemasValid) return null;
+    return submittedCalls[submittedCalls.length - 1]?.execution || null;
   }
 
   /**
@@ -1711,18 +1744,29 @@ class LLMBenchmarkFramework {
           // which is already available via ChatManager.getLastExecutionData() if needed.
           interactionData.response.functionCalls = functionCallsWithConfidence;
           // Store only summary of tool results (success/failure), not full output
-          interactionData.response.toolExecutions = (executionData.toolResults || []).map(r => ({
-            tool_name: r.tool_name,
-            success: r.success,
-            executionTime: r.executionTime,
-            // Truncate large result data to first 200 chars
-            resultPreview:
-              typeof r.result === 'string'
-                ? r.result.substring(0, 200) + (r.result.length > 200 ? '...[TRUNCATED]' : '')
-                : r.result
-                  ? JSON.stringify(r.result).substring(0, 200) + '...[TRUNCATED]'
-                  : null,
-          }));
+          interactionData.response.toolExecutions = (executionData.toolResults || []).map(r => {
+            const execution = r.execution || r;
+            return {
+              // ChatManager's queue records use `tool`; the evaluator matches on
+              // `tool_name`/`tool`/`name`, so expose both spellings explicitly.
+              tool_name: execution.tool_name ?? execution.tool ?? null,
+              tool: execution.tool_name ?? execution.tool ?? null,
+              success: execution.success,
+              executionTime: execution.executionTime ?? execution.duration ?? null,
+              // Preserve identifiers so the evaluator can pair executions to
+              // specific observed tool calls instead of only by tool name.
+              id: execution.id ?? execution.executionId ?? null,
+              call_id: execution.call_id ?? execution.tool_call_id ?? null,
+              tool_call_id: execution.tool_call_id ?? execution.call_id ?? null,
+              // Truncate large result data to first 200 chars
+              resultPreview:
+                typeof execution.result === 'string'
+                  ? execution.result.substring(0, 200) + (execution.result.length > 200 ? '...[TRUNCATED]' : '')
+                  : execution.result
+                    ? JSON.stringify(execution.result).substring(0, 200) + '...[TRUNCATED]'
+                    : null,
+            };
+          });
           interactionData.response.executionRounds = executionData.rounds || 0;
           interactionData.response.totalExecutionTime = executionData.totalExecutionTime || 0;
           // Removed: interactionData.response.actualExecutionData = executionData;
@@ -4626,6 +4670,26 @@ class LLMBenchmarkFramework {
         console.log('📊 [Test Evaluation] Manual verification completion:', completionPercentage + '%');
       }
 
+      this.displayEvaluationResult(test, evaluation, testResult);
+      return evaluation;
+    }
+
+    // Automatic suites are scored only from calls captured during this test.
+    // Prose mentions, debug logs, and tracker records from other tests are not
+    // admissible evidence. Manual suites retain their existing evaluators.
+    if (
+      test.evaluation === 'automatic' &&
+      ['simple', 'complex'].includes(test.complexity) &&
+      ['function_call', 'workflow'].includes(test.type) &&
+      (test.expectedResult?.tool_name || Array.isArray(test.expectedResult?.tool_sequence))
+    ) {
+      const strictEvaluation = this.strictAutomaticEvaluator.evaluate(test, testResult);
+      Object.assign(evaluation, strictEvaluation);
+      console.log('🔒 [Test Evaluation] Strict automatic scorer completed:', {
+        score: evaluation.score,
+        success: evaluation.success,
+        mode: evaluation.details?.scoringMode,
+      });
       this.displayEvaluationResult(test, evaluation, testResult);
       return evaluation;
     }

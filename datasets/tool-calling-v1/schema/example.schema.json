@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codexomics.org/schemas/tool-calling-example-v2.json",
+  "title": "CodeXomics tool-calling training example",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "example_id",
+    "scenario_family_id",
+    "split_group_id",
+    "split",
+    "language",
+    "provenance",
+    "environment",
+    "tool_catalog",
+    "messages",
+    "oracle",
+    "labels",
+    "verification",
+    "strong_model_replay"
+  ],
+  "properties": {
+    "schema_version": { "const": "2.0" },
+    "example_id": { "type": "string", "minLength": 8 },
+    "scenario_family_id": { "type": "string", "minLength": 1 },
+    "split_group_id": { "type": "string", "minLength": 1 },
+    "split": { "enum": ["train", "dev", "holdout"] },
+    "language": { "enum": ["en", "zh", "mixed"] },
+    "provenance": { "type": "object" },
+    "environment": { "type": "object" },
+    "tool_catalog": {
+      "type": "object",
+      "required": ["registry_hash", "candidate_tool_names", "catalog_hash"]
+    },
+    "messages": { "type": "array", "minItems": 2 },
+    "oracle": {
+      "type": "object",
+      "required": ["decision", "acceptable_calls", "argument_provenance", "terminal_predicates"],
+      "properties": {
+        "decision": {
+          "enum": ["call", "no_call", "ask_clarification", "refuse", "unavailable_tool"]
+        },
+        "acceptable_calls": { "type": "array" },
+        "argument_provenance": { "type": "array" },
+        "terminal_predicates": { "type": "array" }
+      }
+    },
+    "labels": { "type": "object" },
+    "verification": {
+      "type": "object",
+      "required": [
+        "schema_valid",
+        "fixture_executable",
+        "state_verified",
+        "validation_tier",
+        "fixture_replay",
+        "state_replay",
+        "leakage_passed"
+      ],
+      "properties": {
+        "schema_valid": { "const": true },
+        "fixture_executable": { "type": "boolean" },
+        "state_verified": { "type": "boolean" },
+        "validation_tier": {
+          "enum": ["schema_valid", "fixture_executable", "state_verified"]
+        },
+        "fixture_replay": { "$ref": "#/$defs/replay" },
+        "state_replay": { "$ref": "#/$defs/replay" },
+        "leakage_passed": { "const": true }
+      }
+    },
+    "strong_model_replay": {
+      "type": "object",
+      "required": [
+        "status",
+        "reason_code",
+        "registry_hash",
+        "comparison_mode",
+        "semantic_verdict",
+        "canonical_oracle_hash",
+        "canonical_calls",
+        "observed_calls",
+        "canonicalized_observed_calls",
+        "observed_call_errors",
+        "fixture_outputs",
+        "terminal_predicates",
+        "terminal_predicate_results",
+        "provenance"
+      ],
+      "properties": {
+        "status": { "$ref": "#/$defs/replayStatus" },
+        "reason_code": { "$ref": "#/$defs/replayReason" },
+        "registry_hash": { "type": "string" },
+        "model_family": { "type": ["string", "null"] },
+        "model_id": { "type": ["string", "null"] },
+        "comparison_mode": { "const": "semantic_canonical_equivalence" },
+        "semantic_verdict": { "enum": ["not_run", "passed", "failed", "blocked"] },
+        "canonical_oracle_hash": { "type": "string" },
+        "canonical_calls": { "type": "array" },
+        "observed_calls": { "type": "array" },
+        "canonicalized_observed_calls": { "type": "array" },
+        "observed_call_errors": { "type": "array" },
+        "fixture_outputs": { "type": "array" },
+        "terminal_predicates": { "type": "array" },
+        "terminal_predicate_results": { "type": "array" },
+        "provenance": { "type": "object" }
+      }
+    }
+  },
+  "$defs": {
+    "replayStatus": { "enum": ["not_run", "passed", "failed", "blocked"] },
+    "replayReason": {
+      "enum": [
+        "not_run",
+        "passed",
+        "schema_mismatch",
+        "tool_selection_mismatch",
+        "argument_semantic_mismatch",
+        "fixture_missing",
+        "fixture_resolution_failed",
+        "fixture_execution_failed",
+        "terminal_predicate_failed",
+        "provider_error",
+        "rate_limited",
+        "manual_review_required"
+      ]
+    },
+    "replay": {
+      "type": "object",
+      "required": ["status", "reason_code"],
+      "properties": {
+        "status": { "$ref": "#/$defs/replayStatus" },
+        "reason_code": { "$ref": "#/$defs/replayReason" },
+        "runner": { "type": ["string", "null"] },
+        "fixture_outputs": { "type": "array" }
+      }
+    }
+  },
+  "additionalProperties": false
+}
