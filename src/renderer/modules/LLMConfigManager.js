@@ -3611,15 +3611,26 @@ class LLMConfigManager {
   getMaxTokens(provider) {
     // 1. Try chatboxSettings override first
     const chatboxSettings = this.configManager ? this.configManager.get('chatboxSettings') : null;
+    let maxTokens = 4000;
     if (chatboxSettings && chatboxSettings.chatboxLLMMaxTokens) {
-      return parseInt(chatboxSettings.chatboxLLMMaxTokens, 10);
+      maxTokens = parseInt(chatboxSettings.chatboxLLMMaxTokens, 10);
+    } else if (provider && provider.maxTokens) {
+      // 2. Try provider config
+      maxTokens = parseInt(provider.maxTokens, 10);
     }
-    // 2. Try provider config
-    if (provider && provider.maxTokens) {
-      return parseInt(provider.maxTokens, 10);
+    // 3. Local reasoning models (Qwen3-style <think> blocks) consume a large
+    // share of the budget before the visible answer or tool call is emitted.
+    // Floor the local endpoint at 8192 so thinking + tool call + summary fit;
+    // cloud providers keep their configured values.
+    if (this.isLocalOllamaEndpoint(provider)) {
+      maxTokens = Number.isFinite(maxTokens) ? Math.max(maxTokens, 8192) : 8192;
     }
-    // 3. Fallback to a safe default
-    return 4000;
+    return Number.isFinite(maxTokens) ? maxTokens : 4000;
+  }
+
+  /** True when the provider points at the local Ollama OpenAI-compatible API. */
+  isLocalOllamaEndpoint(provider) {
+    return /localhost:11434|127\.0\.0\.1:11434/i.test(String(provider?.baseUrl || ''));
   }
 
   getTemperature() {

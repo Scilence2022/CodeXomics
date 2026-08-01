@@ -20,6 +20,7 @@ function parseArgs(argv) {
     concurrency: 1,
     limit: Infinity,
     suite: 'all',
+    tag: '',
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -28,13 +29,15 @@ function parseArgs(argv) {
     else if (arg === '--concurrency') options.concurrency = Number(argv[++index]);
     else if (arg === '--limit') options.limit = Number(argv[++index]);
     else if (arg === '--suite') options.suite = argv[++index];
+    else if (arg === '--tag') options.tag = argv[++index];
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (!['all', 'simple', 'complex'].includes(options.suite)) throw new Error('Invalid --suite value');
   if (!Number.isInteger(options.concurrency) || options.concurrency < 1) throw new Error('Invalid concurrency');
   if (!options.output) {
     const safeModel = options.model.replace(/[^a-zA-Z0-9._-]+/g, '_');
-    options.output = path.join(DEFAULT_OUTPUT_ROOT, `${safeModel}.json`);
+    const suffix = options.tag ? `-${options.tag}` : '';
+    options.output = path.join(DEFAULT_OUTPUT_ROOT, `${safeModel}${suffix}.json`);
   }
   return options;
 }
@@ -88,13 +91,12 @@ async function ollamaChat(model, messages, tools) {
       messages,
       tools,
       stream: false,
-      think: false,
       keep_alive: '30m',
       options: {
         temperature: 0,
         seed: 42,
         num_ctx: 32768,
-        num_predict: 512,
+        num_predict: 8192,
       },
     }),
   });
@@ -127,7 +129,14 @@ function buildSummary(model, records, startedAt, completedAt) {
     model,
     started_at: startedAt,
     completed_at: completedAt,
-    deterministic_options: { temperature: 0, seed: 42, stream: false, candidate_limit: CANDIDATE_LIMIT },
+    deterministic_options: {
+      temperature: 0,
+      seed: 42,
+      stream: false,
+      candidate_limit: CANDIDATE_LIMIT,
+      thinking: 'enabled',
+      num_predict: 8192,
+    },
     benchmark_scope: { automatic_simple: 143, automatic_complex: 29, manual_tests_included: 0 },
     overall: summarize(records),
     automatic_simple: summarize(records.filter(record => record.suite_id === 'automatic_simple')),
