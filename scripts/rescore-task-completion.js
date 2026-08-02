@@ -99,7 +99,13 @@ function main() {
   const summary = {
     schema_version: '1.0',
     scorer: 'task-completion-v1',
-    assessment_tier: 'task-completion-contract',
+    assessment_tier: 'task-completion-audit',
+    authoritative_benchmark:
+      'The official CodeXomics Benchmark runs the real application loop with ' +
+      'strict execution scoring. This file is an OFFLINE AUDIT ONLY: it re-scores ' +
+      'previously recorded native calls with task-completion tolerances ' +
+      '(equivalent tools, read-only extras, placeholders) and must not be ' +
+      'reported as benchmark accuracy.',
     source: options.input,
     source_overall: input.summary?.overall || null,
     overall: summarize(records),
