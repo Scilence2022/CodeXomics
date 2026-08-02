@@ -18,6 +18,12 @@ class LLMBenchmarkFramework {
     this.statisticsEngine = new BenchmarkStatistics();
     this.reportGenerator = new BenchmarkReportGenerator();
     this.strictAutomaticEvaluator = new StrictAutomaticEvaluator({
+      // The real in-app benchmark scores task completion like the offline
+      // audit tier (equivalent tools, read-only extras, duplicates of
+      // required capabilities, schema-documented alternatives) while still
+      // requiring real execution success for every expected call.
+      assessmentMode: 'completion',
+      requireExecutionForCompletion: true,
       validateToolCall: (toolName, parameters) => {
         if (this.chatManager?.dynamicTools?.validateToolCall) {
           return this.chatManager.dynamicTools.validateToolCall(toolName, parameters);

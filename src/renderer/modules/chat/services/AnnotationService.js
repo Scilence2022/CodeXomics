@@ -1232,6 +1232,12 @@ class AnnotationService {
   // 3. ANNOTATION CRUD
   _requireStructuralAnnotationPermission(params) {
     const context = params?.__executionContext;
+    // Local built-in ChatBox calls (including the benchmark loop and agent
+    // routing) carry no MCP execution context; the app itself authenticates
+    // them. Keep the structural-permission gate for external MCP callers so
+    // delete/edit/batch annotation tools work in normal chat instead of
+    // throwing for every local caller.
+    if (!context) return {};
     const permissions = Array.isArray(context?.permissions) ? context.permissions : [];
     if (
       context?.authenticated !== true ||
