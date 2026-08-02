@@ -453,6 +453,54 @@ v4 完成了数据层改造（多方案 oracle + 完成度回放门）并验证�
 - 选定适配器：`selected-adapter-v4/`（iter 150）；评测：`metrics/qwen3.5_4b-codexomics-tools-v4-fixed.json`、`metrics/qwen3.5_4b-codexomics-tools-v4-fixed-task-completion.json`。
 - 部署配方：`ollama/Modelfile-v4`。
 
+## DeepSeek harness 完成度修复与逐条归因（2026-08-02）
+
+目标：把 DeepSeek V4 Flash 在"修复 harness + 完成度口径"下复杂套件 20/29 的剩余失败逐条归因并修复测试侧问题。
+
+### 本轮修复（测试/harness 侧）
+
+1. **循环预算 bug**：harness 按"原始调用数 ≥ 期望数"提前 break，重复调用会吃掉最后一步的执行机会（`nav_auto_complex_02` 的 bookmark、`blast_auto_complex_03` 的 delete 从未被尝试）。改为按"期望步骤覆盖率"break 并预留 2 轮余量。
+2. **系统提示词**：新增通用 agent 指令——"请求可能包含多个步骤，全部完成前不要停止/重复/转向"+"选择执行该动作的工具（分析/编辑工具），而非只读检查工具"。
+3. **工具结果引导**：每次工具结果后追加生产循环同款引导语（"若还有剩余步骤，继续输出下一个工具调用；否则输出最终答案"）——ChatManager 真实循环本来就有，离线 harness 缺失。
+4. **域结果修正**：`capture_screenshot` 回显请求的 filePath（否则下一步打开的是工具内部路径）；序列结果上限 120bp（避免模型传字面量被 max_tokens 截断）；UniProt 条目返回真实序列。
+5. **完成度规则**：`toggle_track(action="toggle")` 在完成度口径下满足任意可见性目标（schema 合法且夹具初始态使 toggle 达成目标）；任务明确要求的能力出现额外实例（如保存第二条引物）不再判失败。
+6. **oracle 修正**：`get_annotation_history` 接受铸成 annotation id 与字面名字（anyOf）。
+
+### 结果（DeepSeek V4 Flash，无 thinking，temp 0）
+
+| 阶段                   |        严格 |              完成度 | 简单（严格→完成度） | 复杂（严格→完成度） |
+| ---------------------- | ----------: | ------------------: | ------------------: | ------------------: |
+| 最初（空结果桩）       |     149/172 |             155/172 |             134→137 |               15→18 |
+| 修复 harness           |     152/172 |             158/172 |             135→138 |               17→20 |
+| + 循环预算/提示词/规则 | **160/172** | **167/172 (97.1%)** |     **140→142/143** |        **20→25/29** |
+
+### 复杂剩余 4 条逐条归因（全部为模型真错）
+
+| 用例                      | 失败形态                                                                           | 归因                           |
+| ------------------------- | ---------------------------------------------------------------------------------- | ------------------------------ |
+| `track_auto_complex_01`   | `get_track_status, toggle_track ×2`，缺最终 `get_track_status` 验证                | 多步持久性：3/4 步完成即停     |
+| `task_auto_complex_01`    | 完成 clear/add/list/update，缺 `delete_task`                                       | 多步持久性：5/6 步完成即停     |
+| `file_auto_complex_02`    | `capture_screenshot` 缺 `mode:"visible"` 参数                                      | 参数遗漏（模型行为波动）       |
+| `protein_auto_complex_02` | 已调用 `analyze_interpro_domains` 但 `analysisType:"complete"` vs 期望 `"domains"` | 枚举值错误（步骤已对、参数错） |
+
+已修复（原 9 条中 7 条）：`nav_auto_complex_02`（循环预算）、`blast_auto_complex_03`（循环预算）、`analysis_auto_complex_05`（结果上限 + 持久性）、`gel_auto_workflow_02`（持久性，补上 gel 模拟）、`blast_auto_complex_02`（持久性，补上本地搜索）、`annotation_auto_complex_02`（oracle anyOf）、`primer_auto_complex_02`（完成度重复实例规则）。
+
+残留（2 条原失败）：`file_auto_complex_02`（provider 路径回显已修复，但本轮模型未带 `mode` 参数，参数遗漏波动）、`protein_auto_complex_02`（已补上 InterPro 分析步骤，但 `analysisType:"complete"` 枚举错）。
+
+另 2 条为运行波动新出现（上一轮通过、最终轮未通过）：`track_auto_complex_01`（缺最后验证步）、`task_auto_complex_01`（缺 `delete_task`）——均属多步最后一步持久性。
+
+### 简单剩余 1 条归因
+
+| 用例               | 失败形态                                                                                      | 归因                                                                                                                                                                  |
+| ------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `settings_auto_07` | `settings` 用了 `showGeneStartMarkers/endArrowSize`，oracle 期望 `showStartMarkers/arrowSize` | 模型真错：settings 为自由格式对象，无 harness 侧安全修复面（补别名等于虚构应用行为）；指令措辞"gene start markers"易诱导非规范键名，建议应用文档/工具 schema 固化键名 |
+
+简单其余原失败已由提示词"选择执行动作的工具"修复（`anal_auto_04`、`edit_auto_02`、`annot_auto_05`），`search_auto_02`/`track_auto_19` 由完成度规则修复。
+
+### 结论
+
+DeepSeek 在公平 harness + 任务完成口径下达到 **167/172（97.1%）**（简单 99.3%、复杂 86.2%），证实最初的低分约 60% 来自测试/harness 侧问题；剩余 5 条失败（简单 1 + 复杂 4）全部是模型真实行为（多步最后一步持久性、参数值/枚举），只能靠提示词进一步优化、更大模型或针对性训练解决。
+
 ## 复现命令与制品
 
 - 数据构建/验证：`npm run dataset:build && npm run dataset:validate`
