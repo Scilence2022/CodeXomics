@@ -301,4 +301,202 @@ describe('StrictAutomaticEvaluator', () => {
     expect(evaluation.details.expectedTools).toEqual(Array(5).fill('open_new_tab'));
     expect(evaluation.details.exactSequence).toBe(true);
   });
+
+  it('resolves nested benchmarkAnyOf parameter alternatives', () => {
+    const evaluator = createEvaluator('contract');
+    const test = {
+      id: 'nested-anyof',
+      complexity: 'complex',
+      maxScore: 15,
+      expectedResult: {
+        tool_sequence: ['bulk_update_annotations'],
+        parameters: [
+          {
+            updates: [
+              {
+                identifier: 'benchmark_bulk_gene',
+                updates: { benchmarkAnyOf: [{ description: 'Bulk benchmark annotation' }, { note: 'other' }] },
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluator.evaluate(test, {
+      actualResult: {
+        nativeFunctionCalls: [
+          {
+            tool_name: 'bulk_update_annotations',
+            parameters: {
+              updates: [{ identifier: 'benchmark_bulk_gene', updates: { description: 'Bulk benchmark annotation' } }],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(evaluation.success).toBe(true);
+  });
+
+  describe('completion mode', () => {
+    const schemaValidator = (name, parameters) => {
+      if (name === 'switch_to_tab') {
+        const valid = ['tab_id', 'tab_name', 'tab_index'].some(
+          key => parameters[key] !== undefined && parameters[key] !== ''
+        );
+        return { valid, errors: valid ? [] : ['$.at least one selector required'] };
+      }
+      if (name === 'toggle_track') {
+        const valid = [
+          'genes',
+          'gc_content',
+          'sequence',
+          'variants',
+          'reads',
+          'proteins',
+          'primers',
+          'actions',
+          'wigTracks',
+          'blast',
+        ].includes(parameters.track_name);
+        return { valid, errors: valid ? [] : ['$.track_name must be one of the track enums'] };
+      }
+      if (name === 'blast_create_quick_db_for_current_genome') {
+        return { valid: typeof parameters.genomeName === 'string', errors: [] };
+      }
+      if (name === 'create_annotation') {
+        const valid = typeof parameters.chromosome === 'string';
+        return { valid, errors: valid ? [] : ['$.chromosome is required'] };
+      }
+      return { valid: true, errors: [] };
+    };
+    const completionEvaluator = () =>
+      new StrictAutomaticEvaluator({ assessmentMode: 'completion', validateToolCall: schemaValidator });
+
+    it('ignores extra read-only calls', () => {
+      const test = {
+        id: 'completion-extra-readonly',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'select_gene', parameters: { geneName: 'lacZ' } },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'select_gene', parameters: { geneName: 'lacZ' } },
+            { tool_name: 'get_gene_details', parameters: { geneName: 'lacZ' } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
+    it('rejects extra state-changing calls', () => {
+      const test = {
+        id: 'completion-extra-stateful',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'compute_gc', parameters: { sequence: 'ATGC' } },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'compute_gc', parameters: { sequence: 'ATGC' } },
+            { tool_name: 'delete_annotation', parameters: { identifier: 'lacZ' } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(false);
+    });
+
+    it('accepts an equivalent blast database-creation tool with an alternative name key', () => {
+      const test = {
+        id: 'completion-blast-equivalent',
+        complexity: 'complex',
+        maxScore: 15,
+        expectedResult: {
+          tool_sequence: ['blast_create_db_from_genome', 'blast_list_databases', 'blast_search_local'],
+          parameters: [{ chromosome: '<current_chromosome>', dbName: 'ecoli_nucl' }, {}, {}],
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            {
+              tool_name: 'blast_create_quick_db_for_current_genome',
+              parameters: { createNucleotide: true, genomeName: 'ecoli_nucl' },
+            },
+            { tool_name: 'blast_list_databases', parameters: {} },
+            { tool_name: 'blast_search_local', parameters: {} },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
+    it('accepts a schema-valid alternative selector for switch_to_tab', () => {
+      const test = {
+        id: 'completion-tab-index',
+        complexity: 'complex',
+        maxScore: 10,
+        expectedResult: {
+          tool_sequence: ['open_new_tab', 'switch_to_tab', 'close_tab'],
+          parameters: [{}, { tab_id: '{open_new_tab.tab_id}' }, {}],
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'open_new_tab', parameters: {} },
+            { tool_name: 'switch_to_tab', parameters: { tab_index: 1 } },
+            { tool_name: 'close_tab', parameters: {} },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
+    it('normalizes track-name aliases before schema validation', () => {
+      const test = {
+        id: 'completion-track-alias',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'toggle_track', parameters: { track_name: 'gc_content', visible: true } },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [{ tool_name: 'toggle_track', parameters: { track_name: 'gc', visible: true } }],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
+    it('still fails when a required parameter is absent and schema-invalid', () => {
+      const test = {
+        id: 'completion-missing-required',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: {
+          tool_name: 'create_annotation',
+          parameters: { chromosome: '<current_chromosome>', name: 'fakG' },
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'create_annotation', parameters: { type: 'gene', name: 'fakG', start: 500000, end: 501500 } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(false);
+      expect(evaluation.errors.some(error => error.includes('Schema invalid'))).toBe(true);
+    });
+  });
 });

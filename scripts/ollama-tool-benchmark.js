@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const DynamicToolsSnapshotAdapter = require('../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
 const StrictAutomaticEvaluator = require('../src/renderer/modules/benchmark-suites/StrictAutomaticEvaluator.js');
+const { buildContractToolResult } = require('./lib/contract-tool-results.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'tools_registry', 'generated', 'tool-registry-manifest.json');
@@ -36,8 +37,11 @@ function parseArgs(argv) {
   if (!Number.isInteger(options.concurrency) || options.concurrency < 1) throw new Error('Invalid concurrency');
   if (!options.output) {
     const safeModel = options.model.replace(/[^a-zA-Z0-9._-]+/g, '_');
+    // Simple and complex runs share the same model+tag, so the suite must be
+    // part of the default filename or one run silently overwrites the other.
+    const suiteSuffix = options.suite === 'all' ? '' : `-${options.suite}`;
     const suffix = options.tag ? `-${options.tag}` : '';
-    options.output = path.join(DEFAULT_OUTPUT_ROOT, `${safeModel}${suffix}.json`);
+    options.output = path.join(DEFAULT_OUTPUT_ROOT, `${safeModel}${suiteSuffix}${suffix}.json`);
   }
   return options;
 }
@@ -129,6 +133,7 @@ function buildSummary(model, records, startedAt, completedAt) {
     model,
     started_at: startedAt,
     completed_at: completedAt,
+    tool_result_mode: 'domain-shaped-contract',
     deterministic_options: {
       temperature: 0,
       seed: 42,
@@ -156,27 +161,70 @@ async function evaluateTest(test, model, adapter, evaluator) {
       content:
         'Use only the supplied CodeXomics tools. Call tools instead of describing calls. Ground all arguments in the user request, this fixture context, or prior tool results. ' +
         'Deterministic fixture context: genome ECOLI.gbk is loaded; active chromosome is U00096; current view is U00096:100000-101000; annotations and UI state are available through tools. ' +
-        'Do not invent values that are absent from all three sources.',
+        'Do not invent values that are absent from all three sources. ' +
+        'The request may contain several steps. Track every requested step and keep calling tools until all of them are done; ' +
+        'do not stop, repeat completed steps, or switch to a different action after partial progress. ' +
+        'Choose the tool that performs the requested action (an analysis or editing tool), not a read-only inspection tool. ' +
+        'Supply every parameter the request implies even when the tool defines a default; relying on a default that changes the outcome is wrong. ' +
+        'Before ending the turn, review the original request and complete every remaining step, including verification steps ("check again", "confirm") and final steps ("delete", "list again"). ' +
+        'When a request asks to check or confirm after a modification, the verification must be its own tool call after the modification. ' +
+        'A status check performed before changes does not verify the changes made after it. ' +
+        'A successful modification is not the verification itself; if the request asks to confirm the result, perform the confirmation call too. ' +
+        'Example: for "load the file, then search it", call the load tool, wait for its result, then call the search tool, and only then give the final answer - never stop after the first result.',
     },
     { role: 'user', content: test.instruction },
   ];
-  const expectedCount = evaluator.getExpectedTools(test).length;
+  const expectedTools = evaluator.getExpectedTools(test);
+  const expectedCount = expectedTools.length;
   const calls = [];
   let promptEvalCount = 0;
   let evalCount = 0;
+  let truncatedTurns = 0;
   const started = Date.now();
   let apiError = null;
 
   try {
-    const maxTurns = Math.max(1, expectedCount + 1);
+    const maxTurns = Math.max(1, expectedCount + 4);
     for (let turn = 0; turn < maxTurns; turn += 1) {
       const response = await ollamaChat(model, messages, tools);
       promptEvalCount += Number(response.prompt_eval_count || 0);
       evalCount += Number(response.eval_count || 0);
+      if (response.done_reason === 'length') truncatedTurns += 1;
       const assistant = response.message || { role: 'assistant', content: '' };
       messages.push(assistant);
       const responseCalls = assistant.tool_calls || [];
-      if (responseCalls.length === 0) break;
+      const usedBeforeTurn = new Set();
+      const coverageBeforeTurn = expectedTools.filter(tool => {
+        const matchIndex = calls.findIndex(
+          (call, index) => !usedBeforeTurn.has(index) && evaluator.toolMatches(call.tool_name, tool)
+        );
+        if (matchIndex === -1) return false;
+        usedBeforeTurn.add(matchIndex);
+        return true;
+      }).length;
+      if (responseCalls.length === 0) {
+        const usedCallIndexes = new Set();
+        const coveredExpected = expectedTools.filter(tool => {
+          const matchIndex = calls.findIndex(
+            (call, index) => !usedCallIndexes.has(index) && evaluator.toolMatches(call.tool_name, tool)
+          );
+          if (matchIndex === -1) return false;
+          usedCallIndexes.add(matchIndex);
+          return true;
+        }).length;
+        if (coveredExpected < expectedCount && turn < maxTurns - 1) {
+          messages.push({
+            role: 'user',
+            content:
+              `You have completed ${coveredExpected} of ${expectedCount} requested steps; ${expectedCount - coveredExpected} are still missing. ` +
+              'The missing steps are the final steps of the request (verification, confirmation, cleanup, search, or query). ' +
+              'Emit the next tool call NOW for the next missing step; do not reply with text only. ' +
+              'Give the final answer only after every requested step is done.',
+          });
+          continue;
+        }
+        break;
+      }
 
       for (const toolCall of responseCalls) {
         const toolName = toolCall.function?.name;
@@ -186,14 +234,36 @@ async function evaluateTest(test, model, adapter, evaluator) {
         messages.push({
           role: 'tool',
           tool_name: toolName,
-          content: JSON.stringify({
-            acknowledged: validation.valid,
-            assessment_tier: 'native-function-contract',
-            domain_result_available: false,
-          }),
+          content:
+            JSON.stringify(buildContractToolResult(toolName, parameters)) +
+            '\nIf the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer. ' +
+            'If the request asked to confirm or verify a change, that verification step is still pending.',
         });
       }
-      if (calls.length >= expectedCount + 1 || calls.length >= expectedCount) break;
+      const usedCallIndexes = new Set();
+      const coveredExpected = expectedTools.filter(tool => {
+        const matchIndex = calls.findIndex(
+          (call, index) => !usedCallIndexes.has(index) && evaluator.toolMatches(call.tool_name, tool)
+        );
+        if (matchIndex === -1) return false;
+        usedCallIndexes.add(matchIndex);
+        return true;
+      }).length;
+      if (
+        coveredExpected < expectedCount &&
+        coveredExpected <= coverageBeforeTurn &&
+        turn < maxTurns - 1
+      ) {
+        messages.push({
+          role: 'user',
+          content:
+            `You have completed ${coveredExpected} of ${expectedCount} requested steps; ${expectedCount - coveredExpected} are still missing. ` +
+            'The missing steps are the final steps of the request (verification, confirmation, cleanup, search, or query). ' +
+            'Emit the next tool call NOW for the next missing step; do not reply with text only. ' +
+            'Give the final answer only after every requested step is done.',
+        });
+      }
+      if (coveredExpected >= expectedCount) break;
     }
   } catch (error) {
     apiError = error.message;
@@ -219,6 +289,7 @@ async function evaluateTest(test, model, adapter, evaluator) {
     selected_tools: selected.map(tool => tool.name),
     calls,
     api_error: apiError,
+    truncated_turns: truncatedTurns,
     evaluation,
   };
 }

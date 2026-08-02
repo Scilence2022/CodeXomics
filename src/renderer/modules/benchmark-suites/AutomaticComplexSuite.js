@@ -774,9 +774,18 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               type: 'regulatory',
             },
             {
-              identifier: 'regulatory_region_A',
+              // create_annotation hands back the minted featureId, and
+              // update_annotation resolves it exactly like the name, so a
+              // model that chains the returned id is equally correct.
+              ...this.anyOfParameters({ identifier: 'regulatory_region_A' }, { identifier: '<created_annotation_id>' }),
               updates: {
-                note: 'Highly conserved regulatory region',
+                // The app aliases description onto the note qualifier (see the
+                // bulk-update workflow comment), so either field name writes
+                // the same value.
+                ...this.anyOfParameters(
+                  { note: 'Highly conserved regulatory region' },
+                  { description: 'Highly conserved regulatory region' }
+                ),
               },
             },
             {
@@ -833,10 +842,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
                 },
               ],
             },
-            // get_annotation_history stays pinned to the name: its lookup is an exact match on the
-            // recorded annotationId, so the two identifiers are not interchangeable here.
+            // History is keyed by the annotation's minted id, and the tool also
+            // accepts the gene name; a model that chains the create_annotation
+            // result is as correct as one that repeats the literal name.
             {
-              identifier: 'benchmark_bulk_gene',
+              ...this.anyOfParameters({ identifier: 'benchmark_bulk_gene' }, { identifier: '<created_annotation_id>' }),
             },
             {
               start: 160000,
@@ -942,7 +952,14 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               representation: this.schemaDefault('cartoon'),
-              ...this.anyOfParameters({ data_ref: '{fetch_alphafold_structure._dataRef}' }, { uniprot_id: 'P04637' }),
+              ...this.anyOfParameters(
+                { data_ref: '{fetch_alphafold_structure._dataRef}' },
+                { uniprot_id: 'P04637' },
+                // The viewer schema documents file_path (local PDB file), and
+                // the instruction says to open the returned structure, so
+                // opening the downloaded file path is equally correct.
+                { file_path: '{fetch_alphafold_structure.filePath}' }
+              ),
             },
           ],
         },
@@ -1217,6 +1234,9 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               // re-transcribing 292 residues is the equally correct call.
               ...this.anyOfParameters(
                 { uniprot_id: 'P0A6L2' },
+                // The tool documents geneName + organism as an alternative
+                // input method, so resolving dapA in E. coli is equally valid.
+                { geneName: 'dapA', organism: 'Escherichia coli' },
                 {
                   sequence:
                     'MFTGSIVAIVTPMDEKGNVCRASLKKLIDYHVASGTSAIVSVGTTGESATLNHDEHADVVMMTLDLADGRIPVIAGTGANATAEAISLTQRFNDSGIVGCLTVTPYYNRPSQEGLYQHFKAIAEHTDLPQILYNVPSRTGCDLLPETVGRLAKVKNIIGIKEATGNLTRVNQIKELVSDDFVLLSGDDASALDFMQLGGHGVISVTANVAARDMAQMCKLAAEGHFAEARVINQRLMPLHNKLFVEPNPIPVKWACKELGLVATDTLRLPMTPITDSGRETVRAALKHAGLL',

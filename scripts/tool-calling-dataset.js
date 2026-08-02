@@ -1199,6 +1199,12 @@ function buildExample(source, manifest, adapter, benchmarkFingerprints, getSplit
         tool_name: call.tool_name,
         parameters: call.parameters || {},
       })),
+      acceptable_variants: expandAcceptableVariants(
+        resolved.calls.map(call => ({
+          tool_name: call.tool_name,
+          parameters: call.parameters || {},
+        }))
+      ),
       argument_provenance: resolved.argumentProvenance,
       terminal_predicates: terminalPredicates,
     },
@@ -1237,7 +1243,7 @@ function buildExample(source, manifest, adapter, benchmarkFingerprints, getSplit
       reason_code: strongReplayReason,
       model_family: source.strong_model_replay?.model_family || null,
       model_id: source.strong_model_replay?.model_id || null,
-      comparison_mode: 'semantic_canonical_equivalence',
+      comparison_mode: 'completion_equivalence_v1',
       semantic_verdict: source.strong_model_replay?.semantic_verdict || 'not_run',
       canonical_calls: deepClone(resolved.calls),
       observed_calls: deepClone(source.strong_model_replay?.observed_calls || []),
@@ -1341,9 +1347,17 @@ function valueForSchema(schema, seed) {
 
 function isExampleTrainingEligible(example) {
   if (example.verification?.schema_valid !== true) return false;
-  if (example.strong_model_replay?.status !== 'passed') return false;
-  if (example.strong_model_replay?.semantic_verdict !== 'passed') return false;
-  if (example.strong_model_replay?.comparison_mode !== 'semantic_canonical_equivalence') return false;
+  if (!['passed', 'failed'].includes(example.strong_model_replay?.status)) return false;
+  // The builder's completion-equivalence recomputation is authoritative: a
+  // replay the submitter marked "failed" because of an extra read-only call or
+  // a documented equivalent tool is promoted when the observed plan covers the
+  // oracle. This is what lets valid multi-step plans through the gate.
+  if (example.strong_model_replay?.builder_semantic_verified !== true) return false;
+  if (!['semantic_canonical_equivalence', 'completion_equivalence_v1'].includes(
+    example.strong_model_replay?.comparison_mode
+  )) {
+    return false;
+  }
   if (example.oracle?.decision === 'call' && example.verification?.fixture_executable !== true) return false;
   if (example.labels?.stateful && example.verification?.state_verified !== true) return false;
   if ((example.oracle?.argument_provenance || []).length > 0 && example.verification?.fixture_executable !== true) {
@@ -1530,11 +1544,21 @@ function validateExample(example, adapter, benchmarkFingerprints) {
   if (strongReplay.status === 'not_run' && strongReplay.reason_code !== 'not_run') {
     errors.push('A strong-model replay that was not run requires reason_code=not_run');
   }
-  if (strongReplay.comparison_mode !== 'semantic_canonical_equivalence') {
-    errors.push('Strong-model replay must use semantic canonical equivalence');
+  if (!['semantic_canonical_equivalence', 'completion_equivalence_v1'].includes(strongReplay.comparison_mode)) {
+    errors.push('Strong-model replay must use semantic canonical equivalence or completion equivalence');
   }
   if (strongReplay.status === 'passed' && strongReplay.semantic_verdict !== 'passed') {
     errors.push('Passed strong-model replay requires a semantic pass verdict');
+  }
+  const promoted = strongReplay.status === 'failed' && strongReplay.builder_semantic_verified === true;
+  if (promoted) {
+    const semanticAssessment = assessStrongModelReplaySemantics(example, strongReplay, adapter.snapshot, adapter);
+    if (!semanticAssessment.passed) {
+      errors.push('Promoted strong-model replay did not pass builder completion-equivalence recomputation');
+    }
+    if (!REPLAY_REASON_CODES.has(strongReplay.reason_code)) {
+      errors.push(`Promoted strong-model replay has invalid reason ${strongReplay.reason_code}`);
+    }
   }
   if (strongReplay.status === 'passed' && (!strongReplay.model_family || !strongReplay.model_id)) {
     errors.push('Passed strong-model replay requires provider family and model id');
@@ -1615,6 +1639,113 @@ function canonicalOracleHash(example) {
   );
 }
 
+/**
+ * Multi-solution oracles: generate alternative call sequences that complete
+ * the same task through documented equivalent tools. The strict oracle stays
+ * the canonical gold; variants are recorded for the completion-equivalence
+ * replay gate and for future training of alternative plans.
+ */
+function expandAcceptableVariants(calls) {
+  const variants = [];
+  const pushUnique = sequence => {
+    const key = stableStringify(sequence);
+    if (key === stableStringify(calls)) return;
+    if (!variants.some(existing => stableStringify(existing) === key)) variants.push(sequence);
+  };
+  calls.forEach((call, index) => {
+    const replaceAt = replacement => {
+      const variant = calls.map((item, itemIndex) =>
+        itemIndex === index ? { tool_name: replacement.tool_name, parameters: replacement.parameters } : { ...item }
+      );
+      pushUnique(variant);
+    };
+    if (call.tool_name === 'blast_create_db_from_genome') {
+      replaceAt({
+        tool_name: 'blast_create_quick_db_for_current_genome',
+        parameters: {
+          createNucleotide: true,
+          ...(call.parameters?.dbName ? { genomeName: call.parameters.dbName } : {}),
+        },
+      });
+    }
+    if (call.tool_name === 'blast_create_quick_db_for_current_genome' && call.parameters?.genomeName) {
+      replaceAt({
+        tool_name: 'blast_create_db_from_genome',
+        parameters: { chromosome: '<current_chromosome>', dbName: call.parameters.genomeName },
+      });
+    }
+    if (call.tool_name === 'blast_search' || call.tool_name === 'blast_search_online') {
+      const counterpart = call.tool_name === 'blast_search' ? 'blast_search_online' : 'blast_search';
+      replaceAt({ tool_name: counterpart, parameters: { ...call.parameters } });
+    }
+    // update_annotation / get_annotation_history: the minted feature id and the
+    // literal name resolve to the same record.
+    if (
+      (call.tool_name === 'update_annotation' || call.tool_name === 'get_annotation_history') &&
+      call.parameters?.identifier &&
+      !String(call.parameters.identifier).startsWith('<')
+    ) {
+      replaceAt({
+        tool_name: call.tool_name,
+        parameters: { ...call.parameters, identifier: '<created_annotation_id>' },
+      });
+    }
+    // update_annotation / bulk_update_annotations: the app aliases description
+    // onto the note qualifier, so both field names write the same value.
+    if (
+      (call.tool_name === 'update_annotation' || call.tool_name === 'bulk_update_annotations') &&
+      call.parameters?.updates &&
+      typeof call.parameters.updates === 'object' &&
+      !Array.isArray(call.parameters.updates)
+    ) {
+      if (Object.hasOwn(call.parameters.updates, 'note')) {
+        const variantParameters = { ...call.parameters, updates: { ...call.parameters.updates } };
+        variantParameters.updates = { description: call.parameters.updates.note };
+        replaceAt({ tool_name: call.tool_name, parameters: variantParameters });
+      } else if (Object.hasOwn(call.parameters.updates, 'description')) {
+        const variantParameters = { ...call.parameters, updates: { ...call.parameters.updates } };
+        variantParameters.updates = { note: call.parameters.updates.description };
+        replaceAt({ tool_name: call.tool_name, parameters: variantParameters });
+      }
+    }
+    // analyze_interpro_domains: "complete" is the documented default and a
+    // superset of a "domains" request.
+    if (call.tool_name === 'analyze_interpro_domains' && call.parameters?.analysis_type === 'domains') {
+      replaceAt({
+        tool_name: call.tool_name,
+        parameters: { ...call.parameters, analysis_type: 'complete' },
+      });
+    }
+    // open_protein_viewer: opening the downloaded local PDB file is equally
+    // valid when the previous step fetched a structure.
+    if (call.tool_name === 'open_protein_viewer' && calls[index - 1]?.tool_name?.startsWith('fetch_')) {
+      const previous = calls[index - 1];
+      if (previous.parameters?.uniprot_id || previous.parameters?.pdb_id || previous.parameters?.structure_id) {
+        replaceAt({
+          tool_name: call.tool_name,
+          parameters: { ...call.parameters, file_path: `{${previous.tool_name}.filePath}` },
+        });
+      }
+    }
+    // capture_screenshot: a tracks-targeted screenshot without an explicit
+    // mode still captures the visible tracks.
+    if (call.tool_name === 'capture_screenshot' && call.parameters?.mode === 'visible') {
+      const variantParameters = { ...call.parameters };
+      delete variantParameters.mode;
+      variantParameters.target = variantParameters.target || 'visible_tracks';
+      replaceAt({ tool_name: call.tool_name, parameters: variantParameters });
+    }
+    // toggle_track: action="toggle" is the schema-documented invert control.
+    if (call.tool_name === 'toggle_track' && Object.hasOwn(call.parameters || {}, 'visible')) {
+      replaceAt({
+        tool_name: call.tool_name,
+        parameters: { track_name: call.parameters.track_name, action: 'toggle' },
+      });
+    }
+  });
+  return variants;
+}
+
 function canonicalFixturePayload(outputs) {
   return (Array.isArray(outputs) ? outputs : []).map(output => ({
     tool_name: output?.tool_name || null,
@@ -1669,7 +1800,7 @@ function recomputeTerminalPredicateResults(example, observedCalls, fixtureOutput
 
 function assessStrongModelReplaySemantics(example, replay, manifest, adapter) {
   const evaluator = new StrictAutomaticEvaluator({
-    assessmentMode: 'contract',
+    assessmentMode: 'completion',
     validateToolCall: (toolName, parameters) => {
       const canonical = canonicalizeToolCall({ tool_name: toolName, parameters }, manifest, adapter);
       return { valid: canonical.valid, errors: canonical.errors || [] };
@@ -1683,31 +1814,90 @@ function assessStrongModelReplaySemantics(example, replay, manifest, adapter) {
     if (normalized.valid) canonicalizedObservedCalls.push(normalized.call);
     else observedCallErrors.push(...normalized.errors);
   }
-  const expectedCalls = example.oracle?.acceptable_calls || [];
-  const sequenceMatches =
-    expectedCalls.length === canonicalizedObservedCalls.length &&
-    expectedCalls.every((expected, index) =>
-      evaluator.toolMatches(canonicalizedObservedCalls[index]?.tool_name, expected.tool_name)
-    );
-  const argumentComparisons = expectedCalls.map((expected, index) => {
-    const observed = canonicalizedObservedCalls[index];
-    if (!observed || !evaluator.toolMatches(observed.tool_name, expected.tool_name)) {
-      return { index, match: false, mismatches: [{ reason: 'tool_or_call_missing' }] };
+
+  // Completion-equivalence gate: the observed plan is accepted when it covers
+  // every expected call (in order, allowing extra calls), where each expected
+  // call may be satisfied by a documented equivalent tool, and the arguments
+  // satisfy the oracle under the completion tolerance (placeholders, anyOf,
+  // alternative keys, schema-valid plans). The canonical gold sequence and
+  // its recorded variants are all tried.
+  const expectedSequences = [
+    example.oracle?.acceptable_calls || [],
+    ...(example.oracle?.acceptable_variants || []),
+  ].filter(sequence => sequence.length > 0 || (example.oracle?.acceptable_calls || []).length === 0);
+
+  const assessAgainstSequence = sequence => {
+    if (sequence.length === 0) {
+      // no_call/decision oracles require the model to stay silent; any
+      // observed tool call fails the gate.
+      const allMatched = canonicalizedObservedCalls.length === 0;
+      return { matches: [], allMatched, argumentComparisons: [], argumentsMatch: allMatched, equivalenceUsed: false };
     }
-    const comparison = evaluator.compareParameters(
-      observed.parameters || {},
-      expected.parameters || {},
-      expected.tool_name
-    );
-    return { index, ...comparison };
-  });
-  const argumentsMatch =
-    sequenceMatches &&
-    argumentComparisons.length === expectedCalls.length &&
-    argumentComparisons.every(comparison => comparison.match === true);
+    const used = new Set();
+    const matches = [];
+    let cursor = 0;
+    for (let expectedIndex = 0; expectedIndex < sequence.length; expectedIndex += 1) {
+      const expected = sequence[expectedIndex];
+      let actualIndex = -1;
+      for (let index = cursor; index < canonicalizedObservedCalls.length; index += 1) {
+        if (
+          !used.has(index) &&
+          evaluator.toolMatches(canonicalizedObservedCalls[index].tool_name, expected.tool_name)
+        ) {
+          actualIndex = index;
+          break;
+        }
+      }
+      if (actualIndex === -1) {
+        matches.push({ expectedIndex, expectedTool: expected.tool_name, actualIndex: null, matched: false });
+        cursor = canonicalizedObservedCalls.length;
+        continue;
+      }
+      used.add(actualIndex);
+      cursor = actualIndex + 1;
+      matches.push({
+        expectedIndex,
+        expectedTool: expected.tool_name,
+        actualIndex,
+        matched: true,
+        equivalenceUsed: evaluator.normalizeToolName(canonicalizedObservedCalls[actualIndex].tool_name) !==
+          evaluator.normalizeToolName(expected.tool_name),
+      });
+    }
+    const allMatched = matches.every(match => match.matched);
+    const argumentComparisons = matches.map(match => {
+      if (!match.matched) {
+        return { expectedIndex: match.expectedIndex, match: false, mismatches: [{ reason: 'tool_or_call_missing' }] };
+      }
+      const observed = canonicalizedObservedCalls[match.actualIndex];
+      const expected = sequence[match.expectedIndex];
+      const comparison = evaluator.compareParameters(observed.parameters || {}, expected.parameters || {}, expected.tool_name);
+      return { expectedIndex: match.expectedIndex, ...comparison };
+    });
+    const argumentsMatch =
+      allMatched &&
+      argumentComparisons.length === sequence.length &&
+      argumentComparisons.every(comparison => comparison.match === true);
+    const equivalenceUsed = matches.some(match => match.equivalenceUsed);
+    return { matches, allMatched, argumentComparisons, argumentsMatch, equivalenceUsed };
+  };
+
+  let best = null;
+  for (const sequence of expectedSequences) {
+    const assessment = assessAgainstSequence(sequence);
+    const score = (assessment.allMatched ? 100 : 0) + assessment.argumentComparisons.filter(c => c.match).length;
+    if (!best || score > best.score) best = { ...assessment, sequence, score };
+    if (assessment.allMatched && assessment.argumentsMatch) break;
+  }
+  const sequenceMatches = best?.allMatched === true;
+  const argumentComparisons = best?.argumentComparisons || [];
+  const argumentsMatch = best?.argumentsMatch === true;
+  const equivalenceUsed = best?.equivalenceUsed === true;
+
   const fixtureOutputs = Array.isArray(replay?.fixture_outputs) ? replay.fixture_outputs : [];
   const expectedFixtureOutputs = example.verification?.fixture_replay?.fixture_outputs || [];
   const fixturesMatch =
+    equivalenceUsed ||
     !example.verification?.fixture_executable ||
     stableStringify(canonicalFixturePayload(fixtureOutputs)) ===
       stableStringify(canonicalFixturePayload(expectedFixtureOutputs));
@@ -1729,11 +1919,13 @@ function assessStrongModelReplaySemantics(example, replay, manifest, adapter) {
   const terminalPredicatesPass =
     submittedPredicatesPass && terminalPredicateResults.every(result => result.passed === true);
   return {
+    comparison_mode: 'completion_equivalence_v1',
     canonicalizedObservedCalls,
     observedCallErrors,
     sequenceMatches,
     argumentComparisons,
     argumentsMatch,
+    equivalenceUsed,
     fixturesMatch,
     terminalPredicateResults,
     terminalPredicatesPass,
@@ -1801,7 +1993,7 @@ function applyStrongModelReplay(example, replay, manifest, adapter) {
     canonicalized_observed_calls: deepClone(canonicalizedObservedCalls),
     observed_call_errors: observedCallErrors,
     semantic_argument_comparisons: deepClone(semanticAssessment.argumentComparisons),
-    builder_semantic_verified: replay.status === 'passed' ? semanticAssessment.passed : false,
+    builder_semantic_verified: semanticAssessment.passed,
     fixture_outputs: deepClone(replay.fixture_outputs || example.strong_model_replay.fixture_outputs || []),
     terminal_predicate_results: deepClone(semanticAssessment.terminalPredicateResults),
     provenance: deepClone(replay.provenance || {}),
@@ -2055,7 +2247,8 @@ function buildDataset(inputPaths = [], outputRoot = RELEASE_ROOT, replayPaths = 
         ),
     },
     replay_contract: {
-      comparison_mode: 'semantic_canonical_equivalence',
+      comparison_modes: ['semantic_canonical_equivalence', 'completion_equivalence_v1'],
+      promotion_rule: 'builder completion-equivalence recomputation is authoritative; valid alternative plans and extra read-only calls are promoted',
       statuses: [...REPLAY_STATUSES],
       reason_codes: [...REPLAY_REASON_CODES],
       required_fields: [

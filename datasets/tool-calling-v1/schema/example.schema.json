@@ -41,6 +41,11 @@
           "enum": ["call", "no_call", "ask_clarification", "refuse", "unavailable_tool"]
         },
         "acceptable_calls": { "type": "array" },
+        "acceptable_variants": {
+          "type": "array",
+          "description": "Alternative call sequences that complete the same task through documented equivalent tools (multi-solution oracle).",
+          "items": { "type": "array" }
+        },
         "argument_provenance": { "type": "array" },
         "terminal_predicates": { "type": "array" }
       }
@@ -93,7 +98,9 @@
         "registry_hash": { "type": "string" },
         "model_family": { "type": ["string", "null"] },
         "model_id": { "type": ["string", "null"] },
-        "comparison_mode": { "const": "semantic_canonical_equivalence" },
+        "comparison_mode": {
+          "enum": ["semantic_canonical_equivalence", "completion_equivalence_v1"]
+        },
         "semantic_verdict": { "enum": ["not_run", "passed", "failed", "blocked"] },
         "canonical_oracle_hash": { "type": "string" },
         "canonical_calls": { "type": "array" },

@@ -168,7 +168,7 @@ describe('DeepSeek dataset semantic replay', () => {
     const result = await replay.replayExample(record, 1, options(), runtime, requestChat);
 
     expect(result.taxonomy).toBe('pass');
-    expect(result.evaluation.details.assessmentMode).toBe('contract');
+    expect(result.evaluation.details.assessmentMode).toBe('completion');
     expect(result.evaluation.details.executionExact).toBe(false);
     expect(result.calls).toEqual(record.oracle.acceptable_calls);
     expect(result.fixture_outputs).toEqual(
@@ -188,11 +188,8 @@ describe('DeepSeek dataset semantic replay', () => {
       .fn()
       .mockResolvedValueOnce(toolResponse('get_sequence', { region: 'A' }, 'observed_1'))
       .mockImplementationOnce(async (_options, messages) => {
-        expect(JSON.parse(messages.at(-1).content)).toEqual({
-          acknowledged: true,
-          assessment_tier: 'native-function-contract',
-          domain_result_available: false,
-        });
+        expect(messages.at(-1).name).toBe('get_sequence');
+        expect(JSON.parse(messages.at(-1).content).success).toBe(true);
         return toolResponse('compute_gc', { sequence: 'ATGC' }, 'observed_2');
       });
 
