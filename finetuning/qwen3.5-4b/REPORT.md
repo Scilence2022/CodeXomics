@@ -1,6 +1,6 @@
 # Qwen3.5 4B CodeXomics 工具调用微调报告
 
-生成时间：2026-08-01T18:40:00.000Z
+生成时间：2026-08-02T06:40:00.000Z
 
 ## 执行摘要
 
@@ -374,6 +374,84 @@ DeepSeek V4 Flash 复测（无 thinking，temperature 0，seed 固定）：
 3. **模型规模。** 4B 单步已达 97.2%；若要把复杂链路推到 75%+，7B/14B 或带思考的模型更合适，但仍需先在夹具 dev 上验证再下载。
 4. **DPO/偏好数据。** 运行语义负例回放后，将 `candidate-preferences.jsonl`（623 条）中通过负例验证的行提升为 `preferences.jsonl`，再做第二轮偏好优化。
 5. **评测纪律。** 训练期只使用私有夹具 dev/holdout；172 条最终测试仅作一次验收，不再承担模型选择职责。
+
+## v4 多方案 oracle + 完成度回放门微调（2026-08-02）
+
+### 动机与数据改造
+
+前几轮审计确认：严格回放门（精确序列 + 规范等价参数）会拒绝**能完成任务的其他方案**（等价 blast 工具、只读多余调用、替代参数键），导致有效记录被门禁丢弃；同时离线评测的"空结果桩"让依赖步骤无法完成。v4 的数据层改动：
+
+1. **多方案 oracle**：`oracle.acceptable_variants` 记录等价方案（`blast_create_db_from_genome ↔ blast_create_quick_db_for_current_genome`、`blast_search ↔ blast_search_online`），schema 同步更新（`datasets/tool-calling-v1/schema/example.schema.json`）。
+2. **完成度等价回放门**（`completion_equivalence_v1`）：`assessStrongModelReplaySemantics` 改为覆盖式匹配（有序子序列 + 等价工具 + 参数容差 + 只读多余调用容忍；no_call 决策要求零调用；blocked 永不提升）；`builder_semantic_verified` 成为资格权威信号。
+3. **数据集回放 harness** 同步改为 completion 评估 + 域形状结果回退 + `max_tokens 4096`。
+
+重建 release（合并 v3/v4 回放 sidecar，v4 限流记录回退 v3 严格通过）：
+
+| 指标                            | v2/v3 release |                                                        v4 release |
+| ------------------------------- | ------------: | ----------------------------------------------------------------: |
+| 可训练记录（train/dev/holdout） |      82/63/21 |                                                      **85/66/21** |
+| 提升来源                        |             — |                    完成度门禁提升 6 条（含只读多余调用/等价方案） |
+| 多步记录回放通过                |             0 | 0（DeepSeek 多步持久性弱，多步训练继续依赖合成链 + 夹具多步记录） |
+
+### 训练数据（data-v4）
+
+- train **363** = 85 单轮合格 + 18 夹具多步 + 260 合成链；dev **120** = 66 + 8 + 46；holdout 29。
+- 渲染长度：train max 2581 / dev max 2223 / test max 2480（上限 3072，监督目标无截断）。
+- 配置：`config/qlora-v4.yaml`（lr 1e-5、rank 16、scale 32、4 层、batch 1 × grad accum 4、iters 200、3072、grad checkpoint、32GB 缓存阈值）。
+
+### 训练过程（含中断与续训）
+
+正式运行在 iter 158/200 附近被外部环境中断（exec 会话终止连带杀进程，/private/tmp 日志被清理）；检查点保存至 iter 150。随后重建训练 venv（mlx 0.32.0 / mlx-lm 0.31.2 / transformers 5.14.1），从 **iter 150 检查点续训 50 iters**（`config/qlora-v4-resume.yaml`），日志落盘工作区。
+
+|               检查点 |  Val loss | 说明                        |
+| -------------------: | --------: | --------------------------- |
+|               iter 1 |     0.446 | 初值                        |
+|              iter 25 |     0.063 |                             |
+|              iter 50 |     0.025 |                             |
+|              iter 75 |     0.055 |                             |
+|             iter 100 |     0.034 |                             |
+|             iter 125 |     0.026 |                             |
+|         **iter 150** | **0.014** | **最优，选定**              |
+| 续训 iter 25（=175） |     0.038 |                             |
+| 续训 iter 50（=200） |     0.036 | Test loss 0.057 / ppl 1.059 |
+
+结论：iter 150 后继续训练不改善验证损失（续训 50 iters 均高于 0.014），选择 **iter 150** 为 v4 适配器。峰值内存 137–167GB（换页运行）。
+
+### 部署
+
+- 融合：`mlx_lm fuse --dequantize` → `fused-mlx-v4`（7.9GB）→ `export-qwen35-mlx-to-hf.py` → `fused-hf-v4`（426 张量，2 shards）。
+- Ollama：`qwen3.5:4b-codexomics-tools-v4`（Q4_K_M 2.7GB，`ollama/Modelfile-v4`），thinking 保持开启。
+
+### 评测（修复后 harness：域形状工具结果 + 4096 tokens，thinking 开启，temp 0 / seed 42）
+
+| 模型                              |            严格总体 |          完成度总体 | 简单（严格→完成度） | 复杂（严格→完成度） |
+| --------------------------------- | ------------------: | ------------------: | ------------------: | ------------------: |
+| 基座 qwen3.5:4b                   |     144/172 (83.7%) |                   — |             132/143 |               12/29 |
+| v2                                |     154/172 (89.5%) |     155/172 (90.1%) |             139→139 |               15→16 |
+| v3                                |     154/172 (89.5%) |     154/172 (89.5%) |             138→138 |               16→16 |
+| **v4**                            | **152/172 (88.4%)** | **154/172 (89.5%)** |         **137→138** |           **15→16** |
+| DeepSeek V4 Flash（修复 harness） |     152/172 (88.4%) |     158/172 (91.9%) |             135→138 |               17→20 |
+
+**v4 相对 v3 的逐条变化（严格口径 8 条翻转，净 0）：**
+
+- 修复：`nav_auto_01`（简单，补齐 position 参数——v2/v3 一直缺参）、`track_auto_07`（简单，恢复调用）、`export_auto_complex_02`（导航+导出链）、`blast_auto_04`（改为选 `blast_search_online`，严格判错但完成度口径下是合法替代）。
+- 回退：`annot_auto_05`（`find_gene_by_name` 而非 `update_annotation`）、`gene_auto_03`（零调用）、`primer_auto_complex_01`（`find_primer_binding_sites` 用了虚构引用 `{get_sequence_from_design}`）、`protein_auto_complex_01`（连续两次 `advanced_uniprot_search` 而非结构获取/查看）、`gel_auto_01`（`ladderType` 双重编码，完成度口径自动归一化后通过）。
+
+**v4 完成度剩余 18 条失败归因：**
+
+- 简单 5：`load_auto_05`（`filePaths` 数组 vs 单字符串，契约口径问题，延续至今）、`annot_auto_05` / `gene_auto_03`（选错工具/零调用，真错）、`settings_auto_07`（`hideGeneStartMarkers` 键名，真错）、`fileop_auto_01`（`mode:"full"` vs `"visible"`，真错）。
+- 复杂 13：多步未完成（`analysis_auto_complex_05`、`gel_auto_workflow_02`、`blast_auto_complex_01/02`）、近义工具替换（`annotation_auto_complex_02`、`protein_auto_complex_01/02`、`analysis_auto_complex_03` 第三步用 `translate_sequence` 代替 `calculate_molecular_weight`）、参数键/引用错误（`annotation_auto_complex_01` 的 `note` vs `description`、`analysis_auto_complex_03` 的 `{get_coding_sequence.sequence}` vs `.codingSequence`、`primer_auto_complex_01` 虚构引用）、重复调用（`primer_auto_complex_02` 两次 `save_primer`）、缺参（`analysis_auto_01`、`file_auto_complex_02`）。
+
+### 结论
+
+v4 完成了数据层改造（多方案 oracle + 完成度回放门）并验证了其效果：6 条新记录进入训练集，模型修复了导航缺参、导出链、轨道开关等用例，但近义工具替换、多步持久性、参数键/引用错误仍是 4B 模型瓶颈，净效果与 v2/v3 持平（完成度 89.5%）。**生产推荐维持 v2**（v4 未构成严格意义上的全面升级；导航参数 grounding 的改进可作为 v5 数据方向保留）。下一轮建议：为易混淆工具对构造判别性单轮样本、在训练数据中显式教授 `{tool.field}` 正确字段名、并考虑 7B/14B 容量上限验证。
+
+### v4 制品
+
+- 数据：`data-v4/`（manifest/token-stats 已更新）；release：`datasets/tool-calling-v1/release/`（含 `acceptable_variants`）。
+- 配置：`config/qlora-v4.yaml`、`config/qlora-v4-resume.yaml`；日志：`training-v4-resume.log`（正式运行日志因环境清理丢失，检查点保留在 `adapters-v4/`）。
+- 选定适配器：`selected-adapter-v4/`（iter 150）；评测：`metrics/qwen3.5_4b-codexomics-tools-v4-fixed.json`、`metrics/qwen3.5_4b-codexomics-tools-v4-fixed-task-completion.json`。
+- 部署配方：`ollama/Modelfile-v4`。
 
 ## 复现命令与制品
 

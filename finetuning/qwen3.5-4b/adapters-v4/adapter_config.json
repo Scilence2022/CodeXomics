@@ -1,0 +1,41 @@
+{
+  "adapter_path": "finetuning/qwen3.5-4b/adapters-v4",
+  "batch_size": 1,
+  "clear_cache_threshold": 0,
+  "config": "finetuning/qwen3.5-4b/config/qlora-v4.yaml",
+  "data": "finetuning/qwen3.5-4b/data-v4",
+  "fine_tune_type": "lora",
+  "grad_accumulation_steps": 4,
+  "grad_checkpoint": true,
+  "iters": 200,
+  "learning_rate": 1e-5,
+  "lora_parameters": {
+    "rank": 16,
+    "dropout": 0.05,
+    "scale": 32.0
+  },
+  "lr_schedule": null,
+  "mask_prompt": true,
+  "max_seq_length": 3072,
+  "model": "finetuning/qwen3.5-4b/base-model",
+  "num_layers": 4,
+  "optimizer": "adamw",
+  "optimizer_config": {
+    "adam": {},
+    "adamw": {},
+    "muon": {},
+    "sgd": {},
+    "adafactor": {}
+  },
+  "project_name": null,
+  "report_to": null,
+  "resume_adapter_file": null,
+  "save_every": 25,
+  "seed": 42,
+  "steps_per_eval": 25,
+  "steps_per_report": 1,
+  "test": true,
+  "test_batches": -1,
+  "train": true,
+  "val_batches": 20
+}
