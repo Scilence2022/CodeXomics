@@ -239,6 +239,13 @@ finetuning/*/adapters-legacy-rejected/
 finetuning/*/selected-adapter*/adapters.safetensors
 finetuning/*/fused-hf*/
 finetuning/*/fused-mlx*/
+finetuning/*/data-v*/
+finetuning/*/metrics/
+finetuning/*/training-v*.log
+finetuning/*/adapters-v*/
+finetuning/*/adapters-v*-resume/
+finetuning/*/selected-adapter-v*/
+finetuning/*/config/qlora-v*.yaml
 
 # Dataset pipeline release backups (keep only the current release)
 datasets/tool-calling-v1/release-legacy-*/
