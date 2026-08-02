@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
   "generator_version": "2.0.0",
-  "generated_at": "2026-08-02T01:07:37.778Z",
+  "generated_at": "2026-08-02T07:35:48.588Z",
   "benchmark_scope": {
     "automatic_simple": 143,
     "automatic_complex": 29,
@@ -9,7 +9,7 @@
     "use": "leakage_fingerprints_only",
     "fingerprint_hash": "a0de19c4b02dc0128b65e96cf5113dcb093291281cfdcc5ee3fd30472f929476"
   },
-  "registry_hash": "16b2912e67d79645722c1bbe0b341e2b0fded49ca89494c8fed22b11d46edb81",
+  "registry_hash": "4028d619007f8bf9a7c4f04ca81f4246e557b64e0fcfa23f307f6e153f2380b0",
   "candidate_limit": 24,
   "candidate_curriculum": {
     "decision": [8, 12],
@@ -32,15 +32,15 @@
   "splits": {
     "train": {
       "count": 476,
-      "sha256": "3f2d66a182c3761627047c7c6a32a31172a7368fbf561da85f2926af438b1c43"
+      "sha256": "8eb7375f5895f2c08748d635e0f2f4444879274e2581debaf3ae25d37725664a"
     },
     "dev": {
       "count": 159,
-      "sha256": "a761a1a815b7141f29bfaadb8cc8be14b5e87d837240e6a21ce4aca01c433138"
+      "sha256": "45e07eff7ab18e6b9c0516b219df57784818e26c8afd5dcef17514436f386f6a"
     },
     "holdout": {
       "count": 43,
-      "sha256": "3d1c562e5230b9d7001956b515d013f4629088b9995be2db54ee577595f74878"
+      "sha256": "ad79d7d83e05ef15fe14344b2655797bd7d411af87e4b9f738acf7c88d5ee2f0"
     }
   },
   "preferences": {
@@ -191,7 +191,7 @@
     "blocked": 0,
     "not_run": 472
   },
-  "tool_catalog_sha256": "6cdba8dc9fa1d5d635be69c2d9f739f85383598c987e851670c88966a8d059c9",
+  "tool_catalog_sha256": "eea7a3b9b8b266882d060d84dafe9958e83cd61cbf3dfe0a65779e29a3134250",
   "training_eligible_by_split": {
     "train": 85,
     "dev": 66,

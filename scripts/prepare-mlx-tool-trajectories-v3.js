@@ -39,6 +39,7 @@ const {
   UNIPROT_FIXTURE_ID,
   executeTool,
 } = require('./lib/deterministic-fixture-corpus.js');
+const { buildContractToolResult } = require('./lib/contract-tool-results.js');
 const { checkLeakage, loadAutomaticBenchmarks } = require('./tool-calling-dataset.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -305,18 +306,16 @@ function syntheticTrajectory(template, variantIndex, toolMap, catalogNames, benc
   );
   if (!leakage.passed) return null;
 
-  // Execute the chain with resolved parameters to obtain real fixture outputs.
+  // Execute the chain with resolved parameters. buildContractToolResult runs
+  // the pinned deterministic fixture when the call is fixture-compatible and
+  // otherwise returns a schema-shaped domain result, so synthetic chains can
+  // cover the full tool set (track/task/annotation/protein/blast/viewer).
   const resultsByName = new Map();
   const executed = [];
   for (const call of calls) {
     const step = resolveParams(call.parameters, resultsByName);
     if (!step.resolved) return null;
-    let result;
-    try {
-      result = executeTool(template.fixtureId, { tool_name: call.tool_name, parameters: step.value });
-    } catch (error) {
-      return null;
-    }
+    const result = buildContractToolResult(call.tool_name, step.value);
     resultsByName.set(call.tool_name, result);
     executed.push({ call, result });
   }
@@ -393,6 +392,65 @@ function releaseMultiCallExamples(records, toolMap) {
   return examples;
 }
 
+/**
+ * Expand multi-solution oracles into training examples: each acceptable
+ * variant sequence replaces the corresponding assistant tool-call in the
+ * record messages, so the model learns valid alternative plans (equivalent
+ * blast tools, minted ids, note/description aliases, complete supersets,
+ * toggle actions, ...). Only records that already pass the training gates
+ * contribute variants.
+ */
+function releaseVariantExamples(records, toolMap) {
+  const examples = [];
+  for (const record of records) {
+    const variants = record.oracle?.acceptable_variants || [];
+    if (variants.length === 0) continue;
+    const calls = record.oracle?.acceptable_calls || [];
+    const eligible = getTrainingEligibility(record).eligible;
+    const schemaValid = record.verification?.schema_valid === true;
+    const multiFixture =
+      calls.length > 1 &&
+      record.verification?.fixture_executable === true &&
+      (record.verification?.fixture_replay?.fixture_outputs || []).length >= calls.length;
+    // Variants are valid alternatives by construction (tool schema + app
+    // semantics), so schema-valid single-call records contribute them even
+    // when state verification is still pending; multi-call variants keep the
+    // fixture requirement.
+    if (!schemaValid) continue;
+    if (!eligible && !multiFixture && calls.length > 1) continue;
+    for (const variant of variants) {
+      const messages = (record.messages || []).map(cleanMessage);
+      const assistantCalls = messages.filter(
+        message =>
+          message.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0
+      );
+      if (assistantCalls.length !== variant.length) continue;
+      assistantCalls.forEach((message, index) => {
+        const replacement = variant[index];
+        message.tool_calls[0].function.name = replacement.tool_name;
+        message.tool_calls[0].function.arguments = replacement.parameters || {};
+      });
+      const tools = selectedToolsForRecord(record, toolMap);
+      messages.forEach((message, index) => {
+        if (message.role !== 'assistant' || !Array.isArray(message.tool_calls) || message.tool_calls.length === 0) {
+          return;
+        }
+        examples.push(
+          buildExample(messages.slice(0, index + 1), tools, {
+            source_example_id: record.example_id,
+            scenario_family_id: record.scenario_family_id,
+            trajectory: calls.length > 1,
+            synthetic: false,
+            variant: true,
+            turn_index: index,
+          })
+        );
+      });
+    }
+  }
+  return examples;
+}
+
 function templatePrompt(language, templateId, details) {
   if (language === 'zh') {
     const zh = {
@@ -407,8 +465,17 @@ function templatePrompt(language, templateId, details) {
       ann_list: `在只读夹具 PX-01 中，列出 ${details.chromosome} 上的注释，并取出第一条注释的完整信息。`,
       ann_nearby: `在只读夹具 PX-01 中，查看 ${details.chromosome}:${details.position} 附近 ${details.distance}bp 内的特征，并取出第一个特征的完整注释。`,
       uniprot: `在只读夹具的 UniProt 语料中搜索 "pinned catalytic"，并取出第一条结果条目的完整信息。`,
-      find_seq_gc: `在只读夹具 PX-01 中，精确查找基因 ${details.gene}（不要跳转视图），取出其返回区间的序列，并计算该序列的 GC 含量。`,
-      seq_translate_mw: `在只读夹具 PX-01 中，取出 ${details.chromosome}:${details.start}-${details.end} ${details.strand} 链的序列，按阅读框 ${details.frame} 翻译，并计算所得蛋白的分子量。`,
+    find_seq_gc: `在只读夹具 PX-01 中，精确查找基因 ${details.gene}（不要跳转视图），取出其返回区间的序列，并计算该序列的 GC 含量。`,
+    seq_translate_mw: `在只读夹具 PX-01 中，取出 ${details.chromosome}:${details.start}-${details.end} ${details.strand} 链的序列，按阅读框 ${details.frame} 翻译，并计算所得蛋白的分子量。`,
+    track_verify_a: '先列出已加载浏览器中所有轨道的可见性，然后打开蛋白质轨道。',
+    track_verify_b: '关闭基因组浏览器中的读段轨道，然后重新检查当前轨道可见性。',
+    task_lifecycle:
+      '清空待办任务列表，新建标题为 PX-verify 的进行中任务（进度 25），将其标记为已完成（进度 100），删除该任务，最后列出全部任务确认。',
+    annotation_crud:
+      '在 U00096 上创建名为 px_reg_A 的调控注释（200000-200600），将其 note 更新为 px conserved region，然后获取它的变更历史。',
+    protein_chain: '在固定 UniProt 语料中搜索催化蛋白，获取第一条条目，然后对该条目进行结构域分析。',
+    blast_chain:
+      '将当前视图导出到 /tmp/px_blast.fasta，用它构建名为 px_nucl 的核酸数据库，校验该数据库，然后列出全部数据库。',
     };
     return zh[templateId];
   }
@@ -426,6 +493,16 @@ function templatePrompt(language, templateId, details) {
     uniprot: `In the pinned UniProt fixture corpus, search for "pinned catalytic", then fetch the full entry of the first search result.`,
     find_seq_gc: `In pinned synthetic sample PX-01, find gene ${details.gene} exactly (do not navigate the view), retrieve the sequence of exactly the returned interval, then compute the GC content of that sequence.`,
     seq_translate_mw: `In pinned synthetic sample PX-01, retrieve the ${details.strand} strand of ${details.chromosome}:${details.start}-${details.end}, translate it in reading frame ${details.frame}, then calculate the molecular weight of the resulting protein.`,
+    track_verify_a: 'In the loaded genome browser, list the visibility of all tracks first, then open the proteins track.',
+    track_verify_b: 'Close the reads track in the genome browser, then re-check the current track visibility.',
+    task_lifecycle:
+      'Clear the pending task list, create a task named PX-verify with status in_progress and progress 25, mark it completed with progress 100, delete it, then list all tasks to confirm.',
+    annotation_crud:
+      "Create a regulatory annotation named px_reg_A on U00096 at 200000-200600, update its note to 'px conserved region', then fetch its change history.",
+    protein_chain:
+      'Search the pinned UniProt corpus for a catalytic protein, fetch the first entry, then run a domain analysis on that entry.',
+    blast_chain:
+      'Export the current view to /tmp/px_blast.fasta, build a nucleotide database named px_nucl from it, validate the database, then list all databases.',
   };
   return en[templateId];
 }
@@ -650,6 +727,92 @@ function buildTemplates() {
     ],
     variantIndex => commonDetails('seq_translate_mw', variantIndex, variantIndex % 2 === 0 ? '+' : '-', (variantIndex % 3) + 1)
   );
+  // Domain-shaped synthetic chains for the full tool set (not just fixture
+  // tools). Signatures deliberately differ from the 172 benchmark workflows so
+  // the leakage gate accepts them; they teach multi-step persistence,
+  // verification-after-change, and cross-round references.
+  register(
+    'track_verify_a',
+    CORE_FIXTURE_ID,
+    () => [
+      { tool_name: 'get_track_status', parameters: {} },
+      { tool_name: 'toggle_track', parameters: { track_name: 'proteins', visible: true } },
+    ],
+    () => ({})
+  );
+  register(
+    'track_verify_b',
+    CORE_FIXTURE_ID,
+    () => [
+      { tool_name: 'toggle_track', parameters: { track_name: 'reads', visible: false } },
+      { tool_name: 'get_track_status', parameters: {} },
+    ],
+    () => ({})
+  );
+  register(
+    'task_lifecycle',
+    CORE_FIXTURE_ID,
+    () => [
+      { tool_name: 'clear_tasks', parameters: { confirm: true } },
+      { tool_name: 'add_task', parameters: { title: 'PX-verify', status: 'in_progress', progress: 25 } },
+      {
+        tool_name: 'update_task',
+        parameters: { task_id: '{add_task.task_id}', status: 'completed', progress: 100 },
+      },
+      { tool_name: 'delete_task', parameters: { task_id: '{add_task.task_id}' } },
+      { tool_name: 'list_tasks', parameters: {} },
+    ],
+    () => ({})
+  );
+  register(
+    'annotation_crud',
+    CORE_FIXTURE_ID,
+    () => [
+      {
+        tool_name: 'create_annotation',
+        parameters: { name: 'px_reg_A', chromosome: 'U00096', start: 200000, end: 200600, type: 'regulatory' },
+      },
+      {
+        tool_name: 'update_annotation',
+        parameters: { identifier: '{create_annotation.id}', updates: { note: 'px conserved region' } },
+      },
+      { tool_name: 'get_annotation_history', parameters: { identifier: '{create_annotation.id}' } },
+    ],
+    () => ({})
+  );
+  register(
+    'protein_chain',
+    CORE_FIXTURE_ID,
+    () => [
+      { tool_name: 'search_uniprot_database', parameters: { search_query: 'pinned catalytic', max_results: 3 } },
+      {
+        tool_name: 'get_uniprot_entry',
+        parameters: { uniprot_id: '{search_uniprot_database.entries[0].accession}' },
+      },
+      {
+        tool_name: 'analyze_interpro_domains',
+        parameters: {
+          uniprot_id: '{search_uniprot_database.entries[0].accession}',
+          analysis_type: 'domains',
+        },
+      },
+    ],
+    () => ({})
+  );
+  register(
+    'blast_chain',
+    CORE_FIXTURE_ID,
+    () => [
+      { tool_name: 'export_current_view_fasta', parameters: { filename: '/tmp/px_blast.fasta', sequence_type: 'all' } },
+      {
+        tool_name: 'blast_create_database',
+        parameters: { inputFile: '/tmp/px_blast.fasta', dbName: 'px_nucl', dbType: 'nucl' },
+      },
+      { tool_name: 'blast_validate_database', parameters: { dbName: 'px_nucl' } },
+      { tool_name: 'blast_list_databases', parameters: {} },
+    ],
+    () => ({})
+  );
   return templates;
 }
 
@@ -683,6 +846,7 @@ function main() {
     const eligible = sourceRecords.filter(record => getTrainingEligibility(record).eligible);
     const baseExamples = eligible.flatMap(record => expandRecord(record, toolMap));
     const multiCallExamples = releaseMultiCallExamples(sourceRecords, toolMap);
+    const variantExamples = releaseVariantExamples(sourceRecords, toolMap);
 
     const syntheticExamples = [];
     if (sourceSplit !== 'holdout') {
@@ -704,7 +868,7 @@ function main() {
       }
     }
 
-    const examples = [...baseExamples, ...multiCallExamples, ...syntheticExamples];
+    const examples = [...baseExamples, ...multiCallExamples, ...variantExamples, ...syntheticExamples];
     splitExamples[sourceSplit] = examples;
     const outputPath = path.join(outputDir, outputFilename);
     writeJsonl(outputPath, examples);
@@ -713,6 +877,7 @@ function main() {
       eligible_source_records: eligible.length,
       single_call_examples: baseExamples.length,
       multi_call_examples: multiCallExamples.length,
+      variant_examples: variantExamples.length,
       synthetic_examples: syntheticExamples.length,
       supervised_examples: examples.length,
       tool_call_targets: examples.filter(example => example.metadata.supervised_target === 'tool_call').length,
@@ -777,6 +942,7 @@ module.exports = {
   catalogForSynthetic,
   collectReferences,
   releaseMultiCallExamples,
+  releaseVariantExamples,
   resolveParams,
   syntheticTrajectory,
   trimResult,

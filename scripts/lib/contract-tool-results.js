@@ -123,9 +123,21 @@ function fixtureFirst(fixtureId, call) {
  * @returns {object} deterministic domain-shaped result
  */
 function buildContractToolResult(toolName, parameters = {}) {
-  const fixtureResult =
-    fixtureFirst(CORE_FIXTURE_ID, { tool_name: toolName, parameters }) ||
-    fixtureFirst(UNIPROT_FIXTURE_ID, { tool_name: toolName, parameters });
+  const uniprotTools = new Set([
+    'search_uniprot_database',
+    'get_uniprot_entry',
+    'analyze_interpro_domains',
+    'advanced_uniprot_search',
+    'get_interpro_entry_details',
+  ]);
+  // UniProt tools must try the UniProt fixture first: the core fixture returns
+  // an empty entries array instead of throwing, which would break reference
+  // resolution for chained UniProt calls.
+  const fixtureResult = uniprotTools.has(toolName)
+    ? fixtureFirst(UNIPROT_FIXTURE_ID, { tool_name: toolName, parameters }) ||
+      fixtureFirst(CORE_FIXTURE_ID, { tool_name: toolName, parameters })
+    : fixtureFirst(CORE_FIXTURE_ID, { tool_name: toolName, parameters }) ||
+      fixtureFirst(UNIPROT_FIXTURE_ID, { tool_name: toolName, parameters });
   if (fixtureResult) return fixtureResult;
 
   const seed = `${toolName}:${JSON.stringify(parameters || {})}`;

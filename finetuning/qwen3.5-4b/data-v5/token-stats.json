@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "model": "finetuning/qwen3.5-4b/base-model",
+  "max_seq_length": 3072,
+  "manual_tests_included": 0,
+  "splits": {
+    "train": {
+      "records": 373,
+      "min_tokens": 966,
+      "p50_tokens": 1431,
+      "p95_tokens": 2381,
+      "p99_tokens": 2744,
+      "max_tokens": 2876,
+      "max_prompt_offset": 2816,
+      "sha256": "bb3887e69fc2f052f05f3993e45b06e58c292eaad527fde9ceb6e946b9ac9e3e"
+    },
+    "valid": {
+      "records": 123,
+      "min_tokens": 972,
+      "p50_tokens": 1464,
+      "p95_tokens": 1944,
+      "p99_tokens": 2313,
+      "max_tokens": 2437,
+      "max_prompt_offset": 2390,
+      "sha256": "623a00e77026cea9a39aaa1f31d11adbe8280afea81e64d8891b2de76b24f668"
+    },
+    "test": {
+      "records": 30,
+      "min_tokens": 1329,
+      "p50_tokens": 1563,
+      "p95_tokens": 2326,
+      "p99_tokens": 2480,
+      "max_tokens": 2480,
+      "max_prompt_offset": 2420,
+      "sha256": "0d586aa5bd8a7313bbb20d7bad9fbbb32794a590a3b0955b7dfc32d08b609dae"
+    }
+  }
+}

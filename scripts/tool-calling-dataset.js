@@ -1678,6 +1678,70 @@ function expandAcceptableVariants(calls) {
       const counterpart = call.tool_name === 'blast_search' ? 'blast_search_online' : 'blast_search';
       replaceAt({ tool_name: counterpart, parameters: { ...call.parameters } });
     }
+    // update_annotation / get_annotation_history: the minted feature id and the
+    // literal name resolve to the same record.
+    if (
+      (call.tool_name === 'update_annotation' || call.tool_name === 'get_annotation_history') &&
+      call.parameters?.identifier &&
+      !String(call.parameters.identifier).startsWith('<')
+    ) {
+      replaceAt({
+        tool_name: call.tool_name,
+        parameters: { ...call.parameters, identifier: '<created_annotation_id>' },
+      });
+    }
+    // update_annotation / bulk_update_annotations: the app aliases description
+    // onto the note qualifier, so both field names write the same value.
+    if (
+      (call.tool_name === 'update_annotation' || call.tool_name === 'bulk_update_annotations') &&
+      call.parameters?.updates &&
+      typeof call.parameters.updates === 'object' &&
+      !Array.isArray(call.parameters.updates)
+    ) {
+      if (Object.hasOwn(call.parameters.updates, 'note')) {
+        const variantParameters = { ...call.parameters, updates: { ...call.parameters.updates } };
+        variantParameters.updates = { description: call.parameters.updates.note };
+        replaceAt({ tool_name: call.tool_name, parameters: variantParameters });
+      } else if (Object.hasOwn(call.parameters.updates, 'description')) {
+        const variantParameters = { ...call.parameters, updates: { ...call.parameters.updates } };
+        variantParameters.updates = { note: call.parameters.updates.description };
+        replaceAt({ tool_name: call.tool_name, parameters: variantParameters });
+      }
+    }
+    // analyze_interpro_domains: "complete" is the documented default and a
+    // superset of a "domains" request.
+    if (call.tool_name === 'analyze_interpro_domains' && call.parameters?.analysis_type === 'domains') {
+      replaceAt({
+        tool_name: call.tool_name,
+        parameters: { ...call.parameters, analysis_type: 'complete' },
+      });
+    }
+    // open_protein_viewer: opening the downloaded local PDB file is equally
+    // valid when the previous step fetched a structure.
+    if (call.tool_name === 'open_protein_viewer' && calls[index - 1]?.tool_name?.startsWith('fetch_')) {
+      const previous = calls[index - 1];
+      if (previous.parameters?.uniprot_id || previous.parameters?.pdb_id || previous.parameters?.structure_id) {
+        replaceAt({
+          tool_name: call.tool_name,
+          parameters: { ...call.parameters, file_path: `{${previous.tool_name}.filePath}` },
+        });
+      }
+    }
+    // capture_screenshot: a tracks-targeted screenshot without an explicit
+    // mode still captures the visible tracks.
+    if (call.tool_name === 'capture_screenshot' && call.parameters?.mode === 'visible') {
+      const variantParameters = { ...call.parameters };
+      delete variantParameters.mode;
+      variantParameters.target = variantParameters.target || 'visible_tracks';
+      replaceAt({ tool_name: call.tool_name, parameters: variantParameters });
+    }
+    // toggle_track: action="toggle" is the schema-documented invert control.
+    if (call.tool_name === 'toggle_track' && Object.hasOwn(call.parameters || {}, 'visible')) {
+      replaceAt({
+        tool_name: call.tool_name,
+        parameters: { track_name: call.parameters.track_name, action: 'toggle' },
+      });
+    }
   });
   return variants;
 }
