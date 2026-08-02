@@ -2052,6 +2052,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         maxScore: 5,
         bonusScore: 0,
         timeout: 60000,
+        // Scored on tool selection, not on the side effect: downloading from
+        // NCBI depends on external network reachability, which is unrelated to
+        // what the test asserts (the model picks the download tool with the
+        // exact URL). Same policy as the online-BLAST call-only tests.
+        assertCallOnly: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {

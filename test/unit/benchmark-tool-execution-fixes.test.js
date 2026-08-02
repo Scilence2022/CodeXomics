@@ -23,12 +23,14 @@ describe('ChatManager benchmark tool execution fixes', () => {
 
   it('export_data defaults to genbank when no format is supplied', async () => {
     const manager = Object.create(ChatManager.prototype);
-    const exportGenBank = vi.fn(() => ({ ok: true }));
-    manager.app = { exportManager: { exportGenBank, exportFASTA: vi.fn(), exportGFF: vi.fn(), exportBED: vi.fn() } };
+    const exportAsGenBank = vi.fn(() => ({ ok: true }));
+    manager.app = {
+      exportManager: { exportAsGenBank, exportAsFasta: vi.fn(), exportAsGFF: vi.fn(), exportAsBED: vi.fn() },
+    };
 
     const result = await manager.exportData({});
 
-    expect(exportGenBank).toHaveBeenCalled();
+    expect(exportAsGenBank).toHaveBeenCalled();
     expect(result.success ?? true).toBe(true);
     expect(result.format).toBe('genbank');
     expect(result.exported).toBe(true);
@@ -36,17 +38,30 @@ describe('ChatManager benchmark tool execution fixes', () => {
 
   it('export_data still honors an explicit format', async () => {
     const manager = Object.create(ChatManager.prototype);
-    const exportFASTA = vi.fn(() => ({ ok: true }));
+    const exportAsFasta = vi.fn(() => ({ ok: true }));
     manager.app = {
-      exportManager: { exportGenBank: vi.fn(), exportFASTA, exportGFF: vi.fn(), exportBED: vi.fn() },
+      exportManager: { exportAsGenBank: vi.fn(), exportAsFasta, exportAsGFF: vi.fn(), exportAsBED: vi.fn() },
       getSequenceForRegion: vi.fn(async () => 'ACGT'),
     };
 
     const result = await manager.exportData({ format: 'fasta', chromosome: 'U00096', start: 1, end: 4 });
 
-    expect(exportFASTA).not.toHaveBeenCalled();
+    expect(exportAsFasta).not.toHaveBeenCalled();
     expect(result.format).toBe('fasta');
     expect(manager.app.getSequenceForRegion).toHaveBeenCalledWith('U00096', 1, 4);
+  });
+
+  it('export_data without region coordinates uses the ExportManager fasta export', async () => {
+    const manager = Object.create(ChatManager.prototype);
+    const exportAsFasta = vi.fn(() => ({ ok: true }));
+    manager.app = {
+      exportManager: { exportAsGenBank: vi.fn(), exportAsFasta, exportAsGFF: vi.fn(), exportAsBED: vi.fn() },
+    };
+
+    const result = await manager.exportData({ format: 'fasta' });
+
+    expect(exportAsFasta).toHaveBeenCalled();
+    expect(result.format).toBe('fasta');
   });
 
   it('configure_export_settings opens the export configuration dialog', async () => {
@@ -69,6 +84,12 @@ describe('ChatManager benchmark tool execution fixes', () => {
     expect(manager.MicrobeFns.translateDNA).toHaveBeenCalledWith('ATGAAATAA', 0);
     expect(result.success).toBe(true);
     expect(result.value).toBe('MK*:0');
+  });
+
+  it('records benchmark tool calls into the request-local execution data', () => {
+    const content = fs.readFileSync(path.join(REPO_ROOT, 'src/renderer/modules/ChatManager.js'), 'utf8');
+    expect(content).toContain('executionData.functionCalls.push');
+    expect(content).not.toContain('this.lastExecutionData.functionCalls.push');
   });
 });
 

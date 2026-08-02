@@ -3785,19 +3785,19 @@ class ChatManager {
               const fastaContent = `>${chromosome}:${start}-${end}\n${sequence}`;
               _exportResult = { content: fastaContent, type: 'text' };
             } else {
-              _exportResult = await this.app.exportManager.exportFASTA();
+              _exportResult = await this.app.exportManager.exportAsFasta();
             }
             break;
           case 'genbank':
           case 'gb':
-            _exportResult = await this.app.exportManager.exportGenBank();
+            _exportResult = await this.app.exportManager.exportAsGenBank();
             break;
           case 'gff':
           case 'gff3':
-            _exportResult = await this.app.exportManager.exportGFF();
+            _exportResult = await this.app.exportManager.exportAsGFF();
             break;
           case 'bed':
-            _exportResult = await this.app.exportManager.exportBED();
+            _exportResult = await this.app.exportManager.exportAsBED();
             break;
           default:
             throw new Error(`Unsupported export format: ${format}`);
@@ -5535,11 +5535,15 @@ class ChatManager {
               });
             }
 
-            // BENCHMARK INTEGRATION: Track function calls and results for benchmark access
-            if (this.lastExecutionData) {
+            // BENCHMARK INTEGRATION: Track function calls and results for benchmark access.
+            // Write into the request-local `executionData`, never the shared
+            // `this.lastExecutionData`: an aborted request whose tool queue is
+            // still running in the background must not append its calls/results
+            // into the next benchmark test's captured interaction data.
+            if (executionData) {
               // Track function calls
               toolsToExecute.forEach(tool => {
-                this.lastExecutionData.functionCalls.push({
+                executionData.functionCalls.push({
                   tool_name: tool.tool_name,
                   parameters: tool.parameters,
                   id: tool.tool_call_id ?? tool.id ?? null,
@@ -5549,8 +5553,8 @@ class ChatManager {
               });
 
               // Track tool results
-              this.lastExecutionData.toolResults.push(...toolResults);
-              this.lastExecutionData.rounds = currentRound;
+              executionData.toolResults.push(...toolResults);
+              executionData.rounds = currentRound;
             }
 
             // Show the tool execution result
