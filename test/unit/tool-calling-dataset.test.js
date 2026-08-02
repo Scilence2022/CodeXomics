@@ -319,6 +319,7 @@ describe('tool-calling dataset release pipeline', () => {
       strong_model_replay: {
         status: 'passed',
         semantic_verdict: 'passed',
+        builder_semantic_verified: true,
         comparison_mode: 'semantic_canonical_equivalence',
       },
       tool_catalog: { candidate_tool_names: candidateNames },
@@ -352,7 +353,7 @@ describe('tool-calling dataset release pipeline', () => {
         verification: { schema_valid: true },
         strong_model_replay: { status: 'not_run', comparison_mode: 'semantic_canonical_equivalence' },
       })
-    ).toThrow(/strong_model_replay_not_passed/);
+    ).toThrow(/strong_model_replay_not_run/);
     expect(() =>
       assertTrainingEligible({
         example_id: 'cx-stateful',
@@ -361,6 +362,7 @@ describe('tool-calling dataset release pipeline', () => {
         strong_model_replay: {
           status: 'passed',
           semantic_verdict: 'passed',
+          builder_semantic_verified: true,
           comparison_mode: 'semantic_canonical_equivalence',
         },
       })
@@ -374,6 +376,7 @@ describe('tool-calling dataset release pipeline', () => {
         strong_model_replay: {
           status: 'passed',
           semantic_verdict: 'passed',
+          builder_semantic_verified: true,
           comparison_mode: 'semantic_canonical_equivalence',
         },
       })

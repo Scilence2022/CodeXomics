@@ -772,6 +772,7 @@ async function replayExample(record, attempt, options, runtime, requestChat = de
         if (typeof rawAssistant.content === 'string') assistantText = rawAssistant.content;
 
         const responseCalls = assistant.tool_calls || [];
+        let usedExpectedCount = usedExpected.size;
         if (responseCalls.length === 0) {
           if (usedExpectedCount < expectedCalls.length) terminationReason = 'no_call_before_complete';
           else terminationReason = 'completed';
@@ -779,7 +780,6 @@ async function replayExample(record, attempt, options, runtime, requestChat = de
         }
 
         let shouldStop = false;
-        let usedExpectedCount = usedExpected.size;
         const currentTurnCalls = [];
         for (const toolCall of responseCalls) {
           const actualCall = {
