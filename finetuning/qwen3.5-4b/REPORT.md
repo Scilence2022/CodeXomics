@@ -499,11 +499,15 @@ v4 完成了数据层改造（多方案 oracle + 完成度回放门）并验证�
 
 ### 结论
 
-DeepSeek 在公平 harness + 任务完成口径下达到 **167/172（97.1%）**（简单 99.3%、复杂 86.2%），证实最初的低分约 60% 来自测试/harness 侧问题；剩余 5 条失败（简单 1 + 复杂 4）全部是模型真实行为（多步最后一步持久性、参数值/枚举），只能靠提示词进一步优化、更大模型或针对性训练解决。
+> ⚠️ 本段为离线审计口径。权威应用内真实执行 Benchmark：DeepSeek V4 Flash = **153/172（89.0%）**（简单 127/143、复杂 26/29），见"口径修正"一节。
+
+离线审计口径下 DeepSeek 可达到 **167/172（97.1%）**，证实最初的低分约 60% 来自测试/harness 侧问题；但该口径包含应用内不具备的容差与提示词增强，**不能作为 Benchmark 成绩**。应用内真实执行暴露的额外差距包括：真实工具执行失败（6 条）、重复/多余调用（严格计分判失败）、以及应用不认可的工具等价（`blast_search_online`、`analysisType:"complete"`）。
 
 ## DeepSeek 极限优化：简单/复杂各 ≤1 错误（2026-08-02 终版）
 
-目标：反复优化直到 DeepSeek（无 thinking、temp 0）在简单与复杂测试上完成度口径各最多 1 个错误。
+> ⚠️ 本节为**离线审计口径**（实验性 harness 提示词 + task-completion 容差），不代表应用内真实执行 Benchmark 成绩；权威结果见"口径修正"一节（153/172，89.0%）。
+
+目标：在离线审计口径下反复优化直到 DeepSeek（无 thinking、temp 0）在简单与复杂测试上各最多 1 个错误。
 
 ### 本轮新增修复
 
@@ -537,9 +541,64 @@ DeepSeek 在公平 harness + 任务完成口径下达到 **167/172（97.1%）**�
 
 制品：`metrics/deepseek-v4-flash-domain-results-final6-complex-task-completion.json`、`metrics/deepseek-v4-flash-domain-results-final-simple-task-completion.json`。
 
+## ⚠️ 口径修正：应用内真实执行 Benchmark 为权威结果（2026-08-02）
+
+此前各节给出的"简单 143/143、复杂 29/29、总计 170-172/172"均为**离线审计口径**：使用实验性系统提示词（持久性指令、进度计数重试）与 task-completion 容差（等价工具、只读多余调用、重复能力实例、`complete` 超集等）对已记录调用重评的结果。**它不是 CodeXomics Benchmark 的官方成绩**。
+
+权威口径 = 应用内真实执行 Benchmark（真实 ChatManager 循环 + 真实工具执行 + 严格计分：多余调用/重复调用/真实执行失败均判失败）。
+
+### DeepSeek V4 Flash 应用内实测（2026-08-02，deepseek-v4-flash，Multi-Agent 关闭）
+
+| 指标     | 结果                               |
+| -------- | ---------------------------------- |
+| 总体     | **153/172（89.0%）**，平均分 97.2% |
+| 自动简单 | **127/143（88.8%）**               |
+| 自动复杂 | **26/29（89.7%）**                 |
+
+失败明细（19 条）：
+
+**简单（16 条）**
+
+| 用例             | 失败原因                                                         |
+| ---------------- | ---------------------------------------------------------------- |
+| sys_auto_02      | 多余调用 `list_available_tools`                                  |
+| nav_auto_02      | 缺 `position` 参数                                               |
+| nav_auto_12      | 多余 `get_gene_details` + `highlight_region`                     |
+| seq_auto_01      | 重复调用 `get_sequence`                                          |
+| edit_auto_02     | 多余 `get_clipboard_content` + `execute_actions`                 |
+| edit_auto_07     | 多余 `export_genbank_format`                                     |
+| annot_auto_06    | **真实执行失败**：`delete_annotation`                            |
+| settings_auto_04 | 重复 `toggle_settings_modal` ×5                                  |
+| blast_auto_04    | 调用 `blast_search_online` 而非 `blast_search`（应用不视为等价） |
+| nav_auto_16      | 多余 `list_highlights`/重复 `remove_highlight`                   |
+| nav_auto_19      | 重复 `restore_view_state` ×4                                     |
+| fileop_auto_01   | 缺 `mode` 参数                                                   |
+| fileop_auto_02   | **真实执行失败**：`configure_export_settings`                    |
+| data_auto_01     | **真实执行失败**：`export_data`                                  |
+| db_auto_03       | **真实执行失败**：`get_interpro_entry_details`                   |
+| seq_auto_06      | **真实执行失败**：`translate_sequence`                           |
+
+**复杂（3 条）**
+
+| 用例                     | 失败原因                                                      |
+| ------------------------ | ------------------------------------------------------------- |
+| analysis_auto_complex_05 | 多余/重复 `get_sequence` ×3（19/20）                          |
+| primer_auto_complex_02   | 重复 `save_primer` ×5+、顺序错乱（11/15）                     |
+| protein_auto_complex_02  | `analysisType:"complete"` 而非 `"domains"`、步骤顺序（14/15） |
+
+### 对离线口径的修正
+
+- `scripts/rescore-task-completion.js` 输出层级改为 `task-completion-audit`，并附权威声明：**不得作为 Benchmark 成绩报告**。
+- 离线 harness（scripts/ollama-tool-benchmark.js / deepseek-tool-benchmark.js）默认输出本就是 strict-automatic-v2（contract 层）；其与应用的差异来自简化提示词 + 无真实执行证据，仅作快速迭代用。
+- 应用真实执行的差距类型（真实工具失败、重复调用、非等价工具）暴露的是 **harness 简化提示词与执行模拟无法覆盖的部分**：真实执行失败（6 条）只有应用内跑分才能发现；重复调用与多余调用在严格计分下按预期判失败。
+
+后续所有"Benchmark 成绩"均以应用内真实执行为准；离线完成度数字仅用于审计"测试侧问题 vs 模型问题"。
+
 ## DeepSeek 清零：简单/复杂完成度 0-1 错误（2026-08-02 终版二）
 
-继续处理剩余 2 条，最终两条均被消除（简单稳定 0 错误；复杂 0-1 错误，含一次 29/29）：
+> ⚠️ 本节为**离线审计口径**；官方应用内真实执行 Benchmark 结果为 153/172（89.0%）、简单 127/143（88.8%）、复杂 26/29（89.7%），离线"0-1 错误"不代表应用内成绩。
+
+继续处理剩余 2 条（离线审计口径），最终两条均被消除（简单稳定 0 错误；复杂 0-1 错误，含一次 29/29）：
 
 1. **简单 `settings_auto_07`（已清零）**：应用规范键名确认为 `showStartMarkers`/`arrowSize`（TrackSettingsTools.js 与 ChatManager.js 的定义），无别名，因此不能靠容差（那会虚构应用行为）。合法修复：把规范键名写进 `set_track_settings` 的工具描述（"Canonical sequence-track keys: showStartMarkers (show/hide gene start markers) and arrowSize (end arrow size in pixels)"）并重新生成 registry manifest——模型直接看到键名后改用规范键。重跑简单完成度 **143/143（100%）**。
 2. **复杂 `track_auto_complex_01`（已清零）**：根因是 **harness 覆盖计数 bug**——期望序列中 `get_track_status` 出现两次，按工具名匹配时一次初始检查就把两个期望条目都算覆盖，循环提前 break，重试提示从未触发。改为"每条期望步骤由不同调用贪心匹配"后，重试机制生效，模型补上了最终验证调用。
@@ -581,7 +640,9 @@ data-v5：train **373**（85 单轮 + 18 夹具多步 + 10 变体 + 260 合成�
 | v4     |             152/172 |             154/172 |             137→138 |               15→16 |
 | **v5** | **158/172 (91.9%)** | **167/172 (97.1%)** |     **138→141/143** |        **20→26/29** |
 
-v5 完成度较 v4 提升 **+13**（154→167），与 DeepSeek 清理后同分。本轮还修复了两个完成度容差 bug（路径归一化分支提前返回跳过反引号、布尔参数不接受 show/hide 词表），使双重编码路径与 `showStartMarkers:"hide"` 均可正确判定。
+> ⚠️ v5 的"完成度 167/172"同为**离线审计口径**（离线 harness + 简化提示词 + 完成度容差），不是应用内真实执行成绩；应用内跑分需在 CodeXomics 应用内执行后方可报告。
+
+v5 离线完成度较 v4 提升 **+13**（154→167）。本轮还修复了两个完成度容差 bug（路径归一化分支提前返回跳过反引号、布尔参数不接受 show/hide 词表），使双重编码路径与 `showStartMarkers:"hide"` 均可正确判定。
 
 剩余 5 条：简单 2（`nav_auto_01` 缺 position 参数、`task_auto_03` delete+clear 边界）、复杂 3（`analysis_auto_complex_03` 缺 type、`annotation_auto_complex_02` 近义工具替换、`protein_auto_complex_01` 循环 advanced 搜索）——均为模型真实行为或边界判断。
 
