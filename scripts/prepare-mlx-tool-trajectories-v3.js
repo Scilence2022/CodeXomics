@@ -37,7 +37,6 @@ const {
   CORE_FIXTURE_ID,
   FIXTURES,
   UNIPROT_FIXTURE_ID,
-  executeTool,
 } = require('./lib/deterministic-fixture-corpus.js');
 const { buildContractToolResult } = require('./lib/contract-tool-results.js');
 const { checkLeakage, loadAutomaticBenchmarks } = require('./tool-calling-dataset.js');
@@ -99,7 +98,7 @@ function clone(value) {
 }
 
 function getPathValue(result, expression) {
-  const parts = String(expression).split(/[.\[\]]+/).filter(Boolean);
+  const parts = String(expression).split(/[.[\]]+/).filter(Boolean);
   let current = result;
   for (const part of parts) {
     if (current === null || current === undefined || typeof current !== 'object') return undefined;
@@ -509,7 +508,6 @@ function templatePrompt(language, templateId, details) {
 
 function buildTemplates() {
   const core = FIXTURES[CORE_FIXTURE_ID];
-  const uniprot = FIXTURES[UNIPROT_FIXTURE_ID];
   const templates = [];
 
   const coreWindow = variantIndex => {

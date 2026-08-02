@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+/* eslint-disable no-new-func */
 
 /**
  * Re-score stored benchmark records under the task-completion contract.
@@ -19,7 +20,6 @@ const StrictAutomaticEvaluator = require('../src/renderer/modules/benchmark-suit
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'tools_registry', 'generated', 'tool-registry-manifest.json');
-const CANDIDATE_LIMIT = 24;
 
 function parseArgs(argv) {
   const options = { input: null, output: null };

@@ -36,11 +36,6 @@ function seededDna(length, seed) {
   return output;
 }
 
-function seededInt(seed, min, max) {
-  const state = hashCode(seed);
-  return min + (state % (max - min + 1));
-}
-
 function translateDna(dna, readingFrame = 1) {
   const table = {
     TTT: 'F', TTC: 'F', TTA: 'L', TTG: 'L', TCT: 'S', TCC: 'S', TCA: 'S', TCG: 'S',
@@ -462,7 +457,6 @@ function buildContractToolResult(toolName, parameters = {}) {
     case 'toggle_sidebar_panel':
     case 'toggle_top_banner':
     case 'switch_ui_style':
-    case 'toggle_settings_modal':
       return { success: true, applied: 1 };
     default:
       return { success: true, acknowledged: true, tool: toolName };
