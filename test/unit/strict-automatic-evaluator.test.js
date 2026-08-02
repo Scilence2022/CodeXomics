@@ -412,6 +412,71 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(false);
     });
 
+    it('tolerates execute_actions as the documented follow-up of a queued edit tool', () => {
+      const test = {
+        id: 'completion-paste-execute-workflow',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'paste_sequence', parameters: { position: 600000 } },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'get_clipboard_content', parameters: {} },
+            { tool_name: 'paste_sequence', parameters: { position: 600000 } },
+            { tool_name: 'execute_actions', parameters: { auto_save: true } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
+    it('tolerates export_genbank_format that repeats the execute_actions export file', () => {
+      const test = {
+        id: 'completion-execute-export-duplicate',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: {
+          tool_name: 'execute_actions',
+          parameters: { filename: '/tmp/edited.gbk', auto_save: true },
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'execute_actions', parameters: { filename: '/tmp/edited.gbk', auto_save: true } },
+            {
+              tool_name: 'export_genbank_format',
+              parameters: { filename: '/tmp/edited.gbk', auto_save: true, include_features: true },
+            },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
+    it('tolerates highlight_region labelled with the selected gene', () => {
+      const test = {
+        id: 'completion-select-highlight-duplicate',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'select_gene', parameters: { geneName: 'lacZ' } },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'select_gene', parameters: { geneName: 'lacZ' } },
+            { tool_name: 'get_gene_details', parameters: { geneName: 'lacZ' } },
+            { tool_name: 'highlight_region', parameters: { start: 363231, end: 366305, label: 'lacZ' } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('accepts an equivalent blast database-creation tool with an alternative name key', () => {
       const test = {
         id: 'completion-blast-equivalent',
@@ -461,6 +526,29 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    it('accepts the schema-documented start-only spelling for navigate_to_position', () => {
+      const test = {
+        id: 'completion-nav-position-alias',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'navigate_to_position', parameters: { position: 3500000 } },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            {
+              tool_name: 'navigate_to_position',
+              parameters: { start: 3500000 },
+              executed: true,
+              executionSuccess: true,
+            },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('normalizes track-name aliases before schema validation', () => {
       const test = {
         id: 'completion-track-alias',
@@ -497,6 +585,45 @@ describe('StrictAutomaticEvaluator', () => {
 
       expect(evaluation.success).toBe(false);
       expect(evaluation.errors.some(error => error.includes('Schema invalid'))).toBe(true);
+    });
+
+    it('requires real execution success for expected calls when configured', () => {
+      const evaluator = new StrictAutomaticEvaluator({
+        assessmentMode: 'completion',
+        requireExecutionForCompletion: true,
+        validateToolCall: schemaValidator,
+      });
+      const test = {
+        id: 'completion-execution',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'select_gene', parameters: { geneName: 'lacZ' } },
+      };
+      const success = evaluator.evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'select_gene', parameters: { geneName: 'lacZ' }, executed: true, executionSuccess: true },
+            { tool_name: 'get_gene_details', parameters: { geneName: 'lacZ' }, executed: true, executionSuccess: true },
+          ],
+        },
+      });
+      const executionFailure = evaluator.evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'select_gene', parameters: { geneName: 'lacZ' }, executed: true, executionSuccess: false },
+          ],
+        },
+      });
+      const noExecutionEvidence = evaluator.evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [{ tool_name: 'select_gene', parameters: { geneName: 'lacZ' } }],
+        },
+      });
+
+      expect(success.success).toBe(true);
+      expect(executionFailure.success).toBe(false);
+      expect(noExecutionEvidence.success).toBe(false);
+      expect(success.details.assessmentTier).toBe('task-completion-execution');
     });
   });
 });

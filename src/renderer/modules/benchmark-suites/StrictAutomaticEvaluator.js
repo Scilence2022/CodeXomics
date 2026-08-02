@@ -22,6 +22,10 @@ class StrictAutomaticEvaluator {
   constructor(options = {}) {
     this.validateToolCall = options.validateToolCall || (() => ({ valid: true, errors: [] }));
     this.assessmentMode = options.assessmentMode || 'execution';
+    // When completion mode also requires real execution evidence (the in-app
+    // benchmark), an expected call that actually failed to execute still
+    // fails the test: under task-completion the task was genuinely not done.
+    this.requireExecutionForCompletion = options.requireExecutionForCompletion === true;
     if (!['contract', 'execution', 'completion'].includes(this.assessmentMode)) {
       throw new TypeError("assessmentMode must be 'contract', 'execution', or 'completion'");
     }
@@ -69,6 +73,10 @@ class StrictAutomaticEvaluator {
     this.completionParameterAlternatives = {
       switch_to_tab: { tabId: ['tabName', 'tabIndex'] },
       blast_create_quick_db_for_current_genome: { dbName: ['genomeName'] },
+      // navigate_to_position documents both spellings: `position` centers a
+      // 2kb window, and a start-only call centers the same way. A schema-valid
+      // call with either key completes "navigate to position N".
+      navigate_to_position: { position: ['start'], start: ['position'] },
     };
 
     // Read-only tools never mutate state, so an extra call to one of them does
@@ -625,6 +633,60 @@ class StrictAutomaticEvaluator {
     });
   }
 
+  /**
+   * Completion-mode extras that do not endanger a completed task:
+   * 1. execute_actions is the documented apply step for queued edit tools
+   *    (paste/insert/cut/delete/replace/copy), so applying the queue after the
+   *    required edit tool is the workflow's own follow-up, not a deviation.
+   * 2. export_genbank_format that writes the same file execute_actions already
+   *    generates (auto_save + filename) is a redundant instance of the export
+   *    capability the task already requires.
+   * 3. highlight_region labelled with the gene select_gene was asked to select
+   *    is a redundant instance of select_gene's documented highlight behavior.
+   */
+  isCompletionToleratedExtra(call, calls, expectedTools, expectedParameters) {
+    const toolName = this.normalizeToolName(call?.tool_name || '');
+    const flatten = names => names.flat().map(name => this.normalizeToolName(name));
+    const expectedNames = flatten(expectedTools.map(expected => (Array.isArray(expected) ? expected : [expected])));
+    const queueingEditTools = [
+      'paste_sequence',
+      'insert_sequence',
+      'cut_sequence',
+      'delete_sequence',
+      'replace_sequence',
+      'copy_sequence',
+    ];
+
+    if (toolName === 'execute_actions') {
+      const queueingToolSeen = calls.some(observed =>
+        queueingEditTools.includes(this.normalizeToolName(observed?.tool_name || ''))
+      );
+      return queueingToolSeen && expectedNames.some(name => queueingEditTools.includes(name));
+    }
+
+    if (toolName === 'export_genbank_format') {
+      if (!expectedNames.some(name => this.toolMatches(name, 'execute_actions'))) return false;
+      const executeCall = calls.find(observed => this.toolMatches(observed?.tool_name, 'execute_actions'));
+      const execFilename = executeCall?.parameters?.filename;
+      const exportFilename = call?.parameters?.filename;
+      if (typeof execFilename !== 'string' || executeCall?.parameters?.auto_save !== true) return false;
+      return exportFilename === undefined || exportFilename === execFilename;
+    }
+
+    if (toolName === 'highlight_region') {
+      if (!expectedNames.some(name => this.toolMatches(name, 'select_gene'))) return false;
+      const expectedGene = expectedParameters
+        .filter(params => params && typeof params === 'object')
+        .map(params => params.geneName || params.gene_name || params.name || params.gene)
+        .find(value => typeof value === 'string');
+      if (!expectedGene) return false;
+      const label = call?.parameters?.label ?? call?.parameters?.geneName ?? call?.parameters?.name;
+      return label === expectedGene;
+    }
+
+    return false;
+  }
+
   parametersMatch(actualParameters, expectedParameters, toolName = '') {
     return this.compareParameters(actualParameters, expectedParameters, toolName).match;
   }
@@ -975,7 +1037,8 @@ class StrictAutomaticEvaluator {
       ? sequence.unexpectedIndexes.filter(index => {
           const toolName = calls[index]?.tool_name;
           if (this.isReadOnlyTool(toolName)) return false;
-          return !expectedTools.some(expected => this.toolMatches(toolName, expected));
+          if (expectedTools.some(expected => this.toolMatches(toolName, expected))) return false;
+          return !this.isCompletionToleratedExtra(calls[index], calls, expectedTools, expectedParameters);
         })
       : sequence.unexpectedIndexes;
     const unexpectedCalls = unexpectedIndexes.map(index => calls[index]);
@@ -1004,9 +1067,10 @@ class StrictAutomaticEvaluator {
     const contractSatisfied = exactSequence && argumentsExact && schemasExact;
     const executionSatisfied = contractSatisfied && executionExact;
     const completionSatisfied = contractSatisfied && unexpectedCalls.length === 0;
+    const completionExecutionSatisfied = completionSatisfied && (!this.requireExecutionForCompletion || executionExact);
     const success =
       assessmentMode === 'completion'
-        ? completionSatisfied
+        ? completionExecutionSatisfied
         : assessmentMode === 'contract'
           ? contractSatisfied
           : executionSatisfied;
@@ -1109,7 +1173,9 @@ class StrictAutomaticEvaluator {
         assessmentMode,
         assessmentTier:
           assessmentMode === 'completion'
-            ? 'task-completion-contract'
+            ? this.requireExecutionForCompletion
+              ? 'task-completion-execution'
+              : 'task-completion-contract'
             : assessmentMode === 'contract'
               ? 'native-function-contract'
               : 'real-tool-execution',

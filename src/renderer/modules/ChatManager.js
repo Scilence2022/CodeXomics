@@ -3770,13 +3770,14 @@ class ChatManager {
   }
 
   async exportData(params) {
-    const { format, chromosome, start, end } = params;
+    const { format = 'genbank', chromosome, start, end } = params;
+    const normalizedFormat = String(format).toLowerCase();
 
     if (this.app && this.app.exportManager) {
       try {
         let _exportResult;
 
-        switch (format.toLowerCase()) {
+        switch (normalizedFormat) {
           case 'fasta':
             if (chromosome && start && end) {
               // Export specific region
@@ -3803,18 +3804,34 @@ class ChatManager {
         }
 
         return {
-          format: format,
+          format: normalizedFormat,
           chromosome: chromosome,
           start: start,
           end: end,
           exported: true,
-          message: `Data exported as ${format.toUpperCase()}`,
+          message: `Data exported as ${normalizedFormat.toUpperCase()}`,
         };
       } catch (error) {
         throw new Error(`Export failed: ${error.message}`);
       }
     }
 
+    throw new Error('Export manager not available');
+  }
+
+  /**
+   * Open the export configuration dialog (built-in tool equivalent of the
+   * Export Config menu action).
+   */
+  async configureExportSettings(parameters = {}) {
+    if (this.app && this.app.exportManager && typeof this.app.exportManager.showExportConfigDialog === 'function') {
+      this.app.exportManager.showExportConfigDialog();
+      return {
+        success: true,
+        tool: 'configure_export_settings',
+        message: 'Export configuration dialog opened',
+      };
+    }
     throw new Error('Export manager not available');
   }
 
@@ -10096,6 +10113,7 @@ ${coreTools}
       export_gff_annotations: () => this.exportGFFAnnotations(parameters),
       export_bed_format: () => this.exportBEDFormat(parameters),
       export_current_view_fasta: () => this.exportCurrentViewFasta(parameters),
+      configure_export_settings: () => this.configureExportSettings(parameters),
       capture_screenshot: () => this.captureScreenshot(parameters),
       open_image_file: () => this.openImageFile(parameters),
 
@@ -12561,7 +12579,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async translateSequence(params) {
-    return this.services.analysis.translateSequence(params);
+    // translate_sequence is a backward-compatible alias of translate_dna;
+    // route it through the same MicrobeGenomics implementation so both the
+    // `sequence` and `dna` parameter spellings and reading_frame work.
+    return this.executeMicrobeFunction('translateDNA', params);
   }
 
   async findOpenReadingFrames(params) {

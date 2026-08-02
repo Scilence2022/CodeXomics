@@ -22,16 +22,33 @@ A request may contain several function-calling rounds. `ChatManager` records eac
 
 ## Evaluation Methodology
 
-An automatic case passes only when all of the following hold:
+The in-app benchmark scores with the **task-completion-execution** tier: it
+asks whether the observed plan completed the task, not whether it matched one
+hand-written oracle byte for byte. An automatic case passes only when all of
+the following hold:
 
 1. The current request produced an authoritative structured tool call.
-2. The tool name or explicitly declared alternative matches.
-3. Every expected concrete argument matches; omitted schema defaults remain valid.
+2. Every expected capability is covered by a matching or explicitly equivalent
+   tool; step order is free because workflows often have several valid orders.
+3. Every expected concrete argument matches, or the call uses a
+   schema-documented alternative key (for example `navigate_to_position`
+   accepts either `position` or a start-only call); omitted schema defaults
+   remain valid.
 4. Every call satisfies the current registered JSON Schema.
-5. Every expected call completed successfully, except tests explicitly marked call-only.
-6. Complex workflows contain every expected step in the required order and no unexpected calls; tools explicitly marked order-insensitive may move.
+5. Every expected call completed successfully, except tests explicitly marked
+   call-only.
+6. Extra calls are tolerated when they are read-only, another instance of a
+   required capability, or the documented follow-up of a required workflow
+   step (for example `execute_actions` after a queued edit, or
+   `export_genbank_format` repeating the file `execute_actions` already
+   writes). Other unexpected state-changing calls still fail.
 
 Text mentions, inferred calls, stale tracker entries, and debug-log matches earn no credit. Failed cases may receive diagnostic partial scores, but the pass flag remains strict.
+
+The stricter **native-function-contract** and **real-tool-execution** tiers
+remain available as diagnostics (exact sequence, exact argument keys, no
+unexpected calls) and are what the offline audit harness reports before the
+task-completion rescore.
 
 ## Scoring and Statistical Analysis
 

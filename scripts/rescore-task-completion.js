@@ -33,11 +33,11 @@ function parseArgs(argv) {
   return options;
 }
 
-function loadAutomaticTests() {
+function loadAutomaticTests(defaultDirectory = './test_data/') {
   const suiteRoot = path.join(REPO_ROOT, 'src', 'renderer', 'modules', 'benchmark-suites');
   const windowMock = {
     songBenchmarkDebug: { detectedTools: [] },
-    benchmarkUI: { getDefaultDirectory: () => './test_data/' },
+    benchmarkUI: { getDefaultDirectory: () => defaultDirectory },
     chatManager: { toolExecutionTracker: { getSessionExecutions: () => [] } },
   };
   const baseCode = fs.readFileSync(path.join(suiteRoot, 'BenchmarkEvaluatorBase.js'), 'utf8');

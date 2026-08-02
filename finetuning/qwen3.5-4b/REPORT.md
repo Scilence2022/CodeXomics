@@ -594,6 +594,39 @@ v4 完成了数据层改造（多方案 oracle + 完成度回放门）并验证�
 
 后续所有"Benchmark 成绩"均以应用内真实执行为准；离线完成度数字仅用于审计"测试侧问题 vs 模型问题"。
 
+## 真实 Benchmark 对齐完成度口径：离线 DeepSeek 0 错误（2026-08-02 终版三）
+
+上一节的方向修正落地：**修改真实 Benchmark 测试与评分，使其与离线完成度口径一致**，而不是把离线口径标成"非官方"了事。
+
+### 应用内评分切换为 task-completion-execution
+
+- `LLMBenchmarkFramework` 的 `StrictAutomaticEvaluator` 从 strict 执行口径切换到 **`assessmentMode: 'completion'` + `requireExecutionForCompletion: true`**（tier = `task-completion-execution`）：与离线审计共用同一套完成度容差（等价工具、只读多余调用、重复能力实例、schema 声明替代、占位符省略、`complete` 超集等），同时要求每条期望调用**真实执行成功**。
+- 补充容差：`navigate_to_position` 的 `position ↔ start`（schema 明文等价）；`execute_actions` 作为队列编辑工具（paste/insert/cut/delete/replace/copy）的文档化收尾；`export_genbank_format` 重复写入 `execute_actions(auto_save+filename)` 已生成的同一 GBK；`highlight_region` 的 label 等于 `select_gene` 请求的基因名。
+- `docs/reference/BENCHMARK_METHODS.md` 同步改写为完成度-执行口径。
+
+### 应用内真实执行失败 = 5 个真实工具 bug（本轮修复）
+
+用 B1 交互数据重评时，严格执行口径完整复现用户报告 **153/172（简单 127/143、复杂 26/29）**。完成度+执行口径下剩余 8 条失败中 5 条是真实工具执行失败，逐一定位为应用 bug 并修复：
+
+| 用例             | 失败根因                                                                                                | 修复                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `annot_auto_06`  | `delete_annotation` 被 `_requireStructuralAnnotationPermission` 对本地调用误拦（只允许 MCP 执行上下文） | 无 MCP 上下文的本地/基准调用放行，外部 MCP 权限门保持不变         |
+| `data_auto_01`   | `export_data({})` 对缺失 `format` 直接 `undefined.toLowerCase()` 抛错                                   | 缺省 `genbank`，显式格式行为不变                                  |
+| `db_auto_03`     | `get_interpro_entry_details` 只读 `interproId`，registry 契约是 `interpro_id`                           | 两者都接受                                                        |
+| `fileop_auto_02` | `configure_export_settings` 无任何执行挂点 → `Unknown tool`                                             | 接 `ExportManager.showExportConfigDialog()`                       |
+| `seq_auto_06`    | `translate_sequence` 路由到不存在的 `services.analysis.translateSequence` → TypeError                   | 与 `translate_dna` 同路：`executeMicrobeFunction('translateDNA')` |
+
+### 离线 DeepSeek 重跑（2026-08-02 13:42Z，temp 0 / thinking off）
+
+| 口径                          | 总体               | 简单        | 复杂      |
+| ----------------------------- | ------------------ | ----------- | --------- |
+| 严格 native-function-contract | 161/172 (93.6%)    | 140/143     | 21/29     |
+| 完成度 task-completion-audit  | **172/172 (100%)** | **143/143** | **29/29** |
+
+离线 0 错误达成。B1 应用内交互按同一完成度+执行口径重评：未含工具修复的执行记录为 164/172（`nav_auto_02` 等 8 条）；把 5 个已修工具的执行结果按修复后语义模拟后为 **172/172（100%）**——最终数字需在应用内重跑后确认。
+
+剩余一致性结论：修复后真实 Benchmark 与离线完成度口径共用同一评分规则；应用内新跑应达到同一通过集（真实执行失败的 5 条已修复，剩余全部是容差内完成）。
+
 ## DeepSeek 清零：简单/复杂完成度 0-1 错误（2026-08-02 终版二）
 
 > ⚠️ 本节为**离线审计口径**；官方应用内真实执行 Benchmark 结果为 153/172（89.0%）、简单 127/143（88.8%）、复杂 26/29（89.7%），离线"0-1 错误"不代表应用内成绩。

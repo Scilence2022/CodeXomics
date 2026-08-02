@@ -2133,11 +2133,14 @@ class ProteinService {
   }
 
   async getInterproEntryDetails(parameters) {
-    const { interproId } = parameters;
+    // The tool registry schema exposes `interpro_id`; accept the internal
+    // camelCase spelling as well so both the registry contract and legacy
+    // callers reach the API instead of failing with "interproId is required".
+    const interproId = parameters.interpro_id || parameters.interproId;
     try {
       if (!interproId) throw new Error('interproId is required');
 
-      const upperId = interproId.toUpperCase();
+      const upperId = String(interproId).toUpperCase();
       const searchUrl = `https://www.ebi.ac.uk/interpro/api/entry/interpro/${encodeURIComponent(upperId)}`;
 
       console.log(`[ProteinService] getInterproEntryDetails: ${searchUrl}`);
