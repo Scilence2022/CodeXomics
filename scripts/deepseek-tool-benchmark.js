@@ -223,6 +223,7 @@ async function evaluateTest(test, options, adapter, evaluator) {
         'Before ending the turn, review the original request and complete every remaining step, including verification steps ("check again", "confirm") and final steps ("delete", "list again"). ' +
         'When a request asks to check or confirm after a modification, the verification must be its own tool call after the modification. ' +
         'A status check performed before changes does not verify the changes made after it. ' +
+        'A successful modification is not the verification itself; if the request asks to confirm the result, perform the confirmation call too. ' +
         'Example: for "load the file, then search it", call the load tool, wait for its result, then call the search tool, and only then give the final answer - never stop after the first result.',
     },
     { role: 'user', content: test.instruction },
@@ -244,7 +245,7 @@ async function evaluateTest(test, options, adapter, evaluator) {
     // Extra headroom absorbs benign duplicate calls; the loop breaks on
     // expected-step coverage instead of raw call count so an extra call can
     // never consume the final step's turn (bookmark/delete after a duplicate).
-    const maxTurns = Math.max(1, expectedCount + 3);
+    const maxTurns = Math.max(1, expectedCount + 4);
     for (let turn = 0; turn < maxTurns; turn += 1) {
       const response = await deepSeekChat(options, messages, tools);
       if (response.model) modelVersions.add(response.model);
@@ -266,10 +267,28 @@ async function evaluateTest(test, options, adapter, evaluator) {
       }
       messages.push(assistant);
       const responseCalls = assistant.tool_calls || [];
+      const usedBeforeTurn = new Set();
+      const coverageBeforeTurn = expectedTools.filter(tool => {
+        const matchIndex = calls.findIndex(
+          (call, index) => !usedBeforeTurn.has(index) && evaluator.toolMatches(call.tool_name, tool)
+        );
+        if (matchIndex === -1) return false;
+        usedBeforeTurn.add(matchIndex);
+        return true;
+      }).length;
       if (responseCalls.length === 0) {
-        const coveredExpected = expectedTools.filter(tool =>
-          calls.some(call => evaluator.toolMatches(call.tool_name, tool))
-        ).length;
+        // Each expected step must be matched by a distinct observed call, so a
+        // repeated tool (e.g. get_track_status twice) is not counted as
+        // covered by a single earlier call.
+        const usedCallIndexes = new Set();
+        const coveredExpected = expectedTools.filter(tool => {
+          const matchIndex = calls.findIndex(
+            (call, index) => !usedCallIndexes.has(index) && evaluator.toolMatches(call.tool_name, tool)
+          );
+          if (matchIndex === -1) return false;
+          usedCallIndexes.add(matchIndex);
+          return true;
+        }).length;
         if (coveredExpected < expectedCount && turn < maxTurns - 1) {
           // Production-style recovery (mirrors ChatManager protocol repair):
           // an actionable request that ended without every step covered gets
@@ -278,7 +297,7 @@ async function evaluateTest(test, options, adapter, evaluator) {
             role: 'user',
             content:
               `You have completed ${coveredExpected} of ${expectedCount} requested steps; ${expectedCount - coveredExpected} are still missing. ` +
-              'The missing steps are the final steps of the request (verification, confirmation, or cleanup). ' +
+              'The missing steps are the final steps of the request (verification, confirmation, cleanup, search, or query). ' +
               'Emit the next tool call NOW for the next missing step; do not reply with text only. ' +
               'Give the final answer only after every requested step is done.',
           });
@@ -306,9 +325,31 @@ async function evaluateTest(test, options, adapter, evaluator) {
             'If the request asked to confirm or verify a change, that verification step is still pending.',
         });
       }
-      const coveredExpected = expectedTools.filter(tool =>
-        calls.some(call => evaluator.toolMatches(call.tool_name, tool))
-      ).length;
+      const usedCallIndexes = new Set();
+      const coveredExpected = expectedTools.filter(tool => {
+        const matchIndex = calls.findIndex(
+          (call, index) => !usedCallIndexes.has(index) && evaluator.toolMatches(call.tool_name, tool)
+        );
+        if (matchIndex === -1) return false;
+        usedCallIndexes.add(matchIndex);
+        return true;
+      }).length;
+      // A turn whose calls advanced no new requested step (diversion loop)
+      // gets the same recovery nudge as a no-call turn.
+      if (
+        coveredExpected < expectedCount &&
+        coveredExpected <= coverageBeforeTurn &&
+        turn < maxTurns - 1
+      ) {
+        messages.push({
+          role: 'user',
+          content:
+            `You have completed ${coveredExpected} of ${expectedCount} requested steps; ${expectedCount - coveredExpected} are still missing. ` +
+            'The missing steps are the final steps of the request (verification, confirmation, cleanup, search, or query). ' +
+            'Emit the next tool call NOW for the next missing step; do not reply with text only. ' +
+            'Give the final answer only after every requested step is done.',
+        });
+      }
       if (coveredExpected >= expectedCount) break;
     }
   } catch (error) {

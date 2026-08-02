@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-08-01T08:13:05.009Z",
-  "registryHash": "16b2912e67d79645722c1bbe0b341e2b0fded49ca89494c8fed22b11d46edb81",
+  "generatedAt": "2026-08-02T07:22:21.763Z",
+  "registryHash": "4028d619007f8bf9a7c4f04ca81f4246e557b64e0fcfa23f307f6e153f2380b0",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -14807,7 +14807,7 @@
           },
           "settings": {
             "type": "object",
-            "description": "Settings object with parameters to update (e.g., renderingMode, height, colors, font sizes)"
+            "description": "Settings object with parameters to update (e.g., renderingMode, height, colors, font sizes). Canonical sequence-track keys: showStartMarkers (show/hide gene start markers) and arrowSize (end arrow size in pixels)."
           }
         },
         "required": ["track_type", "settings"]
@@ -36791,7 +36791,7 @@
           },
           "settings": {
             "type": "object",
-            "description": "Settings object with parameters to update (e.g., renderingMode, height, colors, font sizes)"
+            "description": "Settings object with parameters to update (e.g., renderingMode, height, colors, font sizes). Canonical sequence-track keys: showStartMarkers (show/hide gene start markers) and arrowSize (end arrow size in pixels)."
           }
         },
         "required": ["track_type", "settings"]

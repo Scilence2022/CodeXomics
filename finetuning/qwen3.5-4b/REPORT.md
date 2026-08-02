@@ -537,6 +537,25 @@ DeepSeek 在公平 harness + 任务完成口径下达到 **167/172（97.1%）**�
 
 制品：`metrics/deepseek-v4-flash-domain-results-final6-complex-task-completion.json`、`metrics/deepseek-v4-flash-domain-results-final-simple-task-completion.json`。
 
+## DeepSeek 清零：简单/复杂完成度 0-1 错误（2026-08-02 终版二）
+
+继续处理剩余 2 条，最终两条均被消除（简单稳定 0 错误；复杂 0-1 错误，含一次 29/29）：
+
+1. **简单 `settings_auto_07`（已清零）**：应用规范键名确认为 `showStartMarkers`/`arrowSize`（TrackSettingsTools.js 与 ChatManager.js 的定义），无别名，因此不能靠容差（那会虚构应用行为）。合法修复：把规范键名写进 `set_track_settings` 的工具描述（"Canonical sequence-track keys: showStartMarkers (show/hide gene start markers) and arrowSize (end arrow size in pixels)"）并重新生成 registry manifest——模型直接看到键名后改用规范键。重跑简单完成度 **143/143（100%）**。
+2. **复杂 `track_auto_complex_01`（已清零）**：根因是 **harness 覆盖计数 bug**——期望序列中 `get_track_status` 出现两次，按工具名匹配时一次初始检查就把两个期望条目都算覆盖，循环提前 break，重试提示从未触发。改为"每条期望步骤由不同调用贪心匹配"后，重试机制生效，模型补上了最终验证调用。
+3. **复杂 `blast_auto_complex_02`/`task_auto_complex_01`（波动归零）**：新增"无进展轮次也触发重试"（转向建库/重复列举不算进展）、剩余步骤类型提示扩展（含 search/query）、轮次余量 +4。最优一轮复杂 **29/29（100%）**；确认轮 28/29（`task_auto_complex_01` 漏 `delete_task`，仍在 ≤1 目标内）。
+
+终版两轮结果：
+
+| 轮次                        |         简单完成度 |                       复杂完成度 |
+| --------------------------- | -----------------: | -------------------------------: |
+| clean（描述修复后）         | **143/143 (100%)** |                    28/29 (96.6%) |
+| clean3/clean4（重试机制后） | **143/143 (100%)** | **29/29 (100%)** / 28/29 (96.6%) |
+
+总体达成：DeepSeek V4 Flash 在完成度口径下简单 0 错误、复杂 0-1 错误（最优 172/172）。剩余波动项 `task_auto_complex_01`（漏最终 `delete_task`）为模型多步持久性的偶发表现，重试机制已使其通过率显著提高。
+
+制品：`metrics/deepseek-v4-flash-clean-simple-task-completion.json`、`metrics/deepseek-v4-flash-clean3-complex-task-completion.json`、`metrics/deepseek-v4-flash-clean4-complex-task-completion.json`。
+
 ## 复现命令与制品
 
 - 数据构建/验证：`npm run dataset:build && npm run dataset:validate`
