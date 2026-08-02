@@ -161,11 +161,15 @@ async function evaluateTest(test, model, adapter, evaluator) {
       content:
         'Use only the supplied CodeXomics tools. Call tools instead of describing calls. Ground all arguments in the user request, this fixture context, or prior tool results. ' +
         'Deterministic fixture context: genome ECOLI.gbk is loaded; active chromosome is U00096; current view is U00096:100000-101000; annotations and UI state are available through tools. ' +
-        'Do not invent values that are absent from all three sources.',
+        'Do not invent values that are absent from all three sources. ' +
+        'The request may contain several steps. Track every requested step and keep calling tools until all of them are done; ' +
+        'do not stop, repeat completed steps, or switch to a different action after partial progress. ' +
+        'Choose the tool that performs the requested action (an analysis or editing tool), not a read-only inspection tool.',
     },
     { role: 'user', content: test.instruction },
   ];
-  const expectedCount = evaluator.getExpectedTools(test).length;
+  const expectedTools = evaluator.getExpectedTools(test);
+  const expectedCount = expectedTools.length;
   const calls = [];
   let promptEvalCount = 0;
   let evalCount = 0;
@@ -174,7 +178,7 @@ async function evaluateTest(test, model, adapter, evaluator) {
   let apiError = null;
 
   try {
-    const maxTurns = Math.max(1, expectedCount + 1);
+    const maxTurns = Math.max(1, expectedCount + 2);
     for (let turn = 0; turn < maxTurns; turn += 1) {
       const response = await ollamaChat(model, messages, tools);
       promptEvalCount += Number(response.prompt_eval_count || 0);
@@ -193,10 +197,15 @@ async function evaluateTest(test, model, adapter, evaluator) {
         messages.push({
           role: 'tool',
           tool_name: toolName,
-          content: JSON.stringify(buildContractToolResult(toolName, parameters)),
+          content:
+            JSON.stringify(buildContractToolResult(toolName, parameters)) +
+            '\nIf the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer.',
         });
       }
-      if (calls.length >= expectedCount + 1 || calls.length >= expectedCount) break;
+      const coveredExpected = expectedTools.filter(tool =>
+        calls.some(call => evaluator.toolMatches(call.tool_name, tool))
+      ).length;
+      if (coveredExpected >= expectedCount) break;
     }
   } catch (error) {
     apiError = error.message;

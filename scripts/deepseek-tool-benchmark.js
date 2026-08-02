@@ -215,11 +215,15 @@ async function evaluateTest(test, options, adapter, evaluator) {
       content:
         'Use only the supplied CodeXomics tools. Call tools instead of describing calls. Ground all arguments in the user request, this fixture context, or prior tool results. ' +
         'Deterministic fixture context: genome ECOLI.gbk is loaded; active chromosome is U00096; current view is U00096:100000-101000; annotations and UI state are available through tools. ' +
-        'Do not invent values that are absent from all three sources.',
+        'Do not invent values that are absent from all three sources. ' +
+        'The request may contain several steps. Track every requested step and keep calling tools until all of them are done; ' +
+        'do not stop, repeat completed steps, or switch to a different action after partial progress. ' +
+        'Choose the tool that performs the requested action (an analysis or editing tool), not a read-only inspection tool.',
     },
     { role: 'user', content: test.instruction },
   ];
-  const expectedCount = evaluator.getExpectedTools(test).length;
+  const expectedTools = evaluator.getExpectedTools(test);
+  const expectedCount = expectedTools.length;
   const calls = [];
   const modelVersions = new Set();
   let promptTokens = 0;
@@ -232,7 +236,10 @@ async function evaluateTest(test, options, adapter, evaluator) {
   let apiError = null;
 
   try {
-    const maxTurns = Math.max(1, expectedCount + 1);
+    // Extra headroom absorbs benign duplicate calls; the loop breaks on
+    // expected-step coverage instead of raw call count so an extra call can
+    // never consume the final step's turn (bookmark/delete after a duplicate).
+    const maxTurns = Math.max(1, expectedCount + 2);
     for (let turn = 0; turn < maxTurns; turn += 1) {
       const response = await deepSeekChat(options, messages, tools);
       if (response.model) modelVersions.add(response.model);
@@ -266,10 +273,18 @@ async function evaluateTest(test, options, adapter, evaluator) {
           role: 'tool',
           tool_call_id: toolCall.id || `call_${turn}_${callIndex}`,
           name: toolName,
-          content: JSON.stringify(buildContractToolResult(toolName, parameters)),
+          // Production loop steering: ChatManager appends the same reminder
+          // after every tool result so the model continues to the next step
+          // instead of treating a single result as the end of the task.
+          content:
+            JSON.stringify(buildContractToolResult(toolName, parameters)) +
+            '\nIf the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer.',
         });
       }
-      if (calls.length >= expectedCount) break;
+      const coveredExpected = expectedTools.filter(tool =>
+        calls.some(call => evaluator.toolMatches(call.tool_name, tool))
+      ).length;
+      if (coveredExpected >= expectedCount) break;
     }
   } catch (error) {
     apiError = error.message;

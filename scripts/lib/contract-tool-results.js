@@ -138,17 +138,21 @@ function buildContractToolResult(toolName, parameters = {}) {
 
   switch (toolName) {
     case 'get_sequence':
-    case 'get_coding_sequence':
+    case 'get_coding_sequence': {
+      // Cap returned sequences so models can pass values literally without
+      // exhausting the token budget; references still resolve to full data.
+      const capped = dna.slice(0, 120);
       return {
         success: true,
-        sequence: dna,
-        length: dna.length,
+        sequence: capped,
+        length: capped.length,
         chromosome,
         start,
         end,
         strand,
         format: parameters.format || 'raw',
       };
+    }
     case 'reverse_complement':
       return { success: true, original_sequence: sequence, reverse_complement: reverseComplement(sequence), sequence_length: sequence.length, validation_passed: true };
     case 'translate_dna':
@@ -297,7 +301,14 @@ function buildContractToolResult(toolName, parameters = {}) {
     case 'batch_set_track_settings':
       return { success: true, applied: 1 };
     case 'capture_screenshot':
-      return { success: true, filePath: `/tmp/codexomics_screenshot_${Math.abs(hashCode(seed)) % 10000}.png`, mode: parameters.mode || 'visible' };
+      // Echo the path the caller requested so a follow-up "open the captured
+      // image" step can use the real target instead of a tool-internal path.
+      return {
+        success: true,
+        filePath: parameters.filePath || parameters.path || `/tmp/codexomics_screenshot_${Math.abs(hashCode(seed)) % 10000}.png`,
+        mode: parameters.mode || 'visible',
+        target: parameters.target || 'visible_tracks',
+      };
     case 'open_image_file':
       return { success: true, filePath: parameters.filePath || parameters.path || '/tmp/screenshot.png' };
     case 'view_markdown_file':
@@ -330,7 +341,12 @@ function buildContractToolResult(toolName, parameters = {}) {
     case 'search_uniprot_database':
       return { success: true, results_count: 1, entries: [{ accession: 'P0A6L2', protein_name: 'Dihydrodipicolinate synthase', gene_name: 'dapA', organism: 'Escherichia coli', reviewed: true, length: 292 }] };
     case 'get_uniprot_entry':
-      return { success: true, entry_info: { accession: parameters.uniprot_id || 'P0A6L2', protein_name: 'Dihydrodipicolinate synthase', gene_name: 'dapA', organism: 'Escherichia coli', reviewed: true }, protein_sequence: seededDna ? 'MK' + seededDna(0, seed) : '', sequence_length: 292 };
+      return {
+        success: true,
+        entry_info: { accession: parameters.uniprot_id || 'P0A6L2', protein_name: 'Dihydrodipicolinate synthase', gene_name: 'dapA', organism: 'Escherichia coli', reviewed: true },
+        protein_sequence: 'MK' + seededDna(90, seed),
+        sequence_length: 92,
+      };
     case 'search_pdb_structures':
     case 'search_alphafold_structures':
       return { success: true, structures: [{ pdb_id: '1DHP', gene_name: 'dapA', organism: 'Escherichia coli', resolution: 2.2 }], count: 1 };

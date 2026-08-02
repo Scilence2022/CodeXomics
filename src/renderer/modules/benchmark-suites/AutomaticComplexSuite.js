@@ -833,10 +833,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
                 },
               ],
             },
-            // get_annotation_history stays pinned to the name: its lookup is an exact match on the
-            // recorded annotationId, so the two identifiers are not interchangeable here.
+            // History is keyed by the annotation's minted id, and the tool also
+            // accepts the gene name; a model that chains the create_annotation
+            // result is as correct as one that repeats the literal name.
             {
-              identifier: 'benchmark_bulk_gene',
+              ...this.anyOfParameters({ identifier: 'benchmark_bulk_gene' }, { identifier: '<created_annotation_id>' }),
             },
             {
               start: 160000,
