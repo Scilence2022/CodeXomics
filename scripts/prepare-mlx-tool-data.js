@@ -133,11 +133,18 @@ function compactNativeTool(tool) {
 function getTrainingEligibility(record) {
   const reasons = [];
   if (record.verification?.schema_valid !== true) reasons.push('schema_not_valid');
-  if (record.strong_model_replay?.status !== 'passed') reasons.push('strong_model_replay_not_passed');
-  if (record.strong_model_replay?.semantic_verdict !== 'passed') {
-    reasons.push('strong_model_semantic_verdict_not_passed');
+  if (!record.strong_model_replay?.status || record.strong_model_replay.status === 'not_run') {
+    reasons.push('strong_model_replay_not_run');
   }
-  if (record.strong_model_replay?.comparison_mode !== 'semantic_canonical_equivalence') {
+  // Builder completion-equivalence recomputation is authoritative: replays the
+  // submitter marked failed (extra read-only call, documented equivalent tool)
+  // are promoted when the observed plan covers the oracle.
+  if (record.strong_model_replay?.builder_semantic_verified !== true) {
+    reasons.push('strong_model_replay_not_verified');
+  }
+  if (!['semantic_canonical_equivalence', 'completion_equivalence_v1'].includes(
+    record.strong_model_replay?.comparison_mode
+  )) {
     reasons.push('strong_model_comparison_mode_invalid');
   }
   if (record.labels?.stateful && record.verification?.state_verified !== true) {

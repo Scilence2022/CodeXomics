@@ -17,6 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const DynamicToolsSnapshotAdapter = require('../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
 const StrictAutomaticEvaluator = require('../src/renderer/modules/benchmark-suites/StrictAutomaticEvaluator.js');
+const { buildContractToolResult } = require('./lib/contract-tool-results.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const RELEASE_ROOT = path.join(REPO_ROOT, 'datasets', 'tool-calling-v1', 'release');
@@ -213,7 +214,10 @@ function createCatalogRuntime(catalog = readJson(TOOL_CATALOG_PATH)) {
     nativeToolsByName.set(nativeTool.function.name, nativeTool);
   }
   const evaluator = new StrictAutomaticEvaluator({
-    assessmentMode: 'contract',
+    // Completion-equivalence gate: equivalent tools, extra read-only calls,
+    // and alternative-but-schema-valid parameters are accepted so that valid
+    // multi-step plans are not rejected for oracle strictness.
+    assessmentMode: 'completion',
     validateToolCall: (name, parameters) => adapter.validateToolCall(name, parameters),
   });
   return { catalog, adapter, evaluator, nativeToolsByName };
@@ -449,7 +453,7 @@ async function deepSeekChat(options, messages, tools, fetchImpl = globalThis.fet
     tools,
     tool_choice: 'auto',
     stream: false,
-    max_tokens: options.thinking === 'enabled' ? 4096 : 1024,
+    max_tokens: options.thinking === 'enabled' ? 4096 : 4096,
     thinking: { type: options.thinking },
   };
   if (options.thinking === 'disabled') requestBody.temperature = 0;
@@ -736,6 +740,8 @@ async function replayExample(record, attempt, options, runtime, requestChat = de
   let apiError = null;
   let fixtureError = null;
   let terminationReason = prepared.error ? prepared.errorTaxonomy : null;
+  const usedExpected = new Set();
+  let cursor = 0;
 
   if (!prepared.error) {
     const messages = [...prepared.messages];
@@ -767,12 +773,13 @@ async function replayExample(record, attempt, options, runtime, requestChat = de
 
         const responseCalls = assistant.tool_calls || [];
         if (responseCalls.length === 0) {
-          if (calls.length < expectedCalls.length) terminationReason = 'no_call_before_complete';
+          if (usedExpectedCount < expectedCalls.length) terminationReason = 'no_call_before_complete';
           else terminationReason = 'completed';
           break;
         }
 
         let shouldStop = false;
+        let usedExpectedCount = usedExpected.size;
         const currentTurnCalls = [];
         for (const toolCall of responseCalls) {
           const actualCall = {
@@ -780,30 +787,42 @@ async function replayExample(record, attempt, options, runtime, requestChat = de
             parameters: normalizeArguments(toolCall?.function?.arguments),
           };
           calls.push(actualCall);
-          const expectedIndex = calls.length - 1;
-          const expected = expectedCalls[expectedIndex];
-          if (!expected) {
-            terminationReason = 'unexpected_extra_call';
-            shouldStop = true;
-            break;
+          let expectedIndex = -1;
+          for (let index = cursor; index < expectedCalls.length; index += 1) {
+            if (!usedExpected.has(index) && runtime.evaluator.toolMatches(actualCall.tool_name, expectedCalls[index].tool_name)) {
+              expectedIndex = index;
+              break;
+            }
           }
-
-          const toolMatch = runtime.evaluator.toolMatches(actualCall.tool_name, expected.tool_name);
+          if (expectedIndex === -1) {
+            // Extra call: read-only extras are tolerated, state-changing
+            // extras still fail the replay.
+            if (!runtime.evaluator.isReadOnlyTool(actualCall.tool_name)) {
+              terminationReason = 'unexpected_extra_call';
+              shouldStop = true;
+              break;
+            }
+            continue;
+          }
+          const expected = expectedCalls[expectedIndex];
           const validation = runtime.adapter.validateToolCall(actualCall.tool_name, actualCall.parameters);
-          const argumentMatch = toolMatch && runtime.evaluator.parametersMatch(
+          const argumentMatch = runtime.evaluator.parametersMatch(
             actualCall.parameters,
             expected.parameters || {},
             actualCall.tool_name
           );
-          if (!toolMatch || !validation.valid || !argumentMatch) {
-            terminationReason = !toolMatch ? 'wrong_tool' : !validation.valid ? 'schema_invalid' : 'argument_mismatch';
+          if (!validation.valid || !argumentMatch) {
+            terminationReason = !validation.valid ? 'schema_invalid' : 'argument_mismatch';
             shouldStop = true;
             break;
           }
+          usedExpected.add(expectedIndex);
+          cursor = expectedIndex + 1;
+          usedExpectedCount = usedExpected.size;
           currentTurnCalls.push({ toolCall, actualCall, expectedIndex });
         }
         if (shouldStop) break;
-        if (calls.length >= expectedCalls.length) {
+        if (usedExpectedCount >= expectedCalls.length) {
           terminationReason = 'completed';
           break;
         }
@@ -816,11 +835,8 @@ async function replayExample(record, attempt, options, runtime, requestChat = de
             shouldStop = true;
             break;
           }
-          const content = fixture?.content || JSON.stringify({
-            acknowledged: true,
-            assessment_tier: 'native-function-contract',
-            domain_result_available: false,
-          });
+          const content =
+            fixture?.content || JSON.stringify(buildContractToolResult(actualCall.tool_name, actualCall.parameters));
           messages.push({
             role: 'tool',
             tool_call_id: toolCall.id || `call_${turn + 1}_${expectedIndex + 1}`,

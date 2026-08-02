@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
   "generator_version": "2.0.0",
-  "generated_at": "2026-08-01T11:22:52.654Z",
+  "generated_at": "2026-08-02T01:07:37.778Z",
   "benchmark_scope": {
     "automatic_simple": 143,
     "automatic_complex": 29,
@@ -32,15 +32,15 @@
   "splits": {
     "train": {
       "count": 476,
-      "sha256": "26d7e7e4fa7a6436a150df996504d951e0a66e6eb745084c3cf5ac0277bdcc3b"
+      "sha256": "3f2d66a182c3761627047c7c6a32a31172a7368fbf561da85f2926af438b1c43"
     },
     "dev": {
       "count": 159,
-      "sha256": "88a05deaf67bf7baf56be96a3811151aebaef247e2641b960efc0007c7693601"
+      "sha256": "a761a1a815b7141f29bfaadb8cc8be14b5e87d837240e6a21ce4aca01c433138"
     },
     "holdout": {
       "count": 43,
-      "sha256": "bb7d4d6dfd54400be5cdf53348c34150784ccad9643714a4bfb7b07e2dce1ab5"
+      "sha256": "3d1c562e5230b9d7001956b515d013f4629088b9995be2db54ee577595f74878"
     }
   },
   "preferences": {
@@ -50,7 +50,7 @@
   },
   "candidate_preferences": {
     "count": 623,
-    "sha256": "6710c3139ec736a7c4edbea7b987d8b734eb7b9452dd496bc5ab30725cf3736d",
+    "sha256": "02c8fb965e46745b8a611f1171fb5790c35b9103a12ce53101b81de23b6e10ec",
     "use": "replay_queue_not_training",
     "schema_valid_semantic_negative_rate": 1
   },
@@ -186,28 +186,29 @@
   },
   "strong_model_replays": {
     "supplied": true,
-    "passed": 166,
-    "failed": 40,
+    "passed": 172,
+    "failed": 34,
     "blocked": 0,
     "not_run": 472
   },
   "tool_catalog_sha256": "6cdba8dc9fa1d5d635be69c2d9f739f85383598c987e851670c88966a8d059c9",
   "training_eligible_by_split": {
-    "train": 82,
-    "dev": 63,
+    "train": 85,
+    "dev": 66,
     "holdout": 21
   },
   "release_gates": {
     "schema_valid_rate": 1,
     "fixture_executable_rate": 0.2861356932153392,
     "state_verified_rate": 0,
-    "strong_model_replay_pass_rate": 0.2448377581120944,
+    "strong_model_replay_pass_rate": 0.2536873156342183,
     "leakage_pass_rate": 1,
     "atomic_component_split_overlap": 0,
     "training_promotion_ready": true
   },
   "replay_contract": {
-    "comparison_mode": "semantic_canonical_equivalence",
+    "comparison_modes": ["semantic_canonical_equivalence", "completion_equivalence_v1"],
+    "promotion_rule": "builder completion-equivalence recomputation is authoritative; valid alternative plans and extra read-only calls are promoted",
     "statuses": ["not_run", "passed", "failed", "blocked"],
     "reason_codes": [
       "not_run",

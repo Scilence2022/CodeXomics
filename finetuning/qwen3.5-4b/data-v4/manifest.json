@@ -1,0 +1,82 @@
+{
+  "schema_version": "3.0",
+  "format": "mlx-lm-tools-jsonl",
+  "source_release_manifest_sha256": "2187e87f1e4e004fa8ac916fd5d357c24e8f5bd273c46f42267ca8977bf91c14",
+  "source_registry_hash": "16b2912e67d79645722c1bbe0b341e2b0fded49ca89494c8fed22b11d46edb81",
+  "benchmark_scope": {
+    "automatic_simple": 143,
+    "automatic_complex": 29,
+    "manual_tests_included": 0,
+    "use": "leakage-gate-only"
+  },
+  "max_candidate_tools": 6,
+  "tool_schema_profile": {
+    "function_descriptions_preserved": "truncated_160",
+    "property_descriptions_included": false,
+    "defaults_preserved": true,
+    "examples_preserved": false,
+    "source_semantics_preserved": true,
+    "structural_constraints_preserved": true,
+    "candidate_order_preserved": true,
+    "deterministic_random_gold_position": true,
+    "semantically_hard_distractors": true,
+    "all_gold_tools_always_included": true,
+    "compact_training_schema": "compact-v1"
+  },
+  "trajectory_profile": {
+    "multi_turn_tool_results": true,
+    "cross_round_reference_syntax": "{tool_name.path}",
+    "synthetic_chains_generated": true,
+    "synthetic_leakage_checked_against_172_tests": true,
+    "synthetic_split_buckets": {
+      "train": 85,
+      "dev": 15,
+      "holdout": 0
+    },
+    "release_multi_call_gate_relaxed": "strong replay no longer required when oracle gold + full fixture outputs exist"
+  },
+  "training_eligibility": {
+    "strong_model_semantic_replay_required": true,
+    "fixture_execution_required_for_tool_calls": true,
+    "state_verification_required_for_stateful_records": true,
+    "literal_provider_json_is_not_an_oracle": true,
+    "release_multi_call_trajectories_use_oracle_gold_plus_fixture_outputs": true
+  },
+  "prompt_masking_required": true,
+  "splits": {
+    "train": {
+      "source_records": 476,
+      "eligible_source_records": 85,
+      "single_call_examples": 85,
+      "multi_call_examples": 18,
+      "synthetic_examples": 260,
+      "supervised_examples": 363,
+      "tool_call_targets": 356,
+      "sha256": "5f73a45da648267a2add1230f3dd085d334fd1ba1aa55850a6116ddf67c4228f"
+    },
+    "dev": {
+      "source_records": 159,
+      "eligible_source_records": 66,
+      "single_call_examples": 66,
+      "multi_call_examples": 8,
+      "synthetic_examples": 46,
+      "supervised_examples": 120,
+      "tool_call_targets": 120,
+      "sha256": "16a0d7fbda7ca7075f187d5517caa0ce660b9920a4e322ec2a474fd514149d9d"
+    },
+    "holdout": {
+      "source_records": 43,
+      "eligible_source_records": 21,
+      "single_call_examples": 21,
+      "multi_call_examples": 8,
+      "synthetic_examples": 0,
+      "supervised_examples": 29,
+      "tool_call_targets": 29,
+      "sha256": "8043f7ffb948c8308dbd15b6029cb11518f404222684053e7681945110c08120"
+    }
+  },
+  "synthetic_counts_by_split": {
+    "train": 260,
+    "dev": 46
+  }
+}

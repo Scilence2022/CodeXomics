@@ -49,6 +49,17 @@ const SYSTEM_PROMPT =
   'Use only the supplied CodeXomics tools. Ground every argument in the request or tool results. ' +
   'Ask for missing required information instead of inventing it.';
 
+function parseArgs(argv) {
+  const options = { source: null, output: null };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--source') options.source = path.resolve(argv[++index]);
+    else if (arg === '--output') options.output = path.resolve(argv[++index]);
+    else throw new Error(`Unknown argument: ${arg}`);
+  }
+  return options;
+}
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -643,7 +654,10 @@ function buildTemplates() {
 }
 
 function main() {
-  const releaseManifest = readJson(path.join(RELEASE_DIR, 'manifest.json'));
+  const options = parseArgs(process.argv.slice(2));
+  const sourceDir = options.source || RELEASE_DIR;
+  const outputDir = options.output || OUTPUT_DIR;
+  const releaseManifest = readJson(path.join(sourceDir, 'manifest.json'));
   if (releaseManifest.benchmark_scope?.automatic_simple !== 143 || releaseManifest.benchmark_scope?.automatic_complex !== 29) {
     throw new Error('Release must scope exactly 143 automatic-simple and 29 automatic-complex tests');
   }
@@ -651,7 +665,7 @@ function main() {
     throw new Error('Manual benchmark data must not be included');
   }
   const benchmarks = loadAutomaticBenchmarks();
-  const catalog = readJson(path.join(RELEASE_DIR, 'tool-catalog.json'));
+  const catalog = readJson(path.join(sourceDir, 'tool-catalog.json'));
   const toolMap = new Map(catalog.tools.map(tool => [tool.function.name, tool]));
   const catalogNames = catalog.tools.map(tool => tool.function.name);
 
@@ -665,7 +679,7 @@ function main() {
   const syntheticCounts = {};
 
   for (const [sourceSplit, outputFilename] of splitFiles) {
-    const sourceRecords = readJsonl(path.join(RELEASE_DIR, `${sourceSplit}.jsonl`));
+    const sourceRecords = readJsonl(path.join(sourceDir, `${sourceSplit}.jsonl`));
     const eligible = sourceRecords.filter(record => getTrainingEligibility(record).eligible);
     const baseExamples = eligible.flatMap(record => expandRecord(record, toolMap));
     const multiCallExamples = releaseMultiCallExamples(sourceRecords, toolMap);
@@ -692,7 +706,7 @@ function main() {
 
     const examples = [...baseExamples, ...multiCallExamples, ...syntheticExamples];
     splitExamples[sourceSplit] = examples;
-    const outputPath = path.join(OUTPUT_DIR, outputFilename);
+    const outputPath = path.join(outputDir, outputFilename);
     writeJsonl(outputPath, examples);
     outputStats[sourceSplit] = {
       source_records: sourceRecords.length,
@@ -709,7 +723,7 @@ function main() {
   const manifest = {
     schema_version: '3.0',
     format: 'mlx-lm-tools-jsonl',
-    source_release_manifest_sha256: sha256File(path.join(RELEASE_DIR, 'manifest.json')),
+    source_release_manifest_sha256: sha256File(path.join(sourceDir, 'manifest.json')),
     source_registry_hash: releaseManifest.registry_hash,
     benchmark_scope: {
       automatic_simple: 143,
@@ -750,8 +764,8 @@ function main() {
     splits: outputStats,
     synthetic_counts_by_split: syntheticCounts,
   };
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  fs.writeFileSync(path.join(OUTPUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(outputDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(JSON.stringify(manifest, null, 2));
 }
 

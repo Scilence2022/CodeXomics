@@ -1,0 +1,26 @@
+model: finetuning/qwen3.5-4b/base-model
+train: true
+test: true
+test_batches: -1
+fine_tune_type: lora
+optimizer: adamw
+data: finetuning/qwen3.5-4b/data-v4
+seed: 42
+num_layers: 4
+batch_size: 1
+grad_accumulation_steps: 4
+iters: 200
+val_batches: 20
+learning_rate: 1.0e-5
+steps_per_report: 1
+steps_per_eval: 25
+adapter_path: finetuning/qwen3.5-4b/adapters-v4
+save_every: 25
+max_seq_length: 3072
+mask_prompt: true
+grad_checkpoint: true
+clear_cache_threshold: 34359738368
+lora_parameters:
+  rank: 16
+  dropout: 0.05
+  scale: 32.0
