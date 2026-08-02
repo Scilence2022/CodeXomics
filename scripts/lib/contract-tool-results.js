@@ -341,6 +341,18 @@ function buildContractToolResult(toolName, parameters = {}) {
     case 'search_uniprot_database':
       return { success: true, results_count: 1, entries: [{ accession: 'P0A6L2', protein_name: 'Dihydrodipicolinate synthase', gene_name: 'dapA', organism: 'Escherichia coli', reviewed: true, length: 292 }] };
     case 'get_uniprot_entry':
+      // P0A6L2 (E. coli DapA) is pinned by the benchmark fixture; returning
+      // the real sequence keeps chained analysis calls consistent with the
+      // oracle instead of a synthetic placeholder.
+      if ((parameters.uniprot_id || parameters.geneName || '').toString().toUpperCase() === 'P0A6L2') {
+        return {
+          success: true,
+          entry_info: { accession: 'P0A6L2', protein_name: 'Dihydrodipicolinate synthase', gene_name: 'dapA', organism: 'Escherichia coli', reviewed: true },
+          protein_sequence:
+            'MFTGSIVAIVTPMDEKGNVCRASLKKLIDYHVASGTSAIVSVGTTGESATLNHDEHADVVMMTLDLADGRIPVIAGTGANATAEAISLTQRFNDSGIVGCLTVTPYYNRPSQEGLYQHFKAIAEHTDLPQILYNVPSRTGCDLLPETVGRLAKVKNIIGIKEATGNLTRVNQIKELVSDDFVLLSGDDASALDFMQLGGHGVISVTANVAARDMAQMCKLAAEGHFAEARVINQRLMPLHNKLFVEPNPIPVKWACKELGLVATDTLRLPMTPITDSGRETVRAALKHAGLL',
+          sequence_length: 292,
+        };
+      }
       return {
         success: true,
         entry_info: { accession: parameters.uniprot_id || 'P0A6L2', protein_name: 'Dihydrodipicolinate synthase', gene_name: 'dapA', organism: 'Escherichia coli', reviewed: true },

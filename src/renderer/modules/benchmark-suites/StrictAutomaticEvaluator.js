@@ -136,6 +136,7 @@ class StrictAutomaticEvaluator {
         'blast_search',
         'blast_search_local',
         'blast_validate_database',
+        'blast_filter_results',
         'show_action_list',
       ].map(name => this.normalizeToolName(name))
     );
@@ -357,6 +358,19 @@ class StrictAutomaticEvaluator {
       return actualVisibility !== null && expectedVisibility !== null && actualVisibility === expectedVisibility;
     }
 
+    // analyze_interpro_domains defaults to analysis_type "complete", which is
+    // a documented superset that includes domain analysis. In completion mode
+    // a request for "domains" is satisfied by "complete".
+    if (
+      this.completionMode &&
+      context.toolName === 'analyze_interpro_domains' &&
+      this.normalizeParameterKey(context.parameterKey) === 'analysisType'
+    ) {
+      const normalizedActual = String(actual).trim().toLowerCase();
+      const normalizedExpected = String(expectedValue).trim().toLowerCase();
+      if (normalizedExpected === 'domains' && ['domains', 'complete'].includes(normalizedActual)) return true;
+    }
+
     if (typeof expectedValue === 'number') {
       const numericActual = Number(actual);
       return Number.isFinite(numericActual) && numericActual === expectedValue;
@@ -553,7 +567,24 @@ class StrictAutomaticEvaluator {
         // through an alternative key (tab_index, genomeName, ...).
         const placeholderTolerated = schemaValid && this.isPlaceholder(mismatch.expected);
         const alternativeTolerated = this.completionAlternativeSatisfied(toolName, mismatch.parameter, actual);
-        if (placeholderTolerated || alternativeTolerated) tolerated.push(mismatch);
+        // capture_screenshot: a tracks-targeted screenshot without an explicit
+        // mode still accomplishes "capture a visible tracks screenshot"; the
+        // suite already treats target variants as equivalent, and mode's
+        // schema default ("full") does not change the tracks target.
+        const visibleScreenshotTolerated =
+          schemaValid &&
+          this.normalizeToolName(toolName) === 'capture_screenshot' &&
+          this.normalizeParameterKey(mismatch.parameter) === 'mode' &&
+          (() => {
+            const target = this.getActualParameter(actual, 'target', toolName);
+            return (
+              target.found &&
+              ['visibleTracks', 'tracks', 'track'].includes(this.normalizeParameterKey(String(target.value)))
+            );
+          })();
+        if (placeholderTolerated || alternativeTolerated || visibleScreenshotTolerated) {
+          tolerated.push(mismatch);
+        }
       }
       if (tolerated.length > 0) {
         mismatches = mismatches.filter(mismatch => !tolerated.includes(mismatch));
