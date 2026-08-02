@@ -376,13 +376,24 @@ class StrictAutomaticEvaluator {
       return Number.isFinite(numericActual) && numericActual === expectedValue;
     }
     if (typeof expectedValue === 'boolean' && typeof actual === 'string') {
-      return actual.trim().toLowerCase() === String(expectedValue);
+      if (actual.trim().toLowerCase() === String(expectedValue)) return true;
+      // Completion mode accepts the show/hide vocabulary for boolean settings
+      // (e.g. showStartMarkers: "hide" means false).
+      if (this.completionMode) {
+        const mapped = this.visibilityValue(actual);
+        if (mapped !== null && mapped === expectedValue) return true;
+      }
+      return false;
     }
     if (typeof actual === 'string' && typeof expectedValue === 'string') {
       const actualText = actual.trim();
       const expectedText = expectedValue.trim();
       if (actualText.toLowerCase() === expectedText.toLowerCase()) return true;
       if (/[\\/]/.test(actualText) || /[\\/]/.test(expectedText)) {
+        if (this.completionMode) {
+          const unquoted = this.unquoteJsonString(actualText);
+          if (unquoted !== null && unquoted === expectedText) return true;
+        }
         return this.normalizePath(actualText).toLowerCase() === this.normalizePath(expectedText).toLowerCase();
       }
       if (this.completionMode) {

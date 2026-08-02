@@ -556,6 +556,37 @@ DeepSeek 在公平 harness + 任务完成口径下达到 **167/172（97.1%）**�
 
 制品：`metrics/deepseek-v4-flash-clean-simple-task-completion.json`、`metrics/deepseek-v4-flash-clean3-complex-task-completion.json`、`metrics/deepseek-v4-flash-clean4-complex-task-completion.json`。
 
+## v5 数据整理重训（2026-08-02）
+
+把 DeepSeek harness 审计沉淀的全部知识写回训练数据并重训：
+
+### 数据整理
+
+1. **多方案 oracle 扩展**：`expandAcceptableVariants` 新增铸成 annotation id、note/description 别名、InterPro `complete` 超集、viewer `file_path`、截图 target-缺 mode、toggle `action` 等合法替代；release 重建后 train/dev/holdout 各带变体记录。
+2. **变体训练样本**：轨迹生成器把可训练记录的 `acceptable_variants` 展开为变体样本（train +10 / dev +4），模型直接学习"多条合法方案"。
+3. **全工具合成链**：合成执行器改用 `buildContractToolResult`（夹具优先 + 域形状回退，UniProt 工具优先 UniProt 夹具），新增 6 类模板——轨道验证（改后复查）、任务生命周期（建/更/删/列）、注释 CRUD（建/更/历史）、蛋白链（搜/取/域分析）、blast 链（导出/建库/校验/列表）——签名均避开 172 条基准以过泄漏门。
+4. **工具描述同步**：`set_track_settings` 描述写入规范键名（showStartMarkers/arrowSize），release catalog 重建后训练与评测共用。
+
+data-v5：train **373**（85 单轮 + 18 夹具多步 + 10 变体 + 260 合成）、dev 123、holdout 29；渲染 max 2876（上限 3072）。
+
+### 训练
+
+- 配置：`config/qlora-v5.yaml`（同 v4 超参，iters 200）；Val loss：iter 25 0.138 → 50 0.065 → **75 0.020（选定）** → 100 0.024 → 200 0.120；Test 0.074 / ppl 1.077；峰值内存 191GB（换页）。
+- 部署：`qwen3.5:4b-codexomics-tools-v5`（Q4_K_M，2.7GB）。
+
+### 评测（修复后 harness，thinking 开启）
+
+| 模型   |                严格 |              完成度 | 简单（严格→完成度） | 复杂（严格→完成度） |
+| ------ | ------------------: | ------------------: | ------------------: | ------------------: |
+| v4     |             152/172 |             154/172 |             137→138 |               15→16 |
+| **v5** | **158/172 (91.9%)** | **167/172 (97.1%)** |     **138→141/143** |        **20→26/29** |
+
+v5 完成度较 v4 提升 **+13**（154→167），与 DeepSeek 清理后同分。本轮还修复了两个完成度容差 bug（路径归一化分支提前返回跳过反引号、布尔参数不接受 show/hide 词表），使双重编码路径与 `showStartMarkers:"hide"` 均可正确判定。
+
+剩余 5 条：简单 2（`nav_auto_01` 缺 position 参数、`task_auto_03` delete+clear 边界）、复杂 3（`analysis_auto_complex_03` 缺 type、`annotation_auto_complex_02` 近义工具替换、`protein_auto_complex_01` 循环 advanced 搜索）——均为模型真实行为或边界判断。
+
+制品：`data-v5/`、`config/qlora-v5.yaml`、`selected-adapter-v5/`（iter 75）、`ollama/Modelfile-v5`、`metrics/qwen3.5_4b-codexomics-tools-v5-fixed*.json`、`training-v5.log`。
+
 ## 复现命令与制品
 
 - 数据构建/验证：`npm run dataset:build && npm run dataset:validate`
