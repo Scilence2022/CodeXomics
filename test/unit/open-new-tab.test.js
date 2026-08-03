@@ -11,6 +11,9 @@ import yaml from 'js-yaml';
 const require = createRequire(import.meta.url);
 const originalGenomeBrowser = window.genomeBrowser;
 const settingsPath = path.join(process.cwd(), 'src/renderer/modules/ChatBoxSettingsManager.js');
+// The multi-tab controls are rendered in the Agent Settings modal (Execution tab); their
+// defaults and normalisation still live in ChatBoxSettingsManager, which owns the storage.
+const agentSettingsMarkupPath = path.join(process.cwd(), 'src/renderer/index.html');
 
 function loadOpenNewTabHarness() {
   const managerPath = path.join(process.cwd(), 'src/renderer/modules/ChatManager.js');
@@ -40,10 +43,12 @@ describe('open_new_tab tool', () => {
 
     expect(enabledDefaults.length).toBeGreaterThanOrEqual(2);
     expect(limitDefaults.length).toBeGreaterThanOrEqual(2);
-    expect(settingsSource).toContain('id="enableRepeatedOpenNewTab"');
-    expect(settingsSource).toContain('id="maxRepeatedOpenNewTabCalls"');
-    expect(settingsSource).toContain('id="maxRepeatedOpenNewTabCalls" class="input-full" min="1" max="20"');
-    expect(settingsSource).toContain('Allow Explicit Multi-Tab Requests');
+
+    const markupSource = fs.readFileSync(agentSettingsMarkupPath, 'utf-8');
+    expect(markupSource).toContain('id="enableRepeatedOpenNewTab"');
+    expect(markupSource).toContain('id="maxRepeatedOpenNewTabCalls"');
+    expect(markupSource).toContain('id="maxRepeatedOpenNewTabCalls" class="input-full" min="1" max="20"');
+    expect(markupSource).toContain('Allow Explicit Multi-Tab Requests');
   });
 
   it('normalizes persisted multi-tab settings to the supported range', async () => {

@@ -479,13 +479,22 @@ class GenomeBrowser {
       console.error('❌ Error initializing MultiAgentSettingsManager:', error);
     }
 
-    // Step 5.3: Initialize the Skills tab of the Multi-Agent Settings modal
+    // Step 5.3: Initialize the Skills tab of the Agent Settings modal
     try {
       this.skillsSettingsManager = new SkillsSettingsManager(this.chatManager);
       window.skillsSettingsManager = this.skillsSettingsManager;
       console.log('✅ SkillsSettingsManager initialized successfully');
     } catch (error) {
       console.error('❌ Error initializing SkillsSettingsManager:', error);
+    }
+
+    // Step 5.4: Inline model picker in the ChatBox composer
+    try {
+      this.chatModelSelector = new ChatModelSelector(this.chatManager);
+      window.chatModelSelector = this.chatModelSelector;
+      console.log('✅ ChatModelSelector initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing ChatModelSelector:', error);
     }
 
     // Step 5.5: Plugin Management UI and its development tools load on first use.
@@ -3317,7 +3326,7 @@ class GenomeBrowser {
               // Fallback: show a simple notification
               if (window.genomeBrowser && window.genomeBrowser.showNotification) {
                 window.genomeBrowser.showNotification(
-                  'Multi-Agent Settings system is still initializing. Please try again in a moment.',
+                  'Agent Settings is still initializing. Please try again in a moment.',
                   'warning'
                 );
               }

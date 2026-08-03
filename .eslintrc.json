@@ -34,6 +34,7 @@
     "CanvasSequenceRenderer": "readonly",
     "ChatBoxSettingsManager": "readonly",
     "ChatManager": "readonly",
+    "ChatModelSelector": "readonly",
     "CommandRegistry": "readonly",
     "ContributionRegistry": "readonly",
     "CoordinatorAgent": "readonly",

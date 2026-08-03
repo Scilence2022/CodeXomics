@@ -18,8 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stream LLM responses token-by-token in the AI ChatBox. Replies now render as they are generated instead of appearing only after the entire multi-round agent loop resolves, which was the single largest source of perceived latency in the chat. Supported for all providers: OpenAI, Anthropic, Google Gemini, DeepSeek, SiliconFlow, OpenRouter, MiniMax (global and CN), and local OpenAI-compatible runtimes.
 - Coalesce streamed tokens into one DOM write per animation frame and append them through a single text node, avoiding the quadratic re-parse cost of growing `innerHTML`.
 
+### Changed
+
+- **Multi-Agent Settings is now Agent Settings**, covering both execution modes rather than only the multi-agent one. Single-agent and multi-agent are now presented as a mode choice inside one panel; everything the assistant thinks with — model, execution limits, context/prompt composition, memory, and skills — applies to both modes and lives here. Tabs: Mode, Model, Execution, Context, Memory, Skills.
+- **ChatBox Settings now covers only presentation.** It had accumulated the agent's brain: `functionCallRounds`, tool-repetition limits and early completion sat under "Behavior"; all 15 prompt-composition and dynamic-tool controls sat under "System Prompt"; temperature and token limits sat under "Models". None of that describes the ChatBox as a UI — it governs the agent loop in both modes, so those 36 controls moved to Agent Settings. Remaining tabs: Display, Chat, Advanced, Examples. Storage keys did not move, so existing configuration is preserved and no migration runs — only the panel a control is rendered in changed.
+
 ### Added
 
+- An inline model picker beside the ChatBox input box. It doubles as the active-model indicator: previously nothing in the ChatBox showed which model was answering, and switching meant opening Settings. Options are grouped by provider, disabled providers are omitted, and a selection whose provider is later disabled falls back to Auto. It writes the same settings as Agent Settings → Model, so the two stay in sync.
 - Agent Skills support. Skills are expert, multi-step workflows that teach the assistant the correct tool chain for a domain task, replacing improvised chains of ten or more tools. Skills load progressively: only a one-line-per-skill index enters the system prompt, and a skill's full workflow is fetched on demand through the new `get_skill` tool, so an installed-but-unused skill costs nothing beyond its index line. `get_skill` returns both the executable plan (steps, parallel groups, preconditions, agent notes, output template) and the Markdown guide explaining it. `list_skills` enumerates skills with optional category and free-text filters.
 - A **Skills** button in the ChatBox action bar, next to MCP Tools and MCP Servers, opening the Skills settings panel directly.
 - Rewritten `primer_design` skill (v2.0.0), the one workflow that ships built-in. Every tool name and parameter is now checked against the real tool registry by a unit test. The workflow calls `design_primers` once with `geneName` — that tool already performs gene lookup, sequence extraction with primer-binding buffer, and coordinate mapping — instead of the old five-step chain that hand-fetched sequence and lost the genomic mapping. Adds hairpin screening, thermodynamic genome-wide off-target scanning, and writes both primers to the Primers track.
@@ -33,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- ~25 non-functional controls from the old Multi-Agent Settings panel. An audit against their consumers found the entire LLM Configuration (6), Memory System (11), and Performance (4) tabs, plus 6 of the 8 System-tab controls, were written to config and never read by any code path. The Agent Management list also offered Sequence/Protein/Network toggles for agents that do not exist, while the registered DeepResearch and Coordinator agents had no toggle; the list now derives from a single `AGENT_TOGGLES` map so the UI cannot drift from the registered agents again.
 - Five built-in agent skills (`automated_research`, `gene_annotation_improvement`, `operon_analysis`, `variant_context_analysis`, `multi_window_routing`). An audit against the tool registry found they referenced tools and parameters that do not exist, and each one costs a line in every system prompt. Only `primer_design` ships built-in; users can add their own skills to the user skills folder.
 
 ### Fixed

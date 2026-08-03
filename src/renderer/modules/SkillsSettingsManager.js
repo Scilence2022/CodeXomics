@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * SkillsSettingsManager - Skills tab of the Multi-Agent Settings modal.
+ * SkillsSettingsManager - Skills tab of the Agent Settings modal.
  *
  * Renders the installed Agent Skill inventory, lets the user enable or disable
  * individual skills, rescan the skill folders, and open the user skills directory.

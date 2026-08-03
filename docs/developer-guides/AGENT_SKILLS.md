@@ -31,7 +31,7 @@ beyond its index line.
 | Built-in      | `.agent/skills/` in the app bundle | Ships with CodeXomics; read-only             |
 | User-provided | `skills/` in the userData folder   | Open it from Settings, or add files yourself |
 
-Open the user folder from **Multi-Agent Settings -> Skills -> Open Folder**. A user skill may not reuse
+Open the user folder from **Agent Settings -> Skills -> Open Folder**. A user skill may not reuse
 the id of a built-in skill; the loader reports an error diagnostic and keeps the built-in.
 
 ## Supported formats
@@ -132,7 +132,7 @@ For the same reason, `list_skills` and `get_skill` are listed in `BUILTIN_TOOL_E
 
 ## Enabling and disabling
 
-Every skill has a toggle in **Multi-Agent Settings -> Skills**. Disabled ids are persisted to
+Every skill has a toggle in **Agent Settings -> Skills**. Disabled ids are persisted to
 `skills.disabledIds` in the app configuration. A disabled skill is dropped from the prompt index, hidden
 from `list_skills`, and refused by `get_skill`.
 

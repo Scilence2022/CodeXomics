@@ -119,7 +119,7 @@
   "options": {
     "label": "选项",
     "configureLLM": "配置 LLM",
-    "multiAgentSettings": "多智能体设置",
+    "multiAgentSettings": "智能体设置",
     "configureSearch": "配置搜索",
     "mcpSettings": "MCP 服务器设置",
     "generalSettings": "常规设置",

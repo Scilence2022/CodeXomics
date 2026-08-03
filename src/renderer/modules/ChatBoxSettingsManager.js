@@ -652,16 +652,7 @@ class ChatBoxSettingsManager {
                             <i class="fas fa-eye"></i> Display
                         </button>
                         <button class="tab-button" data-tab="behavior">
-                            <i class="fas fa-cogs"></i> Behavior
-                        </button>
-                        <button class="tab-button" data-tab="models">
-                            <i class="fas fa-brain"></i> Models
-                        </button>
-                        <button class="tab-button" data-tab="memory">
-                            <i class="fas fa-brain"></i> Memory
-                        </button>
-                        <button class="tab-button" data-tab="system-prompt">
-                            <i class="fas fa-robot"></i> System Prompt
+                            <i class="fas fa-comments"></i> Chat
                         </button>
                         <button class="tab-button" data-tab="advanced">
                             <i class="fas fa-tools"></i> Advanced
@@ -825,428 +816,10 @@ class ChatBoxSettingsManager {
                                     <small class="help-text">Allow searching through chat history</small>
                                 </div>
                             </div>
-                            
-                            <div class="form-section">
-                                <h4>Performance</h4>
-                                <div class="form-group">
-                                    <label for="responseTimeout">Response timeout (seconds):</label>
-                                    <input type="number" id="responseTimeout" class="input-full" min="5" max="300" step="5">
-                                    <small class="help-text">How long to wait for LLM responses</small>
-                                </div>
-                            </div>
-                            
-                            <div class="form-section">
-                                <h4>Function Call Settings</h4>
-                                <div class="form-group">
-                                    <label for="functionCallRounds">Maximum Function Call Rounds:</label>
-                                    <input type="number" id="functionCallRounds" class="input-full" min="1" max="20" step="1">
-                                    <small class="help-text">Maximum number of consecutive function calls the AI can make (1-20). Higher values allow more complex multi-step operations but may take longer.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="enableEarlyCompletion" class="setting-checkbox">
-                                        Enable Early Task Completion
-                                    </label>
-                                    <small class="help-text">Allow the AI to end the function call loop early when it determines the task is complete, instead of using all available rounds.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="maxSameToolDifferentParams">Max Execution of Same Tool (Different Parameters):</label>
-                                    <input type="number" id="maxSameToolDifferentParams" class="input-full" min="1" max="10" step="1">
-                                    <small class="help-text">Maximum number of times the same tool can be called with different parameters in a single conversation. Prevents excessive looping during search or exploration tasks.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="maxSameToolIdenticalParams">Max Execution of Same Tool (Identical Parameters):</label>
-                                    <input type="number" id="maxSameToolIdenticalParams" class="input-full" min="1" max="10" step="1">
-                                    <small class="help-text">Maximum number of times the same tool can be called with the exact same parameters. Prevents infinite loops when a tool fails or provides unexpected output.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="enableRepeatedOpenNewTab" class="setting-checkbox">
-                                        Allow Explicit Multi-Tab Requests
-                                    </label>
-                                    <small class="help-text">Allow open_new_tab to run multiple times when the user explicitly requests multiple tabs. Disable this to permit only one new tab per request.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="maxRepeatedOpenNewTabCalls">Maximum Tabs per Explicit Request:</label>
-                                    <input type="number" id="maxRepeatedOpenNewTabCalls" class="input-full" min="1" max="20" step="1">
-                                    <small class="help-text">Maximum open_new_tab calls allowed in both one model round and the full user request (1-20).</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="completionThreshold">Task Completion Confidence Threshold:</label>
-                                    <div class="slider-container">
-                                        <input type="range" id="completionThreshold" class="range-slider" min="0.5" max="1.0" step="0.05" value="0.7">
-                                        <div class="slider-labels">
-                                            <span class="slider-label-left">50% (Low)</span>
-                                            <span class="slider-value" id="completionThresholdValue">70%</span>
-                                            <span class="slider-label-right">100% (High)</span>
-                                        </div>
-                                    </div>
-                                    <small class="help-text">Minimum confidence level required for the AI to consider a task complete. Higher values reduce false positives but may miss valid completions.</small>
-                                </div>
-                            </div>
                         </div>
                         
-                        <!-- Models Tab -->
-                        <div id="models-tab" class="tab-content">
-                            <div class="form-section">
-                                <h4>🤖 Model Selection</h4>
-                                <div class="form-group">
-                                    <label for="chatboxModelType">Primary Model Type:</label>
-                                    <select id="chatboxModelType" class="select">
-                                        <option value="auto">Auto (Use main LLM)</option>
-                                        <option value="reasoning">Reasoning Model</option>
-                                        <option value="task">Task Model</option>
-                                        <option value="code">Code Model</option>
-                                        <option value="multimodal">Multimodal Model</option>
-                                    </select>
-                                    <small class="help-text">Choose the primary model type for ChatBox conversations. Configure specific models in Options → Configure LLMs → Model Selection.</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="chatboxLLMProvider">Provider Override:</label>
-                                    <select id="chatboxLLMProvider" class="select">
-                                        <option value="auto">Auto (Use model type default)</option>
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="google">Google (Gemini)</option>
-                                        <option value="deepseek">DeepSeek</option>
-                                        <option value="siliconflow">SiliconFlow</option>
-                                        <option value="openrouter">OpenRouter</option>
-                                        <option value="local">Custom Endpoint</option>
-                                    </select>
-                                    <small class="help-text">Override the provider for ChatBox conversations (optional)</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="chatboxLLMModel">Model Override:</label>
-                                    <select id="chatboxLLMModel" class="select">
-                                        <option value="auto">Auto (Use provider default)</option>
-                                    </select>
-                                    <small class="help-text">Override the specific model for ChatBox conversations (optional)</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="chatboxLLMTemperature">Temperature:</label>
-                                    <div class="slider-container">
-                                        <input type="range" id="chatboxLLMTemperature" class="range-slider" min="0" max="2" step="0.1" value="0.7">
-                                        <div class="slider-labels">
-                                            <span class="slider-label-left">0 (Deterministic)</span>
-                                            <span class="slider-value" id="chatboxLLMTemperatureValue">0.7</span>
-                                            <span class="slider-label-right">2 (Creative)</span>
-                                        </div>
-                                    </div>
-                                    <small class="help-text">Control creativity vs consistency in responses</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="chatboxLLMMaxTokens">Max Tokens:</label>
-                                    <input type="number" id="chatboxLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
-                                    <small class="help-text">Maximum tokens for LLM responses</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="chatboxLLMTimeout">Timeout (seconds):</label>
-                                    <input type="number" id="chatboxLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
-                                    <small class="help-text">Timeout for LLM requests</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="chatboxLLMUseSystemPrompt" class="setting-checkbox" checked>
-                                        Use system prompt
-                                    </label>
-                                    <small class="help-text">Enable system prompts for better behavior</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="chatboxLLMEnableFunctionCalling" class="setting-checkbox" checked>
-                                        Enable function calling
-                                    </label>
-                                    <small class="help-text">Allow the AI to use function calling capabilities</small>
-                                </div>
-                            </div>
-                            
-                            <div class="form-section">
-                                <h4>ℹ️ Configuration Info</h4>
-                                <div class="info-box">
-                                    <p><strong>Model Configuration:</strong> To configure specific models for each type, go to <strong>Options → Configure LLMs → Model Selection</strong>.</p>
-                                    <p><strong>API Keys:</strong> API keys are configured in the main LLM configuration.</p>
-                                    <p><strong>Inheritance:</strong> These settings serve as defaults for Multi-Agent System. Agent-specific settings can override these defaults.</p>
-                                </div>
-                            </div>
-                        </div>
                         
-                        <!-- Memory Tab -->
-                        <div id="memory-tab" class="tab-content">
-                            <div class="form-section">
-                                <h4>🧠 Memory System</h4>
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="memorySystemEnabled" class="setting-checkbox">
-                                        Enable Memory System
-                                    </label>
-                                    <small class="help-text">Enable intelligent memory caching and context management</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="memoryCacheEnabled" class="setting-checkbox">
-                                        Enable memory caching
-                                    </label>
-                                    <small class="help-text">Cache memory operations for improved performance</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="memoryOptimizationEnabled" class="setting-checkbox">
-                                        Enable memory optimization
-                                    </label>
-                                    <small class="help-text">Automatically optimize memory usage and cleanup</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="memoryCleanupInterval">Memory cleanup interval (minutes):</label>
-                                    <input type="number" id="memoryCleanupInterval" class="input-full" min="1" max="60" step="1">
-                                    <small class="help-text">How often to perform memory cleanup operations</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="memoryMaxEntries">Maximum memory entries:</label>
-                                    <input type="number" id="memoryMaxEntries" class="input-full" min="100" max="100000" step="100">
-                                    <small class="help-text">Maximum number of entries to keep in memory</small>
-                                </div>
-                            </div>
-                        </div>
                         
-                        <!-- System Prompt Tab -->
-                        <div id="system-prompt-tab" class="tab-content">
-                            <div class="form-section">
-                                <h4>Custom System Prompt</h4>
-                                <div class="form-group">
-                                    <label for="customSystemPrompt">Custom System Prompt:</label>
-                                    <textarea id="customSystemPrompt"
-                                        placeholder="Enter your custom system prompt here... Leave empty to use the default system prompt."
-                                        class="input-full system-prompt-textarea" rows="6"></textarea>
-                                    <small class="help-text">
-                                        <strong>Advanced:</strong> Override the default system prompt with your custom instructions.
-                                        <br><strong>Variables:</strong> {{CURRENT_CHROMOSOME}}, {{CURRENT_POSITION}}, {{ANNOTATIONS_COUNT}}, {{USER_FEATURES_COUNT}}
-                                        <br><strong>Leave empty</strong> to use the default system prompt with genomics tools and context.
-                                    </small>
-                                </div>
-                                <div class="system-prompt-controls">
-                                    <button type="button" id="resetCustomSystemPrompt" class="btn btn-secondary btn-sm">
-                                        <i class="fas fa-undo"></i> Reset to Default
-                                    </button>
-                                    <button type="button" id="previewCustomSystemPrompt" class="btn btn-secondary btn-sm">
-                                        <i class="fas fa-eye"></i> Preview
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="form-section">
-                                <h4>Prompt Mode</h4>
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="enableDynamicToolsRegistry" class="setting-checkbox">
-                                        Enable Dynamic Tools Registry
-                                    </label>
-                                    <small class="help-text">Intelligently select tools based on user intent and context. When disabled, uses the comprehensive system prompt with all tools.</small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="limitDynamicToolsSelection" class="setting-checkbox">
-                                        Limit dynamic tools selected per request
-                                    </label>
-                                    <small class="help-text">Keep a high-recall candidate set small enough for local and compact models.</small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="dynamicToolsSelectionLimit">Dynamic tools selection limit:</label>
-                                    <input type="number" id="dynamicToolsSelectionLimit" class="input-full" min="1" max="500" step="1">
-                                    <small class="help-text">Maximum selected tools when the limit option is enabled. The production default is 24.</small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="enableNativeFunctionCalling" class="setting-checkbox">
-                                        Enable native function calling
-                                    </label>
-                                    <small class="help-text">Send selected tool JSON Schemas through the provider's native tool protocol.</small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="enableConstrainedToolOutput" class="setting-checkbox">
-                                        Enable constrained tool output
-                                    </label>
-                                    <small class="help-text">Use strict argument schemas, or JSON Schema output when native tools are disabled.</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="useOptimizedPrompt" class="setting-checkbox">
-                                        Use optimized system prompt
-                                    </label>
-                                    <small class="help-text">Use streamlined system prompt for better performance and reduced token usage (only applies when Dynamic Tools Registry is disabled)</small>
-                                </div>
-                            </div>
-
-                            <div class="form-section">
-                                <h4>Prompt Section Configuration</h4>
-                                <small class="help-text" style="margin-bottom: 12px; display: block;">
-                                    Control which sections are included in the system prompt and their order. 
-                                    Drag items or use arrow buttons to reorder. Disable sections to reduce token usage.
-                                </small>
-                                <div id="systemPromptSectionContainer" class="priority-container system-prompt-section-container">
-                                    <div class="priority-item" data-type="systemInstructions" draggable="true">
-                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                                        <label class="section-toggle">
-                                            <input type="checkbox" id="systemPromptIncludeSystemInstructions" class="setting-checkbox" checked>
-                                        </label>
-                                        <div class="priority-info">
-                                            <span class="priority-label">System Instructions</span>
-                                            <span class="priority-separator">—</span>
-                                            <span class="priority-description">Identity & behavior</span>
-                                        </div>
-                                        <div class="priority-controls">
-                                            <div class="priority-arrows">
-                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
-                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="priority-item" data-type="currentContext" draggable="true">
-                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                                        <label class="section-toggle">
-                                            <input type="checkbox" id="systemPromptIncludeCurrentContext" class="setting-checkbox" checked>
-                                        </label>
-                                        <div class="priority-info">
-                                            <span class="priority-label">Current Context</span>
-                                            <span class="priority-separator">—</span>
-                                            <span class="priority-description">App state (chromosome, position, files)</span>
-                                        </div>
-                                        <div class="priority-controls">
-                                            <div class="priority-arrows">
-                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
-                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="priority-item" data-type="dynamicTools" draggable="true">
-                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                                        <label class="section-toggle">
-                                            <input type="checkbox" id="systemPromptIncludeDynamicTools" class="setting-checkbox" checked>
-                                        </label>
-                                        <div class="priority-info">
-                                            <span class="priority-label">Dynamic Tools</span>
-                                            <span class="priority-separator">—</span>
-                                            <span class="priority-description">Tools based on query</span>
-                                        </div>
-                                        <div class="priority-controls">
-                                            <div class="priority-arrows">
-                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
-                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="priority-item" data-type="toolExamples" draggable="true">
-                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                                        <label class="section-toggle">
-                                            <input type="checkbox" id="systemPromptIncludeToolExamples" class="setting-checkbox" checked>
-                                        </label>
-                                        <div class="priority-info">
-                                            <span class="priority-label">Tool Examples</span>
-                                            <span class="priority-separator">—</span>
-                                            <span class="priority-description">Sample operations</span>
-                                        </div>
-                                        <div class="priority-controls">
-                                            <div class="priority-arrows">
-                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
-                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="priority-item" data-type="toolGuidelines" draggable="true">
-                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                                        <label class="section-toggle">
-                                            <input type="checkbox" id="systemPromptIncludeToolGuidelines" class="setting-checkbox" checked>
-                                        </label>
-                                        <div class="priority-info">
-                                            <span class="priority-label">Tool Guidelines</span>
-                                            <span class="priority-separator">—</span>
-                                            <span class="priority-description">Rules for chaining</span>
-                                        </div>
-                                        <div class="priority-controls">
-                                            <div class="priority-arrows">
-                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
-                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="priority-item" data-type="responseFormat" draggable="true">
-                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                                        <label class="section-toggle">
-                                            <input type="checkbox" id="systemPromptIncludeResponseFormat" class="setting-checkbox" checked>
-                                        </label>
-                                        <div class="priority-info">
-                                            <span class="priority-label">Response Format</span>
-                                            <span class="priority-separator">—</span>
-                                            <span class="priority-description">JSON spec</span>
-                                        </div>
-                                        <div class="priority-controls">
-                                            <div class="priority-arrows">
-                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
-                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="priority-item" data-type="toolCategories" draggable="true">
-                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                                        <label class="section-toggle">
-                                            <input type="checkbox" id="systemPromptIncludeToolCategories" class="setting-checkbox" checked>
-                                        </label>
-                                        <div class="priority-info">
-                                            <span class="priority-label">Tool Categories</span>
-                                            <span class="priority-separator">—</span>
-                                            <span class="priority-description">Tool relationships</span>
-                                        </div>
-                                        <div class="priority-controls">
-                                            <div class="priority-arrows">
-                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
-                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="priority-item" data-type="memoryContext" draggable="true">
-                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
-                                        <label class="section-toggle">
-                                            <input type="checkbox" id="systemPromptIncludeMemoryContext" class="setting-checkbox" checked>
-                                        </label>
-                                        <div class="priority-info">
-                                            <span class="priority-label">Memory Context</span>
-                                            <span class="priority-separator">—</span>
-                                            <span class="priority-description">System continuity</span>
-                                        </div>
-                                        <div class="priority-controls">
-                                            <div class="priority-arrows">
-                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
-                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="priority-help">
-                                    <small class="help-text">
-                                        <strong>Tip:</strong> Disabling sections reduces token usage. Reordering changes how the AI prioritizes information.
-                                    </small>
-                                    <div class="priority-status" id="systemPromptSectionStatus">
-                                        <small>Current order will be applied to the next conversation</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         
                         <div id="advanced-tab" class="tab-content">
                             <div class="form-section">
@@ -2008,6 +1581,19 @@ class ChatBoxSettingsManager {
   /**
    * Populate settings form with current values
    */
+  /**
+   * Resolve a settings control by id.
+   *
+   * Settings stored in `chatboxSettings` are no longer all rendered in the ChatBox
+   * Settings modal — the agent-facing ones (model, execution limits, context/prompt,
+   * memory) now live in the Agent Settings modal. Storage did not move, so this falls
+   * back to a document-wide lookup and both panels drive the same keys. Control ids
+   * are unique across the document, so the fallback is unambiguous.
+   */
+  findSettingControl(modal, id) {
+    return modal?.querySelector(`#${id}`) || (typeof document !== 'undefined' ? document.getElementById(id) : null);
+  }
+
   populateSettingsForm(modal) {
     for (const [key, value] of Object.entries(this.settings)) {
       if (key === 'toolPriority') {
@@ -2024,14 +1610,14 @@ class ChatBoxSettingsManager {
 
       if (key === 'customSystemPrompt') {
         // Handle custom system prompt textarea
-        const textarea = modal.querySelector('#customSystemPrompt');
+        const textarea = this.findSettingControl(modal, 'customSystemPrompt');
         if (textarea) {
           textarea.value = value || '';
         }
         continue;
       }
 
-      const element = modal.querySelector(`#${key}`);
+      const element = this.findSettingControl(modal, key);
       if (element) {
         if (element.type === 'checkbox') {
           element.checked = value;
@@ -2048,7 +1634,7 @@ class ChatBoxSettingsManager {
         } else if (element.type === 'range') {
           element.value = value;
           // Update range value display
-          const valueDisplay = modal.querySelector(`#${key}Value`);
+          const valueDisplay = this.findSettingControl(modal, `${key}Value`);
           if (valueDisplay) {
             if (key === 'completionThreshold') {
               valueDisplay.textContent = Math.round(value * 100) + '%';
@@ -2137,7 +1723,7 @@ class ChatBoxSettingsManager {
 
       if (key === 'customSystemPrompt') {
         // Handle custom system prompt textarea
-        const textarea = modal.querySelector('#customSystemPrompt');
+        const textarea = this.findSettingControl(modal, 'customSystemPrompt');
         if (textarea) {
           newSettings[key] = textarea.value.trim();
         } else {
@@ -2146,7 +1732,7 @@ class ChatBoxSettingsManager {
         continue;
       }
 
-      const element = modal.querySelector(`#${key}`);
+      const element = this.findSettingControl(modal, key);
       if (element) {
         if (element.type === 'checkbox') {
           newSettings[key] = element.checked;
