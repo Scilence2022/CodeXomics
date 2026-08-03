@@ -1208,3 +1208,52 @@
 #llmChatPanel .chat-actions .btn {
   min-width: 92px;
 }
+
+/* ==========================================================================
+   ChatBox composer model picker
+
+   Doubles as the active-model indicator: before this, nothing in the ChatBox
+   showed which model was answering.
+   ========================================================================== */
+
+#llmChatPanel .chat-input-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#llmChatPanel .chat-model-picker {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+#llmChatPanel .chat-model-picker i {
+  flex: none;
+  opacity: 0.75;
+}
+
+#llmChatPanel .chat-model-select {
+  max-width: 168px;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+#llmChatPanel .chat-model-select:hover,
+#llmChatPanel .chat-model-select:focus {
+  border-color: var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  outline: none;
+}

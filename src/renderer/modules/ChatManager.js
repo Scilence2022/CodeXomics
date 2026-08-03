@@ -592,45 +592,16 @@ class ChatManager {
         ...savedSettings,
       };
 
-      // Also load from multiAgentSettings (used by MultiAgentSettingsManager) for sync
+      // Also load from multiAgentSettings (used by MultiAgentSettingsManager) for sync.
+      // Only the settings the Agent Settings panel actually applies are mapped here; the
+      // former per-agent LLM overrides were written but never read by any request path.
       const masSaved = this.configManager.get('multiAgentSettings', {});
       if (masSaved && Object.keys(masSaved).length > 0) {
-        // Map multiAgentSettings keys to agentSystemSettings keys
         if (masSaved.multiAgentSystemEnabled !== undefined) {
           this.agentSystemSettings.enabled = masSaved.multiAgentSystemEnabled;
         }
-        if (masSaved.multiAgentAutoOptimize !== undefined) {
-          this.agentSystemSettings.autoOptimize = masSaved.multiAgentAutoOptimize;
-        }
         if (masSaved.multiAgentShowInfo !== undefined) {
           this.agentSystemSettings.showAgentInfo = masSaved.multiAgentShowInfo;
-        }
-        if (masSaved.multiAgentMemoryEnabled !== undefined) {
-          this.agentSystemSettings.memoryEnabled = masSaved.multiAgentMemoryEnabled;
-        }
-        if (masSaved.multiAgentCacheEnabled !== undefined) {
-          this.agentSystemSettings.cacheEnabled = masSaved.multiAgentCacheEnabled;
-        }
-        if (masSaved.multiAgentLLMTemperature !== undefined) {
-          this.agentSystemSettings.llmTemperature = masSaved.multiAgentLLMTemperature;
-        }
-        if (masSaved.multiAgentLLMMaxTokens !== undefined) {
-          this.agentSystemSettings.llmMaxTokens = masSaved.multiAgentLLMMaxTokens;
-        }
-        if (masSaved.multiAgentLLMTimeout !== undefined) {
-          this.agentSystemSettings.llmTimeout = masSaved.multiAgentLLMTimeout;
-        }
-        if (masSaved.multiAgentLLMRetryAttempts !== undefined) {
-          this.agentSystemSettings.llmRetryAttempts = masSaved.multiAgentLLMRetryAttempts;
-        }
-        if (masSaved.multiAgentLLMUseSystemPrompt !== undefined) {
-          this.agentSystemSettings.llmUseSystemPrompt = masSaved.multiAgentLLMUseSystemPrompt;
-        }
-        if (masSaved.multiAgentLLMEnableFunctionCalling !== undefined) {
-          this.agentSystemSettings.llmEnableFunctionCalling = masSaved.multiAgentLLMEnableFunctionCalling;
-        }
-        if (masSaved.multiAgentModelType !== undefined) {
-          this.agentSystemSettings.llmProvider = masSaved.multiAgentModelType;
         }
       }
 
@@ -4227,6 +4198,12 @@ class ChatManager {
                 </div>
                 <div class="chat-input-container">
                     <div class="chat-input-options">
+                        <div class="chat-model-picker" title="Model used for this conversation">
+                            <i class="fas fa-microchip"></i>
+                            <select id="chatModelSelect" class="chat-model-select">
+                                <option value="auto::auto">Auto</option>
+                            </select>
+                        </div>
                         <div class="context-mode-toggle">
                             <label class="toggle-label">
                                 <input type="checkbox" id="contextModeToggle" checked />

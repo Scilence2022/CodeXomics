@@ -488,6 +488,15 @@ class GenomeBrowser {
       console.error('❌ Error initializing SkillsSettingsManager:', error);
     }
 
+    // Step 5.4: Inline model picker in the ChatBox composer
+    try {
+      this.chatModelSelector = new ChatModelSelector(this.chatManager);
+      window.chatModelSelector = this.chatModelSelector;
+      console.log('✅ ChatModelSelector initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing ChatModelSelector:', error);
+    }
+
     // Step 5.5: Plugin Management UI and its development tools load on first use.
     this.pluginManagementUI = null;
     this.pluginManagementInitializationPromise = null;
