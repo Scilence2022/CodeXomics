@@ -475,6 +475,12 @@ function templatePrompt(language, templateId, details) {
     protein_chain: '在固定 UniProt 语料中搜索催化蛋白，获取第一条条目，然后对该条目进行结构域分析。',
     blast_chain:
       '将当前视图导出到 /tmp/px_blast.fasta，用它构建名为 px_nucl 的核酸数据库，校验该数据库，然后列出全部数据库。',
+    blast_genome_chain:
+      '在只读夹具 PX-01 中，取出 ${details.chromosome}:${details.start}-${details.end} 的序列，用当前已加载基因组建一个名为 px_gdb 的核酸 BLAST 数据库，列出全部数据库，然后用该序列对 px_gdb 做一次本地 blastn 检索。',
+    blast_quick_genome_chain:
+      '在只读夹具 PX-01 中，取出 ${details.chromosome}:${details.start}-${details.end} 的序列，用当前已加载基因组快速创建名为 px_gdb2 的核酸 BLAST 数据库，列出全部数据库，然后用该序列对 px_gdb2 做一次本地 blastn 检索。',
+    blast_db_disambig_genome: '在只读夹具 PX-01 中，用当前已加载基因组建一个名为 px_g1 的核酸 BLAST 数据库。',
+    blast_db_disambig_file: '用 FASTA 文件 /tmp/px_seq.fa 创建一个名为 px_f1 的核酸 BLAST 数据库。',
     };
     return zh[templateId];
   }
@@ -502,6 +508,14 @@ function templatePrompt(language, templateId, details) {
       'Search the pinned UniProt corpus for a catalytic protein, fetch the first entry, then run a domain analysis on that entry.',
     blast_chain:
       'Export the current view to /tmp/px_blast.fasta, build a nucleotide database named px_nucl from it, validate the database, then list all databases.',
+    blast_genome_chain:
+      `In pinned synthetic sample PX-01, retrieve ${details.chromosome}:${details.start}-${details.end}, build a nucleotide BLAST database named px_gdb from the currently loaded genome, list all databases, then run a local blastn search of the retrieved sequence against px_gdb.`,
+    blast_quick_genome_chain:
+      `In pinned synthetic sample PX-01, retrieve ${details.chromosome}:${details.start}-${details.end}, quickly create a nucleotide BLAST database named px_gdb2 from the currently loaded genome, list all databases, then run a local blastn search of the retrieved sequence against px_gdb2.`,
+    blast_db_disambig_genome:
+      'In pinned synthetic sample PX-01, create a nucleotide BLAST database named px_g1 from the currently loaded genome.',
+    blast_db_disambig_file:
+      'Create a nucleotide BLAST database named px_f1 from the FASTA file /tmp/px_seq.fa.',
   };
   return en[templateId];
 }
@@ -808,6 +822,63 @@ function buildTemplates() {
       },
       { tool_name: 'blast_validate_database', parameters: { dbName: 'px_nucl' } },
       { tool_name: 'blast_list_databases', parameters: {} },
+    ],
+    () => ({})
+  );
+  register(
+    'blast_genome_chain',
+    CORE_FIXTURE_ID,
+    (variantIndex, details) => [
+      {
+        tool_name: 'get_sequence',
+        parameters: { chromosome: details.chromosome, start: details.start, end: details.end },
+      },
+      { tool_name: 'blast_create_db_from_genome', parameters: { chromosome: details.chromosome, dbName: 'px_gdb' } },
+      { tool_name: 'blast_list_databases', parameters: {} },
+      {
+        tool_name: 'blast_search_local',
+        parameters: { sequence: '{get_sequence.sequence}', blastType: 'blastn', database: 'px_gdb' },
+      },
+    ],
+    variantIndex => {
+      const window = coreWindow(variantIndex);
+      return { chromosome: window.chromosome, start: window.start, end: window.end };
+    }
+  );
+  register(
+    'blast_quick_genome_chain',
+    CORE_FIXTURE_ID,
+    (variantIndex, details) => [
+      {
+        tool_name: 'get_sequence',
+        parameters: { chromosome: details.chromosome, start: details.start, end: details.end },
+      },
+      {
+        tool_name: 'blast_create_quick_db_for_current_genome',
+        parameters: { genomeName: 'px_gdb2', createNucleotide: true },
+      },
+      { tool_name: 'blast_list_databases', parameters: {} },
+      {
+        tool_name: 'blast_search_local',
+        parameters: { sequence: '{get_sequence.sequence}', blastType: 'blastn', database: 'px_gdb2' },
+      },
+    ],
+    variantIndex => {
+      const window = coreWindow(variantIndex);
+      return { chromosome: window.chromosome, start: window.start, end: window.end };
+    }
+  );
+  register(
+    'blast_db_disambig_genome',
+    CORE_FIXTURE_ID,
+    () => [{ tool_name: 'blast_create_db_from_genome', parameters: { chromosome: 'U00096', dbName: 'px_g1' } }],
+    () => ({})
+  );
+  register(
+    'blast_db_disambig_file',
+    CORE_FIXTURE_ID,
+    () => [
+      { tool_name: 'blast_create_database', parameters: { inputFile: '/tmp/px_seq.fa', dbName: 'px_f1', dbType: 'nucl' } },
     ],
     () => ({})
   );

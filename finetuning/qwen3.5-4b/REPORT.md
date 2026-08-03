@@ -651,6 +651,29 @@ v4 完成了数据层改造（多方案 oracle + 完成度回放门）并验证�
 
 修复：`readOnlyToolNames` 补充 `get_annotation_changeset`/`list_annotation_changesets`/`get_annotation_audit`/`get_annotation_research_workflow`/`get_track_settings`。重评两条均 PASS（5/5）。模型本身行为合理（更新后验证 changeset；获取全部设置后逐轨道查看），属 Benchmark 容差缺口而非模型错误。
 
+## v6：blast genome 建库数据补强 + 重训部署（2026-08-03）
+
+### 背景
+
+小模型应用内复杂失败 `blast_auto_complex_01` 根因是训练数据缺失：v5 的 train 里 `blast_create_db_from_genome` 仅 2 条、`blast_search_local` **0 条**，合成链全部用泛化的 `blast_create_database`（FASTA 文件建库），模型没见过“当前基因组建库 + 本地检索”的工作流。
+
+### 数据（data-v6）
+
+- `prepare-mlx-tool-trajectories-v3.js` 新增 4 个模板：`blast_genome_chain`（取序列 → `blast_create_db_from_genome` → list → `blast_search_local`）、`blast_quick_genome_chain`（quick 变体 + genomeName）、`blast_db_disambig_genome` / `blast_db_disambig_file`（“当前基因组 vs FASTA 文件”判别）。
+- 数据规模：train 374（85 单轮 + 18 多步 + 10 变体 + 261 合成），genome 系建库 45 条、quick 63 条、`blast_search_local` 36 条（v5 为 2/28/0）。
+
+### 训练与内存
+
+- 128GB 物理内存，MLX 峰值常态 137GB、长样本 187-203GB（换页）。**教训**：首次用 `max_seq_length: 2560` 把最长的 protein_chain 样本（3011 tokens）截断，导致该样本 assistant 目标被切没 → loss NaN 且无法恢复；改回 3072（最大样本 3011 完整容纳）后无 NaN。最终 200 步由三段完成（0-25、25-50、50-200，中途因内存/CodeX 重启断点续训）。
+- 选择总 175 步检查点（val 0.033），Test loss **0.065 / ppl 1.068**（v5 为 0.074/1.077）。
+- 部署：`mlx_lm.fuse --dequantize` → `export-qwen35-mlx-to-hf.py` → `ollama create -q q4_K_M` → **`qwen3.5:4b-codexomics-tools-v6`（2.7GB）**。
+
+### 离线复杂初测（v6，严格 18/29 → 完成度 22/29）
+
+- `blast_auto_complex_01` 工具选择已修复：模型改为 `blast_create_quick_db_for_current_genome` → list → `blast_search_local`（v5 用的是错误的 `blast_create_database`）。
+- 仍缺 `genomeName: 'ecoli_nucl'`（指令明确命名了数据库）→ 已更新 `blast_create_quick_db_for_current_genome` 工具描述（“用户指定数据库名时必须传 genomeName”）并重新生成 registry manifest；该参数补齐无需重训，下次应用内评测应生效。
+- 其余复杂失败（`protein_auto_complex_01` 用 `uniprot_search`、`annotation_auto_complex_02` 用 `batch_create_annotations`×4、`analysis_auto_01/03`、`task_auto_complex_01` 等）为模型选择/参数波动，属下一轮数据方向。
+
 ## DeepSeek 清零：简单/复杂完成度 0-1 错误（2026-08-02 终版二）
 
 > ⚠️ 本节为**离线审计口径**；官方应用内真实执行 Benchmark 结果为 153/172（89.0%）、简单 127/143（88.8%）、复杂 26/29（89.7%），离线"0-1 错误"不代表应用内成绩。
