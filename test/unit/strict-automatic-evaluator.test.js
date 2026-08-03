@@ -523,6 +523,68 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    it('accepts a schema-valid start-only navigation for a grouped alternative oracle', () => {
+      const test = {
+        id: 'completion-grouped-navigation-alternative',
+        complexity: 'complex',
+        maxScore: 15,
+        expectedResult: {
+          tool_sequence: ['design_primers', ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position'], 'toggle_track'],
+          parameters: [
+            { geneName: 'lysC', upstreamBp: 50 },
+            {
+              benchmarkAnyOf: [
+                { geneName: 'lysC' },
+                {
+                  chromosome: '<current_chromosome>',
+                  start: '{design_primers.target.start}',
+                  end: '{design_primers.target.end}',
+                },
+              ],
+            },
+            { track_name: 'primers', visible: true },
+          ],
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'design_primers', parameters: { geneName: 'lysC', upstreamBp: 50 } },
+            { tool_name: 'navigate_to_position', parameters: { start: 4232600 } },
+            { tool_name: 'toggle_track', parameters: { track_name: 'primers', visible: true } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
+    it('ignores an extra verification screenshot after the required calls', () => {
+      const test = {
+        id: 'completion-extra-screenshot',
+        complexity: 'complex',
+        maxScore: 15,
+        expectedResult: {
+          tool_sequence: ['design_primers', 'toggle_track'],
+          parameters: [
+            { geneName: 'lysC', upstreamBp: 50 },
+            { track_name: 'primers', visible: true },
+          ],
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'design_primers', parameters: { geneName: 'lysC', upstreamBp: 50 } },
+            { tool_name: 'toggle_track', parameters: { track_name: 'primers', visible: true } },
+            { tool_name: 'capture_screenshot', parameters: { auto_save: true, target: 'tracks' } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('accepts an equivalent blast database-creation tool with an alternative name key', () => {
       const test = {
         id: 'completion-blast-equivalent',

@@ -90,6 +90,10 @@ class StrictAutomaticEvaluator {
         'get_loaded_files_list',
         'get_file_info',
         'get_track_status',
+        // A screenshot only observes the current view; it never mutates
+        // genomic state, so an extra screenshot after the required calls is a
+        // benign verification step rather than a task-endangering side effect.
+        'capture_screenshot',
         'get_all_track_settings',
         'get_track_settings',
         'get_track_settings_schema',
@@ -489,7 +493,16 @@ class StrictAutomaticEvaluator {
     if (ordinaryKeys.length === 0) return false;
     const supplied = ordinaryKeys.every(key => {
       const expectedValue = alternative[key];
-      return this.isSchemaDefault(expectedValue) || this.getActualParameter(actual, key, toolName).found;
+      // Completion mode tolerates omitting placeholder/reference keys when the
+      // observed call is schema-valid (compareParameters applies that
+      // tolerance); the physical-presence gate must not skip it for anyOf
+      // alternative groups (e.g. a start-only navigate_to_position call vs an
+      // oracle alternative that also lists chromosome/end references).
+      return (
+        this.isSchemaDefault(expectedValue) ||
+        this.isPlaceholder(expectedValue) ||
+        this.getActualParameter(actual, key, toolName).found
+      );
     });
     return supplied && this.compareParameters(actual, alternative, toolName).match;
   }
