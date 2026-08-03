@@ -1908,10 +1908,12 @@ Primer Tools:
   getOptimizedSystemMessage() {
     const toolPriority = this.chatManager.getToolPriorityString();
     const tasksString = this.chatManager.services?.task ? this.chatManager.services.task.getTasksContextString() : '';
+    const skillsString = this.getSkillsContextString();
 
     return `You are an AI assistant for CodeXomics, a comprehensive bioinformatics application. You have access to powerful genomic analysis, protein structure, and sequence analysis tools.
 
 ${tasksString}
+${skillsString}
 IMPORTANT: Task Completion Instructions
 When you complete a user's task or fully answer their question, end with a clear completion indicator like "Task completed", "Analysis finished", or "In summary" to signal completion efficiently.
 
@@ -2190,7 +2192,7 @@ Current CodeXomics State:
 - User-defined features: ${context.genomeBrowser.currentState.userDefinedFeaturesCount}
 
 ${mcpServersInfo}
-
+${this.getSkillsContextString()}
 Available Tools Summary:
 - Total Available Tools: ${context.genomeBrowser.toolSources.total}
 - Local Tools: ${context.genomeBrowser.toolSources.local}
@@ -2344,6 +2346,40 @@ Metabolic Pathway Examples:
 `;
   }
 
+  /**
+   * Compact Agent Skills index for the system prompt.
+   *
+   * Only skill metadata is prompted; bodies load on demand through `get_skill`
+   * so unused workflows never consume context. Returns '' when no skills are
+   * available or enabled, which keeps the prompt unchanged for users without skills.
+   */
+  getSkillsContextString() {
+    const skillService = this.chatManager.services?.skill;
+    if (!skillService || typeof skillService.getSkillIndexForPrompt !== 'function') {
+      return '';
+    }
+
+    // Benchmarks measure tool-calling against a fixed oracle. Adding a skill index
+    // would change every benchmark prompt and invite extra list_skills/get_skill
+    // calls that the oracle does not expect, so skills stay out of benchmark runs.
+    try {
+      if (typeof this.chatManager.isBenchmarkMode === 'function' && this.chatManager.isBenchmarkMode()) {
+        return '';
+      }
+    } catch (error) {
+      console.warn('[LLMContextService] Benchmark-mode check failed; omitting skill index:', error);
+      return '';
+    }
+
+    try {
+      const index = skillService.getSkillIndexForPrompt();
+      return index ? `${index}\n` : '';
+    } catch (error) {
+      console.warn('[LLMContextService] Failed to build skill index:', error);
+      return '';
+    }
+  }
+
   getBaseSystemMessage() {
     const context = this.chatManager.getCurrentContext();
 
@@ -2427,7 +2463,7 @@ Current CodeXomics State:
 - User-defined features: ${context.genomeBrowser.currentState.userDefinedFeaturesCount}
 
 ${mcpServersInfo}
-
+${this.getSkillsContextString()}
 Available Tools Summary:
 - Total Available Tools: ${context.genomeBrowser.toolSources.total}
 - Local Tools: ${context.genomeBrowser.toolSources.local}

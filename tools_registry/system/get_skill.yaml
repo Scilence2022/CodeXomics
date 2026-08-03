@@ -1,0 +1,77 @@
+name: get_skill
+version: 1.0.0
+description: 'Load the full workflow body of one Agent Skill by id. Call this before executing a multi-step task that matches a skill, then follow the returned workflow instead of improvising a tool chain.'
+category: system
+keywords:
+  - skill
+  - load skill
+  - get skill
+  - use skill
+  - workflow
+  - open skill
+  - apply skill
+  - run skill
+priority: 1
+execution:
+  type: client
+  timeout: 10000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    skill_id:
+      type: string
+      description: "Identifier of the skill to load, as reported by list_skills (e.g. 'primer_design')"
+  required:
+    - skill_id
+sample_usages:
+  - user_query: 'Design primers for lacZ'
+    tool_call: "get_skill(skill_id='primer_design')"
+    thought: 'The request matches the primer_design skill; load its workflow before running any tools'
+    expected_result: 'Full primer design workflow with ordered steps, preconditions, and output template'
+
+  - user_query: 'I need primers covering thrA with 100 bp upstream'
+    tool_call: "get_skill(skill_id='primer_design')"
+    thought: 'An amplification request with a margin requirement matches the primer_design skill'
+    expected_result: 'Primer design workflow with its ordered steps, parallel quality checks, and output template'
+
+  - user_query: 'Use the primer design workflow on lacZ'
+    tool_call: "get_skill(skill_id='primer_design')"
+    thought: 'User explicitly named a skill'
+    expected_result: 'The primer_design workflow body'
+relationships:
+  depends_on:
+    - list_skills
+  conflicts_with: []
+  enhances: []
+  alternatives: []
+  prerequisites: []
+  follow_up: []
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - system
+    - skills
+    - workflow
+    - meta
+  complexity: simple
+  usage_pattern: frequent
+  recommendation: 'Load a skill whenever the user request matches one of its triggers; never guess a skill workflow from its description alone'
+error_handling:
+  client_error: 'Returns error if the skill registry bridge is unavailable'
+  invalid_input: 'Returns error listing available skill ids when skill_id does not match an installed skill'
+  no_data: 'Returns error when the skill is disabled in Skills settings'
+returns:
+  success: boolean - Whether operation was successful
+  skill_id: string - Identifier of the loaded skill
+  workflow: 'object - Executable plan with inputs, preconditions, steps, parallel_groups, outputs, agent_notes'
+  guide: string - Markdown explaining the rationale, result interpretation, and troubleshooting
+  tools_used: array - Tools the workflow expects to call
+  resources: array - Supporting files bundled with the skill
+  instructions: string - How to execute the returned workflow

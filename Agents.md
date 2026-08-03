@@ -37,8 +37,8 @@ When adding a new AI-callable tool, update every relevant registry. Missing one 
 
 Current local facts to keep in mind:
 
-- `tools_registry/` currently contains 185 YAML tools across 19 active categories.
-- `builtInToolsMap` currently maps 149 built-in tools.
+- `tools_registry/` currently contains 216 YAML tools across 18 active categories.
+- `builtInToolsMap` currently maps 178 built-in tools.
 - MCP tools mode currently exposes 96 tools.
 - MCP agent mode exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
 
@@ -56,6 +56,31 @@ Current local facts to keep in mind:
 - A tool present in both `builtInToolsMap` and the MCP server should be classified as built-in with MCP availability metadata.
 - Built-in parameter descriptions should come from YAML registry definitions where available.
 - Every built-in tool that should appear in dynamic prompts needs a keyword detection rule.
+
+## 4a. Agent Skill Rules
+
+Skills are multi-step workflow documents, not tools. See `docs/developer-guides/AGENT_SKILLS.md`.
+
+- Built-in skills live in `.agent/skills/`; user skills live in `skills/` under `userData`. Both roots
+  are inventoried by `SkillRegistryService` in the main process.
+- Two formats are supported: Anthropic bundles (`<dir>/SKILL.md` with `name`/`description`) and the
+  CodeXomics native format (`<skill_id>.md` plus `SKILL_REGISTRY.yaml` metadata).
+- In native frontmatter, `steps`, `parallel_groups`, and `outputs` are top-level keys. A
+  `parallel_groups:` mapping nested inside the `steps:` sequence is invalid YAML and the skill is
+  skipped.
+- Snapshots carry metadata only. Never add skill bodies to the snapshot; `get_skill` loads them on
+  demand so unused skills cost only their index line in the prompt.
+- The renderer must not read skill directories directly. Go through the `skill-registry:*` IPC channels,
+  the same boundary the tool registry uses.
+- A user skill may not reuse a built-in skill id; the loader emits an error diagnostic and keeps the
+  built-in.
+- Enable/disable state lives in `skills.disabledIds` via `ConfigManager` and is enforced by
+  `SkillService`, not by the main-process registry.
+- `.agent/skills/**/*` must stay in the electron-builder `files` list, or built-in skills will not ship.
+- Skills must stay out of benchmark runs. `getSkillsContextString()` returns `''` when
+  `ChatManager.isBenchmarkMode()` is true, so benchmark prompts and the oracle baseline are unaffected
+  by installed skills. Do not add benchmark cases for `list_skills` / `get_skill`; they are listed in
+  `BUILTIN_TOOL_EXEMPTIONS` instead.
 
 ## 5. Tool Execution Policy Rules
 

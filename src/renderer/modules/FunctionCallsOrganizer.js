@@ -63,6 +63,8 @@ class FunctionCallsOrganizer {
           'clear_highlights',
           'view_markdown_file',
           'list_available_tools',
+          'list_skills',
+          'get_skill',
           'add_task',
           'update_task',
           'list_tasks',

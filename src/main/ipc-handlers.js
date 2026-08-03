@@ -33,6 +33,7 @@ const {
   sanitizePluginId,
 } = require('./security-utils');
 const { ToolRegistryService } = require('./tool-registry-service');
+const { SkillRegistryService } = require('./skill-registry-service');
 const { proxyDgrMcpRequest, uploadDgrResearchDocument, MAX_DOCUMENT_BYTES } = require('./dgr-mcp-proxy');
 const { archiveDgrTaskResult, readDgrArtifact } = require('./dgr-artifact-storage');
 const {
@@ -1039,6 +1040,22 @@ function registerIpcHandlers(deps) {
     }
   };
 
+  const skillRegistryService = deps.skillRegistryService || new SkillRegistryService({ app });
+  const broadcastSkillRegistryUpdated = snapshot => {
+    for (const [, entry] of windowRegistry.entries()) {
+      const win = entry.window || entry;
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('skill-registry-updated', snapshot);
+      }
+    }
+
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('skill-registry-updated', snapshot);
+      }
+    }
+  };
+
   // =====================================================================
   // 1. Tool Execution IPC
   // =====================================================================
@@ -1120,6 +1137,54 @@ function registerIpcHandlers(deps) {
     const snapshot = await toolRegistryService.reload();
     broadcastToolRegistryUpdated(snapshot);
     return snapshot;
+  });
+
+  // =====================================================================
+  // 1b. Agent Skill Registry IPC
+  // =====================================================================
+
+  ipcMain.handle('skill-registry:get-snapshot', async () => {
+    return await skillRegistryService.getSnapshot();
+  });
+
+  ipcMain.handle('skill-registry:get-metadata', async () => {
+    return await skillRegistryService.getMetadata();
+  });
+
+  ipcMain.handle('skill-registry:get-skill', async (event, skillId) => {
+    return await skillRegistryService.getSkill(skillId);
+  });
+
+  ipcMain.handle('skill-registry:get-resource', async (event, skillId, resourcePath) => {
+    return await skillRegistryService.getSkillResource(skillId, resourcePath);
+  });
+
+  ipcMain.handle('skill-registry:reload', async () => {
+    const snapshot = await skillRegistryService.reload();
+    broadcastSkillRegistryUpdated(snapshot);
+    return snapshot;
+  });
+
+  /**
+   * Reveal the user skills directory. The absolute path stays in the main process;
+   * the renderer only asks for it to be opened.
+   */
+  ipcMain.handle('skill-registry:open-user-folder', async () => {
+    const userRoot = skillRegistryService.userSkillsRoot;
+    if (!userRoot) {
+      return { success: false, error: 'User skills directory is not configured' };
+    }
+
+    try {
+      await fs.promises.mkdir(userRoot, { recursive: true });
+      const openError = await shell.openPath(userRoot);
+      if (openError) {
+        return { success: false, error: openError };
+      }
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   });
 
   // =====================================================================

@@ -655,3 +655,52 @@
     display: none;
   }
 }
+
+/* ==========================================================================
+   Multi-Agent Settings Modal - tab visibility
+
+   The generic .tab-content rule in components.css has no display toggle, and the
+   original .multi-agent-content rules live in css/legacy/, which is not linked.
+   Without these, every tab of the modal renders stacked at once.
+   ========================================================================== */
+
+.multi-agent-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.multi-agent-tabs .tab-button {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 16px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.multi-agent-tabs .tab-button:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.multi-agent-tabs .tab-button.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+  background: var(--bg-primary);
+}
+
+.multi-agent-content .tab-content {
+  display: none;
+}
+
+.multi-agent-content .tab-content.active {
+  display: block;
+}

@@ -479,6 +479,15 @@ class GenomeBrowser {
       console.error('❌ Error initializing MultiAgentSettingsManager:', error);
     }
 
+    // Step 5.3: Initialize the Skills tab of the Multi-Agent Settings modal
+    try {
+      this.skillsSettingsManager = new SkillsSettingsManager(this.chatManager);
+      window.skillsSettingsManager = this.skillsSettingsManager;
+      console.log('✅ SkillsSettingsManager initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing SkillsSettingsManager:', error);
+    }
+
     // Step 5.5: Plugin Management UI and its development tools load on first use.
     this.pluginManagementUI = null;
     this.pluginManagementInitializationPromise = null;

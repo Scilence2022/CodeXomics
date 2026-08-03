@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="css/chatbox-enhancements.css">
     <link rel="stylesheet" href="css/chatbox-markdown.css">
     <link rel="stylesheet" href="css/llm-config.css">
+    <link rel="stylesheet" href="css/skills.css">
     <link rel="stylesheet" href="css/advanced-search.css">
     <link rel="stylesheet" href="css/digest.css">
     <link rel="stylesheet" href="css/gel-electrophoresis.css">
@@ -4872,6 +4873,7 @@ Supported formats:
                     <button class="tab-button active" data-tab="system">System</button>
                     <button class="tab-button" data-tab="llm">LLM Configuration</button>
                     <button class="tab-button" data-tab="agents">Agent Management</button>
+                    <button class="tab-button" data-tab="skills">Skills</button>
 
                     <button class="tab-button" data-tab="memory">Memory System</button>
                     <button class="tab-button" data-tab="performance">Performance</button>
@@ -5138,6 +5140,44 @@ Supported formats:
                     </div>
 
                     <!-- Memory System Tab -->
+                    <!-- Skills Tab -->
+                    <div id="skills-tab" class="tab-content">
+                        <div class="form-section">
+                            <h4>📚 Agent Skills</h4>
+                            <p class="help-text skills-intro">
+                                Skills are expert, multi-step workflows the assistant can load on demand. Only a short
+                                index is added to the prompt; a skill's full workflow is loaded only when it is used.
+                            </p>
+                            <div class="skills-toolbar">
+                                <input type="search" id="skillsSearchInput" class="input-full skills-search"
+                                    placeholder="Filter skills by name, tag, or trigger…">
+                                <button class="btn btn-secondary" id="skillsReloadBtn" title="Rescan skill folders">
+                                    <i class="fas fa-sync"></i> Reload
+                                </button>
+                                <button class="btn btn-secondary" id="skillsOpenFolderBtn"
+                                    title="Open the user skills folder">
+                                    <i class="fas fa-folder-open"></i> Open Folder
+                                </button>
+                            </div>
+                            <div id="skillsSummary" class="skills-summary"></div>
+                            <div id="skillsDiagnostics" class="skills-diagnostics"></div>
+                            <div id="skillsList" class="skills-list">
+                                <div class="skills-empty">Loading skills…</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>➕ Adding Your Own Skills</h4>
+                            <p class="help-text">
+                                Put a skill in the user skills folder using either layout, then press Reload:
+                            </p>
+                            <pre class="skills-help-block">skills/
+├── my-workflow/
+│   └── SKILL.md        ← name + description frontmatter
+└── my_workflow.md      ← CodeXomics native format</pre>
+                        </div>
+                    </div>
+
                     <div id="memory-tab" class="tab-content">
                         <div class="form-section">
                             <h4>🧠 Memory System</h4>
@@ -5358,6 +5398,7 @@ Supported formats:
     <script src="modules/LLMStreamClient.js"></script>
     <script src="modules/LLMConfigManager.js"></script>
     <script src="modules/MultiAgentSettingsManager.js"></script>
+    <script src="modules/SkillsSettingsManager.js"></script>
     <script src="modules/ThemeManager.js"></script>
     <script src="modules/GeneralSettingsManager.js"></script>
     <script src="modules/SidecarManager.js"></script>
@@ -5415,6 +5456,7 @@ Supported formats:
     <script src="modules/chat/services/LLMContextService.js"></script>
     <script src="modules/chat/services/UIService.js"></script>
     <script src="modules/chat/services/TaskService.js"></script>
+    <script src="modules/chat/services/SkillService.js"></script>
 
     <!-- Gel Electrophoresis Visualization -->
     <script src="modules/GelElectrophoresisRenderer.js"></script>

@@ -20,12 +20,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Agent Skills support. Skills are expert, multi-step workflows that teach the assistant the correct tool chain for a domain task, replacing improvised chains of ten or more tools. Skills load progressively: only a one-line-per-skill index enters the system prompt, and a skill's full workflow is fetched on demand through the new `get_skill` tool, so an installed-but-unused skill costs nothing beyond its index line. `get_skill` returns both the executable plan (steps, parallel groups, preconditions, agent notes, output template) and the Markdown guide explaining it. `list_skills` enumerates skills with optional category and free-text filters.
+- A **Skills** button in the ChatBox action bar, next to MCP Tools and MCP Servers, opening the Skills settings panel directly.
+- Rewritten `primer_design` skill (v2.0.0), the one workflow that ships built-in. Every tool name and parameter is now checked against the real tool registry by a unit test. The workflow calls `design_primers` once with `geneName` — that tool already performs gene lookup, sequence extraction with primer-binding buffer, and coordinate mapping — instead of the old five-step chain that hand-fetched sequence and lost the genomic mapping. Adds hairpin screening, thermodynamic genome-wide off-target scanning, and writes both primers to the Primers track.
+- User-provided skills, in either the Anthropic Agent Skill bundle format (`<dir>/SKILL.md` with `name`/`description` frontmatter, plus bundled resource files) or the CodeXomics native format (`<skill_id>.md` with structured `steps`/`parallel_groups`/`outputs`). Drop them into the `skills/` folder under userData and press Reload. User skills cannot shadow built-in skill ids.
+- Skills are suppressed during benchmark runs. The skill index is omitted from the system prompt whenever the app is in benchmark mode, so benchmark prompts stay identical to what they were before skills existed and installing or enabling a skill cannot move a benchmark score.
+- Skills tab in Multi-Agent Settings: browse installed skills with their triggers, tool counts, and requirements; filter them; enable or disable individual skills (disabled skills leave the prompt entirely); rescan the skill folders; and open the user skills directory. Parse diagnostics for malformed skills are shown in the panel.
+
 - Paging controls in the main toolbar, next to the zoom buttons: previous/next page (one screen at a time) and jump to the start or end of the sequence. All four preserve the current window width, so paging into either end of the sequence slides the view instead of shrinking it — which also fixes the next-page button in the sidebar and over the genome view collapsing the window when it reached the last partial page.
 - New `enableStreaming` ChatBox setting (Behavior tab, on by default) to toggle streamed responses.
 - Auto-refresh the model list of every LLM provider in Options → Configure LLMs. Each provider tab fetches its live catalogue from the provider's own listing endpoint — `/models` for OpenAI-compatible providers and the custom endpoint, `/v1/models` for Anthropic, `v1beta/models` for Google — so newly released models are selectable without shipping an app update. Lists refresh when a provider tab is opened (cached for 6 hours), immediately after an API key or endpoint changes, and on demand via a per-provider **Refresh** button; a status line reports the model count and age. Reported models are grouped at the top of the dropdown while the models shipped with the app stay available below, and a failed or unsupported refresh keeps the built-in list rather than emptying the selection.
 
+### Removed
+
+- Five built-in agent skills (`automated_research`, `gene_annotation_improvement`, `operon_analysis`, `variant_context_analysis`, `multi_window_routing`). An audit against the tool registry found they referenced tools and parameters that do not exist, and each one costs a line in every system prompt. Only `primer_design` ships built-in; users can add their own skills to the user skills folder.
+
+### Fixed
+
+- Repair the YAML frontmatter of five shipped agent skills. `parallel_groups:` was written as a mapping key inside the `steps:` sequence, which is invalid YAML, so every one of those skills failed to parse — the files had never been machine-read. Lifted to the top level, where the skill spec documents it.
+- Restore tab switching in the Multi-Agent Settings modal. The rules that hide inactive tab panels lived only in `css/legacy/`, which is no longer linked, so every tab's content rendered stacked at once.
+
 ### Documentation
 
+- Document the Agent Skills subsystem: formats, progressive disclosure, architecture, safety limits, and how to add a skill (`docs/developer-guides/AGENT_SKILLS.md`).
 - Synchronize the canonical repository documents and MkDocs site with version `0.722.0`.
 - Add current production-readiness release notes, Node.js 20/22 build guidance, strict documentation validation, and a supported GitHub Pages deployment workflow.
 - Correct the documented Electron runtime from `42.4.0` to the Node 20-compatible `41.7.1` restored after the release cut.
