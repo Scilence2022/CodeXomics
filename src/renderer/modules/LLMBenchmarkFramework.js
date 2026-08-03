@@ -1004,6 +1004,29 @@ class LLMBenchmarkFramework {
         console.error(`Test ${test.id} failed with error:`, error);
       }
 
+      // Timeout diagnostics: correlate the framework-side stall with whether
+      // the request ever reached the provider. `lastExecutionData` is
+      // request-scoped and may be null when the request never started; the
+      // tracker keeps session-wide executions keyed by test id.
+      try {
+        const lastExecutionData = this.chatManager?.getLastExecutionData?.();
+        const tracker = this.chatManager?.toolExecutionTracker;
+        let trackedExecutions = [];
+        if (tracker && typeof tracker.getTestExecutions === 'function') {
+          trackedExecutions = tracker.getTestExecutions(test.id) || [];
+        }
+        console.warn(
+          `[Benchmark][timeout] ${test.id}: ` +
+            `lastExecutionData.calls=${lastExecutionData?.functionCalls?.length ?? 0}, ` +
+            `lastExecutionData.results=${lastExecutionData?.toolResults?.length ?? 0}, ` +
+            `tracker.executions=${trackedExecutions.length}, ` +
+            `history.messages=${this.chatManager?.conversationHistory?.length ?? 0}, ` +
+            `lastResponse=${Boolean(this.chatManager?.lastResponse)}`
+        );
+      } catch (diagnosticsError) {
+        console.warn(`[Benchmark][timeout] diagnostics failed for ${test.id}:`, diagnosticsError);
+      }
+
       // CRITICAL FIX: Try to capture LLM interaction data even on timeout/error
       // Check if we have any LLM interaction data from ChatManager or other sources
       try {
@@ -1687,8 +1710,19 @@ class LLMBenchmarkFramework {
             `🔄 **Status:** Sending request to AI model...`
         );
 
-        // Use ChatManager's sendToLLM method
+        // Use ChatManager's sendToLLM method. The markers below are the app-side
+        // "request sent / request returned" boundary: if a timeout happens with
+        // no request-sent log for the test, the stall is before the provider
+        // call; if request-sent appears but no return, the stall is in the
+        // provider fetch / streaming loop.
+        console.log(
+          `[Benchmark][request] sending test ${options.testInfo?.id || 'unknown'} to LLM at ${new Date().toISOString()}`
+        );
+        const requestSentAt = Date.now();
         response = await this.chatManager.sendToLLM(instruction);
+        console.log(
+          `[Benchmark][request] test ${options.testInfo?.id || 'unknown'} LLM returned in ${Date.now() - requestSentAt}ms at ${new Date().toISOString()}`
+        );
         const actualPromptMetadata = this.captureDynamicToolsAnalysis();
         if (actualPromptMetadata) {
           interactionData.request.dynamicToolsAnalysis = actualPromptMetadata;
@@ -5727,12 +5761,126 @@ class LLMBenchmarkFramework {
         return this.reconstructInteractionDataFromCachedResponse(test, this.chatManager.lastResponse, error);
       }
 
+      // The conversation-history path above only helps when the LLM actually
+      // produced an assistant message. A request that stalled before/during
+      // the provider call often still has request-scoped tool executions
+      // (submitted calls + results) or tracker entries; without them the
+      // timed-out test is recorded as a bare skeleton with zero calls, which
+      // is indistinguishable from the model producing nothing. Recover those
+      // partial executions so the record shows exactly how far the workflow
+      // got before the hang.
+      const lastExecutionData = this.chatManager?.getLastExecutionData?.();
+      const partialCalls = Array.isArray(lastExecutionData?.functionCalls) ? lastExecutionData.functionCalls : [];
+      const partialResults = Array.isArray(lastExecutionData?.toolResults) ? lastExecutionData.toolResults : [];
+      let trackedExecutions = [];
+      try {
+        const tracker = this.chatManager?.toolExecutionTracker;
+        if (tracker && typeof tracker.getTestExecutions === 'function') {
+          trackedExecutions = tracker.getTestExecutions(test.id) || [];
+        }
+      } catch (trackerError) {
+        console.warn(`Could not read tracker executions for ${test.id}:`, trackerError);
+      }
+      if (partialCalls.length > 0 || trackedExecutions.length > 0) {
+        console.log(
+          `Recovered partial execution data for ${test.id}: ` +
+            `calls=${partialCalls.length}, results=${partialResults.length}, tracker=${trackedExecutions.length}`
+        );
+        return this.reconstructInteractionDataFromPartialExecution(
+          test,
+          partialCalls,
+          partialResults,
+          trackedExecutions,
+          error
+        );
+      }
+
       console.log('No recoverable LLM interaction data found');
       return null;
     } catch (recoveryError) {
       console.error('Error during LLM interaction data recovery:', recoveryError);
       return null;
     }
+  }
+
+  /**
+   * Build interaction data from partial request-scoped executions recovered
+   * after a timeout. The shape mirrors the normal execution-data capture so
+   * the strict evaluator can still score whatever was actually submitted.
+   */
+  reconstructInteractionDataFromPartialExecution(test, functionCalls, toolResults, trackerExecutions, error) {
+    const calls = (functionCalls || []).map(call => ({
+      ...call,
+      confidence: call.confidence || 100,
+      executed: true,
+      actualResult: true,
+      detectionMethod: 'actual_execution',
+    }));
+    const seenCalls = new Set(calls.map(call => `${call.tool_name}:${call.round ?? ''}:${call.id ?? ''}`));
+    for (const execution of trackerExecutions || []) {
+      const call = {
+        tool_name: execution.toolName,
+        parameters: execution.parameters || {},
+        id: execution.executionId || null,
+        round: execution.round ?? null,
+        executed: true,
+        actualResult: true,
+        detectionMethod: 'tracker_execution',
+      };
+      const key = `${call.tool_name}:${call.round ?? ''}:${call.id ?? ''}`;
+      if (!seenCalls.has(key)) {
+        seenCalls.add(key);
+        calls.push(call);
+      }
+    }
+    const executions = (toolResults || []).map(execution => {
+      const exec = execution.execution || execution;
+      const preview =
+        typeof exec.result === 'string'
+          ? exec.result.substring(0, 200)
+          : exec.result
+            ? JSON.stringify(exec.result).substring(0, 200)
+            : exec.resultPreview
+              ? String(exec.resultPreview).substring(0, 200)
+              : null;
+      return {
+        tool_name: exec.tool_name ?? exec.tool ?? null,
+        tool: exec.tool_name ?? exec.tool ?? null,
+        success: exec.success,
+        executionTime: exec.executionTime ?? exec.duration ?? null,
+        id: exec.id ?? exec.executionId ?? null,
+        call_id: exec.call_id ?? exec.tool_call_id ?? null,
+        tool_call_id: exec.tool_call_id ?? exec.call_id ?? null,
+        resultPreview: preview,
+      };
+    });
+    return {
+      timestamp: new Date().toISOString(),
+      testId: test.id,
+      testNumber: test.number || null,
+      testName: test.name,
+      request: {
+        instruction: test.instruction,
+        requestId: `partial_${test.id}_${Date.now()}`,
+        recovered: true,
+        recoveryReason: 'timeout_partial_execution',
+      },
+      response: {
+        functionCalls: calls,
+        toolExecutions: executions,
+        rawResponse: null,
+        responseTime: 0,
+        recovered: true,
+      },
+      analysis: {
+        isError: true,
+        errorType: 'timeout',
+        errorMessage: error?.message || 'Test timeout',
+        confidence: 2.5,
+        recoveredData: true,
+        timeoutOccurred: true,
+      },
+    };
   }
 
   /**

@@ -98,4 +98,30 @@ describe('benchmark runtime hardening', () => {
     expect(source).toContain('isDirectory: stats.isDirectory()');
     expect(source).toContain('isFile: stats.isFile()');
   });
+
+  it('recovers partial execution data on timeout instead of an empty skeleton', () => {
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+
+    expect(framework).toContain('reconstructInteractionDataFromPartialExecution');
+    expect(framework).toContain('timeout_partial_execution');
+    expect(framework).toContain('tracker.getTestExecutions(test.id)');
+    // The recovery path must consult request-scoped execution data, not only
+    // conversation history / lastResponse, or timed-out tests lose all calls.
+    const recoveryStart = framework.indexOf('async attemptToRecoverLLMInteractionData');
+    const recoveryEnd = framework.indexOf('reconstructInteractionDataFromPartialExecution', recoveryStart);
+    const recoverySource = framework.slice(recoveryStart, recoveryEnd);
+    expect(recoverySource).toContain('getLastExecutionData');
+    expect(recoverySource).toContain('trackedExecutions');
+  });
+
+  it('marks provider request boundaries and timeout diagnostics for stall analysis', () => {
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+    const config = readSource('src/renderer/modules/LLMConfigManager.js');
+
+    expect(framework).toContain('[Benchmark][request] sending test');
+    expect(framework).toContain('LLM returned in');
+    expect(framework).toContain('[Benchmark][timeout]');
+    expect(config).toContain('[LLM][local] non-streaming request start');
+    expect(config).toContain('streaming request start');
+  });
 });

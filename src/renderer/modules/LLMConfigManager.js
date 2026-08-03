@@ -2954,6 +2954,12 @@ class LLMConfigManager {
     const providerLabel = provider?.name || providerKey;
 
     try {
+      const streamStart = Date.now();
+      console.log(
+        `[LLM][${providerLabel}] streaming request start: url=${provider.baseUrl}/chat/completions, ` +
+          `model=${provider.model}, messages=${conversationHistory.length}, ` +
+          `signal=${options.signal ? 'yes' : 'no'}, at=${new Date().toISOString()}`
+      );
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: this.buildChatCompletionsHeaders(providerKey, provider),
@@ -2962,12 +2968,15 @@ class LLMConfigManager {
         ),
         signal: options.signal || undefined,
       });
+      console.log(
+        `[LLM][${providerLabel}] streaming response status=${response.status} after ${Date.now() - streamStart}ms`
+      );
 
       // Let the established non-streaming path own error classification, retry
       // scheduling, and provider fallback rather than duplicating it here.
       if (!response.ok || !streamClient.isEventStream(response)) {
         console.warn(
-          `[${providerLabel}] Streaming unavailable (status ${response.status}); using non-streaming request.`
+          `[${providerLabel}] Streaming unavailable (status ${response.status}) after ${Date.now() - streamStart}ms; using non-streaming request.`
         );
         return null;
       }
@@ -2978,8 +2987,10 @@ class LLMConfigManager {
         signal: options.signal,
       });
 
+      console.log(`[LLM][${providerLabel}] streaming completed in ${Date.now() - streamStart}ms`);
       return normalizeFn ? normalizeFn.call(this, data) : this.normalizeOpenAICompatibleResponse(data, providerKey);
     } catch (error) {
+      console.warn(`[LLM][${providerLabel}] streaming request failed:`, error?.message || error);
       return this.handleStreamFailure(error, providerLabel, options);
     }
   }
@@ -3956,18 +3967,32 @@ class LLMConfigManager {
     console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
     console.log('Sending to Local LLM - Request Payload:', payload);
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: provider.apiKey
-        ? {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
-          }
-        : {
-            'Content-Type': 'application/json',
-          },
-      body: JSON.stringify(payload),
-    });
+    const requestStartedAt = Date.now();
+    console.log(`[LLM][local] non-streaming request start at ${new Date().toISOString()}`);
+    let response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: provider.apiKey
+          ? {
+              Authorization: `Bearer ${provider.apiKey}`,
+              'Content-Type': 'application/json',
+            }
+          : {
+              'Content-Type': 'application/json',
+            },
+        body: JSON.stringify(payload),
+      });
+    } catch (fetchError) {
+      console.error(
+        `[LLM][local] non-streaming fetch failed after ${Date.now() - requestStartedAt}ms:`,
+        fetchError?.message || fetchError
+      );
+      throw fetchError;
+    }
+    console.log(
+      `[LLM][local] non-streaming response status=${response.status} after ${Date.now() - requestStartedAt}ms`
+    );
 
     if (!response.ok) {
       const errorBody = await response.text(); // Get error body as text
