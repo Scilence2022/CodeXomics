@@ -1257,3 +1257,25 @@
   color: var(--text-primary);
   outline: none;
 }
+
+/* ==========================================================================
+   Range-slider labels (min / current / max)
+
+   The only rule for these lived in css/legacy/, which is not linked, and was
+   scoped to #chatboxSettingsModal — so the three labels collapsed onto one run-on
+   line. Unscoped here so it applies wherever the control is rendered.
+   ========================================================================== */
+
+.slider-container .slider-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.slider-container .slider-labels .slider-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}

@@ -454,66 +454,6 @@ class ChatBoxSettingsManager {
         this.setSetting(key, value);
       });
     }
-
-    // Setup chatbox-specific model event listeners
-    this.setupChatboxModelEventListeners();
-  }
-
-  /**
-   * Setup event listeners for chatbox-specific model configuration
-   */
-  setupChatboxModelEventListeners() {
-    // Provider change handler
-    const providerSelect = document.getElementById('chatboxLLMProvider');
-    if (providerSelect) {
-      providerSelect.addEventListener('change', () => {
-        this.updateChatboxModelOptions();
-      });
-    }
-  }
-
-  /**
-   * Update model options based on selected provider
-   */
-  updateChatboxModelOptions() {
-    const providerSelect = document.getElementById('chatboxLLMProvider');
-    const modelSelect = document.getElementById('chatboxLLMModel');
-
-    if (!providerSelect || !modelSelect) return;
-
-    const selectedProvider = providerSelect.value;
-
-    // Clear existing options
-    modelSelect.innerHTML = '<option value="auto">Auto (Use provider default)</option>';
-
-    // Get LLM configuration if available
-    if (window.llmConfigManager && selectedProvider !== 'auto') {
-      const provider = window.llmConfigManager.providers[selectedProvider];
-
-      if (provider && provider.enabled) {
-        if (provider.models) {
-          Object.entries(provider.models).forEach(([modelId, modelName]) => {
-            const option = document.createElement('option');
-            option.value = modelId;
-            option.textContent = modelName;
-            modelSelect.appendChild(option);
-          });
-        } else if (provider.availableModels) {
-          provider.availableModels.forEach(modelId => {
-            const option = document.createElement('option');
-            option.value = modelId;
-            option.textContent = modelId;
-            modelSelect.appendChild(option);
-          });
-        }
-      } else {
-        const warningOption = document.createElement('option');
-        warningOption.value = 'disabled';
-        warningOption.textContent = '⚠️ Provider not configured';
-        warningOption.disabled = true;
-        modelSelect.appendChild(warningOption);
-      }
-    }
   }
 
   /**

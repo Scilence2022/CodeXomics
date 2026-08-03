@@ -23,6 +23,20 @@ class ChatModelSelector {
     return this.chatManager?.chatBoxSettingsManager || null;
   }
 
+  /**
+   * The live LLMConfigManager. It is owned by ChatManager / GenomeBrowser and is not
+   * published on `window`, so resolve it from its actual owners rather than assuming
+   * a global — reading `window.llmConfigManager` yields undefined and an empty list.
+   */
+  get llmConfig() {
+    return (
+      this.chatManager?.llmConfigManager ||
+      (typeof window !== 'undefined' &&
+        (window.chatManager?.llmConfigManager || window.genomeBrowser?.llmConfigManager)) ||
+      null
+    );
+  }
+
   initialize() {
     if (typeof document === 'undefined') return;
     this.bind();
@@ -31,6 +45,8 @@ class ChatModelSelector {
       // Keep the composer in sync when the model is changed from Agent Settings.
       window.addEventListener('chatboxSettingsChanged', this.handleSettingsChanged);
     }
+
+    this.refreshWhenConfigReady();
   }
 
   bind() {
@@ -39,7 +55,28 @@ class ChatModelSelector {
     if (!this.select) return;
 
     this.select.addEventListener('change', () => this.applySelection());
+    // Rebuild on open. LLM configuration loads asynchronously and can change from
+    // Configure LLMs at any time, so the list is built when it is about to be read
+    // rather than relying on startup ordering.
+    this.select.addEventListener('mousedown', () => this.refresh());
+    this.select.addEventListener('focus', () => this.refresh());
     this.bound = true;
+    this.refresh();
+  }
+
+  /**
+   * Populate once LLM configuration has loaded, so the collapsed control shows the
+   * real model without needing the user to open it first.
+   */
+  async refreshWhenConfigReady() {
+    const llmConfig = this.llmConfig;
+    try {
+      if (llmConfig && typeof llmConfig.waitForInitialization === 'function') {
+        await llmConfig.waitForInitialization();
+      }
+    } catch (error) {
+      console.warn('[ChatModelSelector] LLM config initialization failed:', error);
+    }
     this.refresh();
   }
 
@@ -59,7 +96,8 @@ class ChatModelSelector {
     this.select.innerHTML = '';
     this.select.appendChild(this.createOption('auto::auto', 'Auto'));
 
-    const providers = (typeof window !== 'undefined' && window.llmConfigManager?.providers) || {};
+    const providers = this.llmConfig?.providers || {};
+    let listed = 0;
     for (const [providerKey, providerConfig] of Object.entries(providers)) {
       if (!providerConfig?.enabled) continue;
 
@@ -72,6 +110,14 @@ class ChatModelSelector {
         group.appendChild(this.createOption(`${providerKey}::${modelId}`, modelLabel));
       }
       this.select.appendChild(group);
+      listed += models.length;
+    }
+
+    // Auto on its own is indistinguishable from a broken picker. Say why the list is empty.
+    if (listed === 0) {
+      const hint = this.createOption('auto::auto', 'No models — configure a provider in Options → Configure LLMs');
+      hint.disabled = true;
+      this.select.appendChild(hint);
     }
 
     const desired = `${provider}::${model}`;

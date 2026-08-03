@@ -115,12 +115,10 @@ Options → Configure LLMs
 **Configure Agent Settings:**
 
 - **Mode** — leave multi-agent mode off for a single assistant that plans and calls tools directly, or turn it on to route requests to the specialised agents; enable or disable individual agents here
-- **Model** — provider, model, temperature, and token limits used in both modes
+- **Generation** — temperature, token limits, and timeouts applied in both modes. The model itself is chosen from the picker beside the ChatBox input box; its _Auto_ entry follows the default in **Options → Configure LLMs → Model Selection**
 - **Execution** — function-call rounds, early completion, tool-repetition limits, and timeouts
 - **Context** — system prompt composition and dynamic tool selection
 - **Memory** and **Skills** — memory system and installed agent skills
-
-The model can also be switched inline from the picker beside the ChatBox input box.
 
 **Test Connection:**
 
