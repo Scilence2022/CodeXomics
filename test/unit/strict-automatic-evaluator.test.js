@@ -477,6 +477,52 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    it('ignores a read-only changeset query after a successful annotation update', () => {
+      const test = {
+        id: 'completion-annotation-changeset-query',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: {
+          tool_name: 'update_annotation',
+          parameters: { identifier: 'fakG', updates: { description: 'Updated fakG gene annotation' } },
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            {
+              tool_name: 'update_annotation',
+              parameters: { identifier: 'fakG', updates: { description: 'Updated fakG gene annotation' } },
+            },
+            { tool_name: 'get_annotation_changeset', parameters: { changeSetId: 'cs_1' } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
+    it('ignores read-only per-track settings queries after get_all_track_settings', () => {
+      const test = {
+        id: 'completion-track-settings-queries',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'get_all_track_settings', parameters: {} },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'get_all_track_settings', parameters: {} },
+            { tool_name: 'get_track_settings', parameters: { track_type: 'genes' } },
+            { tool_name: 'get_track_settings', parameters: { track_type: 'gc' } },
+            { tool_name: 'get_track_settings', parameters: { track_type: 'reads' } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('accepts an equivalent blast database-creation tool with an alternative name key', () => {
       const test = {
         id: 'completion-blast-equivalent',
