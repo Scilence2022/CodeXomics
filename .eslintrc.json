@@ -88,6 +88,7 @@
     "PrimerTrackSettingsPanel": "readonly",
     "ProjectXMLHandler": "readonly",
     "ResizableModalManager": "readonly",
+    "SkillsSettingsManager": "readonly",
     "SmartExecutor": "readonly",
     "ToolExecutionTracker": "readonly",
     "TrackRenderer": "readonly",

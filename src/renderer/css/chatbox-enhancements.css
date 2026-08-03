@@ -1191,3 +1191,20 @@
   max-height: 14em;
   overflow-y: auto;
 }
+
+/* ==========================================================================
+   ChatBox action bar
+
+   Buttons are flex: 1 1 0 with a min-width small enough that a full row still
+   fits at the default panel width — so an over-long label is silently clipped
+   instead of wrapping. Raise the floor to the widest label ("MCP Servers")
+   so the row wraps to a new line rather than truncating text.
+   ========================================================================== */
+
+#llmChatPanel .chat-actions {
+  flex-wrap: wrap;
+}
+
+#llmChatPanel .chat-actions .btn {
+  min-width: 92px;
+}

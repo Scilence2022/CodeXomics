@@ -1,0 +1,85 @@
+name: list_skills
+version: 1.0.0
+description: 'List available Agent Skills - expert, multi-step workflows that encode the correct tool chain for a domain task. Use this to discover which skills exist before choosing how to approach a complex request.'
+category: system
+keywords:
+  - skill
+  - skills
+  - workflow
+  - workflows
+  - playbook
+  - procedure
+  - recipe
+  - available skills
+  - list skills
+  - what skills
+priority: 1
+execution:
+  type: client
+  timeout: 10000
+  retries: 2
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    category:
+      type: string
+      description: "Optional category filter (e.g. 'primer_design', 'annotation', 'research', 'sequence_analysis')"
+      default: null
+    query:
+      type: string
+      description: 'Optional free-text filter matched against skill id, name, description, tags, and triggers'
+      default: null
+    include_disabled:
+      type: boolean
+      description: 'Include skills the user has disabled in Skills settings'
+      default: false
+  required: []
+sample_usages:
+  - user_query: 'What skills are available?'
+    tool_call: 'list_skills()'
+    thought: 'User wants to discover the installed expert workflows'
+    expected_result: 'List of skills with descriptions, trigger phrases, and the tools each one uses'
+
+  - user_query: 'Do you have a workflow for primer design?'
+    tool_call: "list_skills(query='primer')"
+    thought: 'User is asking whether a primer-related skill exists'
+    expected_result: 'The primer_design skill with its description and trigger phrases'
+
+  - user_query: 'Show primer design skills'
+    tool_call: "list_skills(category='primer_design')"
+    thought: 'User wants only primer-design-category skills'
+    expected_result: 'Skills in the primer_design category, with their triggers and the tools each one uses'
+relationships:
+  depends_on: []
+  conflicts_with: []
+  enhances: []
+  alternatives:
+    - list_available_tools
+  prerequisites: []
+  follow_up:
+    - get_skill
+metadata:
+  usage_count: 0
+  success_rate: 0
+  avg_execution_time: 0
+  last_used: null
+  tags:
+    - system
+    - skills
+    - discovery
+    - meta
+  complexity: simple
+  usage_pattern: occasional
+  recommendation: 'Use when the user asks what workflows exist, or when a complex request may already have an expert skill defined'
+error_handling:
+  client_error: 'Returns error if the skill registry bridge is unavailable'
+  no_data: 'Returns an empty skill list when no skills are installed'
+returns:
+  success: boolean - Whether operation was successful
+  count: number - Number of skills returned after filtering
+  total_available: number - Total number of installed skills
+  skills: array - Skills with id, description, category, triggers, tools_used, and source
+  hint: string - Reminder to call get_skill before executing a workflow

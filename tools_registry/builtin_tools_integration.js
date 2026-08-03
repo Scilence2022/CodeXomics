@@ -413,6 +413,21 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    // System Tools - Agent Skills
+    this.builtInToolsMap.set('list_skills', {
+      method: 'listSkills',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('get_skill', {
+      method: 'getSkill',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // Navigation & View Control Tools
     this.builtInToolsMap.set('zoom_in', {
       method: 'zoomIn',
@@ -1335,6 +1350,30 @@ class BuiltInToolsIntegration {
         name: 'list_available_tools',
         confidence: 0.85,
         reason: 'Tool listing/discovery keywords detected',
+      });
+    }
+
+    // Check for Agent Skill discovery patterns
+    if (
+      /\b(list|show|display|what|available|which|any)\s+.*?\b(skills?|workflows?|playbooks?)\b/i.test(query) ||
+      /\b(skills?|workflows?|playbooks?)\s+.*?\b(list|available|all|show|exist)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'list_skills',
+        confidence: 0.85,
+        reason: 'Skill listing/discovery keywords detected',
+      });
+    }
+
+    // Check for Agent Skill loading patterns
+    if (
+      /\b(use|run|apply|load|open|follow|execute)\s+.*?\b(skills?|workflows?|playbooks?)\b/i.test(query) ||
+      /\b(skills?|workflows?)\s+.*?\b(for|to)\b/i.test(query)
+    ) {
+      relevantTools.push({
+        name: 'get_skill',
+        confidence: 0.8,
+        reason: 'Skill invocation keywords detected',
       });
     }
 

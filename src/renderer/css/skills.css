@@ -1,0 +1,171 @@
+/* ==========================================================================
+   Agent Skills - Skills tab of the Multi-Agent Settings modal
+   ========================================================================== */
+
+.skills-intro {
+  margin-bottom: 12px;
+}
+
+.skills-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.skills-toolbar .skills-search {
+  flex: 1;
+  min-width: 180px;
+}
+
+.skills-summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.skills-diagnostics {
+  display: none;
+  margin-bottom: 12px;
+}
+
+.skill-diagnostic {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  margin-bottom: 4px;
+  border-left: 3px solid transparent;
+}
+
+.skill-diagnostic-warning {
+  background: var(--bg-tertiary);
+  border-left-color: var(--warning-color, #f59e0b);
+  color: var(--text-primary);
+}
+
+.skill-diagnostic-error {
+  background: var(--bg-tertiary);
+  border-left-color: var(--danger-color, #ef4444);
+  color: var(--text-primary);
+}
+
+.skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.skills-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.skill-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  background: var(--bg-primary);
+  transition: border-color 0.2s ease;
+}
+
+.skill-card:hover {
+  border-color: var(--border-hover);
+}
+
+.skill-card-disabled {
+  opacity: 0.55;
+}
+
+.skill-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.skill-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.skill-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.skill-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.skill-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.skill-badge-builtin {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.skill-badge-user {
+  background: var(--success-color, #10b981);
+  color: #fff;
+}
+
+.skill-description {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.skill-triggers {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.skill-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.skill-meta code {
+  background: var(--bg-tertiary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.skills-help-block {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  margin: 0;
+}

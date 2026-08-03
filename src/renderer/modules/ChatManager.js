@@ -190,6 +190,7 @@ class ChatManager {
       ['restriction', 'RestrictionDigestService'],
       ['gel', 'GelElectrophoresisService'],
       ['task', 'TaskService'],
+      ['skill', 'SkillService'],
     ];
 
     for (const [key, className] of serviceDefinitions) {
@@ -1361,6 +1362,30 @@ class ChatManager {
    * @param {Object} parameters.context - Optional studio context used for relevance scoring
    * @returns {Object} List of available tools organized by category
    */
+  /**
+   * List installed Agent Skills (expert multi-step workflows).
+   * @param {Object} parameters - Optional category/query filters
+   * @returns {Object} Skill index without workflow bodies
+   */
+  async listSkills(parameters = {}) {
+    if (!this.services?.skill) {
+      return { success: false, error: 'Skill service is not available' };
+    }
+    return this.services.skill.listSkills(parameters);
+  }
+
+  /**
+   * Load one Agent Skill's full workflow body on demand.
+   * @param {Object} parameters - Must include skill_id
+   * @returns {Object} Skill metadata plus its workflow body
+   */
+  async getSkill(parameters = {}) {
+    if (!this.services?.skill) {
+      return { success: false, error: 'Skill service is not available' };
+    }
+    return this.services.skill.getSkill(parameters);
+  }
+
   async listAvailableTools(parameters = {}) {
     const {
       category = null,
@@ -4232,6 +4257,10 @@ class ChatManager {
                             <i class="fas fa-microchip"></i>
                             MCP Tools
                         </button>
+                        <button id="chatSkillsBtn" class="btn btn-sm btn-secondary" title="Agent Skills — expert workflows the assistant can load">
+                            <i class="fas fa-book"></i>
+                            Skills
+                        </button>
                     </div>
                     <div class="chat-actions secondary-actions">
                         <button id="chatHistoryBtn" class="btn btn-sm btn-secondary">
@@ -4500,6 +4529,19 @@ class ChatManager {
       if (window.genomeBrowser && window.genomeBrowser.showMCPSettingsModal) {
         window.genomeBrowser.showMCPSettingsModal();
       }
+    });
+
+    // Deep-link to the Skills tab of the Multi-Agent Settings modal rather than
+    // duplicating the panel, so there is one place where skills are managed.
+    document.getElementById('chatSkillsBtn')?.addEventListener('click', () => {
+      const settingsManager = window.multiAgentSettingsManager;
+      if (!settingsManager || typeof settingsManager.showModal !== 'function') {
+        this.showNotification('Skills settings are unavailable in this window', 'warning');
+        return;
+      }
+      settingsManager.currentTab = 'skills';
+      settingsManager.showModal();
+      window.skillsSettingsManager?.render();
     });
 
     // Multi-Agent System event listeners
@@ -10127,6 +10169,8 @@ ${coreTools}
       export_data: () => this.exportData(parameters),
       set_working_directory: () => this.setWorkingDirectory(parameters),
       list_available_tools: () => this.listAvailableTools(parameters),
+      list_skills: () => this.listSkills(parameters),
+      get_skill: () => this.getSkill(parameters),
       download_internet_file: () => this.downloadInternetFile(parameters),
       utility_download_internet_file: () => this.downloadInternetFile(parameters),
       utility_toggle_settings_modal: () => this.toggleSettingsModal(parameters),

@@ -37,6 +37,12 @@ const BUILTIN_TOOL_EXEMPTIONS = {
   // Specialized track toggle dropped from the automatic simple suite.
   toggle_annotation_track:
     'Specialized annotation-track toggle; the generic toggle_track pattern stays covered by the track_auto_* tests.',
+  // Agent Skill discovery tools, deliberately outside the benchmark.
+  // LLMContextService omits the skill index whenever isBenchmarkMode() is true, so these
+  // tools are unreachable during a benchmark run by design; benchmark prompts and the
+  // oracle baseline are unaffected by installed skills. Covered by test/unit/skill-service.test.js.
+  list_skills: 'Agent Skill discovery tool; skills are suppressed during benchmark runs by design.',
+  get_skill: 'Agent Skill loader; skills are suppressed during benchmark runs by design.',
 };
 
 function loadSuites() {

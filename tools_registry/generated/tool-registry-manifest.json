@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-08-02T07:22:21.763Z",
-  "registryHash": "4028d619007f8bf9a7c4f04ca81f4246e557b64e0fcfa23f307f6e153f2380b0",
+  "generatedAt": "2026-08-03T04:55:51.405Z",
+  "registryHash": "ef9a833ddc816b9f6b0ec4bac9ba27c2bdd3dcfab3d71f17aceec749121f0185",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 214,
-    "appTools": 214,
+    "tools": 216,
+    "appTools": 216,
     "userTools": 0,
-    "uniqueTools": 208,
+    "uniqueTools": 210,
     "categories": 18,
-    "builtInTools": 176,
+    "builtInTools": 178,
     "diagnostics": 12
   },
   "categories": {
@@ -132,12 +132,18 @@
       },
       "system": {
         "name": "System Management",
-        "description": "Tools for system operations, interface controls, working directory management, and environment setup",
+        "description": "Tools for system operations, interface controls, working directory management, Agent Skill discovery, and environment setup",
         "icon": "⚙️",
         "priority": 1,
         "color": "#795548",
-        "subcategories": ["directory_management", "environment_setup", "system_configuration", "interface_controls"],
-        "tools_count": 11
+        "subcategories": [
+          "directory_management",
+          "environment_setup",
+          "system_configuration",
+          "interface_controls",
+          "agent_skills"
+        ],
+        "tools_count": 13
       },
       "benchmark": {
         "name": "Benchmark Management",
@@ -20978,6 +20984,112 @@
       }
     },
     {
+      "name": "get_skill",
+      "version": "1.0.0",
+      "description": "Load the full workflow body of one Agent Skill by id. Call this before executing a multi-step task that matches a skill, then follow the returned workflow instead of improvising a tool chain.",
+      "category": "system",
+      "keywords": [
+        "skill",
+        "load skill",
+        "get skill",
+        "use skill",
+        "workflow",
+        "open skill",
+        "apply skill",
+        "run skill"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "description": "Identifier of the skill to load, as reported by list_skills (e.g. 'primer_design')"
+          }
+        },
+        "required": ["skill_id"]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Design primers for lacZ",
+          "tool_call": "get_skill(skill_id='primer_design')",
+          "thought": "The request matches the primer_design skill; load its workflow before running any tools",
+          "expected_result": "Full primer design workflow with ordered steps, preconditions, and output template"
+        },
+        {
+          "user_query": "I need primers covering thrA with 100 bp upstream",
+          "tool_call": "get_skill(skill_id='primer_design')",
+          "thought": "An amplification request with a margin requirement matches the primer_design skill",
+          "expected_result": "Primer design workflow with its ordered steps, parallel quality checks, and output template"
+        },
+        {
+          "user_query": "Use the primer design workflow on lacZ",
+          "tool_call": "get_skill(skill_id='primer_design')",
+          "thought": "User explicitly named a skill",
+          "expected_result": "The primer_design workflow body"
+        }
+      ],
+      "relationships": {
+        "depends_on": ["list_skills"],
+        "conflicts_with": [],
+        "enhances": [],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": []
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["system", "skills", "workflow", "meta"],
+        "complexity": "simple",
+        "usage_pattern": "frequent",
+        "recommendation": "Load a skill whenever the user request matches one of its triggers; never guess a skill workflow from its description alone"
+      },
+      "error_handling": {
+        "client_error": "Returns error if the skill registry bridge is unavailable",
+        "invalid_input": "Returns error listing available skill ids when skill_id does not match an installed skill",
+        "no_data": "Returns error when the skill is disabled in Skills settings"
+      },
+      "returns": {
+        "success": "boolean - Whether operation was successful",
+        "skill_id": "string - Identifier of the loaded skill",
+        "workflow": "object - Executable plan with inputs, preconditions, steps, parallel_groups, outputs, agent_notes",
+        "guide": "string - Markdown explaining the rationale, result interpretation, and troubleshooting",
+        "tools_used": "array - Tools the workflow expects to call",
+        "resources": "array - Supporting files bundled with the skill",
+        "instructions": "string - How to execute the returned workflow"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/get_skill.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "getSkill"
+      },
+      "builtin": {
+        "name": "get_skill",
+        "method": "getSkill",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
       "name": "list_available_tools",
       "version": "1.0.0",
       "description": "List all available tools in the system, organized by category. Use this to discover what functionality is available or to get help with available commands.",
@@ -21104,6 +21216,122 @@
       "builtin": {
         "name": "list_available_tools",
         "method": "listAvailableTools",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "list_skills",
+      "version": "1.0.0",
+      "description": "List available Agent Skills - expert, multi-step workflows that encode the correct tool chain for a domain task. Use this to discover which skills exist before choosing how to approach a complex request.",
+      "category": "system",
+      "keywords": [
+        "skill",
+        "skills",
+        "workflow",
+        "workflows",
+        "playbook",
+        "procedure",
+        "recipe",
+        "available skills",
+        "list skills",
+        "what skills"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Optional category filter (e.g. 'primer_design', 'annotation', 'research', 'sequence_analysis')",
+            "default": null
+          },
+          "query": {
+            "type": "string",
+            "description": "Optional free-text filter matched against skill id, name, description, tags, and triggers",
+            "default": null
+          },
+          "include_disabled": {
+            "type": "boolean",
+            "description": "Include skills the user has disabled in Skills settings",
+            "default": false
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "What skills are available?",
+          "tool_call": "list_skills()",
+          "thought": "User wants to discover the installed expert workflows",
+          "expected_result": "List of skills with descriptions, trigger phrases, and the tools each one uses"
+        },
+        {
+          "user_query": "Do you have a workflow for primer design?",
+          "tool_call": "list_skills(query='primer')",
+          "thought": "User is asking whether a primer-related skill exists",
+          "expected_result": "The primer_design skill with its description and trigger phrases"
+        },
+        {
+          "user_query": "Show primer design skills",
+          "tool_call": "list_skills(category='primer_design')",
+          "thought": "User wants only primer-design-category skills",
+          "expected_result": "Skills in the primer_design category, with their triggers and the tools each one uses"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": [],
+        "alternatives": ["list_available_tools"],
+        "prerequisites": [],
+        "follow_up": ["get_skill"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["system", "skills", "discovery", "meta"],
+        "complexity": "simple",
+        "usage_pattern": "occasional",
+        "recommendation": "Use when the user asks what workflows exist, or when a complex request may already have an expert skill defined"
+      },
+      "error_handling": {
+        "client_error": "Returns error if the skill registry bridge is unavailable",
+        "no_data": "Returns an empty skill list when no skills are installed"
+      },
+      "returns": {
+        "success": "boolean - Whether operation was successful",
+        "count": "number - Number of skills returned after filtering",
+        "total_available": "number - Total number of installed skills",
+        "skills": "array - Skills with id, description, category, triggers, tools_used, and source",
+        "hint": "string - Reminder to call get_skill before executing a workflow"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/list_skills.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listSkills"
+      },
+      "builtin": {
+        "name": "list_skills",
+        "method": "listSkills",
         "category": "system",
         "type": "built-in",
         "priority": 1,
@@ -42961,6 +43189,112 @@
         "source": "builtin_tools_map"
       }
     },
+    "get_skill": {
+      "name": "get_skill",
+      "version": "1.0.0",
+      "description": "Load the full workflow body of one Agent Skill by id. Call this before executing a multi-step task that matches a skill, then follow the returned workflow instead of improvising a tool chain.",
+      "category": "system",
+      "keywords": [
+        "skill",
+        "load skill",
+        "get skill",
+        "use skill",
+        "workflow",
+        "open skill",
+        "apply skill",
+        "run skill"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "description": "Identifier of the skill to load, as reported by list_skills (e.g. 'primer_design')"
+          }
+        },
+        "required": ["skill_id"]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Design primers for lacZ",
+          "tool_call": "get_skill(skill_id='primer_design')",
+          "thought": "The request matches the primer_design skill; load its workflow before running any tools",
+          "expected_result": "Full primer design workflow with ordered steps, preconditions, and output template"
+        },
+        {
+          "user_query": "I need primers covering thrA with 100 bp upstream",
+          "tool_call": "get_skill(skill_id='primer_design')",
+          "thought": "An amplification request with a margin requirement matches the primer_design skill",
+          "expected_result": "Primer design workflow with its ordered steps, parallel quality checks, and output template"
+        },
+        {
+          "user_query": "Use the primer design workflow on lacZ",
+          "tool_call": "get_skill(skill_id='primer_design')",
+          "thought": "User explicitly named a skill",
+          "expected_result": "The primer_design workflow body"
+        }
+      ],
+      "relationships": {
+        "depends_on": ["list_skills"],
+        "conflicts_with": [],
+        "enhances": [],
+        "alternatives": [],
+        "prerequisites": [],
+        "follow_up": []
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["system", "skills", "workflow", "meta"],
+        "complexity": "simple",
+        "usage_pattern": "frequent",
+        "recommendation": "Load a skill whenever the user request matches one of its triggers; never guess a skill workflow from its description alone"
+      },
+      "error_handling": {
+        "client_error": "Returns error if the skill registry bridge is unavailable",
+        "invalid_input": "Returns error listing available skill ids when skill_id does not match an installed skill",
+        "no_data": "Returns error when the skill is disabled in Skills settings"
+      },
+      "returns": {
+        "success": "boolean - Whether operation was successful",
+        "skill_id": "string - Identifier of the loaded skill",
+        "workflow": "object - Executable plan with inputs, preconditions, steps, parallel_groups, outputs, agent_notes",
+        "guide": "string - Markdown explaining the rationale, result interpretation, and troubleshooting",
+        "tools_used": "array - Tools the workflow expects to call",
+        "resources": "array - Supporting files bundled with the skill",
+        "instructions": "string - How to execute the returned workflow"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/get_skill.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "getSkill"
+      },
+      "builtin": {
+        "name": "get_skill",
+        "method": "getSkill",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "list_available_tools": {
       "name": "list_available_tools",
       "version": "1.0.0",
@@ -43088,6 +43422,122 @@
       "builtin": {
         "name": "list_available_tools",
         "method": "listAvailableTools",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "list_skills": {
+      "name": "list_skills",
+      "version": "1.0.0",
+      "description": "List available Agent Skills - expert, multi-step workflows that encode the correct tool chain for a domain task. Use this to discover which skills exist before choosing how to approach a complex request.",
+      "category": "system",
+      "keywords": [
+        "skill",
+        "skills",
+        "workflow",
+        "workflows",
+        "playbook",
+        "procedure",
+        "recipe",
+        "available skills",
+        "list skills",
+        "what skills"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 2,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Optional category filter (e.g. 'primer_design', 'annotation', 'research', 'sequence_analysis')",
+            "default": null
+          },
+          "query": {
+            "type": "string",
+            "description": "Optional free-text filter matched against skill id, name, description, tags, and triggers",
+            "default": null
+          },
+          "include_disabled": {
+            "type": "boolean",
+            "description": "Include skills the user has disabled in Skills settings",
+            "default": false
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "What skills are available?",
+          "tool_call": "list_skills()",
+          "thought": "User wants to discover the installed expert workflows",
+          "expected_result": "List of skills with descriptions, trigger phrases, and the tools each one uses"
+        },
+        {
+          "user_query": "Do you have a workflow for primer design?",
+          "tool_call": "list_skills(query='primer')",
+          "thought": "User is asking whether a primer-related skill exists",
+          "expected_result": "The primer_design skill with its description and trigger phrases"
+        },
+        {
+          "user_query": "Show primer design skills",
+          "tool_call": "list_skills(category='primer_design')",
+          "thought": "User wants only primer-design-category skills",
+          "expected_result": "Skills in the primer_design category, with their triggers and the tools each one uses"
+        }
+      ],
+      "relationships": {
+        "depends_on": [],
+        "conflicts_with": [],
+        "enhances": [],
+        "alternatives": ["list_available_tools"],
+        "prerequisites": [],
+        "follow_up": ["get_skill"]
+      },
+      "metadata": {
+        "usage_count": 0,
+        "success_rate": 0,
+        "avg_execution_time": 0,
+        "last_used": null,
+        "tags": ["system", "skills", "discovery", "meta"],
+        "complexity": "simple",
+        "usage_pattern": "occasional",
+        "recommendation": "Use when the user asks what workflows exist, or when a complex request may already have an expert skill defined"
+      },
+      "error_handling": {
+        "client_error": "Returns error if the skill registry bridge is unavailable",
+        "no_data": "Returns an empty skill list when no skills are installed"
+      },
+      "returns": {
+        "success": "boolean - Whether operation was successful",
+        "count": "number - Number of skills returned after filtering",
+        "total_available": "number - Total number of installed skills",
+        "skills": "array - Skills with id, description, category, triggers, tools_used, and source",
+        "hint": "string - Reminder to call get_skill before executing a workflow"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/list_skills.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "listSkills"
+      },
+      "builtin": {
+        "name": "list_skills",
+        "method": "listSkills",
         "category": "system",
         "type": "built-in",
         "priority": 1,
@@ -45171,6 +45621,26 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "list_skills",
+      "method": "listSkills",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "get_skill",
+      "method": "getSkill",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "zoom_in",
       "method": "zoomIn",
       "category": "navigation",
@@ -46926,6 +47396,26 @@
     "list_available_tools": {
       "name": "list_available_tools",
       "method": "listAvailableTools",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "list_skills": {
+      "name": "list_skills",
+      "method": "listSkills",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "get_skill": {
+      "name": "get_skill",
+      "method": "getSkill",
       "category": "system",
       "type": "built-in",
       "priority": 1,

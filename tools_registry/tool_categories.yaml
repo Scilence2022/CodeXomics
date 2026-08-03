@@ -146,7 +146,7 @@ categories:
 
   system:
     name: 'System Management'
-    description: 'Tools for system operations, interface controls, working directory management, and environment setup'
+    description: 'Tools for system operations, interface controls, working directory management, Agent Skill discovery, and environment setup'
     icon: '⚙️'
     priority: 1
     color: '#795548'
@@ -155,7 +155,8 @@ categories:
       - 'environment_setup'
       - 'system_configuration'
       - 'interface_controls'
-    tools_count: 11
+      - 'agent_skills'
+    tools_count: 13
 
   benchmark:
     name: 'Benchmark Management'
