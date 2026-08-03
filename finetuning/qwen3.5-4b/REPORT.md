@@ -674,6 +674,14 @@ v4 完成了数据层改造（多方案 oracle + 完成度回放门）并验证�
 - 仍缺 `genomeName: 'ecoli_nucl'`（指令明确命名了数据库）→ 已更新 `blast_create_quick_db_for_current_genome` 工具描述（“用户指定数据库名时必须传 genomeName”）并重新生成 registry manifest；该参数补齐无需重训，下次应用内评测应生效。
 - 其余复杂失败（`protein_auto_complex_01` 用 `uniprot_search`、`annotation_auto_complex_02` 用 `batch_create_annotations`×4、`analysis_auto_01/03`、`task_auto_complex_01` 等）为模型选择/参数波动，属下一轮数据方向。
 
+### 应用内重跑：`blast_auto_complex_04` 超时 = NCBI 网络封锁（工具/环境问题）
+
+V6 应用内复杂 27/29，唯一 error 为 `blast_auto_complex_04`（300s 超时）。模型行为完全正确：`blast_detect_sequence_type` → `blast_search(blastn/nt/maxTargets 5)` → 失败重试 → 切换 `blast_search_online`，但搜索从未返回（`TypeError: Failed to fetch`）。
+
+- **根因**：本机到 NCBI `blast.ncbi.nlm.nih.gov/blast/Blast.cgi` 的 POST 被拒——curl 浏览器 UA 返回 **HTTP 403**、裸请求空响应；根路径 301 可通。属网络环境封锁，不是模型选错工具，也不是 CORS 可修复。
+- **工具关系**：`blast_search` 与 `blast_search_online` 是同一 NCBI 在线路径的重复封装（都走 `BlastFunctionTools.executeOnlineBlastSearch → BlastManager.executeNCBIBlast → Blast.cgi`），仅描述/超时不同；已在工具描述中明确 alias 关系。
+- **修复**：`blast_auto_complex_04` 加 `assertCallOnly: true`（与 `util_auto_01`/`blast_auto_05` 同策略）——只评 4 步工作流的工具选择与参数，不执行真实 NCBI 调用；call-only 模式下搜索立即“成功”，模型可继续 filter/export。工具描述同步更新并重新生成 registry manifest。
+
 ## DeepSeek 清零：简单/复杂完成度 0-1 错误（2026-08-02 终版二）
 
 > ⚠️ 本节为**离线审计口径**；官方应用内真实执行 Benchmark 结果为 153/172（89.0%）、简单 127/143（88.8%）、复杂 26/29（89.7%），离线"0-1 错误"不代表应用内成绩。

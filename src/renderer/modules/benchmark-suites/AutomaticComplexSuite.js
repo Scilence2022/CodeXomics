@@ -1119,6 +1119,12 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         bonusScore: 3,
         timeout: 180000,
         earlyReturn: true,
+        // Scored on the four-step workflow the model plans, not on the NCBI
+        // side effect: blast_search against nt is an online call that can be
+        // blocked by the user's network (NCBI returns 403/empty replies from
+        // some regions), which would otherwise starve the filter/export steps.
+        // Same policy as the online-BLAST and internet-download call-only tests.
+        assertCallOnly: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
 
