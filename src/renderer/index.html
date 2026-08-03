@@ -4871,7 +4871,7 @@ Supported formats:
             <div class="modal-body">
                 <div class="multi-agent-tabs">
                     <button class="tab-button active" data-tab="system">Mode</button>
-                    <button class="tab-button" data-tab="model">Model</button>
+                    <button class="tab-button" data-tab="model">Generation</button>
                     <button class="tab-button" data-tab="execution">Execution</button>
                     <button class="tab-button" data-tab="context">Context</button>
                     <button class="tab-button" data-tab="memory">Memory</button>
@@ -5002,55 +5002,23 @@ Supported formats:
                         <div class="form-section">
                             <h4>ℹ️ Where other settings live</h4>
                             <div class="info-box">
-                                <p><strong>Model, temperature, token limits:</strong> ChatBox Settings → Models. Agents
-                                    use the same model configuration as the ChatBox.</p>
-                                <p><strong>Memory system:</strong> ChatBox Settings → Memory.</p>
-                                <p><strong>Rounds, timeouts, retry limits:</strong> ChatBox Settings → Behavior.</p>
-                                <p><strong>API keys and providers:</strong> Options → Configure LLMs.</p>
+                                <p><strong>Which model answers:</strong> the selector beside the ChatBox input box.
+                                    Its <em>Auto</em> entry follows the default below.</p>
+                                <p><strong>API keys, providers, default model:</strong> Options → Configure LLMs.</p>
+                                <p><strong>Temperature, token limits, timeouts:</strong> the Generation tab here.</p>
+                                <p><strong>Chat display, history, window:</strong> ChatBox Settings.</p>
                             </div>
                         </div>
                     </div>
 
 
-                    <!-- Model Tab -->
+                    <!-- Generation Tab -->
                     <div id="model-tab" class="tab-content">
                             <div class="form-section">
-                                <h4>🤖 Model Selection</h4>
-                                <div class="form-group">
-                                    <label for="chatboxModelType">Primary Model Type:</label>
-                                    <select id="chatboxModelType" class="select">
-                                        <option value="auto">Auto (Use main LLM)</option>
-                                        <option value="reasoning">Reasoning Model</option>
-                                        <option value="task">Task Model</option>
-                                        <option value="code">Code Model</option>
-                                        <option value="multimodal">Multimodal Model</option>
-                                    </select>
-                                    <small class="help-text">Choose the primary model type for ChatBox conversations. Configure specific models in Options → Configure LLMs → Model Selection.</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="chatboxLLMProvider">Provider Override:</label>
-                                    <select id="chatboxLLMProvider" class="select">
-                                        <option value="auto">Auto (Use model type default)</option>
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic">Anthropic (Claude)</option>
-                                        <option value="google">Google (Gemini)</option>
-                                        <option value="deepseek">DeepSeek</option>
-                                        <option value="siliconflow">SiliconFlow</option>
-                                        <option value="openrouter">OpenRouter</option>
-                                        <option value="local">Custom Endpoint</option>
-                                    </select>
-                                    <small class="help-text">Override the provider for ChatBox conversations (optional)</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="chatboxLLMModel">Model Override:</label>
-                                    <select id="chatboxLLMModel" class="select">
-                                        <option value="auto">Auto (Use provider default)</option>
-                                    </select>
-                                    <small class="help-text">Override the specific model for ChatBox conversations (optional)</small>
-                                </div>
-                                
+                                <h4>🎛️ Generation</h4>
+                                <p class="help-text">These apply to whichever model is active. Pick the model itself
+                                    from the selector beside the ChatBox input box, or set the default in
+                                    <strong>Options → Configure LLMs → Model Selection</strong>.</p>
                                 <div class="form-group">
                                     <label for="chatboxLLMTemperature">Temperature:</label>
                                     <div class="slider-container">
@@ -5096,9 +5064,9 @@ Supported formats:
                             <div class="form-section">
                                 <h4>ℹ️ Configuration Info</h4>
                                 <div class="info-box">
-                                    <p><strong>Model Configuration:</strong> To configure specific models for each type, go to <strong>Options → Configure LLMs → Model Selection</strong>.</p>
+                                    <p><strong>Choosing a model:</strong> the selector beside the ChatBox input box switches the model for the current conversation; its <em>Auto</em> entry follows the default set in <strong>Options → Configure LLMs → Model Selection</strong>.</p>
                                     <p><strong>API Keys:</strong> API keys are configured in the main LLM configuration.</p>
-                                    <p><strong>Scope:</strong> These settings apply to both single-agent and multi-agent mode. The model can also be switched from the picker beside the ChatBox input box.</p>
+                                    <p><strong>Scope:</strong> These parameters apply to both single-agent and multi-agent mode.</p>
                                 </div>
                             </div>
                     </div>
