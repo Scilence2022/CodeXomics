@@ -124,4 +124,11 @@ describe('benchmark runtime hardening', () => {
     expect(config).toContain('[LLM][local] non-streaming request start');
     expect(config).toContain('streaming request start');
   });
+
+  it('exposes a 10-minute global test timeout option in the benchmark UI', () => {
+    const source = readSource('src/renderer/modules/BenchmarkUI.js');
+
+    const occurrences = source.match(/<option value="600000">10 minutes<\/option>/g) || [];
+    expect(occurrences.length).toBeGreaterThanOrEqual(2);
+  });
 });
