@@ -832,6 +832,7 @@ class BenchmarkUI {
                                             <option value="180000">3 minutes</option>
                                             <option value="240000">4 minutes</option>
                                             <option value="300000" selected>5 minutes</option>
+                                            <option value="600000">10 minutes</option>
                                         </select>
                                         <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
                                             ⏱️ Global timeout or use individual test settings
@@ -4586,6 +4587,7 @@ class BenchmarkUI {
                                 <option value="180000">3 minutes</option>
                                 <option value="240000">4 minutes</option>
                                 <option value="300000">5 minutes</option>
+                                <option value="600000">10 minutes</option>
                             </select>
                         </div>
                     </div>
