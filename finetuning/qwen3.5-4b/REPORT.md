@@ -640,6 +640,17 @@ v4 完成了数据层改造（多方案 oracle + 完成度回放门）并验证�
 
 修复后按应用内交互数据重评（完成度+真实执行口径，模拟修复生效）：4 条全部 PASS（`util_auto_01` 5/5、`data_auto_01` 5/5、`protein_auto_complex_01` 15/15、`file_auto_complex_02` 10/10）。下一次应用内重跑应达到 **172/172**。
 
+## 应用内重跑二：简单残留 2 条均为只读多余调用（2026-08-03）
+
+重跑后仅剩简单 2 条失败（141/143）：
+
+| 用例               | 现象                                                                                | 根因                                           |
+| ------------------ | ----------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `annot_auto_05`    | 4/5，`update_annotation`（参数完全正确、执行成功）后追加 `get_annotation_changeset` | 只读查询不在完成度容差名单 → "Unexpected call" |
+| `settings_auto_02` | 4/5，`get_all_track_settings`（正确、成功）后追加 `get_track_settings` ×10          | 同上，逐轨道只读查询不在名单                   |
+
+修复：`readOnlyToolNames` 补充 `get_annotation_changeset`/`list_annotation_changesets`/`get_annotation_audit`/`get_annotation_research_workflow`/`get_track_settings`。重评两条均 PASS（5/5）。模型本身行为合理（更新后验证 changeset；获取全部设置后逐轨道查看），属 Benchmark 容差缺口而非模型错误。
+
 ## DeepSeek 清零：简单/复杂完成度 0-1 错误（2026-08-02 终版二）
 
 > ⚠️ 本节为**离线审计口径**；官方应用内真实执行 Benchmark 结果为 153/172（89.0%）、简单 127/143（88.8%）、复杂 26/29（89.7%），离线"0-1 错误"不代表应用内成绩。
