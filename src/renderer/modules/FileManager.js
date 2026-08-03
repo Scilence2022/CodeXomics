@@ -1011,7 +1011,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
         this.genomeBrowser.updateStatus(`Parsing GenBank file... ${progress}%`);
 
         // Allow UI to update for large files
-        if (totalLines > 50000) {
+        if (totalLines > 500000) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
       }

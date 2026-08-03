@@ -420,7 +420,7 @@ class StandardClaudeMCPServer extends EventEmitter {
   }
 
   _executionHopTimeoutMs(executionContext) {
-    const maximum = this.mode === 'agent' ? 120000 : 30000;
+    const maximum = this.mode === 'agent' ? 120000 : 120000;
     const requestDeadline = Number(executionContext?.requestDeadline);
     if (!Number.isFinite(requestDeadline)) return maximum;
     const remaining = Math.floor(requestDeadline - Date.now());
@@ -534,7 +534,7 @@ class StandardClaudeMCPServer extends EventEmitter {
 
       try {
         const baseExecutionContext = this._executionContextFromRequestExtra(extra);
-        const timeout = this.mode === 'agent' ? 120000 : 30000;
+        const timeout = this.mode === 'agent' ? 120000 : 120000;
         const executionContext = this._executionContextWithDeadline(baseExecutionContext, timeout);
         this._assertToolPermission(toolName, executionContext);
         // Agent mode: intercept all tool calls and route through the agent
@@ -1207,7 +1207,7 @@ class StandardClaudeMCPServer extends EventEmitter {
 
       case 'tools/call':
         try {
-          const timeoutMs = this.mode === 'agent' ? 120000 : 30000;
+          const timeoutMs = this.mode === 'agent' ? 120000 : 120000;
           const executionContext = this._executionContextWithDeadline(
             this._executionContext(sessionValidation),
             timeoutMs
@@ -1595,7 +1595,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           const startTime = Date.now();
 
           try {
-            const timeoutMs = this.mode === 'agent' ? 120000 : 30000;
+            const timeoutMs = this.mode === 'agent' ? 120000 : 120000;
             const executionContext = this._executionContextWithDeadline(
               this._executionContext(req.mcpSession),
               timeoutMs
