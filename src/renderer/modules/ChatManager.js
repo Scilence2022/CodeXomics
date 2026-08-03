@@ -254,7 +254,7 @@ class ChatManager {
         // Set global reference for settings modal
         window.chatBoxSettingsManager = this.chatBoxSettingsManager;
 
-        // Listen for Multi-Agent Settings changes
+        // Listen for Agent Settings changes
         window.addEventListener('multiAgentSettingsChanged', event => {
           this.updateMultiAgentToggleButton();
         });
@@ -635,7 +635,7 @@ class ChatManager {
     this.agentSystemEnabled = newState;
     this.agentSystemSettings.enabled = newState;
 
-    // Update Multi-Agent Settings
+    // Update Agent Settings
     if (this.configManager) {
       this.configManager.set('multiAgentSettings.multiAgentSystemEnabled', newState);
     }
@@ -4508,7 +4508,7 @@ class ChatManager {
       }
     });
 
-    // Deep-link to the Skills tab of the Multi-Agent Settings modal rather than
+    // Deep-link to the Skills tab of the Agent Settings modal rather than
     // duplicating the panel, so there is one place where skills are managed.
     document.getElementById('chatSkillsBtn')?.addEventListener('click', () => {
       const settingsManager = window.multiAgentSettingsManager;
