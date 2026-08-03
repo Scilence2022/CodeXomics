@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-08-03T04:55:51.405Z",
-  "registryHash": "ef9a833ddc816b9f6b0ec4bac9ba27c2bdd3dcfab3d71f17aceec749121f0185",
+  "generatedAt": "2026-08-03T14:56:21.607Z",
+  "registryHash": "cab9a58805533bc83f6e4861fbbc387aea570b52ae606945856aabfaa96591fb",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -6330,7 +6330,7 @@
           },
           "genomeName": {
             "type": "string",
-            "description": "Custom name for genome identification (optional, auto-detected if not provided)"
+            "description": "Custom database name. When the user names the database (for example \"create a database named ecoli_nucl\"), pass that exact name in genomeName so the later search can target it; if no name is given, it is auto-detected from the loaded genome."
           }
         },
         "required": []
@@ -28992,7 +28992,7 @@
           },
           "genomeName": {
             "type": "string",
-            "description": "Custom name for genome identification (optional, auto-detected if not provided)"
+            "description": "Custom database name. When the user names the database (for example \"create a database named ecoli_nucl\"), pass that exact name in genomeName so the later search can target it; if no name is given, it is auto-detected from the loaded genome."
           }
         },
         "required": []

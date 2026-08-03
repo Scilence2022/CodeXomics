@@ -1,0 +1,8 @@
+FROM ../fused-hf-v6
+
+RENDERER qwen3.5
+PARSER qwen3.5
+
+PARAMETER temperature 0
+
+LICENSE """Apache License 2.0"""

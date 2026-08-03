@@ -31,7 +31,11 @@ parameters:
       default: true
     genomeName:
       type: string
-      description: Custom name for genome identification (optional, auto-detected if not provided)
+      description: >-
+        Custom database name. When the user names the database (for example
+        "create a database named ecoli_nucl"), pass that exact name in
+        genomeName so the later search can target it; if no name is given, it
+        is auto-detected from the loaded genome.
   required: []
 sample_usages:
   - user_query: 'Create BLAST databases for current genome'
