@@ -2641,12 +2641,30 @@ class ChatManager {
           console.log(`Centering on position ${center} with ±${halfRange}bp range: ${finalStart}-${finalEnd}`);
         }
 
-        if (finalStart && finalEnd) {
-          // Check if chromosome exists
-          if (!genomeBrowser.currentSequence || !genomeBrowser.currentSequence[chromosome]) {
-            throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
-          }
+        // Check if chromosome exists before defaulting any coordinates.
+        if (!genomeBrowser.currentSequence || !genomeBrowser.currentSequence[chromosome]) {
+          throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
+        }
 
+        // A chromosome-only call (no start/end/position) legitimately means
+        // "open a tab for the current view" when that chromosome is the one
+        // being displayed; default to the current view range instead of
+        // failing the tool for a perfectly reasonable request.
+        if (!finalStart || !finalEnd) {
+          const currentPosition = genomeBrowser.currentPosition;
+          if (
+            genomeBrowser.currentChromosome === chromosome &&
+            currentPosition &&
+            Number.isFinite(currentPosition.start) &&
+            Number.isFinite(currentPosition.end)
+          ) {
+            finalStart = currentPosition.start;
+            finalEnd = currentPosition.end;
+            console.log(`[ChatManager] openNewTab chromosome-only: using current view ${finalStart}-${finalEnd}`);
+          }
+        }
+
+        if (finalStart && finalEnd) {
           // Use the UI response function instead of direct manager access
           tabId = genomeBrowser.tabManager.createTabForPosition(chromosome, finalStart, finalEnd, finalTitle);
           finalTitle = finalTitle || `${chromosome}:${finalStart.toLocaleString()}-${finalEnd.toLocaleString()}`;
