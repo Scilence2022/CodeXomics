@@ -1602,7 +1602,10 @@ class ProteinService {
         const maxAttempts = 60; // 5 minutes max (5 second intervals)
         let status = 'RUNNING';
 
-        while (status === 'RUNNING' && attempts < maxAttempts) {
+        // EBI legitimately reports QUEUED while a job waits in the service
+        // queue; treating it as terminal made the tool throw a spurious
+        // "timeout" a few seconds after submission whenever EBI was busy.
+        while ((status === 'RUNNING' || status === 'QUEUED') && attempts < maxAttempts) {
           await this.waitUnlessAborted(5000); // Wait 5 seconds
 
           // This poll can outlast the turn that started it — five minutes is longer
