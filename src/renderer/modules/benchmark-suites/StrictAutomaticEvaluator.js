@@ -65,6 +65,10 @@ class StrictAutomaticEvaluator {
       // database either tool completes the task.
       blast_search: ['blast_search_online'],
       blast_search_online: ['blast_search'],
+      // translate_sequence is a backward-compatible alias whose schema says
+      // "prefer translate_dna"; either tool completes a DNA translation.
+      translate_sequence: ['translate_dna'],
+      translate_dna: ['translate_sequence'],
     };
 
     // Completion-mode parameter fallbacks: when the oracle expects key K but
