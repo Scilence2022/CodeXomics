@@ -77,6 +77,11 @@ class StrictAutomaticEvaluator {
       // 2kb window, and a start-only call centers the same way. A schema-valid
       // call with either key completes "navigate to position N".
       navigate_to_position: { position: ['start'], start: ['position'] },
+      // export_bed_format documents both `export_range` and an explicit
+      // region (start_position/end_position); a schema-valid region call
+      // completes "export the current view region" just like export_range.
+      // The grouped alternative requires both coordinate keys to be present.
+      export_bed_format: { exportRange: [['startPosition', 'endPosition']] },
     };
 
     // Read-only tools never mutate state, so an extra call to one of them does
@@ -645,9 +650,15 @@ class StrictAutomaticEvaluator {
     const alternatives =
       this.completionParameterAlternatives[normalizedTool]?.[this.normalizeParameterKey(expectedKey)];
     if (!Array.isArray(alternatives)) return false;
-    return alternatives.some(key => {
-      const candidate = this.getActualParameter(actual, key, toolName);
-      return candidate.found && this.isConcreteContextValue(candidate.value, null);
+    return alternatives.some(alternative => {
+      // A single key ("start") or a grouped alternative (["startPosition",
+      // "endPosition"]) both express the same concept; grouped alternatives
+      // require every key to be supplied with a concrete value.
+      const keys = Array.isArray(alternative) ? alternative : [alternative];
+      return keys.every(key => {
+        const candidate = this.getActualParameter(actual, key, toolName);
+        return candidate.found && this.isConcreteContextValue(candidate.value, null);
+      });
     });
   }
 

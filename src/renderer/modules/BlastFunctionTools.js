@@ -1252,7 +1252,7 @@ class BlastFunctionTools {
       // Create nucleotide database
       if (createNucleotide) {
         try {
-          const nuclResult = await this.blastManager.createQuickDatabase('nucl');
+          const nuclResult = await this.blastManager.createQuickDatabase('nucl', genomeName || null);
           if (nuclResult?.success) {
             const nuclDb = nuclResult.database;
             if (nuclDb?.id) {
@@ -1275,7 +1275,15 @@ class BlastFunctionTools {
       // Create protein database
       if (createProtein) {
         try {
-          const protResult = await this.blastManager.createQuickDatabase('prot');
+          // When the user names the database, use that exact name; when both
+          // types are requested with a name, keep the protein database
+          // distinct with the conventional _protein suffix.
+          const preferredProtName = genomeName
+            ? createNucleotide && createProtein
+              ? `${genomeName}_protein`
+              : genomeName
+            : null;
+          const protResult = await this.blastManager.createQuickDatabase('prot', preferredProtName);
           if (protResult?.success) {
             const protDb = protResult.database;
             if (protDb?.id) {

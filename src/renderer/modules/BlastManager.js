@@ -1701,7 +1701,7 @@ class BlastManager {
   }
 
   // Quick database creation for current genome
-  async createQuickDatabase(dbType) {
+  async createQuickDatabase(dbType, preferredDbName = null) {
     let dbId; // Define at function scope for error handler
 
     try {
@@ -1731,8 +1731,10 @@ class BlastManager {
       }
 
       // Use the generated FASTA basename as the database name so user-facing
-      // database entries match the files created on disk.
-      const dbName = this.getQuickDatabaseBaseName(genomeName, dbType);
+      // database entries match the files created on disk. When the caller
+      // explicitly names the database (genomeName in the quick tool), honor
+      // that exact name instead so a later blast_search_local can target it.
+      const dbName = preferredDbName || this.getQuickDatabaseBaseName(genomeName, dbType);
       dbId = dbName;
 
       // Generate FASTA content based on database type
