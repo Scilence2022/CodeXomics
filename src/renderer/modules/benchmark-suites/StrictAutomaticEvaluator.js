@@ -378,6 +378,29 @@ class StrictAutomaticEvaluator {
     if (this.isPlaceholder(expectedValue)) return this.isConcreteContextValue(actual, expectedValue);
     if (Object.is(actual, expectedValue)) return true;
 
+    // Schema-documented multi-value parameters (e.g. load_wig_tracks.filePaths)
+    // accept a single string or a one-element array; treat the two spellings
+    // as equivalent in completion mode so either valid form satisfies the
+    // oracle.
+    if (this.completionMode) {
+      if (
+        typeof expectedValue === 'string' &&
+        Array.isArray(actual) &&
+        actual.length === 1 &&
+        actual[0] === expectedValue
+      ) {
+        return true;
+      }
+      if (
+        typeof actual === 'string' &&
+        Array.isArray(expectedValue) &&
+        expectedValue.length === 1 &&
+        expectedValue[0] === actual
+      ) {
+        return true;
+      }
+    }
+
     if (context.toolName === 'toggle_track' && context.parameterKey === 'trackName') {
       return this.normalizeTrackName(actual) === this.normalizeTrackName(expectedValue);
     }
@@ -1083,7 +1106,11 @@ class StrictAutomaticEvaluator {
         })
       : sequence.unexpectedIndexes;
     const unexpectedCalls = unexpectedIndexes.map(index => calls[index]);
-    const expectedObservedCalls = sequence.matches.filter(match => match.callObserved);
+    // Execution evidence must follow the parameter-matched call, not the
+    // first call with the same tool name: when the model tries an expected
+    // tool, fails, then corrects the arguments on a second instance, the
+    // successful corrected call is the one that satisfies the oracle.
+    const expectedObservedCalls = argumentMatches.filter(match => match.callObserved);
     const executionObservedCount = expectedObservedCalls.filter(
       match => calls[match.actualIndex].executionObserved
     ).length;
