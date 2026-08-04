@@ -2044,6 +2044,7 @@ For data export requests:
 • **"export proteins" → use export_protein_fasta**
 • **"export annotations" → use export_gff_annotations for GFF or export_bed_format for BED**
 • **"export current view" → use export_current_view_fasta**
+• **export_data is a generic fallback only. Prefer the format-specific tool above; if you do call export_data, always pass format plus filename/auto_save.**
 • **IMPORTANT: ALWAYS set auto_save=true by default when calling ANY export tool. This bypasses the save dialog prompt which blocks LLM execution. Only omit auto_save (or set to false) if the user explicitly asks to choose a save location.**
 • **The filename parameter supports absolute paths (e.g., "/Users/user/output/genome.fasta") or relative paths (resolved against CWD). Use absolute paths when you need a specific output directory.**
 • Examples: 

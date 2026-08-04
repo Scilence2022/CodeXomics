@@ -21,47 +21,68 @@ function loadViaWindow(relativePath) {
 describe('ChatManager benchmark tool execution fixes', () => {
   const ChatManager = require('../../src/renderer/modules/ChatManager.js');
 
-  it('export_data defaults to genbank when no format is supplied', async () => {
+  // export_data used to call ExportManager's menu handlers, which save through an
+  // anchor download with a hard-coded filename — a tool call could only ever open a
+  // native save dialog. It now delegates to the same FileOperationService exports the
+  // export_* tools use, so filename/auto_save are honored.
+  function createExportDataManager() {
     const manager = Object.create(ChatManager.prototype);
-    const exportAsGenBank = vi.fn(() => ({ ok: true }));
-    manager.app = {
-      exportManager: { exportAsGenBank, exportAsFasta: vi.fn(), exportAsGFF: vi.fn(), exportAsBED: vi.fn() },
+    const exportManager = {
+      exportAsGenBank: vi.fn(),
+      exportAsFasta: vi.fn(),
+      exportAsGFF: vi.fn(),
+      exportAsBED: vi.fn(),
     };
+    const fileService = {
+      exportGenBankFormat: vi.fn(async () => ({ success: true, file_path: '/tmp/genome.gbk' })),
+      exportFastaSequence: vi.fn(async () => ({ success: true, file_path: '/tmp/genome.fasta' })),
+      exportGffAnnotations: vi.fn(async () => ({ success: true, file_path: '/tmp/features.gff3' })),
+      exportBedFormat: vi.fn(async () => ({ success: true, file_path: '/tmp/features.bed' })),
+      exportCdsFasta: vi.fn(async () => ({ success: true })),
+      exportProteinFasta: vi.fn(async () => ({ success: true })),
+      shouldAutoSaveExport: params => Boolean(params.auto_save || params.filename),
+      getExportFilename: (params, fallback) => params.filename || fallback,
+      saveExportContent: vi.fn(async (content, filename) => ({ success: true, filePath: filename })),
+    };
+    manager.app = { exportManager, getSequenceForRegion: vi.fn(async () => 'ACGT') };
+    manager.services = { file: fileService };
+    return { manager, exportManager, fileService };
+  }
 
-    const result = await manager.exportData({});
+  it('export_data defaults to genbank when no format is supplied', async () => {
+    const { manager, exportManager, fileService } = createExportDataManager();
 
-    expect(exportAsGenBank).toHaveBeenCalled();
-    expect(result.success ?? true).toBe(true);
+    const result = await manager.exportData({ auto_save: true, filename: '/tmp/genome.gbk' });
+
+    expect(fileService.exportGenBankFormat).toHaveBeenCalled();
+    expect(exportManager.exportAsGenBank).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
     expect(result.format).toBe('genbank');
-    expect(result.exported).toBe(true);
+    expect(result.delegated_tool).toBe('export_genbank_format');
   });
 
   it('export_data still honors an explicit format', async () => {
-    const manager = Object.create(ChatManager.prototype);
-    const exportAsFasta = vi.fn(() => ({ ok: true }));
-    manager.app = {
-      exportManager: { exportAsGenBank: vi.fn(), exportAsFasta, exportAsGFF: vi.fn(), exportAsBED: vi.fn() },
-      getSequenceForRegion: vi.fn(async () => 'ACGT'),
-    };
+    const { manager, exportManager } = createExportDataManager();
 
     const result = await manager.exportData({ format: 'fasta', chromosome: 'U00096', start: 1, end: 4 });
 
-    expect(exportAsFasta).not.toHaveBeenCalled();
+    expect(exportManager.exportAsFasta).not.toHaveBeenCalled();
     expect(result.format).toBe('fasta');
+    expect(result.content).toBe('>U00096:1-4\nACGT\n');
     expect(manager.app.getSequenceForRegion).toHaveBeenCalledWith('U00096', 1, 4);
   });
 
-  it('export_data without region coordinates uses the ExportManager fasta export', async () => {
-    const manager = Object.create(ChatManager.prototype);
-    const exportAsFasta = vi.fn(() => ({ ok: true }));
-    manager.app = {
-      exportManager: { exportAsGenBank: vi.fn(), exportAsFasta, exportAsGFF: vi.fn(), exportAsBED: vi.fn() },
-    };
+  it('export_data without region coordinates exports the whole genome without a dialog', async () => {
+    const { manager, exportManager, fileService } = createExportDataManager();
 
-    const result = await manager.exportData({ format: 'fasta' });
+    const result = await manager.exportData({ format: 'fasta', auto_save: true, filename: '/tmp/genome.fasta' });
 
-    expect(exportAsFasta).toHaveBeenCalled();
+    expect(fileService.exportFastaSequence).toHaveBeenCalledWith(
+      expect.objectContaining({ auto_save: true, filename: '/tmp/genome.fasta' })
+    );
+    expect(exportManager.exportAsFasta).not.toHaveBeenCalled();
     expect(result.format).toBe('fasta');
+    expect(result.delegated_tool).toBe('export_fasta_sequence');
   });
 
   it('configure_export_settings opens the export configuration dialog', async () => {

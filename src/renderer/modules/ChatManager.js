@@ -3765,54 +3765,109 @@ class ChatManager {
     throw new Error('Annotation creation not available');
   }
 
-  async exportData(params) {
+  /**
+   * Generic export entry point.
+   *
+   * Delegates to the same FileOperationService implementations the dedicated
+   * export_* tools use, so `filename`/`auto_save` behave identically here. The
+   * previous implementation called ExportManager's menu handlers, which write
+   * through an anchor download with a hard-coded default name — a tool call
+   * could only ever open a native save dialog nobody is there to dismiss during
+   * automation, and the exported content was discarded from the result.
+   */
+  async exportData(params = {}) {
     const { format = 'genbank', chromosome, start, end } = params;
     const normalizedFormat = String(format).toLowerCase();
+    const fileService = this.services?.file;
 
-    if (this.app && this.app.exportManager) {
-      try {
-        let _exportResult;
-
-        switch (normalizedFormat) {
-          case 'fasta':
-            if (chromosome && start && end) {
-              // Export specific region
-              const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
-              const fastaContent = `>${chromosome}:${start}-${end}\n${sequence}`;
-              _exportResult = { content: fastaContent, type: 'text' };
-            } else {
-              _exportResult = await this.app.exportManager.exportAsFasta();
-            }
-            break;
-          case 'genbank':
-          case 'gb':
-            _exportResult = await this.app.exportManager.exportAsGenBank();
-            break;
-          case 'gff':
-          case 'gff3':
-            _exportResult = await this.app.exportManager.exportAsGFF();
-            break;
-          case 'bed':
-            _exportResult = await this.app.exportManager.exportAsBED();
-            break;
-          default:
-            throw new Error(`Unsupported export format: ${format}`);
-        }
-
-        return {
-          format: normalizedFormat,
-          chromosome: chromosome,
-          start: start,
-          end: end,
-          exported: true,
-          message: `Data exported as ${normalizedFormat.toUpperCase()}`,
-        };
-      } catch (error) {
-        throw new Error(`Export failed: ${error.message}`);
-      }
+    if (!fileService) {
+      throw new Error('Export manager not available');
     }
 
-    throw new Error('Export manager not available');
+    const delegate = async (toolName, method) => {
+      const result = await fileService[method](params);
+      return { ...result, tool: 'export_data', delegated_tool: toolName, format: normalizedFormat };
+    };
+
+    try {
+      switch (normalizedFormat) {
+        case 'fasta':
+          if (chromosome && start && end) {
+            return await this.exportRegionFasta(params, normalizedFormat);
+          }
+          return await delegate('export_fasta_sequence', 'exportFastaSequence');
+        case 'genbank':
+        case 'gb':
+        case 'gbk':
+          return await delegate('export_genbank_format', 'exportGenBankFormat');
+        case 'gff':
+        case 'gff3':
+          return await delegate('export_gff_annotations', 'exportGffAnnotations');
+        case 'bed':
+          return await delegate('export_bed_format', 'exportBedFormat');
+        case 'cds':
+          return await delegate('export_cds_fasta', 'exportCdsFasta');
+        case 'protein':
+          return await delegate('export_protein_fasta', 'exportProteinFasta');
+        default:
+          throw new Error(`Unsupported export format: ${format}`);
+      }
+    } catch (error) {
+      throw new Error(`Export failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Region-scoped FASTA export. With a destination the region is written to
+   * disk; without one the sequence is returned inline rather than opening a
+   * dialog, because a region export has no menu equivalent to fall back to.
+   */
+  async exportRegionFasta(params, normalizedFormat) {
+    const { chromosome, start, end } = params;
+    const fileService = this.services.file;
+    const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
+    let fastaContent = `>${chromosome}:${start}-${end}\n`;
+    for (let i = 0; i < sequence.length; i += 80) {
+      fastaContent += sequence.substring(i, i + 80) + '\n';
+    }
+
+    const base = {
+      success: true,
+      tool: 'export_data',
+      delegated_tool: 'export_fasta_sequence',
+      exported_format: 'FASTA',
+      format: normalizedFormat,
+      chromosome,
+      start,
+      end,
+      length: sequence.length,
+    };
+
+    if (!fileService.shouldAutoSaveExport(params)) {
+      return {
+        ...base,
+        content: fastaContent,
+        message: `Extracted ${chromosome}:${start}-${end} as FASTA (no destination given, returned inline)`,
+      };
+    }
+
+    const outputFilename = fileService.getExportFilename(params, `${chromosome}_${start}-${end}.fasta`);
+    const writeResult = await fileService.saveExportContent(
+      fastaContent,
+      outputFilename,
+      'FASTA sequence',
+      params,
+      'export_data'
+    );
+
+    return {
+      ...base,
+      filename: outputFilename,
+      file_path: writeResult?.filePath || outputFilename,
+      filePath: writeResult?.filePath || outputFilename,
+      message: `Successfully exported ${chromosome}:${start}-${end} as FASTA`,
+      details: `Saved to ${writeResult?.filePath || outputFilename}`,
+    };
   }
 
   /**
