@@ -657,6 +657,38 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    it('accepts a schema-valid region export for export_bed_format exportRange', () => {
+      const test = {
+        id: 'completion-bed-region-export',
+        complexity: 'complex',
+        maxScore: 10,
+        expectedResult: {
+          tool_sequence: ['calc_region_gc', 'export_bed_format'],
+          parameters: [{}, { filename: '/tmp/region.bed', export_range: 'current_view', feature_types: ['all'] }],
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'calc_region_gc', parameters: {} },
+            {
+              tool_name: 'export_bed_format',
+              parameters: {
+                filename: '/tmp/region.bed',
+                feature_types: ['all'],
+                chromosome: 'U00096',
+                start_position: 109999,
+                end_position: 112000,
+                auto_save: true,
+              },
+            },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('normalizes track-name aliases before schema validation', () => {
       const test = {
         id: 'completion-track-alias',
