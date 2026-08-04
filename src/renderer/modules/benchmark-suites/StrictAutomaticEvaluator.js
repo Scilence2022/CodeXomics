@@ -99,6 +99,10 @@ class StrictAutomaticEvaluator {
         // genomic state, so an extra screenshot after the required calls is a
         // benign verification step rather than a task-endangering side effect.
         'capture_screenshot',
+        // save_view_state persists a view snapshot (like a bookmark) without
+        // touching genomic state; a model that wraps up a completed navigation
+        // workflow with one is over-completing, not endangering the task.
+        'save_view_state',
         'get_all_track_settings',
         'get_track_settings',
         'get_track_settings_schema',
