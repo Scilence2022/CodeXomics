@@ -611,6 +611,31 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    it('ignores open_image_file after capturing the required screenshot', () => {
+      const test = {
+        id: 'completion-extra-open-image',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: {
+          tool_name: 'capture_screenshot',
+          parameters: { mode: 'visible', filePath: '/tmp/benchmark_tracks.png', format: 'png' },
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            {
+              tool_name: 'capture_screenshot',
+              parameters: { mode: 'visible', filePath: '/tmp/benchmark_tracks.png', format: 'png' },
+            },
+            { tool_name: 'open_image_file', parameters: { filePath: '/tmp/benchmark_tracks.png' } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('accepts an equivalent blast database-creation tool with an alternative name key', () => {
       const test = {
         id: 'completion-blast-equivalent',

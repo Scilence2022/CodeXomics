@@ -107,6 +107,10 @@ class StrictAutomaticEvaluator {
         // touching genomic state; a model that wraps up a completed navigation
         // workflow with one is over-completing, not endangering the task.
         'save_view_state',
+        // open_image_file opens a viewer to review a file; it does not mutate
+        // genomic state, so opening the screenshot the task just captured is a
+        // benign verification step rather than a task-endangering side effect.
+        'open_image_file',
         'get_all_track_settings',
         'get_track_settings',
         'get_track_settings_schema',
