@@ -142,4 +142,20 @@ describe('benchmark runtime hardening', () => {
     expect(callOnlySource).toContain('toolEquivalents');
     expect(callOnlySource).toContain('callOnlyNames.add(equivalent)');
   });
+
+  it('stops the round loop when expected coverage is reached', () => {
+    const chatManager = readSource('src/renderer/modules/ChatManager.js');
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+
+    expect(chatManager).toContain('options?.shouldStopAfterRound');
+    expect(chatManager).toContain('Early stop after round');
+    expect(framework).toContain('shouldStopAfterRound = async');
+    expect(framework).toContain('strictAutomaticEvaluator.evaluate(options.testInfo, partialResult)');
+  });
+
+  it('persists tool failure reasons in interaction records', () => {
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+
+    expect(framework).toContain('error: execution.error ? String(execution.error).substring(0, 300) : null');
+  });
 });
