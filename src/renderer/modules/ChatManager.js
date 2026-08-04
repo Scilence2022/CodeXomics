@@ -5649,6 +5649,31 @@ class ChatManager {
               executionData.rounds = currentRound;
             }
 
+            // BENCHMARK EARLY STOP: when the benchmark runner supplies a
+            // coverage callback, stop as soon as every expected call has been
+            // observed and executed successfully. A model that already
+            // completed the task must not over-complete with extra
+            // viewer/verification/wrap-up calls that the completion scorer
+            // would otherwise have to tolerate or penalize one tool at a time.
+            if (typeof options?.shouldStopAfterRound === 'function') {
+              let covered = false;
+              try {
+                covered = await options.shouldStopAfterRound({
+                  functionCalls: executionData.functionCalls,
+                  toolResults: executionData.toolResults,
+                  rounds: currentRound,
+                });
+              } catch (coverageError) {
+                console.warn('[Benchmark] shouldStopAfterRound failed:', coverageError);
+              }
+              if (covered) {
+                console.log(`=== [Benchmark] Early stop after round ${currentRound}: expected coverage reached ===`);
+                finalResponse = 'Completed all requested tool calls.';
+                taskCompleted = true;
+                break;
+              }
+            }
+
             // Show the tool execution result
             this.showToolCalls && this.addToolResultMessage(toolResults);
 

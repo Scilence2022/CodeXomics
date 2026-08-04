@@ -1732,7 +1732,26 @@ class LLMBenchmarkFramework {
           `[Benchmark][request] sending test ${options.testInfo?.id || 'unknown'} to LLM at ${new Date().toISOString()}`
         );
         const requestSentAt = Date.now();
-        response = await this.chatManager.sendToLLM(instruction);
+        // Expected-coverage early stop: once every expected call has been
+        // observed and executed successfully, the round loop stops so the model
+        // cannot over-complete with extra viewer/verification/wrap-up calls.
+        // Uses the same completion+execution evaluator as final scoring, so the
+        // stop decision matches the pass decision.
+        const shouldStopAfterRound = async ({ functionCalls, toolResults }) => {
+          if (!options.testInfo) return false;
+          const partialResult = {
+            actualResult: {
+              nativeFunctionCalls: functionCalls,
+              executedFunctionCalls: functionCalls,
+            },
+            llmInteractionData: {
+              request: { dynamicToolsAnalysis: { selectedToolNames: [] } },
+              response: { functionCalls, toolExecutions: toolResults },
+            },
+          };
+          return this.strictAutomaticEvaluator.evaluate(options.testInfo, partialResult).success === true;
+        };
+        response = await this.chatManager.sendToLLM(instruction, { shouldStopAfterRound });
         console.log(
           `[Benchmark][request] test ${options.testInfo?.id || 'unknown'} LLM returned in ${Date.now() - requestSentAt}ms at ${new Date().toISOString()}`
         );
@@ -1818,6 +1837,10 @@ class LLMBenchmarkFramework {
                   : execution.result
                     ? JSON.stringify(execution.result).substring(0, 200) + '...[TRUNCATED]'
                     : null,
+              // Persist the failure reason so timed-out/failed interactions can
+              // be diagnosed without re-running the app (stripped elsewhere by
+              // memory optimization).
+              error: execution.error ? String(execution.error).substring(0, 300) : null,
             };
           });
           interactionData.response.executionRounds = executionData.rounds || 0;
