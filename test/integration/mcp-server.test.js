@@ -678,7 +678,7 @@ describe('MCP Server Structure', () => {
     );
 
     expect(response.error).toBeUndefined();
-    expect(server._withTimeout).toHaveBeenCalledWith(expect.any(Function), 30000, expect.stringContaining('30'));
+    expect(server._withTimeout).toHaveBeenCalledWith(expect.any(Function), 120000, expect.stringContaining('120'));
     const executionContext = server.toolsIntegrator.executeTool.mock.calls[0][3];
     expect(executionContext.commitNotAfter).toBeLessThan(executionContext.requestDeadline);
   });
