@@ -585,6 +585,32 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    it('ignores a benign save_view_state wrap-up after the required calls', () => {
+      const test = {
+        id: 'completion-extra-save-view-state',
+        complexity: 'complex',
+        maxScore: 15,
+        expectedResult: {
+          tool_sequence: ['design_primers', 'toggle_track'],
+          parameters: [
+            { geneName: 'lysC', upstreamBp: 50 },
+            { track_name: 'primers', visible: true },
+          ],
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'design_primers', parameters: { geneName: 'lysC', upstreamBp: 50 } },
+            { tool_name: 'toggle_track', parameters: { track_name: 'primers', visible: true } },
+            { tool_name: 'save_view_state', parameters: { name: 'lysC_view' } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('accepts an equivalent blast database-creation tool with an alternative name key', () => {
       const test = {
         id: 'completion-blast-equivalent',

@@ -1060,13 +1060,26 @@ class LLMBenchmarkFramework {
     if (!test?.assertCallOnly || !this.chatManager) return () => {};
 
     const expected = test.expectedResult || {};
-    const names = (Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name]).filter(
-      name => typeof name === 'string' && name
-    );
+    // Flatten grouped alternatives (arrays inside tool_sequence) so every
+    // legitimate spelling of an expected capability is call-only, then expand
+    // with documented tool equivalents: a model that falls back to
+    // blast_search_online (the equivalent of blast_search) must not actually
+    // hit NCBI during a call-only test.
+    const names = (Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name])
+      .flat()
+      .filter(name => typeof name === 'string' && name);
     if (names.length === 0) return () => {};
 
+    const toolEquivalents = this.strictAutomaticEvaluator?.toolEquivalents || {};
+    const callOnlyNames = new Set(names);
+    for (const name of names) {
+      for (const equivalent of toolEquivalents[name] || []) {
+        callOnlyNames.add(equivalent);
+      }
+    }
+
     const previous = this.chatManager.callOnlyTools;
-    this.chatManager.callOnlyTools = new Set(names);
+    this.chatManager.callOnlyTools = callOnlyNames;
     console.log(`🧪 [Benchmark] Call-only mode for ${test.id}: ${names.join(', ')}`);
     return () => {
       this.chatManager.callOnlyTools = previous;

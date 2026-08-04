@@ -131,4 +131,15 @@ describe('benchmark runtime hardening', () => {
     const occurrences = source.match(/<option value="600000">10 minutes<\/option>/g) || [];
     expect(occurrences.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('extends call-only mode to grouped alternatives and documented equivalents', () => {
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+
+    const callOnlyStart = framework.indexOf('applyCallOnlyMode(test)');
+    const callOnlyEnd = framework.indexOf('abortTimedOutConversation', callOnlyStart);
+    const callOnlySource = framework.slice(callOnlyStart, callOnlyEnd);
+    expect(callOnlySource).toContain('.flat()');
+    expect(callOnlySource).toContain('toolEquivalents');
+    expect(callOnlySource).toContain('callOnlyNames.add(equivalent)');
+  });
 });
