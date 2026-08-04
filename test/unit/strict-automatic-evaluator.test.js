@@ -637,6 +637,28 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    it('accepts translate_dna for an expected translate_sequence alias', () => {
+      const test = {
+        id: 'completion-translate-alias',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: {
+          tool_name: 'translate_sequence',
+          parameters: { sequence: 'ATGAAATAA', reading_frame: 1 },
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'translate_dna', parameters: { dna: 'ATGAAATAA', reading_frame: 1 } },
+            { tool_name: 'translate_dna', parameters: { dna: 'ATGAAATAA', reading_frame: 1 } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('accepts a schema-valid alternative selector for switch_to_tab', () => {
       const test = {
         id: 'completion-tab-index',

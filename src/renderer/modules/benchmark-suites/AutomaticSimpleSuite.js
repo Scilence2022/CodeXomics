@@ -2156,6 +2156,12 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 120000,
         earlyReturn: true,
+        // Scored on tool selection, not on the NCBI side effect: blast_search
+        // against nt is an online call that can be blocked by the user's
+        // network (NCBI returns 403/empty replies from some regions), which
+        // previously hung the test until the global timeout. Same policy as
+        // the other online-BLAST and internet-download call-only tests.
+        assertCallOnly: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
