@@ -593,3 +593,78 @@ describe('ProteinService - cancelling long polls', () => {
     await expect(service.waitUnlessAborted(5000)).resolves.toBeUndefined();
   });
 });
+
+describe('ProteinService - PDB search with no hits', () => {
+  // RCSB answers a zero-hit search with HTTP 204 and an empty body. response.ok
+  // is true for 204, so calling response.json() on it threw "Unexpected end of
+  // JSON input" and a gene with no structures (e.g. ygaQ) surfaced as a failure.
+  let service;
+
+  beforeEach(() => {
+    service = createService({}, { services: { ui: { addAlphaFoldSidebarStyles: vi.fn() } } });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reports zero results instead of throwing when RCSB returns 204', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 204,
+        text: async () => '',
+        json: async () => {
+          throw new SyntaxError('Unexpected end of JSON input');
+        },
+      })
+    );
+
+    const result = await service.searchPdbStructures({ geneName: 'ygaQ', organism: 'Escherichia coli' });
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(0);
+    expect(result.results).toEqual([]);
+    expect(result.error).toBeUndefined();
+    expect(result.message).toContain('ygaQ');
+  });
+
+  it('treats an empty 200 body as zero results', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '   ' }));
+
+    const result = await service.searchPdbStructures({ geneName: 'ygaQ' });
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(0);
+  });
+
+  it('honours the snake_case max_results parameter declared in the tool schema', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await service.searchPdbStructures({ geneName: 'lacZ', max_results: 25 });
+
+    const requestedUrl = decodeURIComponent(fetchMock.mock.calls[0][0]);
+    expect(requestedUrl).toContain('"rows":25');
+  });
+
+  it('clamps max_results to the schema maximum of 50', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await service.searchPdbStructures({ geneName: 'lacZ', max_results: 500 });
+
+    const requestedUrl = decodeURIComponent(fetchMock.mock.calls[0][0]);
+    expect(requestedUrl).toContain('"rows":50');
+  });
+
+  it('still surfaces a genuine HTTP failure as an error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => '' }));
+
+    const result = await service.searchPdbStructures({ geneName: 'lacZ' });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('500');
+  });
+});
