@@ -145,6 +145,82 @@ describe('AnnotationReviewManager', () => {
     expect(app.showNotification).toHaveBeenCalledWith('2/2 ChangeSets applied.', 'success');
   });
 
+  it('collects the rejection reason in an in-app dialog because Electron has no window.prompt', async () => {
+    const mockWindow = {
+      confirm: vi.fn(() => true),
+      prompt: vi.fn(() => {
+        throw new Error('prompt() is not supported.');
+      }),
+      alert: vi.fn(),
+    };
+    const pending = summary('cs-reject', 'ygaQ', 'hash-reject');
+    const rejectAnnotationChangeset = vi.fn(async () => ({ success: true }));
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 0,
+      statusCounts: {},
+      changeSets: [],
+    }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { rejectAnnotationChangeset, listAnnotationChangesets } } },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(mockWindow);
+    const manager = new Manager(app);
+    manager.changeSets = new Map([[pending.id, pending]]);
+    document.getElementById('annotationReviewQueue').innerHTML =
+      `<input class="annotation-review-checkbox" type="checkbox" value="${pending.id}" checked>`;
+
+    const rejection = manager.rejectSelected();
+    const dialog = await vi.waitFor(() => {
+      const element = document.getElementById('annotationReviewReasonDialog');
+      expect(element).not.toBeNull();
+      return element;
+    });
+    expect(dialog.textContent).toContain('ygaQ');
+
+    dialog.querySelector('#annotationReviewReasonInput').value = 'insufficient evidence';
+    dialog.querySelector('[data-reason-action="confirm"]').click();
+    await rejection;
+
+    expect(mockWindow.prompt).not.toHaveBeenCalled();
+    expect(rejectAnnotationChangeset).toHaveBeenCalledWith({
+      changeSetId: pending.id,
+      reason: 'insufficient evidence',
+    });
+    expect(document.getElementById('annotationReviewReasonDialog')).toBeNull();
+    expect(app.showNotification).toHaveBeenCalledWith('1/1 ChangeSets rejected.', 'success');
+  });
+
+  it('leaves the queue untouched when the rejection dialog is cancelled', async () => {
+    const mockWindow = { confirm: vi.fn(() => true), prompt: vi.fn(), alert: vi.fn() };
+    const pending = summary('cs-reject-cancel', 'pinH', 'hash-reject-cancel');
+    const rejectAnnotationChangeset = vi.fn();
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { rejectAnnotationChangeset } } },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(mockWindow);
+    const manager = new Manager(app);
+    manager.changeSets = new Map([[pending.id, pending]]);
+    document.getElementById('annotationReviewQueue').innerHTML =
+      `<input class="annotation-review-checkbox" type="checkbox" value="${pending.id}" checked>`;
+
+    const rejection = manager.rejectSelected();
+    const dialog = await vi.waitFor(() => {
+      const element = document.getElementById('annotationReviewReasonDialog');
+      expect(element).not.toBeNull();
+      return element;
+    });
+    dialog.querySelector('[data-reason-action="cancel"]').click();
+    await rejection;
+
+    expect(rejectAnnotationChangeset).not.toHaveBeenCalled();
+    expect(document.getElementById('annotationReviewReasonDialog')).toBeNull();
+  });
+
   it('blocks a batch when the configured reviewer is also a ChangeSet creator', async () => {
     const mockWindow = { confirm: vi.fn(() => true), prompt: vi.fn(), alert: vi.fn() };
     const conflict = summary('cs-conflict', 'lysC', 'hash-conflict');

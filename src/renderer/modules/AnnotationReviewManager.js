@@ -60,7 +60,17 @@ class AnnotationReviewManager {
       const element = document.getElementById(id);
       const bindingKey = `annotationReview${event[0].toUpperCase()}${event.slice(1)}Bound`;
       if (element && !element.dataset[bindingKey]) {
-        element.addEventListener(event, handler);
+        // Surface handler failures instead of letting an exception kill the click silently.
+        element.addEventListener(event, eventObject => {
+          try {
+            const result = handler(eventObject);
+            if (result && typeof result.catch === 'function') {
+              result.catch(error => this._reportHandlerError(id, error));
+            }
+          } catch (error) {
+            this._reportHandlerError(id, error);
+          }
+        });
         element.dataset[bindingKey] = 'true';
       }
     };
@@ -317,9 +327,7 @@ class AnnotationReviewManager {
     const attachment = reportMetadata?.attachmentId || summary.reportAttachment;
     const fullTextSourceCount = Number(reportMetadata?.summary?.fullTextSourceCount || 0);
     const fullTextFindingCount = Number(reportMetadata?.summary?.fullTextFindingCount || 0);
-    const verifiedFullTextSourceCount = Number(
-      reportMetadata?.citationValidation?.verifiedFullTextSourceCount || 0
-    );
+    const verifiedFullTextSourceCount = Number(reportMetadata?.citationValidation?.verifiedFullTextSourceCount || 0);
     return `
       <div class="annotation-review-detail-header">
         <div>
@@ -518,9 +526,8 @@ class AnnotationReviewManager {
       );
       return;
     }
-    const reason = window.prompt('Reason for rejecting the selected ChangeSets:', 'curator_rejected');
-    if (reason === null || !reason.trim()) return;
-    if (!window.confirm(this._batchConfirmationText(selected, 'reject'))) return;
+    const reason = await this._promptForRejectionReason(selected);
+    if (!reason) return;
     this._startDecisionSession('reject', selected);
     const results = [];
     try {
@@ -541,6 +548,86 @@ class AnnotationReviewManager {
     }
     this._reportBatchResults(results, 'rejected');
     await this.refreshQueue();
+  }
+
+  /**
+   * Collect the rejection reason and the batch confirmation in one dialog.
+   * window.prompt() is unavailable in Electron renderers, so the reason is
+   * gathered with an in-app modal instead.
+   * Resolves with the trimmed reason, or null when the curator cancels.
+   */
+  _promptForRejectionReason(selected) {
+    return new Promise(resolve => {
+      document.getElementById('annotationReviewReasonDialog')?.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'annotationReviewReasonDialog';
+      overlay.className = 'annotation-review-reason-dialog';
+      overlay.innerHTML = `
+        <div class="annotation-review-reason-panel" role="dialog" aria-modal="true"
+             aria-labelledby="annotationReviewReasonTitle">
+          <h4 id="annotationReviewReasonTitle"><i class="fas fa-times-circle"></i> Reject ChangeSets</h4>
+          <pre class="annotation-review-reason-summary"></pre>
+          <label for="annotationReviewReasonInput">Reason for rejection</label>
+          <input id="annotationReviewReasonInput" type="text" maxlength="200" value="curator_rejected">
+          <div class="annotation-review-reason-actions">
+            <button type="button" class="btn btn-secondary" data-reason-action="cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" data-reason-action="confirm">
+              <i class="fas fa-times"></i> Reject ${selected.length} ChangeSet(s)
+            </button>
+          </div>
+        </div>
+      `;
+      overlay.querySelector('.annotation-review-reason-summary').textContent = this._batchConfirmationText(
+        selected,
+        'reject'
+      );
+
+      const input = overlay.querySelector('#annotationReviewReasonInput');
+      let settled = false;
+      const close = value => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener('keydown', onKeydown, true);
+        overlay.remove();
+        resolve(value);
+      };
+      const submit = () => {
+        const value = input.value.trim();
+        if (!value) {
+          input.focus();
+          input.classList.add('is-invalid');
+          return;
+        }
+        close(value);
+      };
+      const onKeydown = event => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          close(null);
+        } else if (event.key === 'Enter' && overlay.contains(event.target)) {
+          event.preventDefault();
+          submit();
+        }
+      };
+
+      overlay.addEventListener('click', event => {
+        const action = event.target.closest('[data-reason-action]')?.dataset.reasonAction;
+        if (action === 'confirm') submit();
+        else if (action === 'cancel' || event.target === overlay) close(null);
+      });
+      input.addEventListener('input', () => input.classList.remove('is-invalid'));
+      document.addEventListener('keydown', onKeydown, true);
+
+      document.body.appendChild(overlay);
+      input.focus();
+      input.select();
+    });
+  }
+
+  _reportHandlerError(elementId, error) {
+    console.error(`[AnnotationReview] handler failed for #${elementId}`, error);
+    this._notify(`Annotation review action failed: ${error?.message || error}`, 'error');
   }
 
   _startDecisionSession(action, changeSets) {
