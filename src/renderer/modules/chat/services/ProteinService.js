@@ -640,10 +640,25 @@ class ProteinService {
     }
   }
 
+  /**
+   * Parse a fetch Response as JSON, tolerating empty bodies.
+   * The RCSB search API answers a zero-hit query with HTTP 204 and no body,
+   * which makes response.json() throw "Unexpected end of JSON input".
+   * Returns null when there is nothing to parse.
+   */
+  async _readJsonOrNull(response) {
+    if (response.status === 204) return null;
+    const text = await response.text();
+    if (!text || text.trim().length === 0) return null;
+    return JSON.parse(text);
+  }
+
   async searchPdbStructures(parameters) {
     const geneName = parameters.geneName || parameters.gene_name || parameters.gene;
     const organism = parameters.organism || 'Escherichia coli';
-    const maxResults = parameters.maxResults || 10;
+    const requestedMax = parameters.maxResults ?? parameters.max_results;
+    const parsedMax = parseInt(requestedMax, 10);
+    const maxResults = Number.isFinite(parsedMax) ? Math.min(Math.max(parsedMax, 1), 50) : 10;
 
     try {
       if (!geneName) throw new Error('Gene name is required for PDB search');
@@ -667,8 +682,9 @@ class ProteinService {
         throw new Error(`PDB search failed: ${response.status}`);
       }
 
-      const data = await response.json();
-      const results = (data.result_set || []).map(entry => ({
+      // A zero-hit search returns 204 with an empty body, not an empty result_set.
+      const data = await this._readJsonOrNull(response);
+      const results = (data?.result_set || []).map(entry => ({
         pdbId: entry.identifier,
         pdbUrl: `https://www.rcsb.org/structure/${entry.identifier}`,
         downloadUrl: `https://files.rcsb.org/download/${entry.identifier}.pdb`,
@@ -707,9 +723,9 @@ class ProteinService {
           });
 
           if (gqlResponse.ok) {
-            const gqlData = await gqlResponse.json();
+            const gqlData = await this._readJsonOrNull(gqlResponse);
             const detailsMap = {};
-            (gqlData.data?.entries || []).forEach(entry => {
+            (gqlData?.data?.entries || []).forEach(entry => {
               detailsMap[entry.rcsb_id] = entry;
             });
 
@@ -748,7 +764,7 @@ class ProteinService {
         message:
           results.length > 0
             ? `Found ${results.length} PDB structure(s) for ${geneName}. Results displayed in sidebar.`
-            : `No PDB structures found for ${geneName}.`,
+            : `No experimental PDB structures found for ${geneName} (${organism}). Consider a predicted structure via AlphaFold.`,
       };
     } catch (error) {
       console.error('PDB search error:', error);
