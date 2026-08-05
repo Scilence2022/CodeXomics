@@ -684,6 +684,27 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    it('accepts a one-element array for a schema-documented string-or-array parameter', () => {
+      const test = {
+        id: 'completion-filepaths-array-form',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: {
+          tool_name: 'load_wig_tracks',
+          parameters: { filePaths: '/tmp/another_sample.wig' },
+        },
+      };
+      const evaluation = completionEvaluator().evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            { tool_name: 'load_wig_tracks', parameters: { filePaths: ['/tmp/another_sample.wig'] } },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
+    });
+
     it('accepts a schema-valid alternative selector for switch_to_tab', () => {
       const test = {
         id: 'completion-tab-index',
@@ -837,6 +858,43 @@ describe('StrictAutomaticEvaluator', () => {
       expect(executionFailure.success).toBe(false);
       expect(noExecutionEvidence.success).toBe(false);
       expect(success.details.assessmentTier).toBe('task-completion-execution');
+    });
+
+    it('uses execution evidence from the parameter-matched call instance', () => {
+      const evaluator = new StrictAutomaticEvaluator({
+        assessmentMode: 'completion',
+        requireExecutionForCompletion: true,
+        validateToolCall: schemaValidator,
+      });
+      const test = {
+        id: 'completion-repeated-search-fixed',
+        complexity: 'simple',
+        maxScore: 5,
+        expectedResult: { tool_name: 'search_interpro_entry', parameters: { search_term: 'beta-galactosidase' } },
+      };
+      // First instance used the batch key and failed; the corrected second
+      // instance matches the oracle and succeeded. Execution evidence must
+      // follow the argument-matched call, not the first same-name call.
+      const evaluation = evaluator.evaluate(test, {
+        actualResult: {
+          nativeFunctionCalls: [
+            {
+              tool_name: 'search_interpro_entry',
+              parameters: { search_terms: ['beta-galactosidase', 'other'] },
+              executed: true,
+              executionSuccess: false,
+            },
+            {
+              tool_name: 'search_interpro_entry',
+              parameters: { search_term: 'beta-galactosidase' },
+              executed: true,
+              executionSuccess: true,
+            },
+          ],
+        },
+      });
+
+      expect(evaluation.success).toBe(true);
     });
   });
 });
