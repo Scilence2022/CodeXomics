@@ -195,14 +195,14 @@ describe('LLMConfigManager model list auto-refresh', () => {
     });
   });
 
-  describe('mergeModelLists', () => {
-    it('keeps built-in models first, sorts discovered ones, and retains unreported built-ins', () => {
+  describe('orderFetchedModels', () => {
+    it('keeps built-in models first, sorts discovered ones, and drops unreported built-ins', () => {
       const manager = createManager();
       manager.builtInModels.test = ['known-a', 'known-b', 'retired'];
 
-      const merged = manager.mergeModelLists('test', ['zeta-new', 'known-b', 'alpha-new', 'known-a']);
+      const ordered = manager.orderFetchedModels('test', ['zeta-new', 'known-b', 'alpha-new', 'known-a']);
 
-      expect(merged).toEqual(['known-a', 'known-b', 'alpha-new', 'zeta-new', 'retired']);
+      expect(ordered).toEqual(['known-a', 'known-b', 'alpha-new', 'zeta-new']);
     });
   });
 
@@ -296,6 +296,36 @@ describe('LLMConfigManager model list auto-refresh', () => {
       expect(second).toEqual(first);
     });
 
+    it('replaces the shipped options with what the provider reported', async () => {
+      renderProviderTab(
+        'openai',
+        `<optgroup label="Shipped">
+           <option value="gpt-5.5">GPT-5.5 (Thinking / Standard - $5/$30 per M)</option>
+           <option value="retired-model">Retired Model</option>
+         </optgroup>`
+      );
+      const manager = createManager();
+      await manager.waitForInitialization();
+      manager.builtInModels.openai = ['gpt-5.5', 'retired-model'];
+      manager.providers.openai.apiKey = 'sk-test';
+
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => mockJsonResponse({ data: [{ id: 'gpt-5.5' }, { id: 'gpt-6-preview' }] }))
+      );
+
+      await manager.refreshProviderModels('openai', { silent: true, persist: false });
+
+      const select = document.getElementById('openaiModel');
+      // A model the provider no longer lists is gone from the dropdown and the
+      // cached list — "Other" is how it can still be entered by hand
+      expect(manager.hasModelOption(select, 'retired-model')).toBe(false);
+      expect(manager.providers.openai.availableModels).toEqual(['gpt-5.5', 'gpt-6-preview']);
+      expect(Array.from(select.options).map(option => option.value)).toEqual(['gpt-5.5', 'gpt-6-preview', 'other']);
+      // The now-empty shipped group is not left behind as a stray label
+      expect(select.querySelectorAll('optgroup')).toHaveLength(1);
+    });
+
     it('falls back to the custom model field when the saved model is no longer offered', async () => {
       renderProviderTab('openai', '<option value="gpt-5.5">GPT-5.5</option>');
       const manager = createManager();
@@ -306,7 +336,7 @@ describe('LLMConfigManager model list auto-refresh', () => {
 
       vi.stubGlobal(
         'fetch',
-        vi.fn(async () => mockJsonResponse({ data: [{ id: 'gpt-6-preview' }] }))
+        vi.fn(async () => mockJsonResponse({ data: [{ id: 'gpt-5.5' }, { id: 'gpt-6-preview' }] }))
       );
 
       await manager.refreshProviderModels('openai', { silent: true, persist: false });
@@ -317,7 +347,6 @@ describe('LLMConfigManager model list auto-refresh', () => {
       // Once it disappears from the provider's list the saved custom model wins
       manager.getModelRefreshState('openai').lastAttemptAt = 0;
       document.getElementById('openaiModel').value = 'gpt-6-preview';
-      manager.builtInModels.openai = [];
       vi.stubGlobal(
         'fetch',
         vi.fn(async () => mockJsonResponse({ data: [{ id: 'gpt-7' }] }))
@@ -442,7 +471,7 @@ describe('LLMConfigManager model list auto-refresh', () => {
       expect(manager.providers.openai.availableModels).toEqual(manager.builtInModels.openai);
     });
 
-    it('keeps a remotely fetched list and re-merges it with the shipped models', () => {
+    it('keeps a remotely fetched list without re-adding the shipped models', () => {
       const manager = createManager();
       manager.providers.openai.modelsSource = 'remote';
       manager.providers.openai.remoteModels = ['gpt-5.5', 'gpt-6-preview'];
@@ -450,9 +479,9 @@ describe('LLMConfigManager model list auto-refresh', () => {
 
       manager.reconcileBuiltInModelLists();
 
-      expect(manager.providers.openai.availableModels).toContain('gpt-6-preview');
-      // Shipped models the provider did not report are still selectable
-      expect(manager.providers.openai.availableModels).toContain('gpt-5.5-pro');
+      expect(manager.providers.openai.availableModels).toEqual(['gpt-5.5', 'gpt-6-preview']);
+      // Shipped models the provider did not report do not come back
+      expect(manager.providers.openai.availableModels).not.toContain('gpt-5.5-pro');
     });
   });
 

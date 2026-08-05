@@ -1070,8 +1070,8 @@ class LLMConfigManager {
   /**
    * Persisted providers are merged over the defaults, so a saved config can
    * shadow the model lists shipped with a newer app version. Keep a cached
-   * list only when it actually came from the provider's API, and re-merge it
-   * with the current built-in list so both sources stay represented.
+   * list only when it actually came from the provider's API; the built-in list
+   * then only supplies ordering and labels, not extra entries.
    */
   reconcileBuiltInModelLists() {
     Object.entries(this.providers).forEach(([providerKey, provider]) => {
@@ -1080,7 +1080,7 @@ class LLMConfigManager {
 
       const remoteModels = Array.isArray(provider.remoteModels) ? provider.remoteModels : [];
       if (provider.modelsSource === 'remote' && remoteModels.length > 0) {
-        provider.availableModels = this.mergeModelLists(providerKey, remoteModels);
+        provider.availableModels = this.orderFetchedModels(providerKey, remoteModels);
         return;
       }
 
@@ -1987,18 +1987,20 @@ class LLMConfigManager {
 
   /**
    * Order a refreshed list so the models shipped with the app come first (in
-   * their curated order), then everything else alphabetically, then curated
-   * models the provider did not report — a saved selection never disappears
-   * because a listing endpoint omitted it.
+   * their curated order), then everything else alphabetically.
+   *
+   * A successful refresh is authoritative: models the provider did not report
+   * are dropped, so the dropdown never offers a retired model that would fail
+   * at request time. A saved model the listing endpoint omits is still usable
+   * through the "Other (specify below)" custom entry.
    */
-  mergeModelLists(providerKey, fetchedModels) {
+  orderFetchedModels(providerKey, fetchedModels) {
     const builtIn = this.builtInModels[providerKey] || [];
     const fetchedSet = new Set(fetchedModels);
     const known = builtIn.filter(model => fetchedSet.has(model));
     const knownSet = new Set(known);
     const discovered = fetchedModels.filter(model => !knownSet.has(model)).sort((a, b) => a.localeCompare(b));
-    const missing = builtIn.filter(model => !fetchedSet.has(model));
-    return [...known, ...discovered, ...missing];
+    return [...known, ...discovered];
   }
 
   /**
@@ -2067,10 +2069,13 @@ class LLMConfigManager {
 
       try {
         const models = await this.fetchProviderModels(providerKey, config);
-        const truncated = models.length > this.maxAvailableModels;
+        // Order before truncating so the curated models the provider reported
+        // survive the cap even when the listing endpoint is huge.
+        const ordered = this.orderFetchedModels(providerKey, models);
+        const truncated = ordered.length > this.maxAvailableModels;
 
-        provider.remoteModels = models.slice(0, this.maxAvailableModels);
-        provider.availableModels = this.mergeModelLists(providerKey, provider.remoteModels);
+        provider.remoteModels = ordered.slice(0, this.maxAvailableModels);
+        provider.availableModels = [...provider.remoteModels];
         provider.modelsSource = 'remote';
         provider.modelsUpdatedAt = new Date().toISOString();
         provider.modelsFingerprint = this.getProviderCredentialFingerprint(config);
@@ -2217,10 +2222,10 @@ class LLMConfigManager {
   }
 
   /**
-   * Rebuild a provider's model dropdown. Models the provider reported go into
-   * a group at the top (keeping the shipped label, e.g. pricing, where we have
-   * one); shipped options the provider also reported are dropped from the
-   * static section so nothing is listed twice.
+   * Rebuild a provider's model dropdown. Once the provider has reported a
+   * model list it replaces the shipped options entirely — the shipped ones only
+   * survive as labels (pricing, sizes) for the models that came back. A model
+   * the provider no longer lists can still be entered through "Other".
    */
   populateProviderModelSelect(providerKey) {
     const select = document.getElementById(`${providerKey}Model`);
@@ -2248,28 +2253,28 @@ class LLMConfigManager {
         if (!isSavedConfigOption(option)) labels.set(option.value, option.textContent);
       });
 
-      const remoteSet = new Set(remoteModels);
+      // The refreshed list is authoritative: every shipped model option goes,
+      // whether or not the provider reported it. Only the custom entry and the
+      // user's own saved endpoint configurations stay.
       Array.from(select.options).forEach(option => {
         if (option.value === 'other' || isSavedConfigOption(option)) return;
-        if (remoteSet.has(option.value)) option.remove();
+        option.remove();
       });
       Array.from(select.querySelectorAll('optgroup')).forEach(group => {
         if (group.id !== SAVED_CONFIGS_OPTGROUP && group.children.length === 0) {
-          group.style.display = 'none';
+          group.remove();
         }
       });
 
       const group = document.createElement('optgroup');
       group.id = `${providerKey}FetchedModelsOptgroup`;
       group.label = `Available from ${provider.name || providerKey} (${remoteModels.length})`;
-      this.mergeModelLists(providerKey, remoteModels)
-        .filter(modelId => remoteSet.has(modelId))
-        .forEach(modelId => {
-          const option = document.createElement('option');
-          option.value = modelId;
-          option.textContent = labels.get(modelId) || modelId;
-          group.appendChild(option);
-        });
+      this.orderFetchedModels(providerKey, remoteModels).forEach(modelId => {
+        const option = document.createElement('option');
+        option.value = modelId;
+        option.textContent = labels.get(modelId) || modelId;
+        group.appendChild(option);
+      });
       select.insertBefore(group, select.firstChild);
     }
 
