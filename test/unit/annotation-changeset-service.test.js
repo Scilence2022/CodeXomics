@@ -2807,3 +2807,84 @@ describe('AnnotationChangeSetService', () => {
     });
   });
 });
+
+describe('annotation ledger change broadcast', () => {
+  const agentContext = {
+    authenticated: true,
+    source: 'mcp',
+    principal: 'research-agent',
+    permissions: ['annotation:propose'],
+  };
+
+  function broadcastingService() {
+    const mockWindow = loadServices();
+    const events = [];
+    mockWindow.dispatchEvent = event => {
+      events.push(event);
+      return true;
+    };
+    const sidecarData = {};
+    const app = {
+      loadedGenomePath: '/tmp/broadcast.gbk',
+      currentFile: { path: '/tmp/broadcast.gbk' },
+      currentChromosome: 'NC_000913.3',
+      currentAnnotations: {
+        'NC_000913.3': [
+          {
+            id: 'feature-1',
+            type: 'CDS',
+            start: 12,
+            end: 120,
+            strand: 1,
+            qualifiers: { locus_tag: 'b0001', gene: 'thrL', product: 'hypothetical protein' },
+          },
+        ],
+      },
+      sidecarManager: {
+        get: async (_genomePath, key) => JSON.parse(JSON.stringify(sidecarData[key] || {})),
+        setAndForceSave: async (_genomePath, key, value) => {
+          sidecarData[key] = JSON.parse(JSON.stringify(value));
+        },
+      },
+    };
+    const service = new mockWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+    return { service, ledgerEvents: () => events.filter(event => event.type === 'annotation-ledger-changed') };
+  }
+
+  // Without this the header Review badge only learned about a proposal when the
+  // curator opened the Review Center.
+  it('publishes the pending counts as soon as a ChangeSet is stored', async () => {
+    const { service, ledgerEvents } = broadcastingService();
+
+    await service.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+
+    const latest = ledgerEvents().at(-1);
+    expect(latest).toBeDefined();
+    expect(latest.detail.reason).toBe('ledger-saved');
+    expect(latest.detail.genomePath).toBe('/tmp/broadcast.gbk');
+    expect(latest.detail.statusCounts.awaiting_approval).toBe(1);
+  });
+
+  it('publishes the queue a reloaded genome inherits from an earlier session', async () => {
+    const { service, ledgerEvents } = broadcastingService();
+    await service.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+
+    await service.restoreCommittedAnnotationOverlay();
+
+    const latest = ledgerEvents().at(-1);
+    expect(latest.detail.reason).toBe('genome-loaded');
+    expect(latest.detail.statusCounts.awaiting_approval).toBe(1);
+  });
+});
