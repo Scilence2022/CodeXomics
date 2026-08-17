@@ -5782,6 +5782,30 @@ class GenomeBrowser {
 
     let processedText = text;
 
+    // Pattern for CITS format: |CITS: [PMID1 PMID2]| or |CITS: 1 2 3|.
+    // This runs before the patterns below so the bracketed PMID form is consumed as a
+    // whole marker; otherwise genericPmidPattern eats the [PMID] and leaves the
+    // surrounding "|CITS:" and "|" as literal text in the note.
+    const citsPattern = /\|CITS:\s*(\[[\d\s,]*\]|[\d\s,]*)\|/gi;
+    processedText = processedText.replace(citsPattern, (match, content) => {
+      const ids = content
+        .replace(/[[\]]/g, '')
+        .split(/[\s,]+/)
+        .filter(id => id.trim());
+      if (ids.length === 0) return '';
+      return ids
+        .map(id => {
+          // 6-10 digit values are PubMed IDs. Shorter values are reference numbers the
+          // note already resolved elsewhere, so they must not become PubMed links.
+          if (/^\d{6,10}$/.test(id)) {
+            const citationNumber = this.addUnifiedCitation('PMID', id);
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${id}/" target="_blank" class="pmid-link" title="View PubMed article ${id}"><sup>${citationNumber}</sup></a>`;
+          }
+          return `<sup class="cits-ref">${id}</sup>`;
+        })
+        .join('');
+    });
+
     // Pattern for PMID references: PMID:1234567 or PMID 1234567
     const pmidPattern = /\b(PMID:?\s*(\d{6,10}))/gi;
     processedText = processedText.replace(pmidPattern, (match, fullMatch, pmidId) => {
@@ -5827,25 +5851,6 @@ class GenomeBrowser {
       }
       const citationNumber = this.addUnifiedCitation('PMID', pmidId);
       return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
-    });
-
-    // Pattern for CITS format: |CITS: [PMID1 PMID2]| or |CITS: 1 2 3| -> unified numbering (remove |CITS: prefix)
-    const citsPattern = /\|CITS:\s*(\[[\d\s]+\]|[\d\s]+)\|/gi;
-    processedText = processedText.replace(citsPattern, (match, content) => {
-      // Remove brackets if present and split by spaces
-      const numbers = content
-        .replace(/[[\]]/g, '')
-        .split(/\s+/)
-        .filter(p => p.trim());
-      const citationNumbers = numbers.map(num => {
-        // If it's already a citation number, use it directly
-        if (/^\d+$/.test(num)) {
-          return this.addUnifiedCitation('PMID', num);
-        }
-        // Otherwise treat as PMID
-        return this.addUnifiedCitation('PMID', num);
-      });
-      return `<sup>${citationNumbers.join(', ')}</sup>`;
     });
 
     return processedText;
@@ -7269,6 +7274,13 @@ class GenomeBrowser {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+
+    // Notes routinely italicise species and gene names (<i>E. coli</i>). Restore that
+    // small set of attribute-free inline tags after escaping so they render instead of
+    // showing as literal markup, while every other tag stays escaped.
+    enhancedValue = enhancedValue
+      .replace(/&lt;(\/?)(i|em|b|strong|sub|sup|u)&gt;/gi, '<$1$2>')
+      .replace(/&lt;br\s*\/?&gt;/gi, '<br>');
 
     // Pattern for GO terms: GO:XXXXXXX or goid XXXXXXX
     const goTermPattern = /\b(GO:\d{7}|goid\s+(\d{7}))\b/gi;

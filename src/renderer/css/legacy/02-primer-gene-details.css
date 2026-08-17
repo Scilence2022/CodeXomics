@@ -1001,6 +1001,22 @@ sup {
   color: var(--text-secondary);
 }
 
+/* Reference numbers from |CITS: n| markers that carry no resolvable PubMed link */
+.cits-ref {
+  padding: 0 1px;
+}
+
+/* Citation chips inside running prose must not inflate the line box: the default
+   .pmid-link padding/margin pushes note paragraphs apart line by line. */
+.gene-annotation-note-value .pmid-link,
+.gene-attribute-value .pmid-link {
+  padding: 0 4px;
+  margin: 0 1px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  vertical-align: baseline;
+}
+
 .go-term-link {
   display: inline-block;
   padding: 2px 6px;
