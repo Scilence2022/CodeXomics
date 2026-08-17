@@ -2888,3 +2888,109 @@ describe('annotation ledger change broadcast', () => {
     expect(latest.detail.statusCounts.awaiting_approval).toBe(1);
   });
 });
+
+// Resolving a target used to hash every annotation in the genome, so one pass
+// over a committed history re-hashed the assembly once per committed chain and
+// froze the Review Center for seconds. The derived values are cached now, and
+// these pin the invalidation that keeps the cache from answering for state it
+// was not built from.
+describe('derived lookup caches', () => {
+  const agentContext = {
+    authenticated: true,
+    source: 'mcp',
+    principal: 'research-agent',
+    permissions: ['annotation:propose'],
+  };
+  const readerContext = {
+    authenticated: true,
+    source: 'mcp',
+    principal: 'curator@example.org',
+    permissions: ['annotation:read'],
+  };
+
+  function cachedService() {
+    const mockWindow = loadServices();
+    const annotation = {
+      id: 'feature-1',
+      type: 'CDS',
+      start: 12,
+      end: 120,
+      strand: 1,
+      qualifiers: { locus_tag: 'b0001', gene: 'thrL', product: 'hypothetical protein' },
+    };
+    const sidecarData = {};
+    const app = {
+      loadedGenomePath: '/tmp/cache.gbk',
+      currentFile: { path: '/tmp/cache.gbk' },
+      currentChromosome: 'NC_000913.3',
+      currentAnnotations: { 'NC_000913.3': [annotation] },
+      currentSequence: { 'NC_000913.3': 'ACGTACGTACGT' },
+      sidecarManager: {
+        get: async (_genomePath, key) => JSON.parse(JSON.stringify(sidecarData[key] || {})),
+        setAndForceSave: async (_genomePath, key, value) => {
+          sidecarData[key] = JSON.parse(JSON.stringify(value));
+        },
+      },
+    };
+    const service = new mockWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+    return { service, app, annotation };
+  }
+
+  it('stops resolving a feature whose identity moved after the index was built', async () => {
+    const { service, annotation } = cachedService();
+    await service.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+    const before = await service.listAnnotationChangesets({ __executionContext: readerContext });
+    expect(before.changeSets[0].targetAvailable).toBe(true);
+
+    // Same annotation object, different coordinates: the cached id no longer
+    // describes it, so the target must read as gone rather than resolve here.
+    annotation.start = 5000;
+    annotation.end = 5200;
+
+    const after = await service.listAnnotationChangesets({ __executionContext: readerContext });
+    expect(after.changeSets[0].targetAvailable).toBe(false);
+  });
+
+  it('re-derives the assembly digest when the loaded sequence changes', async () => {
+    const { service, app } = cachedService();
+    const before = await service.resolveAnnotationTarget({ identifier: 'b0001' });
+
+    // Same sequences object, replaced chromosome string.
+    app.currentSequence['NC_000913.3'] = 'TTTTTTTTTTTT';
+
+    const after = await service.resolveAnnotationTarget({ identifier: 'b0001' });
+    expect(after.target.assemblySha256).not.toBe(before.target.assemblySha256);
+    expect(after.target.genomeId).not.toBe(before.target.genomeId);
+  });
+
+  it('picks up an annotation added to the loaded genome after the index was built', async () => {
+    const { service, app } = cachedService();
+    await service.resolveAnnotationTarget({ identifier: 'b0001' });
+
+    app.currentAnnotations['NC_000913.3'].push({
+      id: 'feature-2',
+      type: 'CDS',
+      start: 400,
+      end: 900,
+      strand: 1,
+      qualifiers: { locus_tag: 'b0002', gene: 'thrA' },
+    });
+    const created = await service.createAnnotationChangeset({
+      identifier: 'b0002',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+
+    const listed = await service.listAnnotationChangesets({ __executionContext: readerContext });
+    const summaryForNewFeature = listed.changeSets.find(item => item.id === created.changeSet.id);
+    expect(summaryForNewFeature.targetAvailable).toBe(true);
+  });
+});

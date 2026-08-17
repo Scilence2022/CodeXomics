@@ -21,6 +21,11 @@ class AnnotationChangeSetService {
     this.annotationService = annotationService;
     this.memoryLedgers = new Map();
     this.ledgerLocks = new Map();
+    // Derived-value caches, keyed by workspace and revalidated against the live
+    // objects they were derived from. Recomputing them per call made every
+    // Review Center interaction re-hash the whole assembly and every feature.
+    this.featureIndexes = new Map();
+    this.assemblyDigests = new Map();
     this.integrityVersion = 2;
     this.hashVersions = Object.freeze({
       current: 'canonical-json-v1',
@@ -1582,13 +1587,30 @@ class AnnotationChangeSetService {
     if (!sequences || typeof sequences !== 'object' || Object.keys(sequences).length === 0) {
       return 'assembly-unavailable';
     }
+    // Hashing a bacterial assembly costs tens of milliseconds and _featureRef
+    // needs it for every reviewed feature. JavaScript strings are immutable, so
+    // an edited sequence is a different string: comparing the exact values the
+    // digest was taken over keeps the cache as accurate as recomputing it.
+    const cached = this.assemblyDigests.get(workspace.key);
+    if (cached && cached.sequences === sequences && this._sameSequenceContents(cached.entries, sequences)) {
+      this._assertWorkspace(workspace);
+      return cached.digest;
+    }
+    const entries = Object.keys(sequences)
+      .sort()
+      .map(chromosome => [chromosome, sequences[chromosome]]);
     const digest = await this._hash({
-      sequences: Object.keys(sequences)
-        .sort()
-        .map(chromosome => [chromosome, String(sequences[chromosome] || '').toUpperCase()]),
+      sequences: entries.map(([chromosome, sequence]) => [chromosome, String(sequence || '').toUpperCase()]),
     });
     this._assertWorkspace(workspace);
+    this.assemblyDigests.set(workspace.key, { sequences, entries, digest });
     return digest;
+  }
+
+  _sameSequenceContents(entries, sequences) {
+    const names = Object.keys(sequences);
+    if (names.length !== entries.length) return false;
+    return entries.every(([chromosome, sequence]) => sequences[chromosome] === sequence);
   }
 
   async _proteinDigest(annotation) {
@@ -1734,17 +1756,90 @@ class AnnotationChangeSetService {
     return null;
   }
 
+  async _featureId(chromosome, annotation) {
+    return (
+      annotation.codexomicsFeatureId || `feat_${await this._hash(this._stableFeatureIdentity(chromosome, annotation))}`
+    );
+  }
+
+  /**
+   * Feature id lookup table for the loaded genome, one entry per annotation.
+   *
+   * Resolving a ChangeSet target used to hash annotations one by one until the
+   * id matched, so a single reconciliation pass over a committed history
+   * re-hashed the whole genome once per committed chain. The identity behind
+   * the id (coordinates, type, locus tag, protein id) is untouched by the
+   * qualifier operations this service allows, and every hit is re-derived
+   * before it is trusted, so a stale entry degrades to the original scan
+   * instead of resolving the wrong feature.
+   */
+  async _featureIndex(workspace) {
+    this._assertWorkspace(workspace);
+    const annotations = workspace.annotations;
+    if (!annotations) return null;
+    const cached = this.featureIndexes.get(workspace.key);
+    if (cached && cached.annotations === annotations && this._sameAnnotationShape(cached.shape, annotations)) {
+      return cached.byChromosome;
+    }
+    const byChromosome = new Map();
+    for (const [chromosome, list] of Object.entries(annotations)) {
+      const byId = new Map();
+      for (const annotation of list || []) {
+        const featureId = await this._featureId(chromosome, annotation);
+        if (!byId.has(featureId)) byId.set(featureId, annotation);
+      }
+      byChromosome.set(chromosome, byId);
+    }
+    this._assertWorkspace(workspace);
+    this.featureIndexes.set(workspace.key, {
+      annotations,
+      shape: this._annotationShape(annotations),
+      byChromosome,
+    });
+    return byChromosome;
+  }
+
+  _annotationShape(annotations) {
+    return Object.entries(annotations).map(([chromosome, list]) => [chromosome, list, (list || []).length]);
+  }
+
+  _sameAnnotationShape(shape, annotations) {
+    const names = Object.keys(annotations);
+    if (!shape || shape.length !== names.length) return false;
+    return shape.every(
+      ([chromosome, list, length]) =>
+        annotations[chromosome] === list && (annotations[chromosome] || []).length === length
+    );
+  }
+
   async _findFeatureByRef(target, workspace) {
     this._assertWorkspace(workspace);
     if (!workspace.annotations) return null;
+    const index = await this._featureIndex(workspace);
+    const chromosomes = target.chromosome ? [target.chromosome] : Object.keys(workspace.annotations);
+    for (const chromosome of chromosomes) {
+      const annotation = index?.get(chromosome)?.get(target.featureId);
+      if (!annotation) continue;
+      // Re-derive the id from the live annotation so an index built before an
+      // in-place edit can never stand in for the identity check itself.
+      if ((await this._featureId(chromosome, annotation)) !== target.featureId) {
+        this.featureIndexes.delete(workspace.key);
+        break;
+      }
+      const ref = await this._featureRef(
+        chromosome,
+        annotation,
+        { revision: target.annotationRevision || 0 },
+        workspace
+      );
+      return { chromosome, annotation, ref };
+    }
     const candidates = target.chromosome
       ? [[target.chromosome, workspace.annotations[target.chromosome] || []]]
       : Object.entries(workspace.annotations);
     for (const [chromosome, annotations] of candidates) {
       for (const annotation of annotations || []) {
-        const featureId =
-          annotation.codexomicsFeatureId ||
-          `feat_${await this._hash(this._stableFeatureIdentity(chromosome, annotation))}`;
+        const featureId = await this._featureId(chromosome, annotation);
         if (featureId !== target.featureId) continue;
         const ref = await this._featureRef(
           chromosome,
