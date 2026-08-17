@@ -427,6 +427,35 @@ describe('AnnotationReviewManager', () => {
     expect(document.getElementById('annotationReviewSelectedCount').textContent).toBe('1 selected');
   });
 
+  it('paints the modal before the ledger read starts', async () => {
+    const listAnnotationChangesets = vi.fn(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({ success: true, total: 0, statusCounts: {}, changeSets: [] }), 0)
+        )
+    );
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { listAnnotationChangesets } } },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(browserWindow());
+    const manager = new Manager(app);
+    listAnnotationChangesets.mockClear();
+
+    manager.showReviewCenter();
+
+    // The click handler must hand the frame back with the modal already
+    // visible; the queue load is what waits, not the button.
+    expect(document.getElementById('annotationReviewModal').classList.contains('show')).toBe(true);
+    expect(document.getElementById('annotationReviewQueue').textContent).toContain('Loading ChangeSets');
+    expect(listAnnotationChangesets).not.toHaveBeenCalled();
+
+    await vi.waitFor(() => expect(listAnnotationChangesets).toHaveBeenCalled());
+    clearInterval(manager.badgeWatchTimer);
+    clearTimeout(manager.modalBehaviorTimer);
+  });
+
   it('shows the pending count on start without the curator opening the Review Center', async () => {
     const listAnnotationChangesets = vi.fn(async () => ({
       success: true,
