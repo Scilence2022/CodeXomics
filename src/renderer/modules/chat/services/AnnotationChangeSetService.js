@@ -1999,8 +1999,8 @@ class AnnotationChangeSetService {
     if (!Array.isArray(summary.facts) || summary.facts.length > 100) {
       throw new Error('Research summary facts must be an array of at most 100 facts');
     }
-    if (!Array.isArray(summary.literature) || summary.literature.length > 30) {
-      throw new Error('Research summary literature must be an array of at most 30 records');
+    if (!Array.isArray(summary.literature) || summary.literature.length > 400) {
+      throw new Error('Research summary literature must be an array of at most 400 records');
     }
     if (!Array.isArray(summary.limitations) || summary.limitations.length > 30) {
       throw new Error('Research summary limitations must be an array of at most 30 statements');
@@ -2316,6 +2316,82 @@ class AnnotationChangeSetService {
     return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
   }
 
+  _englishDate(iso) {
+    const date = new Date(String(iso || ''));
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  }
+
+  /**
+   * Validates a no-information-found note: the search itself is recorded
+   * (RefSeq convention), it makes no biological claim, and it carries no
+   * evidence. The note claim/operation binding is still enforced.
+   */
+  _validateNoInformationFoundNote(note, text, claims, operations) {
+    const searchDate = this._englishDate(note.searchConductedAt);
+    if (!searchDate) {
+      throw new Error('No-information curation note requires a valid searchConductedAt timestamp');
+    }
+    const baseText = `No information about this protein was found by a literature search conducted on ${searchDate}.`;
+    let expectedText = baseText;
+    if (note.provenance !== undefined && note.provenance !== null) {
+      const provenance = note.provenance;
+      const updatedDate = this._englishDate(provenance.updatedAt);
+      if (
+        !this._isPlainRecord(provenance) ||
+        provenance.agent !== 'Deep Gene Research' ||
+        !updatedDate ||
+        String(provenance.clause || '') !== `Annotation by Deep Gene Research on ${updatedDate}.`
+      ) {
+        throw new Error('No-information curation note provenance clause is invalid');
+      }
+      expectedText = `${baseText} ${provenance.clause}`;
+    }
+    if (
+      text !== expectedText ||
+      !Array.isArray(note.segments) ||
+      note.segments.length !== 0 ||
+      !Array.isArray(note.factIds) ||
+      note.factIds.length !== 0 ||
+      !Array.isArray(note.evidenceIds) ||
+      note.evidenceIds.length !== 0 ||
+      !Array.isArray(note.allSourceCitations) ||
+      note.allSourceCitations.length !== 0 ||
+      note.citationText !== undefined
+    ) {
+      throw new Error('No-information curation note is not bound to its search provenance');
+    }
+    if (!this._isPlainRecord(note.coverage)) throw new Error('Curation note requires coverage metadata');
+    if (
+      note.coverage.includedFactCount !== 0 ||
+      note.coverage.availableFactCount !== 0 ||
+      !Array.isArray(note.coverage.includedCategories) ||
+      note.coverage.includedCategories.length !== 0 ||
+      !Array.isArray(note.coverage.omittedFactIds) ||
+      note.coverage.omittedFactIds.length !== 0 ||
+      note.coverage.citedSourceCount !== 0 ||
+      note.coverage.totalSourceCount !== 0 ||
+      !Array.isArray(note.coverage.omittedCitationLabels) ||
+      note.coverage.omittedCitationLabels.length !== 0
+    ) {
+      throw new Error('Curation note coverage metadata is inconsistent');
+    }
+    const noteClaims = claims.filter(claim => claim.field === 'note' && String(claim.value) === text);
+    const noteOperations = operations.filter(
+      operation => operation.op === 'addQualifier' && operation.field === 'note' && String(operation.value) === text
+    );
+    if (
+      noteClaims.length !== 1 ||
+      noteOperations.length !== 1 ||
+      !this._canonicalValuesEqual(noteClaims[0].evidenceIds, []) ||
+      !this._canonicalValuesEqual(noteOperations[0].claimIds, [noteClaims[0].id])
+    ) {
+      throw new Error('Curation note is not bound to one evidence-supported note operation');
+    }
+    this._assertSerializableSize(note, 'Curation note');
+    return this._clone(note);
+  }
+
   /**
    * Validates the all-source citation clause introduced with the DGR note
    * contract that backs authoritative-fact narratives with the complete
@@ -2383,13 +2459,15 @@ class AnnotationChangeSetService {
     if (
       Number.isFinite(Number(note.coverage?.citedSourceCount)) &&
       Number(note.coverage.citedSourceCount) !== includedLabels.length
-    )
+    ) {
       return false;
+    }
     if (
       Number.isFinite(Number(note.coverage?.totalSourceCount)) &&
       Number(note.coverage.totalSourceCount) !== note.allSourceCitations.length
-    )
+    ) {
       return false;
+    }
     return true;
   }
 
@@ -2407,6 +2485,9 @@ class AnnotationChangeSetService {
     const computedHash = await this._hashSerialized(text, { requireSha256: true });
     if (computedHash !== String(note.textSha256).toLowerCase()) {
       throw new Error('Curation note text hash does not match its text');
+    }
+    if (note.kind === 'no_information_found') {
+      return this._validateNoInformationFoundNote(note, text, claims, operations);
     }
     if (!Array.isArray(note.segments) || note.segments.length === 0 || note.segments.length > 30) {
       throw new Error('Curation note requires between 1 and 30 evidence-bound segments');
@@ -2462,11 +2543,29 @@ class AnnotationChangeSetService {
       includedFactIds.push(String(fact.id));
       includedEvidenceIds.push(...segment.evidenceIds.map(String));
     }
-    if (literatureSegmentCount === 0 && !this._validateCurationNoteBibliography(note, researchSummary, text)) {
+    // Standard notes may end with a verbatim agent/timestamp provenance
+    // clause. Strip it before matching the segments/citation-clause contract.
+    let provenanceSuffix = '';
+    if (note.provenance !== undefined && note.provenance !== null) {
+      const provenance = note.provenance;
+      const updatedDate = this._englishDate(provenance.updatedAt);
+      if (
+        !this._isPlainRecord(provenance) ||
+        provenance.agent !== 'Deep Gene Research' ||
+        !updatedDate ||
+        String(provenance.clause || '') !== `Annotation by Deep Gene Research on ${updatedDate}.`
+      ) {
+        throw new Error('Curation note provenance clause is invalid');
+      }
+      provenanceSuffix = ` ${provenance.clause}`;
+    }
+    const baseText =
+      provenanceSuffix && text.endsWith(provenanceSuffix) ? text.slice(0, text.length - provenanceSuffix.length) : text;
+    const segmentText = note.segments.map(segment => segment.text).join(' ');
+    if (baseText !== segmentText && baseText !== `${segmentText} ${String(note.citationText || '')}`.trim()) {
       throw new Error('Curation note must include citation-bound literature and exactly match its segments');
     }
-    const segmentText = note.segments.map(segment => segment.text).join(' ');
-    if (text !== segmentText && text !== `${segmentText} ${String(note.citationText || '')}`.trim()) {
+    if (literatureSegmentCount === 0 && !this._validateCurationNoteBibliography(note, researchSummary, baseText)) {
       throw new Error('Curation note must include citation-bound literature and exactly match its segments');
     }
     const dedupe = values => Array.from(new Set(values));
@@ -2645,6 +2744,11 @@ class AnnotationChangeSetService {
     }
     this._validateOperationPayloads(proposal.operations, 'annotationProposal.operations');
     const claims = new Map();
+    // A no-information-found note records the search itself rather than a
+    // biological claim; its note claim carries no evidence records. Every
+    // other claim still requires evidence present in the manifest.
+    const noInformationNoteText =
+      proposal?.curationNote?.kind === 'no_information_found' ? String(proposal.curationNote?.text || '') : null;
     for (const claim of proposal.claims) {
       if (!this._isPlainRecord(claim)) throw new Error('Every annotation claim must be a JSON object');
       if (!claim?.id || claims.has(claim.id)) {
@@ -2665,9 +2769,11 @@ class AnnotationChangeSetService {
       if (!claim.field || !this.allowedQualifierFields.has(claim.field)) {
         throw new Error(`Claim ${claim.id} uses unsupported annotation field "${claim.field || 'missing'}"`);
       }
+      const isNoInformationNoteClaim =
+        noInformationNoteText !== null && claim.field === 'note' && String(claim.value) === noInformationNoteText;
       if (
         !Array.isArray(claim.evidenceIds) ||
-        claim.evidenceIds.length === 0 ||
+        (claim.evidenceIds.length === 0 && !isNoInformationNoteClaim) ||
         claim.evidenceIds.length > this.inputLimits.referencesPerOperation ||
         claim.evidenceIds.some(id => !evidenceIds.has(id))
       ) {
