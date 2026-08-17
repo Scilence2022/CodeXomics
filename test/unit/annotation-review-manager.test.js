@@ -427,6 +427,96 @@ describe('AnnotationReviewManager', () => {
     expect(document.getElementById('annotationReviewSelectedCount').textContent).toBe('1 selected');
   });
 
+  it('clears the detail pane once the reviewed ChangeSet leaves the queue', async () => {
+    const pending = summary('cs-applied', 'ygeF', 'hash-applied');
+    const getAnnotationChangeset = vi.fn(async () => ({
+      success: true,
+      changeSet: {
+        id: pending.id,
+        target: { geneSymbol: 'ygeF', locusTag: 'b2850', chromosome: 'U00096' },
+        baseRevision: 63,
+        riskLevel: 'medium',
+        createdBy: 'local-bypass',
+        operations: [{ op: 'addQualifier', field: 'pathway', value: 'KEGG:ecj:JW2818' }],
+        evidence: [],
+      },
+    }));
+    const requestAnnotationApproval = vi.fn(async () => ({ success: true, approvalToken: 'cap-applied' }));
+    const applyAnnotationChangeset = vi.fn(async () => ({ success: true, applied: true }));
+    // Applying moves the ChangeSet to committed, so the "Needs action" filter
+    // no longer returns it.
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 0,
+      statusCounts: { committed: 1 },
+      changeSets: [],
+    }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: {
+        services: {
+          annotation: {
+            getAnnotationChangeset,
+            requestAnnotationApproval,
+            applyAnnotationChangeset,
+            listAnnotationChangesets,
+          },
+        },
+      },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(browserWindow({ confirm: vi.fn(() => true) }));
+    const manager = new Manager(app);
+    manager.changeSets = new Map([[pending.id, pending]]);
+    manager._renderQueue({ total: 1, changeSets: [pending] });
+    document.querySelector('.annotation-review-checkbox').click();
+    await manager.viewChangeSet(pending.id);
+    expect(document.getElementById('annotationReviewDetail').textContent).toContain('ygeF');
+
+    await manager.approveSelected(true);
+
+    expect(applyAnnotationChangeset).toHaveBeenCalledOnce();
+    expect(document.getElementById('annotationReviewDetail').innerHTML).toBe('');
+    expect(manager.activeChangeSetId).toBeNull();
+    clearInterval(manager.badgeWatchTimer);
+  });
+
+  it('keeps the detail pane open for a ChangeSet that is still queued', async () => {
+    const pending = summary('cs-still-queued', 'lysC', 'hash-still-queued');
+    const getAnnotationChangeset = vi.fn(async () => ({
+      success: true,
+      changeSet: {
+        id: pending.id,
+        target: { geneSymbol: 'lysC', locusTag: 'b4024' },
+        baseRevision: 12,
+        operations: [{ op: 'addQualifier', field: 'note', value: 'still pending' }],
+        evidence: [],
+      },
+    }));
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 1,
+      statusCounts: { awaiting_approval: 1 },
+      changeSets: [pending],
+    }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { getAnnotationChangeset, listAnnotationChangesets } } },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(browserWindow());
+    const manager = new Manager(app);
+    manager.changeSets = new Map([[pending.id, pending]]);
+    manager._renderQueue({ total: 1, changeSets: [pending] });
+    await manager.viewChangeSet(pending.id);
+
+    await manager.refreshQueue();
+
+    expect(document.getElementById('annotationReviewDetail').textContent).toContain('lysC');
+    expect(manager.activeChangeSetId).toBe(pending.id);
+    clearInterval(manager.badgeWatchTimer);
+  });
+
   it('paints the modal before the ledger read starts', async () => {
     const listAnnotationChangesets = vi.fn(
       () =>

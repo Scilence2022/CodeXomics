@@ -183,6 +183,7 @@ class AnnotationReviewManager {
         limit: 1000,
       });
       this.changeSets = new Map((result.changeSets || []).map(changeSet => [changeSet.id, changeSet]));
+      this._closeDetachedDetail();
       this._renderQueue(result);
       this._updatePendingBadge(result.statusCounts || {});
       if (options.focusChangeSetId && this.changeSets.has(options.focusChangeSetId)) {
@@ -312,6 +313,19 @@ class AnnotationReviewManager {
     } catch (error) {
       detail.innerHTML = `<div class="annotation-review-empty error"><p>${this._escape(error.message)}</p></div>`;
     }
+  }
+
+  /**
+   * Drop the detail pane once the ChangeSet it describes has left the queue.
+   * Approving, applying, or rejecting moves a ChangeSet out of the review
+   * filter, and the pane used to keep presenting the decided proposal — with
+   * its action buttons — next to an empty queue.
+   */
+  _closeDetachedDetail() {
+    if (!this.activeChangeSetId || this.changeSets.has(this.activeChangeSetId)) return;
+    const detail = document.getElementById('annotationReviewDetail');
+    if (detail) detail.innerHTML = '';
+    this._setActiveChangeSet(null);
   }
 
   _renderChangeSetDetail(changeSet, summary) {
