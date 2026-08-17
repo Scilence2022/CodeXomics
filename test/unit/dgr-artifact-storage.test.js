@@ -705,4 +705,51 @@ describe('DGR artifact storage', () => {
       })
     ).rejects.toThrow(/is not complete and cannot be archived/);
   });
+  it('carries literatureCoverage, llmSynthesis, and annotationNote into the archived summary', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    task.result.metadata.searchDiagnostics = {
+      ...task.result.metadata.searchDiagnostics,
+      literatureCoverage: {
+        literatureBudget: 300,
+        pubmedTotalMatchCount: 412,
+        retainedAbstractCount: 300,
+        linkedBibliographyRequested: 212,
+        linkedBibliographyRetrieved: 212,
+        linkedBibliographyComplete: true,
+      },
+    };
+    task.result.metadata.llmSynthesis = {
+      supplementalQueryCount: 3,
+      literatureLearningBatches: 12,
+      synthesizedReport: true,
+    };
+    task.result.annotationNote = {
+      schema: 'dgr.curation-note.v1',
+      text: 'lysC encodes lysine-sensitive aspartokinase III (PMID:123456).',
+      textSha256: 'n'.repeat(64),
+      segments: [],
+      factIds: [],
+      evidenceIds: [],
+      coverage: { availableFactCount: 3, includedFactCount: 1, includedCategories: ['function'], omittedFactIds: [] },
+    };
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    expect(descriptor.summary.literatureCoverage).toMatchObject({
+      literatureBudget: 300,
+      pubmedTotalMatchCount: 412,
+      linkedBibliographyComplete: true,
+    });
+    expect(descriptor.summary.llmSynthesis).toMatchObject({ synthesizedReport: true, literatureLearningBatches: 12 });
+    expect(descriptor.summary.annotationNote).toMatchObject({
+      schema: 'dgr.curation-note.v1',
+      text: expect.stringContaining('PMID:123456'),
+    });
+  });
 });

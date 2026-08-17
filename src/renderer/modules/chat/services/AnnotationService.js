@@ -961,6 +961,10 @@ class AnnotationService {
         ...this._normalizeQualifierValues(proposedUpdates.db_xref),
         ...evidence.filter(ref => /^(PMID|DOI):/i.test(ref)),
       ]),
+      // Preserve DGR's citation-bound curation note so the merge path can
+      // prefer it over the generic summary-derived note.
+      curationNote:
+        proposal.curationNote && typeof proposal.curationNote === 'object' ? { ...proposal.curationNote } : null,
     };
   }
 
@@ -985,7 +989,14 @@ class AnnotationService {
       updates.product = proposedProduct;
     }
 
-    if (noteParts.length > 0) {
+    // DGR's citation-bound curation note is a hash-bound, reviewable artifact.
+    // Prefer it verbatim over the generic summary-derived note; the generic
+    // note remains only as a fallback for proposals that carry no note.
+    const dgrNoteText = String(proposal.curationNote?.text || proposal.updates?.note || '').trim();
+    if (dgrNoteText) {
+      const mergedNote = this._mergeQualifierValue(qualifiers.note, dgrNoteText, { splitSemicolon: false });
+      if (mergedNote) updates.note = mergedNote;
+    } else if (noteParts.length > 0) {
       const mergedNote = this._mergeQualifierValue(qualifiers.note, noteParts.join(' '), { splitSemicolon: false });
       if (mergedNote) updates.note = mergedNote;
     }

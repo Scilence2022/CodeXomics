@@ -265,7 +265,8 @@ function fullTextSourceMetadata(source) {
   const text = String(fullText.text || '');
   const documentSha256 = String(fullText.documentSha256 || '').toLowerCase();
   if (
-    !text || !/^[a-f0-9]{64}$/.test(documentSha256) ||
+    !text ||
+    !/^[a-f0-9]{64}$/.test(documentSha256) ||
     fullText.canonicalization !== 'dgr.full-text.v1' ||
     fullText.offsetEncoding !== 'utf16_code_units'
   ) {
@@ -280,8 +281,7 @@ function fullTextSourceMetadata(source) {
     text,
     textSha256: textSha256(text),
     textLength: text.length,
-    accepted:
-      source?.evidenceRole !== 'excluded' && source?.structuredData?.targetRelevance?.accepted === true,
+    accepted: source?.evidenceRole !== 'excluded' && source?.structuredData?.targetRelevance?.accepted === true,
   };
 }
 
@@ -355,34 +355,40 @@ function validateCitationBoundFacts(task) {
         source => source.documentSha256 === String(basis.documentSha256).toLowerCase()
       );
       if (matchingSources.length !== 1) {
-        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} does not resolve to exactly one archived full-text source`);
+        throw new Error(
+          `Citation-bound fact ${fact?.id || 'unknown'} does not resolve to exactly one archived full-text source`
+        );
       }
       const source = matchingSources[0];
       if (!source.accepted || source.pmid !== pmid || source.origin !== basis.sourceOrigin) {
         throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} is not backed by accepted target full text`);
       }
-      if (
-        source.textSha256 !== String(basis.textSha256).toLowerCase() ||
-        source.textLength !== basis.textLength
-      ) {
-        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} full-text hash does not match the archived source`);
+      if (source.textSha256 !== String(basis.textSha256).toLowerCase() || source.textLength !== basis.textLength) {
+        throw new Error(
+          `Citation-bound fact ${fact?.id || 'unknown'} full-text hash does not match the archived source`
+        );
       }
       if (
         basis.excerptStart < 0 ||
         basis.excerptEnd !== basis.excerptStart + excerpt.length ||
         source.text.slice(basis.excerptStart, basis.excerptEnd) !== excerpt
       ) {
-        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} full-text offsets do not match the archived source`);
+        throw new Error(
+          `Citation-bound fact ${fact?.id || 'unknown'} full-text offsets do not match the archived source`
+        );
       }
       const factEvidence = records.filter(record => (fact.evidenceIds || []).includes(record?.id));
       const expectedSupporting = (fact?.evidenceIds || []).some(id => noteEvidenceIds.has(String(id)));
-      const matchingEvidence = factEvidence.filter(record =>
-        record?.supporting === expectedSupporting &&
-        evidenceIdentifier(record, 'pmid').includes(pmid) &&
-        record?.sourceBinding?.content?.canonicalization === 'dgr.full-text.v1'
+      const matchingEvidence = factEvidence.filter(
+        record =>
+          record?.supporting === expectedSupporting &&
+          evidenceIdentifier(record, 'pmid').includes(pmid) &&
+          record?.sourceBinding?.content?.canonicalization === 'dgr.full-text.v1'
       );
       if (matchingEvidence.length !== 1) {
-        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} must reference exactly one full-text evidence record`);
+        throw new Error(
+          `Citation-bound fact ${fact?.id || 'unknown'} must reference exactly one full-text evidence record`
+        );
       }
       const evidence = matchingEvidence[0];
       const binding = evidence.sourceBinding;
@@ -403,14 +409,18 @@ function validateCitationBoundFacts(task) {
         throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} has an invalid full-text source binding`);
       }
       if (String(evidence?.database || '').toLowerCase() !== source.database) {
-        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} evidence database does not match its full-text source`);
+        throw new Error(
+          `Citation-bound fact ${fact?.id || 'unknown'} evidence database does not match its full-text source`
+        );
       }
       const expectedDoi = normalizeDoi(basis.doi || citation?.doi);
       if (expectedDoi && source.doi !== expectedDoi) {
         throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} DOI does not match the full-text source`);
       }
       if (expectedDoi && !evidenceIdentifier(evidence, 'doi').includes(expectedDoi)) {
-        throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} DOI is missing from its full-text evidence record`);
+        throw new Error(
+          `Citation-bound fact ${fact?.id || 'unknown'} DOI is missing from its full-text evidence record`
+        );
       }
       verifiedPmids.add(pmid);
       verifiedFullTextDocuments.add(source.documentSha256);
@@ -685,6 +695,9 @@ async function archiveDgrTaskResult({
       citationBoundFactCount,
       fullTextSourceCount,
       fullTextFindingCount,
+      literatureCoverage: task.result?.metadata?.searchDiagnostics?.literatureCoverage ?? null,
+      llmSynthesis: task.result?.metadata?.llmSynthesis ?? null,
+      annotationNote: task.result?.annotationNote ?? null,
     },
   };
 }
