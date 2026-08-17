@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 
 // renderer-modular.js is a classic script with no exports, so the citation helpers are
 // lifted out of the class body by line range (Prettier keeps the indentation stable).
@@ -19,10 +20,10 @@ function createRenderer() {
   const body = ['processUnifiedCitations', 'addUnifiedCitation', 'getCitationUrl', 'enhanceGeneAttributeWithLinks']
     .map(extractMethod)
     .join('\n');
-  const Harness = new Function(`return class CitationHarness {
+  const Harness = vm.runInNewContext(`(class CitationHarness {
     constructor() { this.citationCollector = new Map(); this.citationCounter = 0; }
     ${body}
-  }`)();
+  })`);
   const harness = new Harness();
   return {
     harness,
