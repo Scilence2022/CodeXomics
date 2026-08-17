@@ -2994,3 +2994,85 @@ describe('derived lookup caches', () => {
     expect(summaryForNewFeature.targetAvailable).toBe(true);
   });
 });
+
+describe('feature index warm-up on genome load', () => {
+  const agentContext = {
+    authenticated: true,
+    source: 'mcp',
+    principal: 'research-agent',
+    permissions: ['annotation:propose'],
+  };
+
+  // Building the index inside the first review action put it inside a click,
+  // where it reads as a stalled Review button.
+  it('builds the lookup index while the genome loads, not on the first review action', async () => {
+    const mockWindow = loadServices();
+    const sidecarData = {};
+    const app = {
+      loadedGenomePath: '/tmp/warm.gbk',
+      currentFile: { path: '/tmp/warm.gbk' },
+      currentChromosome: 'NC_000913.3',
+      currentAnnotations: {
+        'NC_000913.3': [
+          {
+            id: 'feature-1',
+            type: 'CDS',
+            start: 12,
+            end: 120,
+            strand: 1,
+            qualifiers: { locus_tag: 'b0001', gene: 'thrL', product: 'hypothetical protein' },
+          },
+        ],
+      },
+      sidecarManager: {
+        get: async (_genomePath, key) => JSON.parse(JSON.stringify(sidecarData[key] || {})),
+        setAndForceSave: async (_genomePath, key, value) => {
+          sidecarData[key] = JSON.parse(JSON.stringify(value));
+        },
+      },
+    };
+    const service = new mockWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+    await service.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+
+    // Reopening the genome starts from a cold service.
+    const reloadedWindow = loadServices();
+    const reloaded = new reloadedWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+    expect(reloaded.changeSetService.featureIndexes.size).toBe(0);
+
+    await reloaded.restoreCommittedAnnotationOverlay();
+
+    expect(reloaded.changeSetService.featureIndexes.size).toBe(1);
+  });
+
+  it('leaves the index unbuilt for a genome with no ChangeSets', async () => {
+    const mockWindow = loadServices();
+    const app = {
+      loadedGenomePath: '/tmp/empty.gbk',
+      currentFile: { path: '/tmp/empty.gbk' },
+      currentChromosome: 'NC_000913.3',
+      currentAnnotations: {
+        'NC_000913.3': [{ id: 'feature-1', type: 'CDS', start: 12, end: 120, strand: 1, qualifiers: {} }],
+      },
+      sidecarManager: {
+        get: async () => ({}),
+        setAndForceSave: async () => {},
+      },
+    };
+    const service = new mockWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+
+    await service.restoreCommittedAnnotationOverlay();
+
+    expect(service.changeSetService.featureIndexes.size).toBe(0);
+  });
+});

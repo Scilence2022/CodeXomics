@@ -115,7 +115,21 @@ class AnnotationReviewManager {
     modal.classList.add('show');
     this._initializeModalBehavior();
     this.showModalTab(options.tab || 'queue');
-    void this.refreshQueue({ focusChangeSetId: options.changeSetId || null });
+    // Reading the ledger costs more than a frame, and starting it in the click
+    // handler holds back the paint that shows the modal, so the button feels
+    // dead. Show the spinner first and let the queue load on the next frame.
+    this._renderQueueLoading();
+    const loadQueue = () => void this.refreshQueue({ focusChangeSetId: options.changeSetId || null });
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(loadQueue);
+    else loadQueue();
+  }
+
+  _renderQueueLoading() {
+    const queue = document.getElementById('annotationReviewQueue');
+    if (queue) {
+      queue.innerHTML =
+        '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading ChangeSets…</div>';
+    }
   }
 
   _initializeModalBehavior() {
@@ -156,8 +170,7 @@ class AnnotationReviewManager {
     const queue = document.getElementById('annotationReviewQueue');
     if (!queue) return;
     this.isLoading = true;
-    queue.innerHTML =
-      '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading ChangeSets…</div>';
+    this._renderQueueLoading();
     try {
       const status = document.getElementById('annotationReviewFilter')?.value || 'active';
       const riskLevel = document.getElementById('annotationReviewRiskFilter')?.value || '';

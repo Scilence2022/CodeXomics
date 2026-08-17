@@ -2956,6 +2956,11 @@ class AnnotationChangeSetService {
       const restored = Object.values(ledger.changeSets).filter(
         changeSet => changeSet?.status === 'committed' && changeSet.commitReceipt
       ).length;
+      // Build the feature index while the genome is already loading rather than
+      // on the first review action, where it lands inside a click and reads as
+      // a stalled button. Reconciliation warms it whenever committed history
+      // exists, so this only does work for a pending-only queue.
+      if (Object.keys(ledger.changeSets || {}).length > 0) await this._featureIndex(workspace);
       // Genome load path: the freshly bound ledger may already carry a pending
       // queue from an earlier session, so the badge is published right away.
       this._broadcastLedgerState(ledger, workspace.genomePath, 'genome-loaded');
