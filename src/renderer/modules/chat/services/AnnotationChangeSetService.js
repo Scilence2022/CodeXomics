@@ -2316,6 +2316,83 @@ class AnnotationChangeSetService {
     return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
   }
 
+  /**
+   * Validates the all-source citation clause introduced with the DGR note
+   * contract that backs authoritative-fact narratives with the complete
+   * retained bibliography. Returns true when the note is fully citation-bound
+   * through its bibliography; old-style notes without the clause return false
+   * and must rely on citation-bound literature segments instead.
+   */
+  _validateCurationNoteBibliography(note, researchSummary, noteText) {
+    if (!Array.isArray(note.allSourceCitations) || note.allSourceCitations.length === 0) return false;
+    const knownLiteratureIds = new Set(
+      (Array.isArray(researchSummary.literature) ? researchSummary.literature : []).flatMap(item => {
+        const ids = [];
+        if (item?.pmid) ids.push(`pmid:${String(item.pmid)}`);
+        if (item?.doi) ids.push(`doi:${String(item.doi).toLowerCase()}`);
+        return ids;
+      })
+    );
+    const seenLabels = new Set();
+    for (const citation of note.allSourceCitations) {
+      if (!this._isPlainRecord(citation)) return false;
+      const kind = String(citation.kind || '');
+      const id = String(citation.id || '');
+      if (kind === 'pmid') {
+        if (!/^\d{5,10}$/.test(id)) return false;
+        if (String(citation.label || '') !== `PMID:${id}`) return false;
+        if (String(citation.url || '') !== `https://pubmed.ncbi.nlm.nih.gov/${id}/`) return false;
+        if (!knownLiteratureIds.has(`pmid:${id}`)) return false;
+      } else if (kind === 'doi') {
+        if (!/^10\.\d{4,9}\//.test(id)) return false;
+        if (String(citation.label || '') !== `DOI:${id}`) return false;
+        if (String(citation.url || '') !== `https://doi.org/${id}`) return false;
+        if (!knownLiteratureIds.has(`doi:${id.toLowerCase()}`)) return false;
+      } else {
+        return false;
+      }
+      if (seenLabels.has(String(citation.label))) return false;
+      seenLabels.add(String(citation.label));
+    }
+    const citationText = note.citationText === undefined ? null : String(note.citationText || '');
+    if (citationText === null) return false;
+    // The clause must be exactly "Supporting sources: L1. L2. ..." for an
+    // in-order prefix of the complete bibliography (length-bounded by DGR).
+    const includedLabels = [];
+    for (const citation of note.allSourceCitations) {
+      const candidate = [...includedLabels, String(citation.label)].map(label => `${label}.`).join(' ');
+      const expectedClause = `Supporting sources: ${candidate}`;
+      if (citationText === expectedClause) {
+        includedLabels.push(String(citation.label));
+        break;
+      }
+      if (citationText.startsWith(`${expectedClause} `)) {
+        includedLabels.push(String(citation.label));
+        continue;
+      }
+      break;
+    }
+    if (includedLabels.length === 0) return false;
+    const expectedClause = `Supporting sources: ${includedLabels.map(label => `${label}.`).join(' ')}`;
+    if (citationText !== expectedClause) return false;
+    if (!noteText.endsWith(expectedClause)) return false;
+    const omitted = note.allSourceCitations.slice(includedLabels.length).map(citation => String(citation.label));
+    if (omitted.length > 0 && !this._canonicalValuesEqual(note.coverage?.omittedCitationLabels, omitted)) {
+      return false;
+    }
+    if (
+      Number.isFinite(Number(note.coverage?.citedSourceCount)) &&
+      Number(note.coverage.citedSourceCount) !== includedLabels.length
+    )
+      return false;
+    if (
+      Number.isFinite(Number(note.coverage?.totalSourceCount)) &&
+      Number(note.coverage.totalSourceCount) !== note.allSourceCitations.length
+    )
+      return false;
+    return true;
+  }
+
   async _validateCurationNote(note, researchSummary, evidenceRecords, claims, operations) {
     if (note === undefined || note === null) return null;
     if (!researchSummary || !this._isPlainRecord(note) || note.schema !== 'dgr.curation-note.v1') {
@@ -2385,7 +2462,11 @@ class AnnotationChangeSetService {
       includedFactIds.push(String(fact.id));
       includedEvidenceIds.push(...segment.evidenceIds.map(String));
     }
-    if (literatureSegmentCount === 0 || note.segments.map(segment => segment.text).join(' ') !== text) {
+    if (literatureSegmentCount === 0 && !this._validateCurationNoteBibliography(note, researchSummary, text)) {
+      throw new Error('Curation note must include citation-bound literature and exactly match its segments');
+    }
+    const segmentText = note.segments.map(segment => segment.text).join(' ');
+    if (text !== segmentText && text !== `${segmentText} ${String(note.citationText || '')}`.trim()) {
       throw new Error('Curation note must include citation-bound literature and exactly match its segments');
     }
     const dedupe = values => Array.from(new Set(values));
