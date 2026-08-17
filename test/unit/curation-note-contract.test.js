@@ -147,6 +147,128 @@ describe('curation note contract validation', () => {
     ).rejects.toThrow('must include citation-bound literature');
   });
 
+  it('accepts a no-information-found note that records the search itself', async () => {
+    const Service = loadService();
+    const service = new Service({}, {});
+    const updatedAt = '2026-08-17T12:00:00.000Z';
+    const searchDate = new Date(updatedAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+    const clause = `Annotation by Deep Gene Research on ${searchDate}.`;
+    const text = `No information about this protein was found by a literature search conducted on ${searchDate}. ${clause}`;
+    const note = {
+      schema: 'dgr.curation-note.v1',
+      kind: 'no_information_found',
+      text,
+      textSha256: sha256(text),
+      segments: [],
+      factIds: [],
+      evidenceIds: [],
+      allSourceCitations: [],
+      provenance: { agent: 'Deep Gene Research', updatedAt, clause },
+      searchConductedAt: updatedAt,
+      coverage: {
+        availableFactCount: 0,
+        includedFactCount: 0,
+        includedCategories: [],
+        omittedFactIds: [],
+        citedSourceCount: 0,
+        totalSourceCount: 0,
+        omittedCitationLabels: [],
+      },
+    };
+    const claims = [{ id: 'claim_1', field: 'note', value: text, evidenceIds: [], confidence: null }];
+    const operations = [{ op: 'addQualifier', field: 'note', value: text, claimIds: ['claim_1'] }];
+    const researchSummary = {
+      schema: 'dgr.curation-summary.v1',
+      headline: 'Search summary.',
+      facts: [],
+      literature: [],
+      limitations: [],
+    };
+
+    const validated = await service._validateCurationNote(note, researchSummary, [], claims, operations);
+    expect(validated.kind).toBe('no_information_found');
+    expect(validated.text).toBe(text);
+  });
+
+  it('rejects a no-information note whose search date was tampered with', async () => {
+    const Service = loadService();
+    const service = new Service({}, {});
+    const updatedAt = '2026-08-17T12:00:00.000Z';
+    const searchDate = new Date(updatedAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+    const clause = `Annotation by Deep Gene Research on ${searchDate}.`;
+    const tamperedText =
+      'No information about this protein was found by a literature search conducted on January 1, 1990.';
+    const text = `${tamperedText} ${clause}`;
+    const note = {
+      schema: 'dgr.curation-note.v1',
+      kind: 'no_information_found',
+      text,
+      textSha256: sha256(text),
+      segments: [],
+      factIds: [],
+      evidenceIds: [],
+      allSourceCitations: [],
+      provenance: { agent: 'Deep Gene Research', updatedAt, clause },
+      searchConductedAt: updatedAt,
+      coverage: {
+        availableFactCount: 0,
+        includedFactCount: 0,
+        includedCategories: [],
+        omittedFactIds: [],
+        citedSourceCount: 0,
+        totalSourceCount: 0,
+        omittedCitationLabels: [],
+      },
+    };
+    const claims = [{ id: 'claim_1', field: 'note', value: text, evidenceIds: [], confidence: null }];
+    const operations = [{ op: 'addQualifier', field: 'note', value: text, claimIds: ['claim_1'] }];
+    const researchSummary = {
+      schema: 'dgr.curation-summary.v1',
+      headline: 'Search summary.',
+      facts: [],
+      literature: [],
+      limitations: [],
+    };
+
+    await expect(service._validateCurationNote(note, researchSummary, [], claims, operations)).rejects.toThrow(
+      'not bound to its search provenance'
+    );
+  });
+
+  it('accepts a standard note ending with the agent/timestamp provenance clause', async () => {
+    const Service = loadService();
+    const service = new Service({}, {});
+    const { researchSummary, evidenceRecords } = authoritativeFixture();
+    const { note, claims, operations } = newContractNote();
+    const updatedAt = '2026-08-17T12:00:00.000Z';
+    const searchDate = new Date(updatedAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+    const clause = `Annotation by Deep Gene Research on ${searchDate}.`;
+    note.provenance = { agent: 'Deep Gene Research', updatedAt, clause };
+    note.text = `${note.text} ${clause}`;
+    note.textSha256 = sha256(note.text);
+    claims[0].value = note.text;
+    operations[0].value = note.text;
+
+    const validated = await service._validateCurationNote(note, researchSummary, evidenceRecords, claims, operations);
+    expect(validated.text).toBe(note.text);
+    expect(validated.provenance.clause).toBe(clause);
+  });
+
   it('still accepts an old-contract note with a direct literature segment and no clause', async () => {
     const Service = loadService();
     const service = new Service({}, {});
