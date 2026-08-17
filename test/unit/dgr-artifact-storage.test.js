@@ -752,4 +752,56 @@ describe('DGR artifact storage', () => {
       text: expect.stringContaining('PMID:123456'),
     });
   });
+  it('prefers the canonical literatureMetrics count over directness-derived legacy counting', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    // Six direct papers visible to the legacy counter, but the canonical
+    // metrics report the complete retained bibliography (38 papers).
+    task.result.metadata.literatureMetrics = {
+      totalPapers: 38,
+      pubmedPapers: 36,
+      directPapers: 6,
+      geneLinkedPapers: 30,
+      preprintPapers: 2,
+      userDocumentPapers: 0,
+    };
+    task.result.sources.push(
+      { id: 'ppr:1', database: 'europepmc_preprints', url: 'https://doi.org/10.1101/example.1' },
+      { id: 'ppr:2', database: 'europepmc_preprints', url: 'https://doi.org/10.1101/example.2' }
+    );
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    expect(descriptor.summary.literatureCount).toBe(38);
+    expect(descriptor.summary.literatureMetrics).toMatchObject({
+      totalPapers: 38,
+      directPapers: 6,
+      preprintPapers: 2,
+    });
+  });
+
+  it('counts preprints and user documents in the legacy fallback literature count', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    delete task.result.metadata.literatureMetrics;
+    task.result.sources.push(
+      { id: 'ppr:1', database: 'europepmc_preprints', url: 'https://doi.org/10.1101/example.1' },
+      { id: 'pdf:1', database: 'user_document', url: 'urn:sha256:aa', pmid: '12345678' }
+    );
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    // 2 pubmed sources + 1 preprint + 1 user document.
+    expect(descriptor.summary.literatureCount).toBe(4);
+  });
 });

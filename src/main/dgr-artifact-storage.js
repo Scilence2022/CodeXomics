@@ -661,6 +661,19 @@ async function archiveDgrTaskResult({
   const geneLinkedContextCount = pubmedSources.filter(
     source => source?.structuredData?.targetRelevance?.directness === 'gene_linked_context'
   ).length;
+  // Preprint abstracts and user PDFs with a PMID/DOI are papers too. The
+  // legacy directness-only count silently under-reported them.
+  const retainedLiteratureCount = Array.isArray(task.result?.sources)
+    ? task.result.sources.filter(source =>
+        ['pubmed', 'europepmc_preprints', 'user_document'].includes(String(source?.database || '').toLowerCase())
+      ).length
+    : 0;
+  // Newer DGR runs publish a canonical count; it is the single source of
+  // truth so the UI can never diverge from the retained bibliography.
+  const literatureMetrics = task.result?.metadata?.literatureMetrics ?? null;
+  const literatureCount = Number.isInteger(literatureMetrics?.totalPapers)
+    ? Number(literatureMetrics.totalPapers)
+    : retainedLiteratureCount;
   const citationBoundFactCount = Array.isArray(task.result?.annotationProposal?.researchSummary?.facts)
     ? task.result.annotationProposal.researchSummary.facts.filter(fact => fact?.evidenceLevel === 'target_literature')
         .length
@@ -689,9 +702,17 @@ async function archiveDgrTaskResult({
       title: task.result?.title || task.result?.report?.title || `Deep Gene Research: ${target.geneSymbol || geneKey}`,
       sourceCount: Number.isFinite(sourceCount) ? sourceCount : 0,
       confidence: Number.isFinite(Number(confidence)) ? Number(confidence) : null,
-      literatureCount: directLiteratureCount + geneLinkedContextCount,
+      literatureCount,
       directLiteratureCount,
       geneLinkedContextCount,
+      preprintCount: literatureMetrics?.preprintPapers ?? null,
+      userDocumentCount: literatureMetrics?.userDocumentPapers ?? null,
+      literatureMetrics: literatureMetrics ?? {
+        totalPapers: literatureCount,
+        pubmedPapers: pubmedSources.length,
+        directPapers: directLiteratureCount,
+        geneLinkedPapers: geneLinkedContextCount,
+      },
       citationBoundFactCount,
       fullTextSourceCount,
       fullTextFindingCount,
