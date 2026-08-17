@@ -36,7 +36,25 @@ function reviewDom() {
     <input id="annotationBatchLimit" value="50">
     <input id="annotationBatchReviewEnabled" type="checkbox" checked>
     <button id="annotationGovernanceSaveBtn"></button>
+    <button id="annotationReviewBadgeHost"><span class="annotation-review-badge" hidden>0</span></button>
   `;
+}
+
+// The manager is evaluated with `window` bound to a stub, so a test that
+// exercises the ledger broadcast needs one that carries real event plumbing.
+// Each stub gets its own target, keeping one test's manager deaf to the events
+// of the next.
+function browserWindow(extra = {}) {
+  const events = new EventTarget();
+  return {
+    confirm: vi.fn(),
+    prompt: vi.fn(),
+    alert: vi.fn(),
+    addEventListener: (...args) => events.addEventListener(...args),
+    removeEventListener: (...args) => events.removeEventListener(...args),
+    dispatchEvent: (...args) => events.dispatchEvent(...args),
+    ...extra,
+  };
 }
 
 function summary(id, gene, hash) {
@@ -407,5 +425,88 @@ describe('AnnotationReviewManager', () => {
 
     expect(getAnnotationChangeset).not.toHaveBeenCalled();
     expect(document.getElementById('annotationReviewSelectedCount').textContent).toBe('1 selected');
+  });
+
+  it('shows the pending count on start without the curator opening the Review Center', async () => {
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 1,
+      statusCounts: { awaiting_approval: 3, committed: 12 },
+      changeSets: [],
+    }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { listAnnotationChangesets } } },
+      showNotification: vi.fn(),
+    };
+    const appWindow = browserWindow();
+    const Manager = loadManager(appWindow);
+    const manager = new Manager(app);
+
+    const badge = document.querySelector('.annotation-review-badge');
+    await vi.waitFor(() => expect(badge.textContent).toBe('3'));
+    expect(badge.hidden).toBe(false);
+    // The badge poll must not pay for queue previews it never renders.
+    expect(listAnnotationChangesets).toHaveBeenCalledWith({ statuses: ['awaiting_approval'], limit: 1 });
+    expect(document.getElementById('annotationReviewQueue').innerHTML).toBe('');
+    clearInterval(manager.badgeWatchTimer);
+  });
+
+  it('updates the header badge as soon as a ChangeSet is written to the ledger', async () => {
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: {} },
+      showNotification: vi.fn(),
+    };
+    const appWindow = browserWindow();
+    const Manager = loadManager(appWindow);
+    const manager = new Manager(app);
+    const badge = document.querySelector('.annotation-review-badge');
+    expect(badge.hidden).toBe(true);
+
+    appWindow.dispatchEvent(
+      new CustomEvent('annotation-ledger-changed', {
+        detail: { reason: 'ledger-saved', statusCounts: { awaiting_approval: 1, approved: 1, rejected: 4 } },
+      })
+    );
+
+    expect(badge.textContent).toBe('2');
+    expect(badge.hidden).toBe(false);
+    clearInterval(manager.badgeWatchTimer);
+  });
+
+  it('leaves an in-progress review alone when the ledger changes underneath it', async () => {
+    const pending = summary('cs-open', 'lysC', 'hash-open');
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 1,
+      statusCounts: { awaiting_approval: 1 },
+      changeSets: [pending],
+    }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { listAnnotationChangesets } } },
+      showNotification: vi.fn(),
+    };
+    const appWindow = browserWindow();
+    const Manager = loadManager(appWindow);
+    const manager = new Manager(app);
+    document.getElementById('annotationReviewModal').classList.add('show');
+    manager.changeSets = new Map([[pending.id, pending]]);
+    manager._renderQueue({ total: 1, changeSets: [pending] });
+    document.querySelector('.annotation-review-checkbox').click();
+    await vi.waitFor(() => expect(listAnnotationChangesets).toHaveBeenCalled());
+    listAnnotationChangesets.mockClear();
+
+    appWindow.dispatchEvent(
+      new CustomEvent('annotation-ledger-changed', {
+        detail: { reason: 'ledger-saved', statusCounts: { awaiting_approval: 2 } },
+      })
+    );
+
+    expect(document.querySelector('.annotation-review-badge').textContent).toBe('2');
+    expect(listAnnotationChangesets).not.toHaveBeenCalled();
+    expect(document.getElementById('annotationReviewSelectedCount').textContent).toBe('1 selected');
+    clearInterval(manager.badgeWatchTimer);
   });
 });

@@ -1495,6 +1495,34 @@ class AnnotationChangeSetService {
     }
     this._assertWorkspace(workspace);
     this.memoryLedgers.set(workspace.key, snapshot);
+    this._broadcastLedgerState(snapshot, genomePath, 'ledger-saved');
+  }
+
+  /**
+   * Announce the review queue state to the renderer UI. Without this the
+   * header Review badge only learns about a new proposal when the curator
+   * opens the Review Center, so an agent-created ChangeSet stayed invisible.
+   */
+  _broadcastLedgerState(ledger, genomePath, reason) {
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+    if (typeof CustomEvent !== 'function') return;
+    try {
+      const statusCounts = Object.create(null);
+      for (const changeSet of Object.values(ledger?.changeSets || {})) {
+        if (!changeSet) continue;
+        const status = String(changeSet.status || 'unknown');
+        this._ledgerMapSet(statusCounts, status, (statusCounts[status] || 0) + 1);
+      }
+      window.dispatchEvent(
+        new CustomEvent('annotation-ledger-changed', {
+          detail: { reason, genomePath: genomePath || null, revision: ledger?.revision ?? null, statusCounts },
+        })
+      );
+    } catch (error) {
+      // The ledger is already persisted; a failed UI notification must not
+      // turn a successful annotation write into an error.
+      console.warn('[AnnotationChangeSet] ledger change broadcast failed:', error?.message || error);
+    }
   }
 
   async _hash(value) {
@@ -2833,6 +2861,9 @@ class AnnotationChangeSetService {
       const restored = Object.values(ledger.changeSets).filter(
         changeSet => changeSet?.status === 'committed' && changeSet.commitReceipt
       ).length;
+      // Genome load path: the freshly bound ledger may already carry a pending
+      // queue from an earlier session, so the badge is published right away.
+      this._broadcastLedgerState(ledger, workspace.genomePath, 'genome-loaded');
       return { success: true, revision: ledger.revision, committedChangeSets: restored };
     });
   }

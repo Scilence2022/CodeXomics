@@ -23,10 +23,13 @@ class AnnotationReviewManager {
       batchSizeLimit: 50,
       batchReviewEnabled: true,
     });
+    this.badgeWatchIntervalMs = 60000;
+    this.isBadgeRefreshing = false;
     this.settings = this._loadSettings();
     this.app.localCuratorIdentity = this.settings.curatorIdentity;
     this.app.confirmAnnotationChangeSet = request => this.confirmAnnotationChangeSet(request);
     this._bindStaticEvents();
+    this._startPendingBadgeWatch();
   }
 
   _annotationService() {
@@ -799,6 +802,66 @@ class AnnotationReviewManager {
   _refreshSelectedGene() {
     if (this.app?.selectedGene?.gene && typeof this.app.populateGeneDetails === 'function') {
       this.app.populateGeneDetails(this.app.selectedGene.gene, this.app.selectedGene.operonInfo);
+    }
+  }
+
+  /**
+   * Keep the header Review badge current without the curator opening the
+   * Review Center. Ledger writes broadcast their own status counts, so a
+   * proposal made by an agent shows up immediately; the slow poll is the
+   * fallback for ledger state this renderer never observed being written.
+   */
+  _startPendingBadgeWatch() {
+    if (this.badgeWatchStarted || typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
+      return;
+    }
+    this.badgeWatchStarted = true;
+    window.addEventListener('annotation-ledger-changed', event => this._handleLedgerChanged(event));
+    this.badgeWatchTimer = setInterval(() => {
+      // Re-reading the ledger validates every committed receipt, so an
+      // unwatched window pays nothing for the fallback poll.
+      if (document.hidden) return;
+      void this.refreshPendingBadge();
+    }, this.badgeWatchIntervalMs);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) void this.refreshPendingBadge();
+    });
+    void this.refreshPendingBadge();
+  }
+
+  _handleLedgerChanged(event) {
+    const statusCounts = event?.detail?.statusCounts;
+    if (statusCounts) this._updatePendingBadge(statusCounts);
+    else void this.refreshPendingBadge();
+    // An open queue would otherwise keep showing the pre-change list while the
+    // badge already counts the new ChangeSet. Reloading is only safe while the
+    // curator has nothing selected and no decision is in flight.
+    const modalIsOpen = document.getElementById('annotationReviewModal')?.classList.contains('show');
+    if (modalIsOpen && !this.activeDecisionSession && this._selectedChangeSets().length === 0) {
+      void this.refreshQueue();
+    }
+  }
+
+  /**
+   * Read only the pending counts. listAnnotationChangesets always reports the
+   * full ledger status counts, so limit=1 keeps the per-item preview work out
+   * of a background poll.
+   */
+  async refreshPendingBadge() {
+    if (this.isLoading || this.isBadgeRefreshing) return;
+    this.isBadgeRefreshing = true;
+    try {
+      const result = await this._annotationService().listAnnotationChangesets({
+        statuses: ['awaiting_approval'],
+        limit: 1,
+      });
+      this._updatePendingBadge(result.statusCounts || {});
+    } catch (error) {
+      // No loaded genome, services still starting, or a genome swap mid-poll:
+      // leave the badge as it is and let the next tick retry.
+      console.debug('[AnnotationReview] pending badge refresh skipped:', error?.message || error);
+    } finally {
+      this.isBadgeRefreshing = false;
     }
   }
 
