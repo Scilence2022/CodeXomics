@@ -117,15 +117,8 @@ class BlastService {
       }
     }
 
-    // Priority 2: Direct BlastManager-backed implementations for core BLAST tools.
-    // Wrapped because a throw here used to escape the whole chain: priorities 3-5,
-    // including the MCP fallback, became unreachable the moment this path failed.
-    let directResult;
-    try {
-      directResult = await this._executeDirectBlastManagerRequest(methodName, normalizedParams);
-    } catch (e) {
-      console.warn(`[BlastService] BlastManager direct path for '${methodName}' failed, falling back:`, e.message);
-    }
+    // Priority 2: Direct BlastManager-backed implementations for core BLAST tools
+    const directResult = await this._executeDirectBlastManagerRequest(methodName, normalizedParams);
     if (directResult !== undefined) {
       return directResult;
     }

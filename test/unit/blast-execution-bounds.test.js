@@ -91,7 +91,7 @@ describe('online BLAST honours one overall deadline', () => {
   const source = readSource('src/renderer/modules/BlastManager.js');
 
   it('anchors an absolute deadline instead of a per-attempt budget', () => {
-    expect(source).toMatch(/async executeNCBIBlast\(params, retryCount = 0, deadline = null, existingJob = null\)/);
+    expect(source).toMatch(/async executeNCBIBlast\(params, retryCount = 0, deadline = null\)/);
     expect(source).toMatch(
       /const effectiveDeadline = deadline \?\? Date\.now\(\) \+ Number\(this\.config\?\.maxWaitTime/
     );
@@ -99,9 +99,7 @@ describe('online BLAST honours one overall deadline', () => {
 
   it('refuses to retry past the deadline', () => {
     expect(source).toMatch(/if \(Date\.now\(\) \+ delay < effectiveDeadline\) \{/);
-    // The retry carries the submitted job forward so a poll failure resumes the
-    // existing RID rather than resubmitting; the deadline argument is unchanged.
-    expect(source).toMatch(/return this\.executeNCBIBlast\(params, retryCount \+ 1, effectiveDeadline, submittedJob\)/);
+    expect(source).toMatch(/return this\.executeNCBIBlast\(params, retryCount \+ 1, effectiveDeadline\)/);
   });
 
   it('makes the nested submission retry loop deadline-aware', () => {
