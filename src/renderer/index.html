@@ -1355,6 +1355,10 @@
                 <button class="annotation-review-nav-btn active" data-review-tab="queue" role="tab">
                     <i class="fas fa-list-check"></i> Review Queue
                 </button>
+                <button class="annotation-review-nav-btn" data-review-tab="applied" role="tab">
+                    <i class="fas fa-dna"></i> Annotated Genes
+                    <span class="annotation-review-applied-count" hidden>0</span>
+                </button>
                 <button class="annotation-review-nav-btn" data-review-tab="governance" role="tab">
                     <i class="fas fa-user-shield"></i> Security &amp; Governance
                 </button>
@@ -1409,6 +1413,26 @@
                             </button>
                         </div>
                     </div>
+                </section>
+
+                <section class="annotation-review-panel" data-review-panel="applied">
+                    <div class="annotation-review-toolbar">
+                        <div class="annotation-review-filters">
+                            <input id="annotationAppliedSearch" type="search" placeholder="Gene, locus tag, or chromosome">
+                            <select id="annotationAppliedSort" aria-label="Sort annotated genes">
+                                <option value="recent">Most recently applied</option>
+                                <option value="count">Most applied ChangeSets</option>
+                                <option value="gene">Gene name (A–Z)</option>
+                            </select>
+                            <button id="annotationAppliedRefreshBtn" class="btn btn-secondary btn-sm" title="Refresh annotated genes">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                        </div>
+                        <div class="annotation-review-queue-meta">
+                            <span id="annotationAppliedTotal">0 genes</span>
+                        </div>
+                    </div>
+                    <div id="annotationAppliedGenes" class="annotation-applied-list"></div>
                 </section>
 
                 <section class="annotation-review-panel" data-review-panel="governance">

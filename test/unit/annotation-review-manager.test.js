@@ -14,7 +14,12 @@ function loadManager(mockWindow) {
 
 function reviewDom() {
   document.body.innerHTML = `
-    <div id="annotationReviewModal"></div>
+    <div id="annotationReviewModal">
+      <button class="annotation-review-nav-btn" data-review-tab="queue"><span class="annotation-review-applied-count" hidden>0</span></button>
+      <button class="annotation-review-nav-btn" data-review-tab="applied"></button>
+      <section class="annotation-review-panel active" data-review-panel="queue"></section>
+      <section class="annotation-review-panel" data-review-panel="applied"></section>
+    </div>
     <button id="annotationReviewHeaderBtn"></button>
     <input id="annotationReviewSearch" value="">
     <select id="annotationReviewFilter"><option value="active" selected>active</option></select>
@@ -36,6 +41,11 @@ function reviewDom() {
     <input id="annotationBatchLimit" value="50">
     <input id="annotationBatchReviewEnabled" type="checkbox" checked>
     <button id="annotationGovernanceSaveBtn"></button>
+    <input id="annotationAppliedSearch" value="">
+    <select id="annotationAppliedSort"><option value="recent" selected>recent</option></select>
+    <button id="annotationAppliedRefreshBtn"></button>
+    <span id="annotationAppliedTotal"></span>
+    <div id="annotationAppliedGenes"></div>
     <button id="annotationReviewBadgeHost"><span class="annotation-review-badge" hidden>0</span></button>
   `;
 }
@@ -69,6 +79,32 @@ function summary(id, gene, hash) {
     operationCount: 1,
     evidenceCount: 1,
     preview: [{ op: 'addQualifier', field: 'note', before: null, after: `${gene} note` }],
+  };
+}
+
+function appliedSummary(id, gene, overrides = {}) {
+  return {
+    id,
+    status: 'committed',
+    createdAt: '2026-07-16T00:00:00.000Z',
+    createdBy: 'research-agent',
+    committedAt: '2026-07-17T10:00:00.000Z',
+    committedBy: 'local-curator',
+    resultingRevision: 4,
+    riskLevel: 'medium',
+    operationCount: 1,
+    evidenceCount: 2,
+    fields: ['product'],
+    target: {
+      featureId: `feat-${gene}`,
+      geneSymbol: gene,
+      locusTag: `${gene}-tag`,
+      featureType: 'CDS',
+      chromosome: 'U00096.3',
+      coordinates: { start: 100, end: 400, strand: 1 },
+    },
+    preview: [{ op: 'replaceQualifier', field: 'product', before: 'hypothetical protein', after: `${gene} synthase` }],
+    ...overrides,
   };
 }
 
@@ -627,5 +663,153 @@ describe('AnnotationReviewManager', () => {
     expect(listAnnotationChangesets).not.toHaveBeenCalled();
     expect(document.getElementById('annotationReviewSelectedCount').textContent).toBe('1 selected');
     clearInterval(manager.badgeWatchTimer);
+  });
+
+  it('lists one annotated gene per target with its applied ChangeSet history', async () => {
+    const first = appliedSummary('cs-a1', 'lysC');
+    const second = appliedSummary('cs-a2', 'lysC', {
+      committedAt: '2026-07-18T10:00:00.000Z',
+      resultingRevision: 6,
+      committedBy: 'second-curator',
+      fields: ['note'],
+      preview: [{ op: 'addQualifier', field: 'note', before: null, after: 'kinase activity confirmed' }],
+    });
+    const third = appliedSummary('cs-a3', 'thrB');
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 3,
+      statusCounts: { committed: 3, awaiting_approval: 0 },
+      changeSets: [first, second, third],
+    }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { listAnnotationChangesets } } },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(browserWindow());
+    const manager = new Manager(app);
+
+    manager.showModalTab('applied');
+    await vi.waitFor(() => {
+      expect(document.querySelectorAll('.annotation-applied-item').length).toBe(2);
+    });
+
+    expect(listAnnotationChangesets).toHaveBeenCalledWith({ statuses: ['committed'], query: '', limit: 1000 });
+    const items = Array.from(document.querySelectorAll('.annotation-applied-item'));
+    // Most recently applied gene first, and its two commits are one entry.
+    expect(items[0].textContent).toContain('lysC');
+    expect(items[0].textContent).toContain('2 applied');
+    expect(items[1].textContent).toContain('thrB');
+    expect(document.getElementById('annotationAppliedTotal').textContent).toBe('2 genes · 3 applied ChangeSets');
+    expect(document.querySelector('.annotation-review-applied-count').textContent).toBe('3');
+
+    items[0].querySelector('.annotation-applied-main').click();
+    const expanded = document.querySelectorAll('.annotation-applied-item')[0];
+    expect(expanded.querySelector('.annotation-applied-history').hidden).toBe(false);
+    const records = expanded.querySelectorAll('.annotation-applied-record');
+    expect(records.length).toBe(2);
+    // Newest commit first, showing the value that was written.
+    expect(records[0].textContent).toContain('cs-a2');
+    expect(records[0].textContent).toContain('kinase activity confirmed');
+    expect(records[1].textContent).toContain('cs-a1');
+  });
+
+  it('navigates the genome view to an applied gene and closes the review center', async () => {
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 1,
+      statusCounts: { committed: 1 },
+      changeSets: [appliedSummary('cs-a4', 'ygaQ')],
+    }));
+    const navigateToPosition = vi.fn(() => ({ success: true }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { listAnnotationChangesets } } },
+      navigationManager: { navigateToPosition },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(browserWindow());
+    const manager = new Manager(app);
+    document.getElementById('annotationReviewModal').classList.add('show');
+
+    await manager.refreshAppliedGenes();
+    document.querySelector('[data-action="applied-locate"]').click();
+
+    expect(navigateToPosition).toHaveBeenCalledWith('U00096.3', 100, 400);
+    expect(document.getElementById('annotationReviewModal').classList.contains('show')).toBe(false);
+    expect(app.showNotification).toHaveBeenCalledWith('Navigated to ygaQ.', 'success');
+  });
+
+  it('reports targets without recorded coordinates instead of navigating', async () => {
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 1,
+      statusCounts: { committed: 1 },
+      changeSets: [
+        appliedSummary('cs-a5', 'pinH', {
+          target: { featureId: 'feat-pinH', geneSymbol: 'pinH', featureType: 'CDS' },
+        }),
+      ],
+    }));
+    const navigateToPosition = vi.fn();
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { listAnnotationChangesets } } },
+      navigationManager: { navigateToPosition },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(browserWindow());
+    const manager = new Manager(app);
+
+    await manager.refreshAppliedGenes();
+    const locateButton = document.querySelector('[data-action="applied-locate"]');
+
+    expect(locateButton.disabled).toBe(true);
+    manager.locateAppliedGene('feat-pinH');
+    expect(navigateToPosition).not.toHaveBeenCalled();
+    expect(app.showNotification).toHaveBeenCalledWith(
+      'This ChangeSet target has no recorded coordinates to navigate to.',
+      'warning'
+    );
+  });
+
+  it('opens an applied audit record back in the review queue', async () => {
+    const applied = appliedSummary('cs-a6', 'metL');
+    const listAnnotationChangesets = vi.fn(async () => ({
+      success: true,
+      total: 1,
+      statusCounts: { committed: 1 },
+      changeSets: [applied],
+    }));
+    const getAnnotationChangeset = vi.fn(async () => ({
+      success: true,
+      changeSet: { id: applied.id, target: applied.target, operations: [], evidence: [] },
+    }));
+    const app = {
+      configManager: { get: vi.fn(() => ({})), set: vi.fn(), save: vi.fn() },
+      chatManager: { services: { annotation: { listAnnotationChangesets, getAnnotationChangeset } } },
+      showNotification: vi.fn(),
+    };
+    const Manager = loadManager(browserWindow());
+    const manager = new Manager(app);
+    document.getElementById('annotationReviewFilter').innerHTML =
+      '<option value="active" selected>active</option><option value="committed">committed</option>';
+
+    await manager.refreshAppliedGenes();
+    manager.toggleAppliedGene('feat-metL');
+    await manager.openAppliedRecord(applied.id);
+
+    expect(document.getElementById('annotationReviewFilter').value).toBe('committed');
+    expect(document.querySelector('[data-review-panel="queue"]').classList.contains('active')).toBe(true);
+    expect(getAnnotationChangeset).toHaveBeenCalledWith({ changeSetId: applied.id });
+  });
+
+  it('exposes the annotated genes tab and panel in the review center markup', () => {
+    const html = fs.readFileSync(RENDERER_INDEX_PATH, 'utf8');
+
+    expect(html).toContain('data-review-tab="applied"');
+    expect(html).toContain('data-review-panel="applied"');
+    expect(html).toContain('id="annotationAppliedGenes"');
+    expect(html.indexOf('data-review-tab="applied"')).toBeLessThan(html.indexOf('data-review-tab="governance"'));
   });
 });
