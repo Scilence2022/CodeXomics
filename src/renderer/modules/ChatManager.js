@@ -4303,28 +4303,33 @@ class ChatManager {
                             <i class="fas fa-plus"></i>
                             New Chat
                         </button>
-                        <button id="mcpToggleBtn" class="btn btn-sm btn-secondary mcp-tools-btn" title="Toggle MCP Tools" data-connected="false">
-                            <i class="fas fa-microchip"></i>
-                            MCP Tools
-                        </button>
-                        <button id="chatSkillsBtn" class="btn btn-sm btn-secondary" title="Agent Skills — expert workflows the assistant can load">
-                            <i class="fas fa-book"></i>
-                            Skills
-                        </button>
-                    </div>
-                    <div class="chat-actions secondary-actions">
                         <button id="chatHistoryBtn" class="btn btn-sm btn-secondary">
                             <i class="fas fa-history"></i>
                             History
                         </button>
-                        <button id="exportChatBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-download"></i>
-                            Export
+                        <button id="mcpToggleBtn" class="btn btn-sm btn-secondary mcp-tools-btn" title="Toggle MCP Tools" data-connected="false">
+                            <i class="fas fa-microchip"></i>
+                            MCP Tools
                         </button>
-                        <button id="mcpServerMgmtBtn" class="btn btn-sm btn-secondary" title="External MCP Servers">
-                            <i class="fas fa-server"></i>
-                            MCP Servers
-                        </button>
+                        <div class="chat-more-menu-container">
+                            <button id="chatMoreBtn" class="btn btn-sm btn-secondary" title="More actions">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                            <div class="dropdown-menu chat-more-menu" id="chatMoreMenu">
+                                <button class="dropdown-item" id="chatSkillsBtn" title="Agent Skills — expert workflows the assistant can load">
+                                    <i class="fas fa-book"></i>
+                                    Skills
+                                </button>
+                                <button class="dropdown-item" id="exportChatBtn">
+                                    <i class="fas fa-download"></i>
+                                    Export
+                                </button>
+                                <button class="dropdown-item" id="mcpServerMgmtBtn" title="External MCP Servers">
+                                    <i class="fas fa-server"></i>
+                                    MCP Servers
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <!-- Resize handles -->
@@ -4666,6 +4671,25 @@ class ChatManager {
     document.getElementById('mcpToggleBtn')?.addEventListener('click', () => {
       this.toggleMCPConnection();
     });
+
+    // "More" actions dropdown (Skills / Export / MCP Servers)
+    document.getElementById('chatMoreBtn')?.addEventListener('click', e => {
+      e.stopPropagation();
+      document.getElementById('chatMoreMenu')?.classList.toggle('show');
+    });
+
+    // Guard against duplicate document-level binding if setupEventListeners runs again
+    if (!this._chatMoreMenuDismissBound) {
+      this._chatMoreMenuDismissBound = true;
+      document.addEventListener('click', e => {
+        const moreMenu = document.getElementById('chatMoreMenu');
+        if (!moreMenu || !moreMenu.classList.contains('show')) return;
+        // Close after picking an item, or when clicking anywhere outside the dropdown
+        if (e.target.closest('#chatMoreMenu .dropdown-item') || !e.target.closest('.chat-more-menu-container')) {
+          moreMenu.classList.remove('show');
+        }
+      });
+    }
   }
 
   addChatToggleButton() {

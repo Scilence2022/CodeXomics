@@ -2592,6 +2592,27 @@ function registerIpcHandlers(deps) {
     }
   });
 
+  // Drag-and-drop is an explicit user gesture, equivalent in trust to picking
+  // the same files in an open dialog: grant read-only access to the dropped
+  // paths so FileManager's broker-checked reads succeed.
+  ipcMain.handle('authorize-file-drop', async (event, filePaths) => {
+    try {
+      if (!Array.isArray(filePaths) || filePaths.length === 0 || filePaths.length > 32) {
+        throw new Error('File drop authorization expects between 1 and 32 file paths');
+      }
+      const grantedPaths = filePaths.map(filePath =>
+        grantReadOnlyFileLoadPath(filePath, {
+          source: 'user-file-drop',
+          reason: 'Read-only access granted by an explicit user drag-and-drop gesture',
+          operation: 'drop file',
+        })
+      );
+      return { success: true, filePaths: grantedPaths };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('get-app-paths', async () => {
     const safeGetPath = name => {
       try {

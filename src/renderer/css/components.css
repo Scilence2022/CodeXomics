@@ -16,6 +16,9 @@
 }
 
 .version-tag {
+  /* Redundant with the window title version — keep the element (version.js
+     still writes into it) but do not show it in the header. */
+  display: none;
   font-size: 11px;
   font-weight: 400;
   color: #74b9ff;

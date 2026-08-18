@@ -1209,6 +1209,28 @@
   min-width: 92px;
 }
 
+/* "More" actions dropdown: icon-only trigger, menu opens upwards because the
+   actions row sits at the bottom edge of the ChatBox. */
+#llmChatPanel .chat-more-menu-container {
+  position: relative;
+}
+
+#llmChatPanel .chat-actions #chatMoreBtn {
+  min-width: 0;
+}
+
+#llmChatPanel .chat-more-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+  left: auto;
+  right: 0;
+  min-width: 150px;
+}
+
+#llmChatPanel .chat-more-menu .dropdown-item {
+  color: var(--text-primary);
+}
+
 /* ==========================================================================
    ChatBox composer model picker
 

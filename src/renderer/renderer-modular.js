@@ -1068,15 +1068,9 @@ class GenomeBrowser {
     document
       .getElementById('openGenomeBtn')
       .addEventListener('click', () => this.fileManager.openSpecificFileType('genome'));
-    // Annotation file submenu is handled by CSS hover, no JS needed
-
-    // Annotation file action handlers
-    document.getElementById('openAnnotationMergeBtn').addEventListener('click', () => {
-      this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: true });
-    });
-
-    document.getElementById('openAnnotationNewBtn').addEventListener('click', () => {
-      this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: false });
+    // Annotation file action handler: single entry that asks merge vs. new track when a genome is loaded
+    document.getElementById('openAnnotationBtn').addEventListener('click', () => {
+      this.uiManager.openAnnotationFileWithChoice();
     });
     document
       .getElementById('openVariantBtn')
@@ -1178,21 +1172,17 @@ class GenomeBrowser {
       .getElementById('welcomeOpenGenomeBtn')
       .addEventListener('click', () => this.fileManager.openSpecificFileType('genome'));
     document
-      .getElementById('welcomeOpenAnnotationMergeBtn')
-      .addEventListener('click', () =>
-        this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: true })
-      );
-    document
-      .getElementById('welcomeOpenAnnotationNewBtn')
-      .addEventListener('click', () =>
-        this.fileManager.openSpecificFileType('annotation', { mergeWithExisting: false })
-      );
+      .getElementById('welcomeOpenAnnotationBtn')
+      .addEventListener('click', () => this.uiManager.openAnnotationFileWithChoice());
     document
       .getElementById('welcomeOpenVariantBtn')
       .addEventListener('click', () => this.fileManager.openSpecificFileType('variant'));
     document
       .getElementById('welcomeOpenReadsBtn')
       .addEventListener('click', () => this.fileManager.openSpecificFileType('reads'));
+
+    // Welcome screen drag & drop zone
+    this.setupWelcomeDropZone();
 
     // Close dropdown when clicking outside
     document.addEventListener('click', e => {
@@ -5396,6 +5386,89 @@ class GenomeBrowser {
 
   hideWelcomeScreen() {
     this.uiManager.hideWelcomeScreen();
+  }
+
+  /**
+   * Wire the welcome screen drop zone. Dropped files are routed by extension
+   * through the same FileManager entry points the open-file buttons use.
+   */
+  setupWelcomeDropZone() {
+    const dropZone = document.getElementById('welcomeDropZone');
+    if (!dropZone) return;
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('dragover');
+      const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+      if (files.length > 0) {
+        this.loadDroppedFiles(files);
+      }
+    });
+  }
+
+  /**
+   * Resolve the filesystem path of a dropped File. Electron >= 32 removed
+   * File.path in favor of webUtils.getPathForFile(); keep both so the drop
+   * zone also works in environments where webUtils is unavailable.
+   */
+  getDroppedFilePath(file) {
+    try {
+      if (typeof require === 'function') {
+        const { webUtils } = require('electron');
+        if (webUtils && typeof webUtils.getPathForFile === 'function') {
+          const filePath = webUtils.getPathForFile(file);
+          if (filePath) return filePath;
+        }
+      }
+    } catch (error) {
+      console.warn('webUtils.getPathForFile failed, falling back to File.path:', error);
+    }
+    return file.path || '';
+  }
+
+  async loadDroppedFiles(files) {
+    const filePaths = files.map(file => this.getDroppedFilePath(file)).filter(Boolean);
+    if (filePaths.length === 0) {
+      this.updateStatus('Could not resolve dropped file path(s)');
+      return;
+    }
+
+    // The permission broker only auto-grants dialog-picked paths; a drop is an
+    // equally explicit user gesture, so request the read grant up front.
+    const authorization = await ipcRenderer.invoke('authorize-file-drop', filePaths);
+    if (!authorization?.success) {
+      this.updateStatus(`Dropped file not authorized: ${authorization?.error || 'unknown error'}`, 'error');
+      return;
+    }
+
+    const wigExtensions = ['.wig', '.bw', '.bigwig'];
+    const isWigFile = filePath => wigExtensions.some(ext => filePath.toLowerCase().endsWith(ext));
+
+    try {
+      if (filePaths.length > 1 && filePaths.every(isWigFile)) {
+        // Mirror the WIG/BigWig button: multiple track files load together
+        await this.fileManager.loadMultipleWIGFiles(filePaths);
+      } else {
+        // FileManager.loadFile() routes genome/annotation/variant/reads/track files by extension
+        for (const filePath of filePaths) {
+          await this.fileManager.loadFile(filePath);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading dropped files:', error);
+      this.updateStatus(`Failed to load dropped file: ${error.message}`, 'error');
+    }
   }
 
   updateStatus(message, options = {}) {

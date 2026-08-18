@@ -337,6 +337,14 @@ class UIManager {
     const sidebarVisible =
       hasConfiguredSidebarVisibility && configManager?.get ? configManager.get('ui.sidebarVisible', false) : false;
     this.setSidebarCollapsed(sidebarVisible !== true, { persist: false });
+
+    // Empty state: the sidebar has no data to show until a file is loaded, so
+    // collapse it rather than showing a blank strip. The saved preference
+    // still applies once hideWelcomeScreen() expands it again. Users can still
+    // expand it manually and see the panels.
+    if (document.body?.classList.contains('no-genome-loaded')) {
+      this.setSidebarCollapsed(true, { persist: false });
+    }
   }
 
   persistSidebarVisibility(visible) {
@@ -1045,6 +1053,91 @@ class UIManager {
     const welcomeScreen = document.querySelector('.welcome-screen');
     if (welcomeScreen) {
       welcomeScreen.style.display = 'none';
+    }
+    // A file was loaded: clear the empty-state marker
+    document.body.classList.remove('no-genome-loaded');
+    // The empty state force-collapses the sidebar; now that panels have
+    // content, expand it again without touching the user's persisted preference.
+    this.setSidebarCollapsed(false, { persist: false });
+  }
+
+  /**
+   * Single entry point for loading an annotation file. When a genome is
+   * already loaded the user picks between merging into the current
+   * annotations and creating a new track; otherwise the file is loaded
+   * directly as a new track (there is nothing to merge into).
+   */
+  openAnnotationFileWithChoice() {
+    const genomeBrowser = this.genomeBrowser;
+    const hasGenomeLoaded =
+      genomeBrowser && genomeBrowser.currentSequence && Object.keys(genomeBrowser.currentSequence).length > 0;
+
+    if (!hasGenomeLoaded) {
+      genomeBrowser.fileManager.openSpecificFileType('annotation', { mergeWithExisting: false });
+      return;
+    }
+
+    this.showAnnotationLoadChoiceModal(mergeWithExisting => {
+      if (mergeWithExisting === null) return; // cancelled
+      genomeBrowser.fileManager.openSpecificFileType('annotation', { mergeWithExisting });
+    });
+  }
+
+  /**
+   * Show a modal asking how an annotation file should be loaded.
+   * The callback receives true (merge), false (new track) or null (cancelled).
+   */
+  showAnnotationLoadChoiceModal(onChoice) {
+    let modal = document.getElementById('annotationLoadChoiceModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'annotationLoadChoiceModal';
+      modal.className = 'modal';
+      modal.innerHTML = `
+                <div class="modal-content" style="max-width: 420px;">
+                    <div class="modal-header">
+                        <h3>Load Annotation File</h3>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Choose how to load the annotation file:</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="annotationLoadMergeBtn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Merge into current annotations
+                        </button>
+                        <button id="annotationLoadNewBtn" class="btn btn-secondary">
+                            <i class="fas fa-file"></i> Load as new track
+                        </button>
+                    </div>
+                </div>
+            `;
+      document.body.appendChild(modal);
+
+      modal
+        .querySelector('#annotationLoadMergeBtn')
+        .addEventListener('click', () => this._finishAnnotationLoadChoice(true));
+      modal
+        .querySelector('#annotationLoadNewBtn')
+        .addEventListener('click', () => this._finishAnnotationLoadChoice(false));
+      modal.querySelectorAll('.modal-close').forEach(btn => {
+        btn.addEventListener('click', () => this._finishAnnotationLoadChoice(null));
+      });
+    }
+
+    this._annotationLoadChoiceCallback = onChoice;
+    modal.classList.add('show');
+  }
+
+  _finishAnnotationLoadChoice(mergeWithExisting) {
+    const modal = document.getElementById('annotationLoadChoiceModal');
+    if (modal) {
+      modal.classList.remove('show');
+    }
+    const callback = this._annotationLoadChoiceCallback;
+    this._annotationLoadChoiceCallback = null;
+    if (typeof callback === 'function') {
+      callback(mergeWithExisting);
     }
   }
 

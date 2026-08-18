@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, shell } = require('electron');
+const { contextBridge, ipcRenderer, shell, webUtils } = require('electron');
 
 const allowedInvokeChannels = [
   'mcp-server-start',
@@ -22,6 +22,7 @@ const allowedInvokeChannels = [
   'read-file-stream',
   'get-file-info',
   'authorize-file-load',
+  'authorize-file-drop',
   'getFileInfo',
   'get-app-paths',
   'checkFileExists',
@@ -345,6 +346,12 @@ const safeRequire = moduleName => {
         ipcRenderer: safeIpcRenderer,
         shell: {
           openExternal: url => shell.openExternal(url),
+        },
+        webUtils: {
+          // File objects cross the context bridge by reference, so this is the
+          // sanctioned way to resolve dropped-file paths (Electron >= 32
+          // removed File.path).
+          getPathForFile: file => webUtils.getPathForFile(file),
         },
       };
     case 'path':

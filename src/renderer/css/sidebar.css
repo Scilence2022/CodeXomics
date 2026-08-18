@@ -27,6 +27,20 @@
   color: var(--text-primary);
 }
 
+/* Group titles inside the Show Features panel: muted, smaller sibling of .section-header h3 */
+.feature-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.feature-group-title:first-child {
+  margin-top: 0;
+}
+
 /* File Information Section */
 .file-info .no-file {
   color: var(--text-muted);

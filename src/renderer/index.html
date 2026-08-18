@@ -59,7 +59,7 @@
     <script src="modules/DebugLogger.js"></script>
 </head>
 
-<body>
+<body class="no-genome-loaded">
     <!-- Early style application: eliminates flash-of-default-style on startup.
          This inline script runs synchronously before any external JS or first paint,
          applying the saved UI style's CSS custom properties immediately. -->
@@ -419,13 +419,9 @@
                             <i class="fas fa-dna"></i>
                             Genome File
                         </button>
-                        <button class="dropdown-item" id="openAnnotationMergeBtn">
-                            <i class="fas fa-plus"></i>
-                            Annotation (Merge)
-                        </button>
-                        <button class="dropdown-item" id="openAnnotationNewBtn">
+                        <button class="dropdown-item" id="openAnnotationBtn">
                             <i class="fas fa-file"></i>
-                            Annotation (New Track)
+                            Annotation File
                         </button>
                         <button class="dropdown-item" id="openVariantBtn">
                             <i class="fas fa-exclamation-triangle"></i>
@@ -1022,6 +1018,7 @@
                         </button>
                     </div>
                     <div class="feature-controls">
+                        <div class="feature-group-title">Core</div>
                         <label class="feature-control-item">
                             <input type="checkbox" id="sidebarShowGenes">
                             <span>Genes</span>
@@ -1034,6 +1031,7 @@
                             <input type="checkbox" id="sidebarShowMRNA" checked>
                             <span>mRNA</span>
                         </label>
+                        <div class="feature-group-title">RNA</div>
                         <label class="feature-control-item">
                             <input type="checkbox" id="sidebarShowTRNA" checked>
                             <span>tRNA</span>
@@ -1042,6 +1040,7 @@
                             <input type="checkbox" id="sidebarShowRRNA" checked>
                             <span>rRNA</span>
                         </label>
+                        <div class="feature-group-title">Regulatory</div>
                         <label class="feature-control-item">
                             <input type="checkbox" id="sidebarShowPromoter" checked>
                             <span>Promoters</span>
@@ -1054,6 +1053,7 @@
                             <input type="checkbox" id="sidebarShowRegulatory" checked>
                             <span>Regulatory Sites</span>
                         </label>
+                        <div class="feature-group-title">Other</div>
                         <label class="feature-control-item">
                             <input type="checkbox" id="sidebarShowSource">
                             <span>Source Features</span>
@@ -1161,21 +1161,20 @@
 
                 <div class="welcome-screen">
                     <div class="welcome-content">
-                        <i class="fas fa-dna welcome-icon"></i>
-                        <h2>Welcome onboard</h2>
-                        <p>Choose a file type to start exploring</p>
+                        <div class="welcome-drop-zone" id="welcomeDropZone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Drag &amp; drop files here</span>
+                            <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM, WIG, BigWig</small>
+                        </div>
+                        <p class="welcome-or-hint">or choose a file type</p>
                         <div class="welcome-buttons">
                             <button id="welcomeOpenGenomeBtn" class="btn btn-primary btn-lg">
                                 <i class="fas fa-dna"></i>
                                 <span>Genome File</span>
                             </button>
-                            <button id="welcomeOpenAnnotationMergeBtn" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-plus"></i>
-                                <span>Annotation (Merge)</span>
-                            </button>
-                            <button id="welcomeOpenAnnotationNewBtn" class="btn btn-secondary btn-lg">
+                            <button id="welcomeOpenAnnotationBtn" class="btn btn-secondary btn-lg">
                                 <i class="fas fa-file"></i>
-                                <span>Annotation (New Track)</span>
+                                <span>Annotation File</span>
                             </button>
                             <button id="welcomeOpenVariantBtn" class="btn btn-secondary btn-lg">
                                 <i class="fas fa-exclamation-triangle"></i>
@@ -1190,9 +1189,6 @@
                                 <span>WIG/BigWig Tracks</span>
                             </button>
                         </div>
-                        <p class="welcome-note">
-                            <small>Supported formats: FASTA, GenBank, GFF, BED, VCF, SAM/BAM, WIG, BigWig</small>
-                        </p>
                     </div>
                 </div>
 
