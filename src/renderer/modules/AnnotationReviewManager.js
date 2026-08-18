@@ -12,6 +12,8 @@ class AnnotationReviewManager {
     this.app = app;
     this.configManager = app?.configManager || null;
     this.changeSets = new Map();
+    this.appliedGeneGroups = new Map();
+    this.expandedAppliedGeneKeys = new Set();
     this.duplicateTargetCounts = new Map();
     this.approvalTokens = new Map();
     this.activeDecisionSession = null;
@@ -25,6 +27,7 @@ class AnnotationReviewManager {
     });
     this.badgeWatchIntervalMs = 60000;
     this.isBadgeRefreshing = false;
+    this.isAppliedLoading = false;
     this.settings = this._loadSettings();
     this.app.localCuratorIdentity = this.settings.curatorIdentity;
     this.app.confirmAnnotationChangeSet = request => this.confirmAnnotationChangeSet(request);
@@ -87,6 +90,11 @@ class AnnotationReviewManager {
     bind('annotationReviewApproveApplyBtn', 'click', () => this.approveSelected(true));
     bind('annotationReviewRejectBtn', 'click', () => this.rejectSelected());
     bind('annotationGovernanceSaveBtn', 'click', () => this.saveGovernanceSettings());
+    bind('annotationAppliedRefreshBtn', 'click', () => this.refreshAppliedGenes());
+    bind('annotationAppliedSort', 'change', () => this.refreshAppliedGenes());
+    bind('annotationAppliedSearch', 'input', () => this._debouncedAppliedRefresh());
+    bind('annotationAppliedGenes', 'click', event => this._handleAppliedClick(event));
+    bind('annotationAppliedGenes', 'keydown', event => this._handleAppliedKeydown(event));
     bind('annotationReviewQueue', 'click', event => this._handleQueueClick(event));
     bind('annotationReviewQueue', 'keydown', event => this._handleQueueKeydown(event));
     bind('annotationReviewQueue', 'change', event => this._handleQueueChange(event));
@@ -102,6 +110,11 @@ class AnnotationReviewManager {
   _debouncedRefresh() {
     clearTimeout(this.refreshTimer);
     this.refreshTimer = setTimeout(() => this.refreshQueue(), 250);
+  }
+
+  _debouncedAppliedRefresh() {
+    clearTimeout(this.appliedRefreshTimer);
+    this.appliedRefreshTimer = setTimeout(() => this.refreshAppliedGenes(), 250);
   }
 
   showReviewCenter(options = {}) {
@@ -163,6 +176,306 @@ class AnnotationReviewManager {
     document.querySelectorAll('#annotationReviewModal .annotation-review-panel').forEach(panel => {
       panel.classList.toggle('active', panel.dataset.reviewPanel === tabName);
     });
+    // The applied list reads the same ledger as the queue, so it is loaded on
+    // demand rather than kept in sync with every queue refresh.
+    if (tabName === 'applied') void this.refreshAppliedGenes();
+  }
+
+  _isAppliedTabActive() {
+    return Boolean(
+      document.querySelector('#annotationReviewModal .annotation-review-panel[data-review-panel="applied"].active')
+    );
+  }
+
+  /**
+   * List every gene whose annotation ChangeSets were applied to the genome.
+   * Committed ChangeSets are grouped per target so a gene curated several
+   * times reads as one entry with its full applied history.
+   */
+  async refreshAppliedGenes() {
+    const list = document.getElementById('annotationAppliedGenes');
+    if (!list || this.isAppliedLoading) return;
+    this.isAppliedLoading = true;
+    list.innerHTML =
+      '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading annotated genes…</div>';
+    try {
+      const query = document.getElementById('annotationAppliedSearch')?.value || '';
+      const result = await this._annotationService().listAnnotationChangesets({
+        statuses: ['committed'],
+        query,
+        limit: 1000,
+      });
+      const groups = this._groupAppliedChangeSets(result.changeSets || []);
+      this.appliedGeneGroups = new Map(groups.map(group => [group.key, group]));
+      // Keep only the expansions that survived the reload, otherwise a stale
+      // key would silently re-expand a different gene later.
+      this.expandedAppliedGeneKeys = new Set(
+        Array.from(this.expandedAppliedGeneKeys).filter(key => this.appliedGeneGroups.has(key))
+      );
+      this._renderAppliedGenes(this._sortAppliedGroups(groups));
+      this._updateAppliedCount(result.statusCounts || {});
+    } catch (error) {
+      list.innerHTML = `<div class="annotation-review-empty error"><i class="fas fa-exclamation-triangle"></i><p>${this._escape(error.message)}</p></div>`;
+    } finally {
+      this.isAppliedLoading = false;
+    }
+  }
+
+  _groupAppliedChangeSets(changeSets) {
+    const groups = new Map();
+    for (const changeSet of changeSets) {
+      const key = this._targetKey(changeSet) || changeSet.id;
+      const target = changeSet.target || {};
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          key,
+          label: target.geneSymbol || target.locusTag || target.proteinId || target.featureId || 'Unknown target',
+          geneSymbol: target.geneSymbol || null,
+          locusTag: target.locusTag || null,
+          chromosome: target.chromosome || null,
+          featureType: target.featureType || null,
+          coordinates: target.coordinates || null,
+          changeSets: [],
+          fields: [],
+          curators: [],
+          lastAppliedAt: null,
+          latestRevision: null,
+        };
+        groups.set(key, group);
+      }
+      group.changeSets.push(changeSet);
+      for (const field of changeSet.fields || []) {
+        if (!group.fields.includes(field)) group.fields.push(field);
+      }
+      if (changeSet.committedBy && !group.curators.includes(changeSet.committedBy)) {
+        group.curators.push(changeSet.committedBy);
+      }
+      const appliedAt = Date.parse(changeSet.committedAt || '');
+      if (Number.isFinite(appliedAt) && (!group.lastAppliedAt || appliedAt > group.lastAppliedAt)) {
+        group.lastAppliedAt = appliedAt;
+      }
+      if (Number.isInteger(changeSet.resultingRevision)) {
+        group.latestRevision = Math.max(group.latestRevision ?? 0, changeSet.resultingRevision);
+      }
+      // Coordinates and identifiers are only present on targets recorded by a
+      // recent service version; take them from whichever record carries them.
+      group.coordinates = group.coordinates || target.coordinates || null;
+      group.chromosome = group.chromosome || target.chromosome || null;
+      group.featureType = group.featureType || target.featureType || null;
+    }
+    for (const group of groups.values()) {
+      group.changeSets.sort((left, right) => Date.parse(right.committedAt || 0) - Date.parse(left.committedAt || 0));
+    }
+    return Array.from(groups.values());
+  }
+
+  _sortAppliedGroups(groups) {
+    const mode = document.getElementById('annotationAppliedSort')?.value || 'recent';
+    const sorted = groups.slice();
+    if (mode === 'gene') {
+      sorted.sort((left, right) => left.label.localeCompare(right.label, undefined, { sensitivity: 'base' }));
+    } else if (mode === 'count') {
+      sorted.sort(
+        (left, right) =>
+          right.changeSets.length - left.changeSets.length || (right.lastAppliedAt || 0) - (left.lastAppliedAt || 0)
+      );
+    } else {
+      sorted.sort((left, right) => (right.lastAppliedAt || 0) - (left.lastAppliedAt || 0));
+    }
+    return sorted;
+  }
+
+  _renderAppliedGenes(groups) {
+    const list = document.getElementById('annotationAppliedGenes');
+    const total = document.getElementById('annotationAppliedTotal');
+    const appliedChangeSets = groups.reduce((count, group) => count + group.changeSets.length, 0);
+    if (total) {
+      total.textContent = `${groups.length} gene${groups.length === 1 ? '' : 's'} · ${appliedChangeSets} applied ChangeSet${appliedChangeSets === 1 ? '' : 's'}`;
+    }
+    if (!list) return;
+    if (groups.length === 0) {
+      list.innerHTML = `
+        <div class="annotation-review-empty">
+          <i class="fas fa-dna"></i>
+          <p>No annotations have been applied yet.</p>
+          <small>Genes appear here once an approved ChangeSet is committed to the genome.</small>
+        </div>`;
+      return;
+    }
+    list.innerHTML = groups.map(group => this._renderAppliedGeneItem(group)).join('');
+  }
+
+  _renderAppliedGeneItem(group) {
+    const expanded = this.expandedAppliedGeneKeys.has(group.key);
+    const locus = group.locusTag && group.locusTag !== group.label ? group.locusTag : '';
+    const coordinates = group.coordinates || {};
+    const hasLocation =
+      group.chromosome && Number.isFinite(Number(coordinates.start)) && Number.isFinite(Number(coordinates.end));
+    const location = hasLocation
+      ? `${group.chromosome}:${Number(coordinates.start).toLocaleString()}–${Number(coordinates.end).toLocaleString()}${coordinates.strand === -1 ? ' (−)' : coordinates.strand === 1 ? ' (+)' : ''}`
+      : group.chromosome || '';
+    const fields = group.fields
+      .slice(0, 8)
+      .map(field => `<span class="annotation-applied-field">${this._escape(this._fieldLabel(field))}</span>`)
+      .join('');
+    const omittedFields = group.fields.length - Math.min(group.fields.length, 8);
+    return `
+      <article class="annotation-applied-item${expanded ? ' is-expanded' : ''}" data-applied-key="${this._escape(group.key)}">
+        <div class="annotation-applied-main" role="button" tabindex="0" data-action="applied-toggle"
+          aria-expanded="${expanded ? 'true' : 'false'}"
+          aria-label="Applied annotation history for ${this._escape(group.label)}">
+          <div class="annotation-review-item-heading">
+            <div>
+              <i class="fas fa-chevron-${expanded ? 'down' : 'right'} annotation-applied-caret" aria-hidden="true"></i>
+              <strong>${this._escape(group.label)}</strong>
+              ${locus ? `<span class="annotation-review-locus">${this._escape(locus)}</span>` : ''}
+              <span class="annotation-review-feature">${this._escape(group.featureType || '')}</span>
+            </div>
+            <div class="annotation-review-badges">
+              <span class="annotation-review-status status-committed">${group.changeSets.length} applied</span>
+            </div>
+          </div>
+          <div class="annotation-review-meta">
+            <span><i class="fas fa-clock"></i> ${this._escape(group.lastAppliedAt ? this._formatDate(group.lastAppliedAt) : 'Unknown time')}</span>
+            <span><i class="fas fa-user-check"></i> ${this._escape(group.curators.join(', ') || 'unknown curator')}</span>
+            ${Number.isInteger(group.latestRevision) ? `<span><i class="fas fa-code-branch"></i> Revision ${group.latestRevision}</span>` : ''}
+            ${location ? `<span><i class="fas fa-map-marker-alt"></i> ${this._escape(location)}</span>` : ''}
+          </div>
+          ${fields ? `<div class="annotation-applied-fields">${fields}${omittedFields > 0 ? `<span class="annotation-applied-field is-muted">+${omittedFields} more</span>` : ''}</div>` : ''}
+        </div>
+        <div class="annotation-applied-actions">
+          <button class="btn btn-sm btn-secondary" data-action="applied-locate" data-applied-key="${this._escape(group.key)}"
+            ${hasLocation ? '' : 'disabled title="This ChangeSet target has no recorded coordinates"'}>
+            <i class="fas fa-crosshairs"></i> Go to gene
+          </button>
+        </div>
+        <div class="annotation-applied-history" ${expanded ? '' : 'hidden'}>
+          ${expanded ? group.changeSets.map(changeSet => this._renderAppliedRecord(changeSet)).join('') : ''}
+        </div>
+      </article>`;
+  }
+
+  _renderAppliedRecord(changeSet) {
+    const changes = (changeSet.preview || [])
+      .map(
+        item =>
+          `<div class="annotation-applied-change"><label>${this._escape(this._fieldLabel(item.field))}</label><span>${this._escape(this._compactValue(item.after, 160))}</span></div>`
+      )
+      .join('');
+    return `
+      <div class="annotation-applied-record">
+        <div class="annotation-applied-record-heading">
+          <code>${this._escape(changeSet.id)}</code>
+          <span><i class="fas fa-clock"></i> ${this._escape(changeSet.committedAt ? this._formatDate(changeSet.committedAt) : 'Unknown time')}</span>
+        </div>
+        <div class="annotation-review-meta">
+          <span><i class="fas fa-list-check"></i> ${changeSet.operationCount} changes</span>
+          <span><i class="fas fa-book"></i> ${changeSet.evidenceCount} evidence records</span>
+          <span><i class="fas fa-robot"></i> proposed by ${this._escape(changeSet.createdBy || 'unknown')}</span>
+          <span><i class="fas fa-user-check"></i> applied by ${this._escape(changeSet.committedBy || 'unknown')}</span>
+          <span class="annotation-review-risk risk-${this._escape(changeSet.riskLevel || 'unknown')}">${this._escape(changeSet.riskLevel || 'unknown')} risk</span>
+        </div>
+        ${changes ? `<div class="annotation-applied-changes">${changes}</div>` : ''}
+        ${changeSet.reportAttachment ? `<div class="annotation-review-report-link"><i class="fas fa-paperclip"></i> Archived report: <code>${this._escape(changeSet.reportAttachment)}</code></div>` : ''}
+        <button class="btn btn-sm btn-secondary annotation-applied-record-btn" data-action="applied-open-record" data-id="${this._escape(changeSet.id)}">
+          <i class="fas fa-clipboard-list"></i> Open audit record
+        </button>
+      </div>`;
+  }
+
+  _handleAppliedClick(event) {
+    const actionElement = event.target.closest('[data-action]');
+    const action = actionElement?.dataset.action;
+    if (action === 'applied-locate') {
+      event.stopPropagation();
+      this.locateAppliedGene(actionElement.dataset.appliedKey);
+      return;
+    }
+    if (action === 'applied-open-record') {
+      event.stopPropagation();
+      this.openAppliedRecord(actionElement.dataset.id);
+      return;
+    }
+    const item = event.target.closest('.annotation-applied-item[data-applied-key]');
+    if (item && !event.target.closest('button, a, input, select, textarea, summary')) {
+      this.toggleAppliedGene(item.dataset.appliedKey);
+    }
+  }
+
+  _handleAppliedKeydown(event) {
+    if (!['Enter', ' '].includes(event.key)) return;
+    const main = event.target.closest('.annotation-applied-main[role="button"]');
+    if (!main || event.target !== main) return;
+    const item = main.closest('.annotation-applied-item[data-applied-key]');
+    if (!item) return;
+    event.preventDefault();
+    this.toggleAppliedGene(item.dataset.appliedKey);
+  }
+
+  toggleAppliedGene(key) {
+    const group = this.appliedGeneGroups.get(key);
+    if (!group) return;
+    if (this.expandedAppliedGeneKeys.has(key)) this.expandedAppliedGeneKeys.delete(key);
+    else this.expandedAppliedGeneKeys.add(key);
+    const item = this._appliedGeneNode(key);
+    if (!item) return;
+    item.outerHTML = this._renderAppliedGeneItem(group);
+    this._appliedGeneNode(key)?.querySelector('.annotation-applied-main')?.focus();
+  }
+
+  _appliedGeneNode(key) {
+    return Array.from(document.querySelectorAll('.annotation-applied-item[data-applied-key]')).find(
+      node => node.dataset.appliedKey === key
+    );
+  }
+
+  /**
+   * Move the genome view to the applied gene. Committed targets record the
+   * coordinates as they were at commit time, so a missing or unresolvable
+   * location is reported instead of silently doing nothing.
+   */
+  locateAppliedGene(key) {
+    const group = this.appliedGeneGroups.get(key);
+    const coordinates = group?.coordinates || {};
+    if (!group || !group.chromosome || !Number.isFinite(Number(coordinates.start))) {
+      this._notify('This ChangeSet target has no recorded coordinates to navigate to.', 'warning');
+      return;
+    }
+    const navigate = this.app?.navigationManager?.navigateToPosition;
+    if (typeof navigate !== 'function') {
+      this._notify('Genome navigation is not available.', 'error');
+      return;
+    }
+    const result = this.app.navigationManager.navigateToPosition(
+      group.chromosome,
+      Number(coordinates.start),
+      Number(coordinates.end ?? coordinates.start)
+    );
+    if (result && result.success === false) {
+      this._notify(result.error || 'Unable to navigate to this gene.', 'error');
+      return;
+    }
+    document.getElementById('annotationReviewModal')?.classList.remove('show');
+    this._notify(`Navigated to ${group.label}.`, 'success');
+  }
+
+  /** Show the full audit record of an applied ChangeSet in the review queue. */
+  async openAppliedRecord(changeSetId) {
+    const filter = document.getElementById('annotationReviewFilter');
+    if (filter && filter.value !== 'committed' && filter.value !== 'all') filter.value = 'committed';
+    const search = document.getElementById('annotationReviewSearch');
+    if (search) search.value = '';
+    this.showModalTab('queue');
+    await this.refreshQueue({ focusChangeSetId: changeSetId });
+  }
+
+  _updateAppliedCount(statusCounts) {
+    const applied = Number(statusCounts.committed || 0);
+    document.querySelectorAll('.annotation-review-applied-count').forEach(badge => {
+      badge.textContent = applied > 999 ? '999+' : String(applied);
+      badge.hidden = applied === 0;
+    });
   }
 
   async refreshQueue(options = {}) {
@@ -186,6 +499,7 @@ class AnnotationReviewManager {
       this._closeDetachedDetail();
       this._renderQueue(result);
       this._updatePendingBadge(result.statusCounts || {});
+      this._updateAppliedCount(result.statusCounts || {});
       if (options.focusChangeSetId && this.changeSets.has(options.focusChangeSetId)) {
         await this.viewChangeSet(options.focusChangeSetId);
       }
@@ -543,6 +857,7 @@ class AnnotationReviewManager {
     }
     this._reportBatchResults(results, applyAfterApproval ? 'applied' : 'approved');
     await this.refreshQueue();
+    if (applyAfterApproval) await this.refreshAppliedGenes();
     this._refreshSelectedGene();
   }
 
@@ -858,8 +1173,10 @@ class AnnotationReviewManager {
 
   _handleLedgerChanged(event) {
     const statusCounts = event?.detail?.statusCounts;
-    if (statusCounts) this._updatePendingBadge(statusCounts);
-    else void this.refreshPendingBadge();
+    if (statusCounts) {
+      this._updatePendingBadge(statusCounts);
+      this._updateAppliedCount(statusCounts);
+    } else void this.refreshPendingBadge();
     // An open queue would otherwise keep showing the pre-change list while the
     // badge already counts the new ChangeSet. Reloading is only safe while the
     // curator has nothing selected and no decision is in flight.
@@ -867,6 +1184,7 @@ class AnnotationReviewManager {
     if (modalIsOpen && !this.activeDecisionSession && this._selectedChangeSets().length === 0) {
       void this.refreshQueue();
     }
+    if (modalIsOpen && this._isAppliedTabActive()) void this.refreshAppliedGenes();
   }
 
   /**
@@ -883,6 +1201,7 @@ class AnnotationReviewManager {
         limit: 1,
       });
       this._updatePendingBadge(result.statusCounts || {});
+      this._updateAppliedCount(result.statusCounts || {});
     } catch (error) {
       // No loaded genome, services still starting, or a genome swap mid-poll:
       // leave the badge as it is and let the next tick retry.
