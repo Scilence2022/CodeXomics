@@ -1861,6 +1861,37 @@ class AnnotationChangeSetService {
       .filter(Boolean);
   }
 
+  /**
+   * Derive human-readable evidence references from an evidence manifest,
+   * preferring structured identifiers (PMID/DOI), then the record label,
+   * sourceId, and url, with the record id as the last resort. Results are
+   * deduplicated case-insensitively.
+   */
+  _evidenceReferencesFromManifest(manifest) {
+    const seen = new Set();
+    const references = [];
+    const sourceRecords = Array.isArray(manifest?.sourceRecords) ? manifest.sourceRecords : [];
+    for (const record of sourceRecords) {
+      const identifiers = Array.isArray(record?.identifiers) ? record.identifiers : [];
+      const pmid = identifiers.find(identifier => identifier?.scheme === 'pmid')?.value;
+      const doi = identifiers.find(identifier => identifier?.scheme === 'doi')?.value;
+      const reference = this._normaliseValues(
+        (pmid && `PMID:${pmid}`) ||
+          (doi && `DOI:${doi}`) ||
+          record?.label ||
+          record?.sourceId ||
+          record?.url ||
+          record?.id
+      )[0];
+      if (!reference) continue;
+      const key = reference.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      references.push(reference);
+    }
+    return references;
+  }
+
   _currentAnnotationSnapshot(annotation) {
     const qualifiers = this._isPlainRecord(annotation?.qualifiers) ? annotation.qualifiers : {};
     const boundedValues = (names, maximumItems, maximumLength) => {
@@ -3356,7 +3387,11 @@ class AnnotationChangeSetService {
     let evidence = this._normaliseValues(params.evidence);
     if (evidence.length === 0) evidence = this._normaliseValues(proposal.evidence || []);
     if (evidence.length === 0 && proposalContract) {
-      evidence = proposalContract.evidenceManifest.sourceRecords.map(record => record.id);
+      // Fall back to human-readable references derived from the manifest
+      // rather than opaque record ids: these strings are copied into the
+      // change history and the codexomics_research_evidence qualifier, where
+      // they must stay interpretable without a manifest lookup.
+      evidence = this._evidenceReferencesFromManifest(proposalContract.evidenceManifest);
     }
     this._assertBoundedValues(
       evidence,
