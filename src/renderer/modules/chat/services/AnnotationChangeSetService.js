@@ -2175,7 +2175,7 @@ class AnnotationChangeSetService {
           (isFullTextBasis &&
             (!/^[a-f0-9]{64}$/i.test(String(basis.documentSha256)) ||
               !/^[a-f0-9]{64}$/i.test(String(basis.textSha256)) ||
-              !['user_upload', 'pmc_xml'].includes(String(basis.sourceOrigin)) ||
+              !['user_upload', 'pmc_xml', 'bioc', 'tei', 'pdf', 'snippet'].includes(String(basis.sourceOrigin)) ||
               basis.canonicalization !== 'dgr.full-text.v1' ||
               (basis.pageNumber !== undefined && (!Number.isSafeInteger(basis.pageNumber) || basis.pageNumber < 1))))
         ) {

@@ -398,6 +398,32 @@ describe('DGR artifact storage', () => {
     expect(fullText.documentSha256).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  it('accepts full-text spans acquired through DGR provider waterfall origins', async () => {
+    // DGR's provider waterfall yields BioC (PubTator), TEI (OpenAlex), PDF
+    // (OA copies), and snippet (Asta) documents in addition to PMC XML and
+    // user uploads; all share the same hash/offset verification contract.
+    for (const origin of ['bioc', 'tei', 'pdf', 'snippet']) {
+      const target = createTarget();
+      const task = createCompletedTask(target);
+      addFullTextEvidence(task);
+      task.result.sources[task.result.sources.length - 1].fullText.origin = origin;
+      const facts = task.result.annotationProposal.researchSummary.facts;
+      facts[facts.length - 1].literatureBasis.sourceOrigin = origin;
+
+      const descriptor = await archiveDgrTaskResult({
+        userDataPath,
+        taskId: task.id,
+        target,
+        proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+      });
+
+      expect(descriptor.citationValidation).toMatchObject({
+        verified: true,
+        verifiedFullTextSourceCount: 1,
+      });
+    }
+  });
+
   it('requires the DGR task snapshot when external archival requests live current-annotation binding', async () => {
     const target = createTarget();
     const task = createCompletedTask(target);
