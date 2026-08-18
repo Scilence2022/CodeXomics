@@ -408,6 +408,18 @@ class GenomeBrowser {
     return [value];
   }
 
+  /**
+   * Extract the Deep Gene Research provenance date from a GenBank /note value.
+   * Curation notes applied by the research workflow end with a verbatim
+   * "Annotation by Deep Gene Research on <Month D, YYYY>." clause; original
+   * GenBank annotations do not. Returns the date string, or null for values
+   * that were not added by Deep Gene Research.
+   */
+  getAnnotationNoteResearchDate(value) {
+    const match = String(value).match(/Annotation by Deep Gene Research on ([A-Z][a-z]+ \d{1,2}, \d{4})\.\s*$/);
+    return match ? match[1] : null;
+  }
+
   init() {
     // Force reload timestamp: 2025-05-31-15:05
     console.log('🚀 GenomeBrowser initialization starting...');
@@ -6509,6 +6521,10 @@ class GenomeBrowser {
     const annotationNoteValues = this.getAllQualifierValues(gene.qualifiers, 'note').filter(
       value => value != null && String(value).trim()
     );
+    // Deep Gene Research appends its curated note as an additional /note value.
+    // Tag those values so the AI-curated addition is visually distinct from the
+    // original GenBank annotation instead of blending into a single text block.
+    const hasResearchNote = annotationNoteValues.some(value => this.getAnnotationNoteResearchDate(value));
     const annotationNoteHtml = `
       <div class="gene-annotation-note-section">
         <div class="gene-annotation-note-header">
@@ -6520,10 +6536,18 @@ class GenomeBrowser {
           ${
             annotationNoteValues.length > 0
               ? annotationNoteValues
-                  .map(
-                    value =>
-                      `<div class="gene-annotation-note-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(value)))}</div>`
-                  )
+                  .map(value => {
+                    const researchDate = this.getAnnotationNoteResearchDate(value);
+                    const sourceBadge = researchDate
+                      ? `<span class="gene-annotation-note-source-badge research" title="Added by Deep Gene Research"><i class="fas fa-robot"></i> Deep Gene Research &middot; ${researchDate}</span>`
+                      : hasResearchNote
+                        ? '<span class="gene-annotation-note-source-badge original">Original annotation</span>'
+                        : '';
+                    const valueClass = researchDate
+                      ? 'gene-annotation-note-value research-note'
+                      : 'gene-annotation-note-value';
+                    return `<div class="${valueClass}">${sourceBadge}<div class="gene-annotation-note-text">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(value)))}</div></div>`;
+                  })
                   .join('')
               : '<div class="gene-tab-empty">No annotation note has been applied.</div>'
           }

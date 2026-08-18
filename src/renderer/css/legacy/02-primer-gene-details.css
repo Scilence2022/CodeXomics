@@ -810,6 +810,35 @@
   white-space: pre-wrap;
 }
 
+.gene-annotation-note-value.research-note {
+  background: color-mix(in srgb, var(--primary-color) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 25%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.gene-annotation-note-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.gene-annotation-note-source-badge.research {
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.gene-annotation-note-source-badge.original {
+  color: var(--text-muted);
+  background: var(--bg-hover);
+}
+
 .gene-notes-section {
   background: var(--bg-secondary);
   border-radius: var(--radius-md);
