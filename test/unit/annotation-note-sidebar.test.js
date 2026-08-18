@@ -21,4 +21,33 @@ describe('Gene Details annotation note presentation', () => {
     expect(notesManager).toContain('Add your own notes about this gene');
     expect(index).toContain('Annotation Note (GenBank /note)');
   });
+
+  it('visually distinguishes Deep Gene Research notes from the original annotation', () => {
+    const renderer = fs.readFileSync(path.join(process.cwd(), 'src/renderer/renderer-modular.js'), 'utf8');
+    const css = fs.readFileSync(path.join(process.cwd(), 'src/renderer/css/legacy/02-primer-gene-details.css'), 'utf8');
+
+    // Research-curated /note values are detected via their provenance clause
+    // and rendered with a source badge; the original annotation gets a muted
+    // badge of its own when both kinds are present.
+    expect(renderer).toContain('getAnnotationNoteResearchDate');
+    expect(renderer).toContain('Annotation by Deep Gene Research on ');
+    expect(renderer).toContain('gene-annotation-note-source-badge research');
+    expect(renderer).toContain('gene-annotation-note-source-badge original');
+    expect(renderer).toContain('Deep Gene Research &middot;');
+    expect(renderer).toContain('Original annotation');
+    expect(renderer).toContain('gene-annotation-note-value research-note');
+    expect(css).toContain('.gene-annotation-note-value.research-note');
+    expect(css).toContain('.gene-annotation-note-source-badge.research');
+    expect(css).toContain('.gene-annotation-note-source-badge.original');
+  });
+
+  it('detects the Deep Gene Research provenance clause format', () => {
+    // Mirrors the provenance contract enforced by AnnotationChangeSetService:
+    // "Annotation by Deep Gene Research on <Month D, YYYY>." at end of note.
+    const clausePattern = /Annotation by Deep Gene Research on ([A-Z][a-z]+ \d{1,2}, \d{4})\.\s*$/;
+    expect('Some curated text. Annotation by Deep Gene Research on August 18, 2026.'.match(clausePattern)?.[1]).toBe(
+      'August 18, 2026'
+    );
+    expect('Original GenBank annotation without provenance.'.match(clausePattern)).toBeNull();
+  });
 });
