@@ -1,0 +1,249 @@
+{
+  "schema_version": "2.0",
+  "generator_version": "2.0.0",
+  "generated_at": "2026-08-02T07:35:48.588Z",
+  "benchmark_scope": {
+    "automatic_simple": 143,
+    "automatic_complex": 29,
+    "manual_tests_included": 0,
+    "use": "leakage_fingerprints_only",
+    "fingerprint_hash": "a0de19c4b02dc0128b65e96cf5113dcb093291281cfdcc5ee3fd30472f929476"
+  },
+  "registry_hash": "4028d619007f8bf9a7c4f04ca81f4246e557b64e0fcfa23f307f6e153f2380b0",
+  "candidate_limit": 24,
+  "candidate_curriculum": {
+    "decision": [8, 12],
+    "single_call": [8, 8, 12, 12],
+    "multi_step": [16, 16, 24, 24]
+  },
+  "candidate_count_histogram": {
+    "8": 281,
+    "12": 278,
+    "16": 70,
+    "24": 49
+  },
+  "input_sources": 686,
+  "accepted_examples": 678,
+  "rejected_examples": 8,
+  "rejection_counts": {
+    "token_similarity": 5,
+    "exact_prompt_hash": 3
+  },
+  "splits": {
+    "train": {
+      "count": 476,
+      "sha256": "8eb7375f5895f2c08748d635e0f2f4444879274e2581debaf3ae25d37725664a"
+    },
+    "dev": {
+      "count": 159,
+      "sha256": "45e07eff7ab18e6b9c0516b219df57784818e26c8afd5dcef17514436f386f6a"
+    },
+    "holdout": {
+      "count": 43,
+      "sha256": "ad79d7d83e05ef15fe14344b2655797bd7d411af87e4b9f738acf7c88d5ee2f0"
+    }
+  },
+  "preferences": {
+    "count": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "use": "promoted_training_only"
+  },
+  "candidate_preferences": {
+    "count": 623,
+    "sha256": "02c8fb965e46745b8a611f1171fb5790c35b9103a12ce53101b81de23b6e10ec",
+    "use": "replay_queue_not_training",
+    "schema_valid_semantic_negative_rate": 1
+  },
+  "validation_tier_counts": {
+    "schema_valid": 484,
+    "fixture_executable": 194
+  },
+  "deterministic_fixture_corpus": {
+    "runner": "codexomics-pinned-readonly-fixture-v1",
+    "generated_records": 189,
+    "fixture_executable_stateless_single_calls": 180,
+    "dependent_workflows": 9,
+    "covered_tool_count": 18,
+    "covered_tools": [
+      "calculate_entropy",
+      "calculate_molecular_weight",
+      "calculate_primer_properties",
+      "compute_gc",
+      "find_gene_by_name",
+      "find_primer_binding_sites",
+      "find_restriction_sites",
+      "get_annotation",
+      "get_gene_details",
+      "get_nearby_features",
+      "get_sequence",
+      "get_uniprot_entry",
+      "list_annotations",
+      "list_restriction_enzymes",
+      "reverse_complement",
+      "search_uniprot_database",
+      "translate_dna",
+      "virtual_digest"
+    ],
+    "target_core_tools": [
+      "get_sequence",
+      "find_gene_by_name",
+      "list_annotations",
+      "get_annotation",
+      "get_gene_details",
+      "get_nearby_features",
+      "reverse_complement",
+      "translate_dna",
+      "compute_gc",
+      "calculate_entropy",
+      "calculate_molecular_weight",
+      "calculate_primer_properties",
+      "find_primer_binding_sites",
+      "find_restriction_sites",
+      "virtual_digest",
+      "list_restriction_enzymes",
+      "search_uniprot_database",
+      "get_uniprot_entry"
+    ],
+    "splits": {
+      "train": {
+        "records": 85,
+        "single_call": 82,
+        "dependent_workflows": 3,
+        "tools": [
+          "calculate_entropy",
+          "calculate_molecular_weight",
+          "calculate_primer_properties",
+          "find_gene_by_name",
+          "find_primer_binding_sites",
+          "get_annotation",
+          "get_nearby_features",
+          "get_sequence",
+          "get_uniprot_entry",
+          "list_annotations",
+          "list_restriction_enzymes",
+          "reverse_complement",
+          "search_uniprot_database",
+          "translate_dna",
+          "virtual_digest"
+        ]
+      },
+      "dev": {
+        "records": 76,
+        "single_call": 73,
+        "dependent_workflows": 3,
+        "tools": [
+          "calculate_entropy",
+          "calculate_molecular_weight",
+          "calculate_primer_properties",
+          "compute_gc",
+          "find_gene_by_name",
+          "find_primer_binding_sites",
+          "find_restriction_sites",
+          "get_annotation",
+          "get_gene_details",
+          "get_nearby_features",
+          "get_sequence",
+          "get_uniprot_entry",
+          "list_annotations",
+          "reverse_complement",
+          "search_uniprot_database",
+          "translate_dna",
+          "virtual_digest"
+        ]
+      },
+      "holdout": {
+        "records": 28,
+        "single_call": 25,
+        "dependent_workflows": 3,
+        "tools": [
+          "calculate_entropy",
+          "calculate_molecular_weight",
+          "calculate_primer_properties",
+          "compute_gc",
+          "find_gene_by_name",
+          "find_primer_binding_sites",
+          "find_restriction_sites",
+          "get_annotation",
+          "get_gene_details",
+          "get_nearby_features",
+          "get_sequence",
+          "get_uniprot_entry",
+          "list_annotations",
+          "reverse_complement",
+          "search_uniprot_database",
+          "translate_dna",
+          "virtual_digest"
+        ]
+      }
+    },
+    "declared_outputs_recomputed": true,
+    "stateful_tools_verified": 0
+  },
+  "statefulness": {
+    "stateful": 348,
+    "stateless": 330,
+    "quarantined": 348
+  },
+  "strong_model_replays": {
+    "supplied": true,
+    "passed": 172,
+    "failed": 34,
+    "blocked": 0,
+    "not_run": 472
+  },
+  "tool_catalog_sha256": "eea7a3b9b8b266882d060d84dafe9958e83cd61cbf3dfe0a65779e29a3134250",
+  "training_eligible_by_split": {
+    "train": 85,
+    "dev": 66,
+    "holdout": 21
+  },
+  "release_gates": {
+    "schema_valid_rate": 1,
+    "fixture_executable_rate": 0.2861356932153392,
+    "state_verified_rate": 0,
+    "strong_model_replay_pass_rate": 0.2536873156342183,
+    "leakage_pass_rate": 1,
+    "atomic_component_split_overlap": 0,
+    "training_promotion_ready": true
+  },
+  "replay_contract": {
+    "comparison_modes": ["semantic_canonical_equivalence", "completion_equivalence_v1"],
+    "promotion_rule": "builder completion-equivalence recomputation is authoritative; valid alternative plans and extra read-only calls are promoted",
+    "statuses": ["not_run", "passed", "failed", "blocked"],
+    "reason_codes": [
+      "not_run",
+      "passed",
+      "schema_mismatch",
+      "tool_selection_mismatch",
+      "argument_semantic_mismatch",
+      "fixture_missing",
+      "fixture_resolution_failed",
+      "fixture_execution_failed",
+      "terminal_predicate_failed",
+      "provider_error",
+      "rate_limited",
+      "manual_review_required"
+    ],
+    "required_fields": [
+      "example_id",
+      "registry_hash",
+      "canonical_oracle_hash",
+      "canonical_calls",
+      "observed_calls",
+      "fixture_outputs",
+      "terminal_predicates",
+      "provenance",
+      "status",
+      "reason_code",
+      "semantic_verdict"
+    ],
+    "strong_model_required_for_training_promotion": true
+  },
+  "promotion_contract": {
+    "tool_call_requires_fixture_execution": true,
+    "tool_call_requires_strong_model_semantic_replay": true,
+    "stateful_requires_state_verification": true,
+    "no_call_requires_fixture_execution": false,
+    "schema_only_rows_are_candidates_not_training": true
+  }
+}

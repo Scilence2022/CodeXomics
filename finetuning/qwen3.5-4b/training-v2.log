@@ -1,0 +1,19 @@
+Qwen3.5-4B CodeXomics retrain (compact-v1, 6 candidates, max_seq_length 3072)
+Started: 2026-08-01T20:12 (MLX-LM LoRA, lr 1e-5, rank 16, grad checkpoint, 32GB cache threshold)
+
+Iter  1: Val loss 0.287
+Iter 10: Train loss 0.214, Peak mem 98.317 GB
+Iter 20: Train loss 0.178, Peak mem 101.421 GB
+Iter 25: Val loss 0.025, checkpoint saved
+Iter 30: Train loss 0.192, Peak mem 101.421 GB
+Iter 40: Train loss 0.446
+Iter 50: Val loss 0.014, Train loss 0.004, Peak mem 110.723 GB, checkpoint saved
+Iter 60: Train loss 0.155, Peak mem 112.664 GB
+Iter 70: Train loss 0.172
+Iter 75: Val loss 0.022, checkpoint saved, Peak mem 144.399 GB
+
+Stopped early at iteration 50 (minimum validation loss 0.014; patience rule:
+val loss rose at iter 75 and peak memory exceeded physical RAM).
+Selected adapter: finetuning/qwen3.5-4b/selected-adapter (iter 50).
+Legacy rejected run preserved at adapters-legacy-rejected/ and
+training-legacy.log.

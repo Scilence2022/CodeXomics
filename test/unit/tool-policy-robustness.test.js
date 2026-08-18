@@ -67,7 +67,10 @@ function loadChatManagerClass() {
     /\n\s{2}createPendingToolExecutionQueue\s*\([\s\S]*?\n\s{2}\}\n\n\s{2}filterExecutableToolInstances/
   );
   const filterExecutableToolInstancesMatch = content.match(
-    /\n\s{2}filterExecutableToolInstances\s*\(toolsToExecute,\s*successfulToolExecutionCounts,\s*originalMessage\)\s*\{[\s\S]*?\}\n\n\s{2}async executePendingToolExecutionQueue/
+    /\n\s{2}filterExecutableToolInstances\s*\([\s\S]*?\n\s{2}\}\n\n\s{2}\/\*\*/
+  );
+  const hasProgressSinceLastSuccessMatch = content.match(
+    /\n\s{2}hasProgressSinceLastSuccess\s*\(toolExecutionState,\s*toolKey\)\s*\{[\s\S]*?\n\s{2}\}\n\n\s{2}async executePendingToolExecutionQueue/
   );
   const executePendingToolExecutionQueueMatch = content.match(
     /\n\s{2}async executePendingToolExecutionQueue\s*\(pendingToolExecutionQueue,\s*referenceToolResults\s*=\s*\[\]\)\s*\{[\s\S]*?\}\n\n\s{2}addToolResultsToReferenceContext/
@@ -85,11 +88,20 @@ function loadChatManagerClass() {
   const extractParametersMatch = content.match(
     /extractParametersFromExecutionMessage\s*\(content\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
   );
+  const parseToolExecutionFeedbackEntriesMatch = content.match(
+    /parseToolExecutionFeedbackEntries\s*\(content\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
+  );
+  const doesFeedbackEntryMatchParametersMatch = content.match(
+    /doesFeedbackEntryMatchParameters\s*\(toolName,\s*parsedKeyParams,\s*paramsStr,\s*entry\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
+  );
   const wasToolExecutedSuccessfullyMatch = content.match(
     /wasToolExecutedSuccessfully\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
   );
   const getToolExecutionCountMatch = content.match(
     /getToolExecutionCount\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
+  );
+  const getToolExecutionCountByNameMatch = content.match(
+    /getToolExecutionCountByName\s*\(toolName,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
   );
   const findExistingExecutionMatch = content.match(
     /findExistingExecution\s*\(toolKey,\s*conversationHistory\)\s*\{[\s\S]*?\}\n\n\s*\/\*\*/
@@ -114,7 +126,10 @@ function loadChatManagerClass() {
     ? createPendingToolExecutionQueueMatch[0].replace(/\n\n\s{2}filterExecutableToolInstances$/, '')
     : '';
   const filterExecutableToolInstancesCode = filterExecutableToolInstancesMatch
-    ? filterExecutableToolInstancesMatch[0].replace(/\n\n\s{2}async executePendingToolExecutionQueue$/, '')
+    ? filterExecutableToolInstancesMatch[0].replace(/\n\n\s{2}\/\*\*$/, '')
+    : '';
+  const hasProgressSinceLastSuccessCode = hasProgressSinceLastSuccessMatch
+    ? hasProgressSinceLastSuccessMatch[0].replace(/\n\n\s{2}async executePendingToolExecutionQueue$/, '')
     : '';
   const executePendingToolExecutionQueueCode = executePendingToolExecutionQueueMatch
     ? executePendingToolExecutionQueueMatch[0].replace(/\n\n\s{2}addToolResultsToReferenceContext$/, '')
@@ -128,10 +143,19 @@ function loadChatManagerClass() {
     ? areToolParametersEqualMatch[0].replace('/**', '')
     : '';
   const extractParametersCode = extractParametersMatch ? extractParametersMatch[0].replace('/**', '') : '';
+  const parseToolExecutionFeedbackEntriesCode = parseToolExecutionFeedbackEntriesMatch
+    ? parseToolExecutionFeedbackEntriesMatch[0].replace('/**', '')
+    : '';
+  const doesFeedbackEntryMatchParametersCode = doesFeedbackEntryMatchParametersMatch
+    ? doesFeedbackEntryMatchParametersMatch[0].replace('/**', '')
+    : '';
   const wasToolExecutedSuccessfullyCode = wasToolExecutedSuccessfullyMatch
     ? wasToolExecutedSuccessfullyMatch[0].replace('/**', '')
     : '';
   const getToolExecutionCountCode = getToolExecutionCountMatch ? getToolExecutionCountMatch[0].replace('/**', '') : '';
+  const getToolExecutionCountByNameCode = getToolExecutionCountByNameMatch
+    ? getToolExecutionCountByNameMatch[0].replace('/**', '')
+    : '';
   const findExistingExecutionCode = findExistingExecutionMatch ? findExistingExecutionMatch[0].replace('/**', '') : '';
 
   const mockClassCode = `
@@ -143,14 +167,18 @@ function loadChatManagerClass() {
       ${toolExecutionStateMethodsCode}
       ${createPendingToolExecutionQueueCode}
       ${filterExecutableToolInstancesCode}
+      ${hasProgressSinceLastSuccessCode}
       ${executePendingToolExecutionQueueCode}
       ${toolReferenceMethodsCode}
       ${normalizeParamsCode}
       ${areParametersEqualCode}
       ${areToolParametersEqualCode}
       ${extractParametersCode}
+      ${parseToolExecutionFeedbackEntriesCode}
+      ${doesFeedbackEntryMatchParametersCode}
       ${wasToolExecutedSuccessfullyCode}
       ${getToolExecutionCountCode}
+      ${getToolExecutionCountByNameCode}
       ${findExistingExecutionCode}
     }
     return MockChatManager;
@@ -296,22 +324,46 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(manager.getToolExecutionKey('design_primers', { targetSequence })).toContain(targetSequence);
   });
 
-  it('should allow a fresh identical tool call from a later model round', () => {
+  it('should suppress an identical repeat from a later model round when nothing happened in between', () => {
+    const manager = new MockChatManager();
+    const tool = { tool_name: 'zoom_out', parameters: { factor: 2 } };
+    const toolKey = manager.getToolExecutionKey(tool.tool_name, tool.parameters);
+    const successfulCounts = new Map([[toolKey, 1]]);
+    const state = manager.createToolExecutionState('zoom out');
+    state.records.push({ tool: 'zoom_out', parameters: { factor: 2 }, status: 'success' });
+
+    const result = manager.filterExecutableToolInstances([tool], successfulCounts, state.originalMessage, state);
+
+    // The regression this pins: an already-successful call used to be treated as
+    // "fresh" in every later round, so the model could re-issue it once per round
+    // and each repeat applied the side effect again. Nothing changed between the
+    // two rounds, so the repeat cannot produce anything new.
+    expect(result.executableTools).toHaveLength(0);
+    expect(result.suppressedTools).toHaveLength(1);
+  });
+
+  it('should allow an identical repeat once another tool has succeeded since', () => {
     const manager = new MockChatManager();
     const tool = { tool_name: 'get_track_status', parameters: {} };
     const successfulCounts = new Map([[manager.getToolExecutionKey(tool.tool_name, tool.parameters), 1]]);
-
-    const result = manager.filterExecutableToolInstances(
-      [tool],
-      successfulCounts,
+    const state = manager.createToolExecutionState(
       'check track status, show GC, hide variants, then check track status again'
     );
+    state.records.push(
+      { tool: 'get_track_status', parameters: {}, status: 'success' },
+      { tool: 'toggle_track', parameters: { trackName: 'gc' }, status: 'success' },
+      { tool: 'toggle_track', parameters: { trackName: 'variants' }, status: 'success' }
+    );
 
+    const result = manager.filterExecutableToolInstances([tool], successfulCounts, state.originalMessage, state);
+
+    // Re-reading state after something changed it is real work, and the evidence is
+    // the intervening success rather than a list of which tools mutate state.
     expect(result.executableTools).toHaveLength(1);
     expect(result.suppressedTools).toHaveLength(0);
   });
 
-  it('should leave cross-round primer repeats for execution policy when the LLM echoes resolved targetSequence', () => {
+  it('should catch a cross-round repeat the LLM disguises by echoing a resolved targetSequence', () => {
     const manager = new MockChatManager();
     const firstTool = { tool_name: 'design_primers', parameters: { geneName: 'lysC' } };
     const repeatedTool = {
@@ -322,15 +374,20 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
       },
     };
     const successfulCounts = new Map([[manager.getToolExecutionKey(firstTool.tool_name, firstTool.parameters), 1]]);
+    const state = manager.createToolExecutionState('please design primers to amplify lysC gene');
+    state.records.push({ tool: 'design_primers', parameters: { geneName: 'lysC' }, status: 'success' });
 
     const result = manager.filterExecutableToolInstances(
       [repeatedTool],
       successfulCounts,
-      'please design primers to amplify lysC gene'
+      state.originalMessage,
+      state
     );
 
-    expect(result.executableTools).toHaveLength(1);
-    expect(result.suppressedTools).toHaveLength(0);
+    // Normalization drops the derived targetSequence, so the echoed call has the
+    // same execution identity and is recognized as the repeat it is.
+    expect(result.executableTools).toHaveLength(0);
+    expect(result.suppressedTools).toHaveLength(1);
   });
 
   it('should allow get_track_status to rerun after track visibility changes', () => {
@@ -664,9 +721,10 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     const completedTool = { tool_name: 'get_coding_sequence', parameters: { gene_name: 'lacZ' } };
     const blockedTool = { tool_name: 'blocked_tool', parameters: { id: 1 } };
     const queuedTool = { tool_name: 'translate_dna', parameters: { dna: 'ATG', reading_frame: 1 } };
-    const successfulCounts = new Map([
-      [manager.getToolExecutionKey(completedTool.tool_name, completedTool.parameters), 1],
-    ]);
+    // The 'suppressed' record comes from the same-response duplicate below, which is
+    // what this test is about. Seeding a prior-round success instead would now
+    // suppress both instances and stop exercising the queued path.
+    const successfulCounts = new Map();
     const state = manager.createToolExecutionState('retrieve lacZ, translate it, and calculate molecular weight');
 
     const result = manager.createPendingToolExecutionQueue(
@@ -687,6 +745,104 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
       'blocked_tool',
       'translate_dna',
     ]);
+  });
+
+  it('bounds cross-round repeats for a tool no completion heuristic knows about', () => {
+    const manager = new MockChatManager();
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = () => true;
+
+    // Deliberately a name that appears in no capability policy, no task-completing
+    // tool list and no single-execution phrase list. The loop still has to bound it:
+    // that was the actual defect behind "zoom out" running once per round, and it
+    // applied to every tool those lists happen to omit.
+    const call = { tool_name: 'some_unlisted_capability', parameters: { level: 1 } };
+    const state = manager.createToolExecutionState('do the thing');
+    const successfulCounts = new Map();
+
+    const round1 = manager.createPendingToolExecutionQueue(
+      [call],
+      successfulCounts,
+      state.originalMessage,
+      [],
+      1,
+      state
+    );
+    expect(round1.pendingTools).toHaveLength(1);
+
+    manager.markToolExecutionResults(
+      state,
+      round1.pendingTools,
+      [{ tool: call.tool_name, parameters: call.parameters, success: true, result: { ok: true }, error: null }],
+      1
+    );
+    successfulCounts.set(manager.getToolExecutionKey(call.tool_name, call.parameters), 1);
+
+    const round2 = manager.createPendingToolExecutionQueue(
+      [call],
+      successfulCounts,
+      state.originalMessage,
+      [],
+      2,
+      state
+    );
+
+    expect(round2.pendingTools).toHaveLength(0);
+    expect(round2.suppressedTools).toHaveLength(1);
+  });
+
+  it('stops a genome-wide analysis from re-running every round', () => {
+    const manager = new MockChatManager();
+    manager.showThinkingProcess = false;
+    manager.updateThinkingMessage = () => {};
+    manager.shouldAllowToolExecution = () => true;
+
+    // Reported scenario: "genome wide codon usage analysis" ran four times with
+    // identical parameters. The message matches the "codon usage analysis" phrase
+    // list and the list names codon_usage_analysis, but the tool the model actually
+    // picked is genome_codon_usage_analysis, which no list mentions.
+    const call = { tool_name: 'genome_codon_usage_analysis', parameters: { clientId: 'U00096' } };
+    const state = manager.createToolExecutionState('genome wide codon usage analysis');
+    const successfulCounts = new Map();
+
+    const round1 = manager.createPendingToolExecutionQueue(
+      [call],
+      successfulCounts,
+      state.originalMessage,
+      [],
+      1,
+      state
+    );
+    expect(round1.pendingTools).toHaveLength(1);
+
+    manager.markToolExecutionResults(
+      state,
+      round1.pendingTools,
+      [
+        {
+          tool: call.tool_name,
+          parameters: call.parameters,
+          success: true,
+          result: { success: true, totalGenes: 3878, totalCodons: 1343883 },
+          error: null,
+        },
+      ],
+      1
+    );
+    successfulCounts.set(manager.getToolExecutionKey(call.tool_name, call.parameters), 1);
+
+    const round2 = manager.createPendingToolExecutionQueue(
+      [call],
+      successfulCounts,
+      state.originalMessage,
+      [],
+      2,
+      state
+    );
+
+    expect(round2.pendingTools).toHaveLength(0);
+    expect(round2.suppressedTools).toHaveLength(1);
   });
 
   it('should update execution state with success/failure results and inject it as a user-visible state message', () => {
@@ -800,17 +956,23 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(results).toEqual([
       {
         tool: 'search_uniprot_database',
+        tool_name: 'search_uniprot_database',
+        tool_call_id: null,
         parameters: { search_query: 'DNA polymerase I' },
         success: true,
         result: { ok: true, toolName: 'search_uniprot_database' },
         error: null,
+        executionTime: expect.any(Number),
       },
       {
         tool: 'search_uniprot_database',
+        tool_name: 'search_uniprot_database',
+        tool_call_id: null,
         parameters: { search_query: 'fail' },
         success: false,
         result: null,
         error: 'simulated failure',
+        executionTime: expect.any(Number),
       },
     ]);
   });
@@ -826,10 +988,13 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(results).toEqual([
       {
         tool: 'select_gene',
+        tool_name: 'select_gene',
+        tool_call_id: null,
         parameters: { geneName: 'lysC' },
         success: false,
         result: null,
         error: 'Gene lysC was not found',
+        executionTime: expect.any(Number),
       },
     ]);
     expect(referenceContext).toHaveLength(0);
@@ -910,10 +1075,13 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(results).toEqual([
       {
         tool: 'calculate_entropy',
+        tool_name: 'calculate_entropy',
+        tool_call_id: null,
         parameters: { sequence: '{get_sequence.sequence}' },
         success: false,
         result: null,
         error: 'Unresolved tool result reference: {get_sequence.sequence}',
+        executionTime: 0,
       },
     ]);
   });
@@ -1045,6 +1213,109 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     expect(manager.getToolExecutionCount(toolKey, history)).toBe(2);
   });
 
+  describe('multi-tool rounds', () => {
+    // A round that runs several tools reports all of them in one feedback message.
+    // Every repeat guard reads that message, so a tool that is not listed first must
+    // still be recognised — otherwise the model can re-issue it every round and the
+    // tool really re-runs (re-opening viewers, re-hitting external APIs) until the
+    // turn times out.
+    const buildMultiToolFeedback = () => ({
+      role: 'system',
+      content:
+        '[Tool Result]\n' +
+        'search_uniprot_database executed successfully with parameters: ' +
+        '{"organism":"Escherichia coli","search_query":"DapA"}: {"success":true,"count":5}; ' +
+        'search_pdb_structures executed successfully with parameters: ' +
+        '{"geneName":"dapA","organism":"Escherichia coli"}: {"success":true,"count":10}',
+    });
+
+    const pdbKey = 'search_pdb_structures:{"geneName":"dapA","organism":"Escherichia coli"}';
+
+    it('attributes parameters to the tool that reported them', () => {
+      const manager = new MockChatManager();
+      const entries = manager.parseToolExecutionFeedbackEntries(buildMultiToolFeedback().content);
+
+      expect(entries.map(entry => entry.toolName)).toEqual(['search_uniprot_database', 'search_pdb_structures']);
+      expect(entries.every(entry => entry.success)).toBe(true);
+      expect(JSON.parse(entries[0].parametersText)).toEqual({
+        organism: 'Escherichia coli',
+        search_query: 'DapA',
+      });
+      expect(JSON.parse(entries[1].parametersText)).toEqual({
+        geneName: 'dapA',
+        organism: 'Escherichia coli',
+      });
+    });
+
+    it('detects a tool reported after the first one in the same round', () => {
+      const manager = new MockChatManager();
+      const history = [buildMultiToolFeedback()];
+
+      expect(manager.wasToolExecutedSuccessfully(pdbKey, history)).toBe(true);
+      expect(manager.getToolExecutionCount(pdbKey, history)).toBe(1);
+      expect(manager.findExistingExecution(pdbKey, history)).toMatchObject({ success: true });
+    });
+
+    it('counts repeats of a non-first tool so the identical-execution limit can fire', () => {
+      const manager = new MockChatManager();
+      const history = [buildMultiToolFeedback(), buildMultiToolFeedback(), buildMultiToolFeedback()];
+
+      expect(manager.getToolExecutionCount(pdbKey, history)).toBe(3);
+    });
+
+    it('does not match a non-first tool called with different parameters', () => {
+      const manager = new MockChatManager();
+      const otherKey = 'search_pdb_structures:{"geneName":"lysC","organism":"Escherichia coli"}';
+
+      expect(manager.wasToolExecutedSuccessfully(otherKey, [buildMultiToolFeedback()])).toBe(false);
+      expect(manager.getToolExecutionCount(otherKey, [buildMultiToolFeedback()])).toBe(0);
+    });
+
+    it('lets the execution policy stop a tool the model keeps re-issuing', () => {
+      // The end of the chain the parsing bug broke: a PDB search batched behind
+      // the UniProt search in every round used to look brand new each time, so it
+      // re-ran and re-opened the results viewer until the turn timed out.
+      const ToolExecutionPolicy = globalThis.ToolExecutionPolicy;
+      const manager = new MockChatManager();
+      const policy = new ToolExecutionPolicy({
+        chatManager: {
+          configManager: { get: (key, fallback) => (key === 'chatboxSettings' ? {} : fallback) },
+          getToolExecutionKey: manager.getToolExecutionKey.bind(manager),
+          getToolExecutionCount: manager.getToolExecutionCount.bind(manager),
+          getToolExecutionCountByName: manager.getToolExecutionCountByName.bind(manager),
+          wasToolExecutedSuccessfully: manager.wasToolExecutedSuccessfully.bind(manager),
+          findExistingExecution: manager.findExistingExecution.bind(manager),
+        },
+      });
+
+      const call = {
+        tool_name: 'search_pdb_structures',
+        parameters: { geneName: 'dapA', organism: 'Escherichia coli' },
+      };
+
+      expect(policy.shouldAllowToolExecution(call, [], 1, [])).toBe(true);
+      expect(policy.shouldAllowToolExecution(call, [buildMultiToolFeedback()], 2, [])).toBe(false);
+    });
+
+    it('reads failure from the tool own entry, not from a sibling that succeeded', () => {
+      const manager = new MockChatManager();
+      const history = [
+        {
+          role: 'system',
+          content:
+            '[Tool Result]\n' +
+            'search_uniprot_database executed successfully with parameters: ' +
+            '{"organism":"Escherichia coli","search_query":"DapA"}: {"success":true}; ' +
+            'search_pdb_structures executed with parameters: ' +
+            '{"geneName":"dapA","organism":"Escherichia coli"}: {"success":false}',
+        },
+      ];
+
+      expect(manager.findExistingExecution(pdbKey, history)).toMatchObject({ success: false });
+      expect(manager.wasToolExecutedSuccessfully(pdbKey, history)).toBe(false);
+    });
+  });
+
   it('should detect view state changes in hasViewStateChangedSinceLastExecution', () => {
     const service = new LLMContextService({}, {});
 
@@ -1146,6 +1417,70 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
     );
 
     expect(shouldTerminate).toBe(true);
+  });
+
+  it('should terminate after a successful bare zoom request', () => {
+    const service = new LLMContextService({}, {});
+
+    // Regression: "zoom out" was absent from both the single-execution patterns
+    // and the task-completing tool list, so a one-word zoom never met the early
+    // termination criteria. The model was re-prompted after every successful
+    // zoom_out and simply issued it again, zooming the view out once per round
+    // until the round limit was reached.
+    const zoomResult = {
+      success: true,
+      factor: 2,
+      message: 'Zoomed out by 2x',
+      newRange: { chromosome: 'U00096', start: 1, end: 8000, length: 8000, centerPosition: 4000 },
+    };
+
+    expect(
+      service.shouldTerminateAfterToolExecution(
+        [{ tool_name: 'zoom_out', parameters: { factor: 2 } }],
+        [{ tool: 'zoom_out', result: zoomResult }],
+        'zoom out'
+      )
+    ).toBe(true);
+
+    expect(
+      service.shouldTerminateAfterToolExecution(
+        [{ tool_name: 'zoom_in', parameters: { factor: 2 } }],
+        [{ tool: 'zoom_in', result: { ...zoomResult, message: 'Zoomed in by 2x' } }],
+        'zoom in'
+      )
+    ).toBe(true);
+  });
+
+  it('treats a zoom "Nx" as a magnification, not as N sequential zooms', () => {
+    const service = new LLMContextService({}, {});
+
+    // "zoom out 4x" is one zoom_out(factor: 4), so it must still terminate early.
+    expect(
+      service.shouldTerminateAfterToolExecution(
+        [{ tool_name: 'zoom_out', parameters: { factor: 4 } }],
+        [
+          {
+            tool: 'zoom_out',
+            result: {
+              success: true,
+              factor: 4,
+              message: 'Zoomed out by 4x',
+              newRange: { chromosome: 'U00096', start: 1, end: 16000, length: 16000, centerPosition: 8000 },
+            },
+          },
+        ],
+        'zoom out 4x'
+      )
+    ).toBe(true);
+
+    expect(service.messageHasMultiStepIntent('zoom out 4x')).toBe(false);
+    expect(service.messageHasMultiStepIntent('zoom in 10x')).toBe(false);
+    expect(service.messageHasMultiStepIntent('zoom out by 4x')).toBe(false);
+
+    // Spelled-out repetition and non-zoom multipliers remain multi-step requests.
+    expect(service.messageHasMultiStepIntent('zoom out 3 times')).toBe(true);
+    expect(service.messageHasMultiStepIntent('pan right 3x')).toBe(true);
+    expect(service.messageHasMultiStepIntent('navigate to lacZ and then zoom in 10x')).toBe(true);
   });
 
   it('should NOT terminate early when the message chains a follow-up action ("and then")', () => {

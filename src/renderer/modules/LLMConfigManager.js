@@ -1070,8 +1070,8 @@ class LLMConfigManager {
   /**
    * Persisted providers are merged over the defaults, so a saved config can
    * shadow the model lists shipped with a newer app version. Keep a cached
-   * list only when it actually came from the provider's API, and re-merge it
-   * with the current built-in list so both sources stay represented.
+   * list only when it actually came from the provider's API; the built-in list
+   * then only supplies ordering and labels, not extra entries.
    */
   reconcileBuiltInModelLists() {
     Object.entries(this.providers).forEach(([providerKey, provider]) => {
@@ -1080,7 +1080,7 @@ class LLMConfigManager {
 
       const remoteModels = Array.isArray(provider.remoteModels) ? provider.remoteModels : [];
       if (provider.modelsSource === 'remote' && remoteModels.length > 0) {
-        provider.availableModels = this.mergeModelLists(providerKey, remoteModels);
+        provider.availableModels = this.orderFetchedModels(providerKey, remoteModels);
         return;
       }
 
@@ -1987,18 +1987,20 @@ class LLMConfigManager {
 
   /**
    * Order a refreshed list so the models shipped with the app come first (in
-   * their curated order), then everything else alphabetically, then curated
-   * models the provider did not report — a saved selection never disappears
-   * because a listing endpoint omitted it.
+   * their curated order), then everything else alphabetically.
+   *
+   * A successful refresh is authoritative: models the provider did not report
+   * are dropped, so the dropdown never offers a retired model that would fail
+   * at request time. A saved model the listing endpoint omits is still usable
+   * through the "Other (specify below)" custom entry.
    */
-  mergeModelLists(providerKey, fetchedModels) {
+  orderFetchedModels(providerKey, fetchedModels) {
     const builtIn = this.builtInModels[providerKey] || [];
     const fetchedSet = new Set(fetchedModels);
     const known = builtIn.filter(model => fetchedSet.has(model));
     const knownSet = new Set(known);
     const discovered = fetchedModels.filter(model => !knownSet.has(model)).sort((a, b) => a.localeCompare(b));
-    const missing = builtIn.filter(model => !fetchedSet.has(model));
-    return [...known, ...discovered, ...missing];
+    return [...known, ...discovered];
   }
 
   /**
@@ -2067,10 +2069,13 @@ class LLMConfigManager {
 
       try {
         const models = await this.fetchProviderModels(providerKey, config);
-        const truncated = models.length > this.maxAvailableModels;
+        // Order before truncating so the curated models the provider reported
+        // survive the cap even when the listing endpoint is huge.
+        const ordered = this.orderFetchedModels(providerKey, models);
+        const truncated = ordered.length > this.maxAvailableModels;
 
-        provider.remoteModels = models.slice(0, this.maxAvailableModels);
-        provider.availableModels = this.mergeModelLists(providerKey, provider.remoteModels);
+        provider.remoteModels = ordered.slice(0, this.maxAvailableModels);
+        provider.availableModels = [...provider.remoteModels];
         provider.modelsSource = 'remote';
         provider.modelsUpdatedAt = new Date().toISOString();
         provider.modelsFingerprint = this.getProviderCredentialFingerprint(config);
@@ -2217,10 +2222,10 @@ class LLMConfigManager {
   }
 
   /**
-   * Rebuild a provider's model dropdown. Models the provider reported go into
-   * a group at the top (keeping the shipped label, e.g. pricing, where we have
-   * one); shipped options the provider also reported are dropped from the
-   * static section so nothing is listed twice.
+   * Rebuild a provider's model dropdown. Once the provider has reported a
+   * model list it replaces the shipped options entirely — the shipped ones only
+   * survive as labels (pricing, sizes) for the models that came back. A model
+   * the provider no longer lists can still be entered through "Other".
    */
   populateProviderModelSelect(providerKey) {
     const select = document.getElementById(`${providerKey}Model`);
@@ -2248,28 +2253,28 @@ class LLMConfigManager {
         if (!isSavedConfigOption(option)) labels.set(option.value, option.textContent);
       });
 
-      const remoteSet = new Set(remoteModels);
+      // The refreshed list is authoritative: every shipped model option goes,
+      // whether or not the provider reported it. Only the custom entry and the
+      // user's own saved endpoint configurations stay.
       Array.from(select.options).forEach(option => {
         if (option.value === 'other' || isSavedConfigOption(option)) return;
-        if (remoteSet.has(option.value)) option.remove();
+        option.remove();
       });
       Array.from(select.querySelectorAll('optgroup')).forEach(group => {
         if (group.id !== SAVED_CONFIGS_OPTGROUP && group.children.length === 0) {
-          group.style.display = 'none';
+          group.remove();
         }
       });
 
       const group = document.createElement('optgroup');
       group.id = `${providerKey}FetchedModelsOptgroup`;
       group.label = `Available from ${provider.name || providerKey} (${remoteModels.length})`;
-      this.mergeModelLists(providerKey, remoteModels)
-        .filter(modelId => remoteSet.has(modelId))
-        .forEach(modelId => {
-          const option = document.createElement('option');
-          option.value = modelId;
-          option.textContent = labels.get(modelId) || modelId;
-          group.appendChild(option);
-        });
+      this.orderFetchedModels(providerKey, remoteModels).forEach(modelId => {
+        const option = document.createElement('option');
+        option.value = modelId;
+        option.textContent = labels.get(modelId) || modelId;
+        group.appendChild(option);
+      });
       select.insertBefore(group, select.firstChild);
     }
 
@@ -2377,7 +2382,7 @@ class LLMConfigManager {
       throw new Error('No LLM provider configured');
     }
 
-    const provider = this.providers[providerKey];
+    const provider = this.getProviderConfigForModelType('task');
 
     try {
       switch (providerKey) {
@@ -2414,11 +2419,11 @@ class LLMConfigManager {
    *   text as it arrives, for providers that stream it separately from the
    *   answer; `onStreamReset()` is invoked if a stream fails partway so the
    *   caller can discard partial text before the non-streaming retry;
-   *   `signal` aborts an in-flight stream.
+   *   `signal` aborts an in-flight stream. `modelType`, `providerOverride`,
+   *   and `modelOverride` can select a request-scoped ChatBox model.
    */
   async sendMessageWithHistory(conversationHistory, context = null, memoryContext = null, options = {}) {
-    // Get the best available provider for task model type
-    const primaryProvider = this.getProviderForModelType('task');
+    const { providerKey: primaryProvider, model: primaryModel } = this.getRequestModelSelection('task', options);
     if (!primaryProvider) {
       throw new Error('No LLM provider configured');
     }
@@ -2427,13 +2432,20 @@ class LLMConfigManager {
 
     // Try primary provider first
     try {
-      return await this.sendMessageWithProvider(primaryProvider, conversationHistory, context, memoryContext, options);
+      return await this.sendMessageWithProvider(
+        primaryProvider,
+        conversationHistory,
+        context,
+        memoryContext,
+        options,
+        primaryModel
+      );
     } catch (error) {
       lastError = error;
       console.warn(`Primary provider ${primaryProvider} failed:`, error.message);
 
       // Only try fallback if it's a service unavailable error and fallback is enabled
-      if (this.shouldTryFallback(error)) {
+      if (!options.disableFallback && this.shouldTryFallback(error)) {
         const fallbackProvider = this.getFallbackProvider(primaryProvider);
 
         if (fallbackProvider) {
@@ -2483,12 +2495,24 @@ class LLMConfigManager {
   /**
    * Send message using a specific provider
    */
-  async sendMessageWithProvider(providerKey, conversationHistory, context, memoryContext = null, options = {}) {
-    const provider = this.providers[providerKey];
+  async sendMessageWithProvider(
+    providerKey,
+    conversationHistory,
+    context,
+    memoryContext = null,
+    options = {},
+    modelOverride = null
+  ) {
+    const configuredProvider = this.providers[providerKey];
 
-    if (!provider || !provider.enabled) {
+    if (!configuredProvider || !configuredProvider.enabled) {
       throw new Error(`Provider ${providerKey} is not configured or enabled`);
     }
+
+    // Model Selection config is request-scoped. Do not mutate the provider's
+    // saved default, because a fallback provider must still use its own model.
+    const provider =
+      modelOverride && modelOverride !== 'auto' ? { ...configuredProvider, model: modelOverride } : configuredProvider;
 
     switch (providerKey) {
       case 'openai':
@@ -2757,6 +2781,104 @@ class LLMConfigManager {
     return this.formatProviderText(visibleText, reasoningText);
   }
 
+  getRequestTemperature(options = {}) {
+    return Number.isFinite(options.temperatureOverride) ? options.temperatureOverride : this.getTemperature();
+  }
+
+  getNativeFunctionTools(options = {}) {
+    if (options.nativeFunctionCalling === false || !Array.isArray(options.tools)) return [];
+    return options.tools.filter(
+      tool =>
+        tool?.type === 'function' &&
+        typeof tool?.function?.name === 'string' &&
+        tool.function.parameters &&
+        typeof tool.function.parameters === 'object'
+    );
+  }
+
+  buildConstrainedToolResponseFormat(options = {}) {
+    if (options.constrainedToolOutput !== true || options.nativeFunctionCalling !== false) return null;
+    const tools = Array.isArray(options.tools) ? options.tools : [];
+    const names = tools.map(tool => tool?.function?.name).filter(Boolean);
+    if (names.length === 0) return null;
+    return {
+      type: 'json_schema',
+      json_schema: {
+        name: 'codexomics_tool_decision',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            decision: {
+              type: 'string',
+              enum: ['call', 'no_call', 'ask_clarification', 'refuse', 'unavailable_tool'],
+            },
+            tool_calls: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  tool_name: { type: 'string', enum: names },
+                  parameters: { type: 'object', additionalProperties: true },
+                },
+                required: ['tool_name', 'parameters'],
+                additionalProperties: false,
+              },
+            },
+            final_answer: { type: ['string', 'null'] },
+          },
+          required: ['decision', 'tool_calls', 'final_answer'],
+          additionalProperties: false,
+        },
+      },
+    };
+  }
+
+  buildOpenAICompatiblePayload(provider, conversationHistory, options = {}, extra = {}) {
+    const payload = {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getRequestTemperature(options),
+      ...extra,
+    };
+    const nativeTools = this.getNativeFunctionTools(options);
+    if (nativeTools.length > 0) {
+      payload.tools = nativeTools;
+      payload.tool_choice = options.toolChoice || 'auto';
+      payload.parallel_tool_calls = options.parallelToolCalls !== false;
+    } else {
+      const responseFormat = this.buildConstrainedToolResponseFormat(options);
+      if (responseFormat) payload.response_format = responseFormat;
+    }
+    return payload;
+  }
+
+  buildAnthropicTools(options = {}) {
+    return this.getNativeFunctionTools(options).map(tool => ({
+      name: tool.function.name,
+      description: tool.function.description,
+      input_schema: tool.function.parameters,
+    }));
+  }
+
+  buildGoogleFunctionDeclarations(options = {}) {
+    const toGoogleSchema = value => {
+      if (Array.isArray(value)) return value.map(toGoogleSchema);
+      if (!value || typeof value !== 'object') return value;
+      return Object.fromEntries(
+        Object.entries(value)
+          .filter(([key]) => !['additionalProperties', '$schema', '$id'].includes(key))
+          .map(([key, child]) => [key, toGoogleSchema(child)])
+      );
+    };
+    return this.getNativeFunctionTools(options).map(tool => ({
+      name: tool.function.name,
+      description: tool.function.description,
+      parameters: toGoogleSchema(tool.function.parameters),
+    }));
+  }
+
   // ---------------------------------------------------------------------------
   // Token streaming
   //
@@ -2796,7 +2918,7 @@ class LLMConfigManager {
    */
   shouldAttemptStream(options) {
     const hasSink = Boolean(options?.onToken || options?.onReasoningToken);
-    return hasSink && this.isStreamingEnabled() && Boolean(this.getStreamClient());
+    return !options?.disableStreaming && hasSink && this.isStreamingEnabled() && Boolean(this.getStreamClient());
   }
 
   /**
@@ -2837,24 +2959,29 @@ class LLMConfigManager {
     const providerLabel = provider?.name || providerKey;
 
     try {
+      const streamStart = Date.now();
+      console.log(
+        `[LLM][${providerLabel}] streaming request start: url=${provider.baseUrl}/chat/completions, ` +
+          `model=${provider.model}, messages=${conversationHistory.length}, ` +
+          `signal=${options.signal ? 'yes' : 'no'}, at=${new Date().toISOString()}`
+      );
       const response = await fetch(`${provider.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: this.buildChatCompletionsHeaders(providerKey, provider),
-        body: JSON.stringify({
-          model: provider.model,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-          stream: true,
-        }),
+        body: JSON.stringify(
+          this.buildOpenAICompatiblePayload(provider, conversationHistory, options, { stream: true })
+        ),
         signal: options.signal || undefined,
       });
+      console.log(
+        `[LLM][${providerLabel}] streaming response status=${response.status} after ${Date.now() - streamStart}ms`
+      );
 
       // Let the established non-streaming path own error classification, retry
       // scheduling, and provider fallback rather than duplicating it here.
       if (!response.ok || !streamClient.isEventStream(response)) {
         console.warn(
-          `[${providerLabel}] Streaming unavailable (status ${response.status}); using non-streaming request.`
+          `[${providerLabel}] Streaming unavailable (status ${response.status}) after ${Date.now() - streamStart}ms; using non-streaming request.`
         );
         return null;
       }
@@ -2865,8 +2992,10 @@ class LLMConfigManager {
         signal: options.signal,
       });
 
+      console.log(`[LLM][${providerLabel}] streaming completed in ${Date.now() - streamStart}ms`);
       return normalizeFn ? normalizeFn.call(this, data) : this.normalizeOpenAICompatibleResponse(data, providerKey);
     } catch (error) {
+      console.warn(`[LLM][${providerLabel}] streaming request failed:`, error?.message || error);
       return this.handleStreamFailure(error, providerLabel, options);
     }
   }
@@ -2883,11 +3012,16 @@ class LLMConfigManager {
       const payload = {
         model: provider.model,
         max_tokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
+        temperature: this.getRequestTemperature(options),
         messages: conversationHistory.filter(msg => msg.role !== 'system'),
         stream: true,
       };
       if (systemMessage) payload.system = systemMessage.content;
+      const anthropicTools = this.buildAnthropicTools(options);
+      if (anthropicTools.length > 0) {
+        payload.tools = anthropicTools;
+        payload.tool_choice = { type: options.toolChoice || 'auto' };
+      }
 
       const response = await fetch(`${provider.baseUrl}/v1/messages`, {
         method: 'POST',
@@ -2940,11 +3074,16 @@ class LLMConfigManager {
         contents,
         generationConfig: {
           maxOutputTokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
+          temperature: this.getRequestTemperature(options),
         },
       };
       if (systemMessage?.content) {
         payload.systemInstruction = { parts: [{ text: systemMessage.content }] };
+      }
+      const functionDeclarations = this.buildGoogleFunctionDeclarations(options);
+      if (functionDeclarations.length > 0) {
+        payload.tools = [{ functionDeclarations }];
+        payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
       }
 
       const apiUrl =
@@ -3015,7 +3154,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     return await this.makeRequestWithRetry(
@@ -3026,12 +3166,7 @@ class LLMConfigManager {
             Authorization: `Bearer ${provider.apiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: provider.model,
-            messages: conversationHistory,
-            max_tokens: this.getMaxTokens(provider),
-            temperature: this.getTemperature(),
-          }),
+          body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
         });
 
         if (!response.ok) {
@@ -3098,12 +3233,17 @@ class LLMConfigManager {
     const payload = {
       model: provider.model,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
       messages: messages,
     };
 
     if (systemMessage) {
       payload.system = systemMessage.content;
+    }
+    const anthropicTools = this.buildAnthropicTools(options);
+    if (anthropicTools.length > 0) {
+      payload.tools = anthropicTools;
+      payload.tool_choice = { type: options.toolChoice || 'auto' };
     }
 
     console.log('Sending to Anthropic - Request Payload:', payload);
@@ -3201,7 +3341,7 @@ class LLMConfigManager {
       contents: contents,
       generationConfig: {
         maxOutputTokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
+        temperature: this.getRequestTemperature(options),
       },
     };
 
@@ -3215,6 +3355,11 @@ class LLMConfigManager {
       console.warn(
         'Google API: No system message found in conversation history - tools and system prompt will be missing!'
       );
+    }
+    const functionDeclarations = this.buildGoogleFunctionDeclarations(options);
+    if (functionDeclarations.length > 0) {
+      payload.tools = [{ functionDeclarations }];
+      payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
     }
 
     console.log('Sending to Google - Request Payload:', payload);
@@ -3278,7 +3423,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -3287,12 +3433,7 @@ class LLMConfigManager {
         Authorization: `Bearer ${provider.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: provider.model,
-        messages: conversationHistory,
-        max_tokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
-      }),
+      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
     });
 
     if (!response.ok) {
@@ -3429,7 +3570,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     return await this.makeRequestWithRetry(
@@ -3440,12 +3582,7 @@ class LLMConfigManager {
             Authorization: `Bearer ${provider.apiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: provider.model,
-            messages: conversationHistory,
-            max_tokens: this.getMaxTokens(provider),
-            temperature: this.getTemperature(),
-          }),
+          body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
         });
 
         if (!response.ok) {
@@ -3490,15 +3627,26 @@ class LLMConfigManager {
   getMaxTokens(provider) {
     // 1. Try chatboxSettings override first
     const chatboxSettings = this.configManager ? this.configManager.get('chatboxSettings') : null;
+    let maxTokens = 4000;
     if (chatboxSettings && chatboxSettings.chatboxLLMMaxTokens) {
-      return parseInt(chatboxSettings.chatboxLLMMaxTokens, 10);
+      maxTokens = parseInt(chatboxSettings.chatboxLLMMaxTokens, 10);
+    } else if (provider && provider.maxTokens) {
+      // 2. Try provider config
+      maxTokens = parseInt(provider.maxTokens, 10);
     }
-    // 2. Try provider config
-    if (provider && provider.maxTokens) {
-      return parseInt(provider.maxTokens, 10);
+    // 3. Local reasoning models (Qwen3-style <think> blocks) consume a large
+    // share of the budget before the visible answer or tool call is emitted.
+    // Floor the local endpoint at 8192 so thinking + tool call + summary fit;
+    // cloud providers keep their configured values.
+    if (this.isLocalOllamaEndpoint(provider)) {
+      maxTokens = Number.isFinite(maxTokens) ? Math.max(maxTokens, 8192) : 8192;
     }
-    // 3. Fallback to a safe default
-    return 4000;
+    return Number.isFinite(maxTokens) ? maxTokens : 4000;
+  }
+
+  /** True when the provider points at the local Ollama OpenAI-compatible API. */
+  isLocalOllamaEndpoint(provider) {
+    return /localhost:11434|127\.0\.0\.1:11434/i.test(String(provider?.baseUrl || ''));
   }
 
   getTemperature() {
@@ -3575,7 +3723,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     const doRequest = async modelToUse => {
@@ -3587,12 +3736,9 @@ class LLMConfigManager {
           'HTTP-Referer': window.location.origin,
           'X-Title': 'GenomeExplorer',
         },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages: conversationHistory,
-          max_tokens: this.getMaxTokens(provider),
-          temperature: this.getTemperature(),
-        }),
+        body: JSON.stringify(
+          this.buildOpenAICompatiblePayload({ ...provider, model: modelToUse }, conversationHistory, options)
+        ),
       });
       return resp;
     };
@@ -3602,7 +3748,7 @@ class LLMConfigManager {
     if (!response.ok) {
       const status = response.status;
       const errorText = await response.text().catch(() => '');
-      if (status === 403 || status === 404) {
+      if (!options.disableFallback && (status === 403 || status === 404)) {
         const fallbackModel = this.getOpenRouterFallbackModel(provider.model);
         if (fallbackModel && fallbackModel !== provider.model) {
           console.warn(`OpenRouter model unavailable (${provider.model}). Falling back to ${fallbackModel}.`);
@@ -3722,7 +3868,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -3731,12 +3878,7 @@ class LLMConfigManager {
         Authorization: `Bearer ${provider.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: provider.model,
-        messages: conversationHistory,
-        max_tokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
-      }),
+      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
     });
 
     if (!response.ok) {
@@ -3788,7 +3930,8 @@ class LLMConfigManager {
       model: provider.model,
       messages: conversationHistory,
       max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
     });
 
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
@@ -3797,12 +3940,7 @@ class LLMConfigManager {
         Authorization: `Bearer ${provider.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: provider.model,
-        messages: conversationHistory,
-        max_tokens: this.getMaxTokens(provider),
-        temperature: this.getTemperature(),
-      }),
+      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
     });
 
     if (!response.ok) {
@@ -3834,18 +3972,32 @@ class LLMConfigManager {
     console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
     console.log('Sending to Local LLM - Request Payload:', payload);
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: provider.apiKey
-        ? {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
-          }
-        : {
-            'Content-Type': 'application/json',
-          },
-      body: JSON.stringify(payload),
-    });
+    const requestStartedAt = Date.now();
+    console.log(`[LLM][local] non-streaming request start at ${new Date().toISOString()}`);
+    let response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: provider.apiKey
+          ? {
+              Authorization: `Bearer ${provider.apiKey}`,
+              'Content-Type': 'application/json',
+            }
+          : {
+              'Content-Type': 'application/json',
+            },
+        body: JSON.stringify(payload),
+      });
+    } catch (fetchError) {
+      console.error(
+        `[LLM][local] non-streaming fetch failed after ${Date.now() - requestStartedAt}ms:`,
+        fetchError?.message || fetchError
+      );
+      throw fetchError;
+    }
+    console.log(
+      `[LLM][local] non-streaming response status=${response.status} after ${Date.now() - requestStartedAt}ms`
+    );
 
     if (!response.ok) {
       const errorBody = await response.text(); // Get error body as text
@@ -3878,13 +4030,7 @@ class LLMConfigManager {
       role: msg.role === 'system' ? 'system' : msg.role,
     }));
 
-    const payload = {
-      model: provider.model,
-      messages: messages,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getTemperature(),
-      stream: false,
-    };
+    const payload = this.buildOpenAICompatiblePayload(provider, messages, options, { stream: false });
 
     console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
     console.log('Sending to Local LLM - Request Payload:', payload);
@@ -4232,18 +4378,72 @@ Current context summary:
     // For general tasks, reasoning, and code, use the main model configuration
     if (modelType === 'task' || modelType === 'reasoning' || modelType === 'code') {
       const mainConfig = this.modelTypes.main;
-      if (mainConfig && mainConfig.model !== 'auto') {
+      if (
+        mainConfig &&
+        mainConfig.model !== 'auto' &&
+        (mainConfig.provider === 'auto' || mainConfig.provider === providerKey)
+      ) {
         return mainConfig.model;
       }
     } else {
       // For specialized model types, check their specific configuration
-      if (this.modelTypes[modelType] && this.modelTypes[modelType].model !== 'auto') {
-        return this.modelTypes[modelType].model;
+      const modelTypeConfig = this.modelTypes[modelType];
+      if (
+        modelTypeConfig &&
+        modelTypeConfig.model !== 'auto' &&
+        (modelTypeConfig.provider === 'auto' || modelTypeConfig.provider === providerKey)
+      ) {
+        return modelTypeConfig.model;
       }
     }
 
     // Fallback to provider's default model
     return this.providers[providerKey].model;
+  }
+
+  /**
+   * Resolve a request-scoped provider configuration for a model type.
+   * The returned object may contain a selected model override, while the
+   * persisted provider configuration remains unchanged.
+   */
+  getProviderConfigForModelType(modelType) {
+    const providerKey = this.getProviderForModelType(modelType);
+    if (!providerKey) return null;
+
+    const provider = this.providers[providerKey];
+    const model = this.getModelForModelType(modelType);
+    if (!provider || !model || model === provider.model) return provider;
+
+    return { ...provider, model };
+  }
+
+  /**
+   * Resolve provider and model overrides for a single request. A provider-only
+   * override uses that provider's saved default model; a model override always
+   * wins. Invalid explicit providers fail clearly instead of silently routing
+   * the conversation somewhere else.
+   */
+  getRequestModelSelection(defaultModelType = 'task', options = {}) {
+    const modelType = options.modelType && options.modelType !== 'auto' ? options.modelType : defaultModelType;
+    const providerOverride =
+      options.providerOverride && options.providerOverride !== 'auto' ? options.providerOverride : null;
+
+    if (providerOverride) {
+      const provider = this.providers[providerOverride];
+      if (!provider || !provider.enabled) {
+        throw new Error(`Provider ${providerOverride} is not configured or enabled`);
+      }
+
+      const model = options.modelOverride && options.modelOverride !== 'auto' ? options.modelOverride : provider.model;
+      return { providerKey: providerOverride, model };
+    }
+
+    const providerKey = this.getProviderForModelType(modelType);
+    const model =
+      options.modelOverride && options.modelOverride !== 'auto'
+        ? options.modelOverride
+        : this.getModelForModelType(modelType);
+    return { providerKey, model };
   }
 
   // ==========================================

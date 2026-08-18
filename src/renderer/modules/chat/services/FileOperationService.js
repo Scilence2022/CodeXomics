@@ -29,7 +29,9 @@ class FileOperationService {
 
   requireExplicitFilePathForBenchmark(toolName) {
     if (this.isBenchmarkAutomationMode()) {
-      throw new Error(`${toolName} requires an explicit filePath during benchmark automation; file dialogs require user activation.`);
+      throw new Error(
+        `${toolName} requires an explicit filePath during benchmark automation; file dialogs require user activation.`
+      );
     }
   }
 
@@ -207,18 +209,50 @@ class FileOperationService {
   shouldAutoSaveExport(parameters = {}) {
     return Boolean(
       parameters.auto_save ||
-        parameters.autoSave ||
-        parameters.filename ||
-        parameters.fileName ||
-        parameters.file_name ||
-        parameters.filePath ||
-        parameters.file_path ||
-        parameters.path ||
-        parameters.outputPath ||
-        parameters.output_path ||
-        parameters.savePath ||
-        parameters.save_path
+      parameters.autoSave ||
+      parameters.filename ||
+      parameters.fileName ||
+      parameters.file_name ||
+      parameters.filePath ||
+      parameters.file_path ||
+      parameters.path ||
+      parameters.outputPath ||
+      parameters.output_path ||
+      parameters.savePath ||
+      parameters.save_path
     );
+  }
+
+  /**
+   * Single persistence path for every export tool.
+   *
+   * A call that names a destination (or sets auto_save) writes straight to disk.
+   * Only an interactive export with no destination falls back to the save
+   * dialog, and benchmark automation never reaches that dialog: no user is
+   * present to dismiss it, so the run would block until the global timeout.
+   * A dialog the user cancels is reported as a failure instead of being
+   * summarised as a successful export to a file that was never written.
+   */
+  async saveExportContent(content, outputFilename, formatType, parameters = {}, toolName = '') {
+    if (this.shouldAutoSaveExport(parameters)) {
+      return await this.writeFileDirectly(content, outputFilename, formatType);
+    }
+
+    this.requireExplicitExportPathForBenchmark(toolName || formatType);
+
+    const writeResult = await this.showExportSaveDialog(content, outputFilename, formatType, 'text/plain');
+    if (writeResult?.canceled) {
+      throw new Error('export canceled before a destination was chosen');
+    }
+    return writeResult;
+  }
+
+  requireExplicitExportPathForBenchmark(toolName) {
+    if (this.isBenchmarkAutomationMode()) {
+      throw new Error(
+        `${toolName} requires an explicit filename (or auto_save) during benchmark automation; save dialogs require user activation.`
+      );
+    }
   }
 
   async exportFastaSequence(parameters = {}) {
@@ -239,12 +273,13 @@ class FileOperationService {
       });
 
       const outputFilename = this.getExportFilename(parameters, 'genome.fasta');
-      let writeResult;
-      if (this.shouldAutoSaveExport(parameters)) {
-        writeResult = await this.writeFileDirectly(fastaContent, outputFilename, 'FASTA sequence');
-      } else {
-        writeResult = await this.showExportSaveDialog(fastaContent, outputFilename, 'FASTA sequence', 'text/plain');
-      }
+      const writeResult = await this.saveExportContent(
+        fastaContent,
+        outputFilename,
+        'FASTA sequence',
+        parameters,
+        'export_fasta_sequence'
+      );
 
       return {
         success: true,
@@ -300,12 +335,13 @@ class FileOperationService {
       if (!proteinContent) throw new Error('No protein-coding features found to export');
 
       const outputFilename = this.getExportFilename(parameters, 'protein_sequences.fasta');
-      let writeResult;
-      if (this.shouldAutoSaveExport(parameters)) {
-        writeResult = await this.writeFileDirectly(proteinContent, outputFilename, 'Protein FASTA');
-      } else {
-        writeResult = await this.showExportSaveDialog(proteinContent, outputFilename, 'Protein FASTA', 'text/plain');
-      }
+      const writeResult = await this.saveExportContent(
+        proteinContent,
+        outputFilename,
+        'Protein FASTA',
+        parameters,
+        'export_protein_fasta'
+      );
 
       const proteinCount = chromosomes.reduce((sum, chr) => {
         return sum + (this.app.currentAnnotations[chr] || []).filter(f => f.type === 'CDS').length;
@@ -350,12 +386,13 @@ class FileOperationService {
 
       const defaultFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
       const outputFilename = this.getExportFilename(parameters, defaultFilename);
-      let writeResult;
-      if (this.shouldAutoSaveExport(parameters)) {
-        writeResult = await this.writeFileDirectly(fastaContent, outputFilename, 'Current view FASTA');
-      } else {
-        writeResult = await this.showExportSaveDialog(fastaContent, outputFilename, 'Current view FASTA', 'text/plain');
-      }
+      const writeResult = await this.saveExportContent(
+        fastaContent,
+        outputFilename,
+        'Current view FASTA',
+        parameters,
+        'export_current_view_fasta'
+      );
 
       return {
         success: true,
@@ -416,12 +453,13 @@ class FileOperationService {
       });
 
       const outputFilename = this.getExportFilename(parameters, 'genome.gbk');
-      let writeResult;
-      if (this.shouldAutoSaveExport(parameters)) {
-        writeResult = await this.writeFileDirectly(genbankContent, outputFilename, 'GenBank format');
-      } else {
-        writeResult = await this.showExportSaveDialog(genbankContent, outputFilename, 'GenBank format', 'text/plain');
-      }
+      const writeResult = await this.saveExportContent(
+        genbankContent,
+        outputFilename,
+        'GenBank format',
+        parameters,
+        'export_genbank_format'
+      );
 
       return {
         success: true,
@@ -471,12 +509,13 @@ class FileOperationService {
       if (cdsContent === '') throw new Error('No CDS features found to export');
 
       const outputFilename = this.getExportFilename(parameters, 'cds_sequences.fasta');
-      let writeResult;
-      if (this.shouldAutoSaveExport(parameters)) {
-        writeResult = await this.writeFileDirectly(cdsContent, outputFilename, 'CDS FASTA');
-      } else {
-        writeResult = await this.showExportSaveDialog(cdsContent, outputFilename, 'CDS FASTA', 'text/plain');
-      }
+      const writeResult = await this.saveExportContent(
+        cdsContent,
+        outputFilename,
+        'CDS FASTA',
+        parameters,
+        'export_cds_fasta'
+      );
 
       return {
         success: true,
@@ -515,12 +554,13 @@ class FileOperationService {
       });
 
       const outputFilename = this.getExportFilename(parameters, 'features.gff3');
-      let writeResult;
-      if (this.shouldAutoSaveExport(parameters)) {
-        writeResult = await this.writeFileDirectly(gffContent, outputFilename, 'GFF annotations');
-      } else {
-        writeResult = await this.showExportSaveDialog(gffContent, outputFilename, 'GFF annotations', 'text/plain');
-      }
+      const writeResult = await this.saveExportContent(
+        gffContent,
+        outputFilename,
+        'GFF annotations',
+        parameters,
+        'export_gff_annotations'
+      );
 
       return {
         success: true,
@@ -592,12 +632,13 @@ class FileOperationService {
       }
 
       const outputFilename = this.getExportFilename(parameters, 'features.bed');
-      let writeResult;
-      if (this.shouldAutoSaveExport(parameters)) {
-        writeResult = await this.writeFileDirectly(bedContent, outputFilename, 'BED format');
-      } else {
-        writeResult = await this.showExportSaveDialog(bedContent, outputFilename, 'BED format', 'text/plain');
-      }
+      const writeResult = await this.saveExportContent(
+        bedContent,
+        outputFilename,
+        'BED format',
+        parameters,
+        'export_bed_format'
+      );
 
       const result = {
         success: true,
@@ -751,16 +792,7 @@ class FileOperationService {
 
   async downloadInternetFile(parameters = {}) {
     try {
-      let {
-        url,
-        destinationPath,
-        destination_path,
-        savePath,
-        save_path,
-        filename,
-        fileName,
-        file_name,
-      } = parameters;
+      let { url, destinationPath, destination_path, savePath, save_path, filename, fileName, file_name } = parameters;
       destinationPath = destinationPath || destination_path || savePath || save_path;
       filename = filename || fileName || file_name;
       if (url) url = url.replace(/[`\s]/g, '');
@@ -788,7 +820,7 @@ class FileOperationService {
       if (window.electronAPI?.downloadInternetFile) {
         const result = await window.electronAPI.downloadInternetFile({ url, destinationPath, filename });
         if (result.success) {
-return {
+          return {
             success: true,
             message: `Successfully downloaded file to: ${result.filePath}`,
             filePath: result.filePath,
@@ -797,12 +829,12 @@ return {
             url,
             tool: 'download_internet_file',
           };
-}
+        }
         throw new Error(result.error || 'Download failed');
       } else if (window.ipcRenderer) {
         const result = await window.ipcRenderer.invoke('download-internet-file', { url, destinationPath, filename });
         if (result.success) {
-return {
+          return {
             success: true,
             message: `Successfully downloaded file to: ${result.filePath}`,
             filePath: result.filePath,
@@ -811,7 +843,7 @@ return {
             url,
             tool: 'download_internet_file',
           };
-}
+        }
         throw new Error(result.error || 'Download failed');
       } else {
         throw new Error('electronAPI.downloadInternetFile not available');
@@ -874,8 +906,8 @@ return {
           const writeResult = await window.electronAPI.writeFile(result.filePath, content);
           if (writeResult.success) {
             if (this.chatManager.showNotification) {
-this.chatManager.showNotification(`${formatType} saved successfully`, 'success');
-}
+              this.chatManager.showNotification(`${formatType} saved successfully`, 'success');
+            }
             return { success: true, filePath: result.filePath };
           } else throw new Error(`Failed to write file: ${writeResult.error}`);
         }
@@ -886,8 +918,8 @@ this.chatManager.showNotification(`${formatType} saved successfully`, 'success')
       }
     } catch (error) {
       if (this.chatManager.showNotification) {
-this.chatManager.showNotification(`Failed to save ${formatType}: ${error.message}`, 'error');
-}
+        this.chatManager.showNotification(`Failed to save ${formatType}: ${error.message}`, 'error');
+      }
       throw error;
     }
   }
@@ -923,16 +955,16 @@ this.chatManager.showNotification(`Failed to save ${formatType}: ${error.message
           throw new Error(result?.error || `Failed to write ${formatType} to ${resolvedPath}`);
         }
         if (this.chatManager.showNotification) {
-this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
-}
+          this.chatManager.showNotification(`${formatType} exported successfully`, 'success');
+        }
         return { success: true, filePath: result.filePath || resolvedPath };
       } else {
         throw new Error('electronAPI.writeFile is unavailable in the hardened renderer');
       }
     } catch (error) {
       if (this.chatManager.showNotification) {
-this.chatManager.showNotification(`Failed to export ${formatType}: ${error.message}`, 'error');
-}
+        this.chatManager.showNotification(`Failed to export ${formatType}: ${error.message}`, 'error');
+      }
       throw error;
     }
   }

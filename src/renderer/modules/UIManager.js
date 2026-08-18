@@ -1391,10 +1391,7 @@ class UIManager {
     const primerContent = primerElement?.querySelector('.track-content');
     if (!primerContent) return;
 
-    trackContent.innerHTML = '';
-    while (primerContent.firstChild) {
-      trackContent.appendChild(primerContent.firstChild);
-    }
+    this.genomeBrowser.trackRenderer.adoptPrimerTrackContent(trackContent, primerContent);
     console.log('🧬 Primer track SVG refreshed');
   }
 

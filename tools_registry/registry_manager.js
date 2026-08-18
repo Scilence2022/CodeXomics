@@ -586,6 +586,21 @@ class ToolsRegistryManager {
         'complete task',
         'pending task',
       ],
+      skills: [
+        'skill',
+        'skills',
+        'workflow',
+        'workflows',
+        'playbook',
+        'playbooks',
+        'list skills',
+        'available skills',
+        'what skills',
+        'use skill',
+        'run skill',
+        'load skill',
+        'apply skill',
+      ],
     };
 
     const detectedIntents = [];

@@ -398,6 +398,32 @@ describe('DGR artifact storage', () => {
     expect(fullText.documentSha256).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  it('accepts full-text spans acquired through DGR provider waterfall origins', async () => {
+    // DGR's provider waterfall yields BioC (PubTator), TEI (OpenAlex), PDF
+    // (OA copies), and snippet (Asta) documents in addition to PMC XML and
+    // user uploads; all share the same hash/offset verification contract.
+    for (const origin of ['bioc', 'tei', 'pdf', 'snippet']) {
+      const target = createTarget();
+      const task = createCompletedTask(target);
+      addFullTextEvidence(task);
+      task.result.sources[task.result.sources.length - 1].fullText.origin = origin;
+      const facts = task.result.annotationProposal.researchSummary.facts;
+      facts[facts.length - 1].literatureBasis.sourceOrigin = origin;
+
+      const descriptor = await archiveDgrTaskResult({
+        userDataPath,
+        taskId: task.id,
+        target,
+        proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+      });
+
+      expect(descriptor.citationValidation).toMatchObject({
+        verified: true,
+        verifiedFullTextSourceCount: 1,
+      });
+    }
+  });
+
   it('requires the DGR task snapshot when external archival requests live current-annotation binding', async () => {
     const target = createTarget();
     const task = createCompletedTask(target);
@@ -704,5 +730,104 @@ describe('DGR artifact storage', () => {
         proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(incompleteTask)),
       })
     ).rejects.toThrow(/is not complete and cannot be archived/);
+  });
+  it('carries literatureCoverage, llmSynthesis, and annotationNote into the archived summary', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    task.result.metadata.searchDiagnostics = {
+      ...task.result.metadata.searchDiagnostics,
+      literatureCoverage: {
+        literatureBudget: 300,
+        pubmedTotalMatchCount: 412,
+        retainedAbstractCount: 300,
+        linkedBibliographyRequested: 212,
+        linkedBibliographyRetrieved: 212,
+        linkedBibliographyComplete: true,
+      },
+    };
+    task.result.metadata.llmSynthesis = {
+      supplementalQueryCount: 3,
+      literatureLearningBatches: 12,
+      synthesizedReport: true,
+    };
+    task.result.annotationNote = {
+      schema: 'dgr.curation-note.v1',
+      text: 'lysC encodes lysine-sensitive aspartokinase III (PMID:123456).',
+      textSha256: 'n'.repeat(64),
+      segments: [],
+      factIds: [],
+      evidenceIds: [],
+      coverage: { availableFactCount: 3, includedFactCount: 1, includedCategories: ['function'], omittedFactIds: [] },
+    };
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    expect(descriptor.summary.literatureCoverage).toMatchObject({
+      literatureBudget: 300,
+      pubmedTotalMatchCount: 412,
+      linkedBibliographyComplete: true,
+    });
+    expect(descriptor.summary.llmSynthesis).toMatchObject({ synthesizedReport: true, literatureLearningBatches: 12 });
+    expect(descriptor.summary.annotationNote).toMatchObject({
+      schema: 'dgr.curation-note.v1',
+      text: expect.stringContaining('PMID:123456'),
+    });
+  });
+  it('prefers the canonical literatureMetrics count over directness-derived legacy counting', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    // Six direct papers visible to the legacy counter, but the canonical
+    // metrics report the complete retained bibliography (38 papers).
+    task.result.metadata.literatureMetrics = {
+      totalPapers: 38,
+      pubmedPapers: 36,
+      directPapers: 6,
+      geneLinkedPapers: 30,
+      preprintPapers: 2,
+      userDocumentPapers: 0,
+    };
+    task.result.sources.push(
+      { id: 'ppr:1', database: 'europepmc_preprints', url: 'https://doi.org/10.1101/example.1' },
+      { id: 'ppr:2', database: 'europepmc_preprints', url: 'https://doi.org/10.1101/example.2' }
+    );
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    expect(descriptor.summary.literatureCount).toBe(38);
+    expect(descriptor.summary.literatureMetrics).toMatchObject({
+      totalPapers: 38,
+      directPapers: 6,
+      preprintPapers: 2,
+    });
+  });
+
+  it('counts preprints and user documents in the legacy fallback literature count', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    delete task.result.metadata.literatureMetrics;
+    task.result.sources.push(
+      { id: 'ppr:1', database: 'europepmc_preprints', url: 'https://doi.org/10.1101/example.1' },
+      { id: 'pdf:1', database: 'user_document', url: 'urn:sha256:aa', pmid: '12345678' }
+    );
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    // 2 pubmed sources + 1 preprint + 1 user document.
+    expect(descriptor.summary.literatureCount).toBe(4);
   });
 });

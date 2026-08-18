@@ -862,6 +862,8 @@ class AnnotationResearchWorkflowService {
         userPrompt: params.userPrompt || null,
         language: params.language || null,
         maxResult: params.maxResult ?? null,
+        literatureBudget: params.literatureBudget ?? null,
+        fullTextBudget: params.fullTextBudget ?? null,
         forceRefresh: params.forceRefresh === true,
         researchDocumentIds: researchDocuments.map(document => document.documentId),
         currentAnnotation,
@@ -919,6 +921,8 @@ class AnnotationResearchWorkflowService {
         userPrompt: params.userPrompt,
         language: params.language,
         maxResult: params.maxResult,
+        literatureBudget: params.literatureBudget,
+        fullTextBudget: params.fullTextBudget,
         forceRefresh: params.forceRefresh === true,
         userDocumentIds: researchDocuments.map(document => document.documentId),
         enableCitationImage: false,
@@ -986,6 +990,20 @@ class AnnotationResearchWorkflowService {
       workflow.eventSeq = Number.isInteger(status.eventSeq) && status.eventSeq >= 0 ? status.eventSeq : null;
       workflow.updatedAt = new Date().toISOString();
       workflow.error = this._optionalRemoteString(status.error, 2048);
+
+      // Project the DGR coverage/synthesis/note artifacts onto the durable
+      // workflow so external agents (and the Skills runner) can read them
+      // without re-fetching the full task result. Only overwrite when the
+      // remote status actually carries a result; intermediate polls must not
+      // wipe already-persisted values.
+      const remoteResult = this._isPlainRecord(status.result) ? status.result : null;
+      if (remoteResult) {
+        workflow.literatureCoverage = this._clone(
+          remoteResult?.metadata?.searchDiagnostics?.literatureCoverage ?? null
+        );
+        workflow.llmSynthesis = this._clone(remoteResult?.metadata?.llmSynthesis ?? null);
+        workflow.annotationNote = this._clone(remoteResult?.annotationNote ?? null);
+      }
 
       // Persist the authoritative remote status before local archival or
       // proposal materialization. Those post-processing steps can fail even

@@ -29,6 +29,22 @@ class BenchmarkEvaluatorBase {
     WORKFLOW_BASELINE: 0.4,
   };
 
+  // ─── Test Numbering ──────────────────────────────────────────────────────
+
+  /**
+   * Stamp a 1-based number onto every test, following the order the suite runs
+   * them in (declaration order, or the pinned order a suite imposes on top of it).
+   * The number is a test's position in the full suite, so it stays the same when
+   * only a subset is run - "#12 failed" always means the same test.
+   */
+  numberTests(tests) {
+    const numbered = Array.isArray(tests) ? tests : [];
+    numbered.forEach((test, index) => {
+      test.number = index + 1;
+    });
+    return numbered;
+  }
+
   // ─── Tool Name Normalization (camelCase / kebab-case → snake_case) ───────
 
   /**

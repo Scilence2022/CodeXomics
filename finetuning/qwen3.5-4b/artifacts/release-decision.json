@@ -1,0 +1,125 @@
+{
+  "schema_version": "2.0",
+  "status": "PASSED",
+  "production_default": "qwen3.5:4b-codexomics-tools-v2 (recommended candidate; app rollout separate)",
+  "experimental_model": "qwen3.5:4b-codexomics-tools-v2",
+  "experimental_checkpoint_iteration": 50,
+  "scope": {
+    "automatic_simple": 143,
+    "automatic_complex": 29,
+    "manual_tests_included": 0
+  },
+  "scorer": "strict-automatic-v2 (native-function-contract)",
+  "strict_accuracy": {
+    "base": {
+      "overall": 0.8372093023255814,
+      "automatic_simple": 0.9230769230769231,
+      "automatic_complex": 0.41379310344827586,
+      "passed": 144
+    },
+    "old_v1_experimental": {
+      "overall": 0.8255813953488372,
+      "automatic_simple": 0.8811188811188811,
+      "automatic_complex": 0.5517241379310345,
+      "passed": 142
+    },
+    "v2_experimental": {
+      "overall": 0.8953488372093024,
+      "automatic_simple": 0.972027972027972,
+      "automatic_complex": 0.5172413793103449,
+      "passed": 154
+    }
+  },
+  "average_duration_ms": {
+    "base": 17419,
+    "v2_experimental": 10772
+  },
+  "gate_results": {
+    "overall_accuracy_improved": true,
+    "automatic_simple_accuracy_improved": true,
+    "automatic_complex_accuracy_improved": true,
+    "average_latency_within_limit": true,
+    "schema_validity": true,
+    "sandbox_execution": "contract-simulated",
+    "leakage_control": true,
+    "family_split_isolation": true
+  },
+  "v2_failures": {
+    "count": 18,
+    "automatic_simple": ["load_auto_05", "settings_auto_07", "annot_auto_08", "db_auto_01"],
+    "automatic_complex": [
+      "analysis_auto_01",
+      "analysis_auto_complex_03",
+      "nav_auto_complex_02",
+      "analysis_auto_complex_05",
+      "gel_auto_01",
+      "gel_auto_workflow_02",
+      "annotation_auto_complex_01",
+      "annotation_auto_complex_02",
+      "primer_auto_complex_02",
+      "file_auto_complex_02",
+      "ui_auto_complex_02",
+      "blast_auto_complex_01",
+      "protein_auto_complex_02",
+      "blast_auto_complex_04"
+    ],
+    "dominant_reason": "multi-step chain stops early or substitutes a near-miss tool; simple failures are argument-shape mismatches"
+  },
+  "previous_v1": {
+    "status": "REJECTED",
+    "strict_accuracy_v1_scoring": {
+      "base_overall": 0.6627906976744186,
+      "experimental_overall": 0.622093023255814
+    },
+    "gate_failures": ["overall_accuracy_regressed", "automatic_simple_accuracy_regressed"],
+    "artifacts_preserved_at": [
+      "adapters-legacy-rejected",
+      "selected-adapter-legacy-rejected",
+      "fused-hf-legacy-rejected"
+    ]
+  },
+  "dataset_v2": {
+    "status": "RELEASED_AND_TRAINED",
+    "release_records": 678,
+    "fixture_executable_calls": 204,
+    "strong_model_replay": {
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "thinking": "disabled",
+      "promotion_candidates": 206,
+      "passed": 166,
+      "failed": 40,
+      "single_call_accuracy": 0.8833333333333333,
+      "multi_step_accuracy": 0,
+      "decision_accuracy": 0.5833333333333334
+    },
+    "sft_splits": {
+      "train": 82,
+      "valid": 63,
+      "test": 21
+    },
+    "max_seq_length": 3072,
+    "max_rendered_tokens": 2381,
+    "training_schema_profile": "compact-v1",
+    "training_candidate_tools": 6,
+    "training_ready": true,
+    "training_probe_memory": {
+      "max_seq_length_8192_peak_gb": 177,
+      "max_seq_length_4096_peak_gb": 305,
+      "compact_v1_8_tools_3072_peak_gb": 123.8,
+      "compact_v1_6_tools_3072_peak_gb": 98.3
+    },
+    "training_run": {
+      "stopped_at_iteration": 50,
+      "validation_loss_trajectory": {
+        "iter_25": 0.025,
+        "iter_50": 0.014,
+        "iter_75": 0.022
+      },
+      "selected_checkpoint": "selected-adapter",
+      "ollama_tag": "qwen3.5:4b-codexomics-tools-v2",
+      "benchmark": "metrics/tuned-v2.json",
+      "benchmark_passed": 154
+    }
+  }
+}

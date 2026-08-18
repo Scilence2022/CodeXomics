@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="css/chatbox-enhancements.css">
     <link rel="stylesheet" href="css/chatbox-markdown.css">
     <link rel="stylesheet" href="css/llm-config.css">
+    <link rel="stylesheet" href="css/skills.css">
     <link rel="stylesheet" href="css/advanced-search.css">
     <link rel="stylesheet" href="css/digest.css">
     <link rel="stylesheet" href="css/gel-electrophoresis.css">
@@ -385,7 +386,7 @@
                         </button>
                         <button class="dropdown-item" id="multiAgentSettingsBtn">
                             <i class="fas fa-users-cog"></i>
-                            Multi-Agent Settings
+                            Agent Settings
                         </button>
                         <button class="dropdown-item" id="mcpSettingsBtn">
                             <i class="fas fa-server"></i>
@@ -531,7 +532,6 @@
         <!-- Toolbar -->
         <div class="toolbar">
             <div class="toolbar-section">
-                <label>Sidebar:</label>
                 <label class="mac-toggle">
                     <input type="checkbox" id="toggleSidebar">
                     <span class="mac-toggle-slider"></span>
@@ -543,15 +543,30 @@
                     <option value="">Select chromosome...</option>
                 </select>
             </div>
-            <div class="toolbar-section">
+            <div class="toolbar-section toolbar-navigation-section">
+                <!-- <label>Navigate:</label> -->
+                <button id="goToStartBtn" class="btn btn-sm" title="Jump to start of sequence">
+                    <i class="fas fa-fast-backward"></i>
+                </button>
+                <button id="pagePrevBtn" class="btn btn-sm" title="Previous page (one screen left)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="pageNextBtn" class="btn btn-sm" title="Next page (one screen right)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button id="goToEndBtn" class="btn btn-sm" title="Jump to end of sequence">
+                    <i class="fas fa-fast-forward"></i>
+                </button>
+            </div>
+            <div class="toolbar-section toolbar-zoom-section">
                 <!-- <label>Zoom:</label> -->
-                <button id="zoomInBtn" class="btn btn-sm">
+                <button id="zoomInBtn" class="btn btn-sm" title="Zoom in">
                     <i class="fas fa-search-plus"></i>
                 </button>
-                <button id="zoomOutBtn" class="btn btn-sm">
+                <button id="zoomOutBtn" class="btn btn-sm" title="Zoom out">
                     <i class="fas fa-search-minus"></i>
                 </button>
-                <button id="resetZoomBtn" class="btn btn-sm btn-outline-secondary"><i class="fas fa-undo"></i> Reset</button>
+                <button id="resetZoomBtn" class="btn btn-sm btn-outline-secondary" title="Reset view to the first 10 kb"><i class="fas fa-undo"></i> Reset</button>
             </div>
 
             <div class="toolbar-section">
@@ -1193,31 +1208,31 @@
                         <div class="sequence-header">
                             <h4 id="sequenceTitle" class="sequence-title">Sequence View</h4>
                             <div class="sequence-controls">
-                                <button id="toggleProteinSequenceBtn" class="track-btn sequence-header-btn" title="Show the translated protein sequence aligned beneath each visible CDS">
+                                <button id="toggleProteinSequenceBtn" class="track-btn sequence-header-btn" title="Show the translated protein sequence aligned beneath each visible CDS" data-tooltip="Show the translated protein sequence aligned beneath each visible CDS" aria-label="Show the translated protein sequence aligned beneath each visible CDS">
                                     <i class="fas fa-dna"></i>
                                     <span>Protein</span>
                                 </button>
-                                <button id="togglePrimerSequenceBtn" class="track-btn sequence-header-btn" title="Show primer binding footprints aligned with the DNA sequence">
+                                <button id="togglePrimerSequenceBtn" class="track-btn sequence-header-btn" title="Show primer binding footprints aligned with the DNA sequence" data-tooltip="Show primer binding footprints aligned with the DNA sequence" aria-label="Show primer binding footprints aligned with the DNA sequence">
                                     <i class="fas fa-vial"></i>
                                     <span>Primers</span>
                                 </button>
-                                <button id="toggleComplementaryStrandBtn" class="track-btn sequence-header-btn" title="Show the reverse-complement strand below the forward sequence">
+                                <button id="toggleComplementaryStrandBtn" class="track-btn sequence-header-btn" title="Show the reverse-complement strand below the forward sequence" data-tooltip="Show the reverse-complement strand below the forward sequence" aria-label="Show the reverse-complement strand below the forward sequence">
                                     <i class="fas fa-align-justify"></i>
                                     <span>Complementary</span>
                                 </button>
-                                <button id="toggleSequenceCopyFormatBtn" class="track-btn sequence-header-btn" title="Toggle whether Copy exports a clean sequence or FASTA with a header">
+                                <button id="toggleSequenceCopyFormatBtn" class="track-btn sequence-header-btn" title="Toggle whether Copy exports a clean sequence or FASTA with a header" data-tooltip="Toggle whether Copy exports a clean sequence or FASTA with a header" aria-label="Toggle whether Copy exports a clean sequence or FASTA with a header">
                                     <i class="fas fa-file-alt"></i>
                                     <span>Clean</span>
                                 </button>
-                                <button id="sequenceSettingsBtn" class="track-btn sequence-header-btn" title="Open sequence track settings (colors, indicators, line height &amp; spacing)">
+                                <button id="sequenceSettingsBtn" class="track-btn sequence-header-btn" title="Open sequence track settings (colors, indicators, line height &amp; spacing)" data-tooltip="Open sequence track settings (colors, indicators, line height &amp; spacing)" aria-label="Open sequence track settings (colors, indicators, line height &amp; spacing)">
                                     <i class="fas fa-cog"></i>
                                     <span>Settings</span>
                                 </button>
-                                <button id="copySequenceHeaderBtn" class="track-btn sequence-header-btn" title="Copy the sequence currently in view to the clipboard">
+                                <button id="copySequenceHeaderBtn" class="track-btn sequence-header-btn" title="Copy the sequence currently in view to the clipboard" data-tooltip="Copy the sequence currently in view to the clipboard" aria-label="Copy the sequence currently in view to the clipboard">
                                     <i class="fas fa-copy"></i>
                                     <span>Copy</span>
                                 </button>
-                                <button id="toggleSequenceCollapseBtn" class="track-btn sequence-header-btn sequence-collapse-btn" title="Collapse the sequence track (keep only the header visible)">
+                                <button id="toggleSequenceCollapseBtn" class="track-btn sequence-header-btn sequence-collapse-btn" title="Collapse the sequence track (keep only the header visible)" data-tooltip="Collapse the sequence track (keep only the header visible)" aria-label="Collapse the sequence track (keep only the header visible)">
                                     <i class="fas fa-chevron-down"></i>
                                     <span>Collapse</span>
                                 </button>
@@ -1340,6 +1355,10 @@
                 <button class="annotation-review-nav-btn active" data-review-tab="queue" role="tab">
                     <i class="fas fa-list-check"></i> Review Queue
                 </button>
+                <button class="annotation-review-nav-btn" data-review-tab="applied" role="tab">
+                    <i class="fas fa-dna"></i> Annotated Genes
+                    <span class="annotation-review-applied-count" hidden>0</span>
+                </button>
                 <button class="annotation-review-nav-btn" data-review-tab="governance" role="tab">
                     <i class="fas fa-user-shield"></i> Security &amp; Governance
                 </button>
@@ -1394,6 +1413,26 @@
                             </button>
                         </div>
                     </div>
+                </section>
+
+                <section class="annotation-review-panel" data-review-panel="applied">
+                    <div class="annotation-review-toolbar">
+                        <div class="annotation-review-filters">
+                            <input id="annotationAppliedSearch" type="search" placeholder="Gene, locus tag, or chromosome">
+                            <select id="annotationAppliedSort" aria-label="Sort annotated genes">
+                                <option value="recent">Most recently applied</option>
+                                <option value="count">Most applied ChangeSets</option>
+                                <option value="gene">Gene name (A–Z)</option>
+                            </select>
+                            <button id="annotationAppliedRefreshBtn" class="btn btn-secondary btn-sm" title="Refresh annotated genes">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                        </div>
+                        <div class="annotation-review-queue-meta">
+                            <span id="annotationAppliedTotal">0 genes</span>
+                        </div>
+                    </div>
+                    <div id="annotationAppliedGenes" class="annotation-applied-list"></div>
                 </section>
 
                 <section class="annotation-review-panel" data-review-panel="governance">
@@ -4539,7 +4578,7 @@ Supported formats:
                         <input type="text" id="editGeneLocusTag" class="input-full" placeholder="Enter locus tag">
                     </div>
                     <div class="form-group">
-                        <label for="editGeneNote">Genome Annotation Note (GenBank /note):</label>
+                        <label for="editGeneNote">Annotation Note (GenBank /note):</label>
                         <textarea id="editGeneNote" class="input-full" rows="3"
                             placeholder="Enter an annotation note to include in GenBank exports"></textarea>
                     </div>
@@ -4573,11 +4612,11 @@ Supported formats:
 
     <!-- Tab Settings Modal -->
     <div id="tabSettingsModal" class="modal">
-        <div class="modal-content resizable">
+        <div class="modal-content tab-settings-modal resizable" data-min-width="480" data-min-height="420">
             <div class="modal-header">
                 <h3><i class="fas fa-cog"></i> Tab Behavior Settings</h3>
                 <div class="modal-controls">
-                    <button class="reset-position-btn" title="Reset Position">
+                    <button class="reset-position-btn" title="Reset Position &amp; Size">
                         <i class="fas fa-crosshairs"></i>
                     </button>
                     <button class="reset-defaults-btn" title="Reset to Defaults">
@@ -4586,16 +4625,33 @@ Supported formats:
                     <button class="modal-close">&times;</button>
                 </div>
             </div>
+
+            <div class="tab-settings-nav" role="tablist" aria-label="Tab behavior settings sections">
+                <button type="button" class="tab-settings-nav-btn active" data-pane="cache" role="tab"
+                    aria-selected="true" aria-controls="tabSettingsPaneCache">
+                    <i class="fas fa-memory"></i> Caching
+                </button>
+                <button type="button" class="tab-settings-nav-btn" data-pane="indicator" role="tab"
+                    aria-selected="false" aria-controls="tabSettingsPaneIndicator">
+                    <i class="fas fa-map-marker-alt"></i> Position Indicator
+                </button>
+                <button type="button" class="tab-settings-nav-btn" data-pane="track" role="tab" aria-selected="false"
+                    aria-controls="tabSettingsPaneTrack">
+                    <i class="fas fa-dna"></i> Track Styling
+                </button>
+            </div>
+
             <div class="modal-body">
-                <div class="settings-section">
+                <div class="settings-section tab-settings-pane active" id="tabSettingsPaneCache" data-pane="cache"
+                    role="tabpanel">
                     <h4><i class="fas fa-memory"></i> Tab Rendering Cache</h4>
-                    <p class="help-text">Cache tab content to improve switching performance. When enabled, tab content
-                        is cached in memory to avoid re-rendering when switching between tabs.</p>
+                    <p class="help-text">Keeps the rendered tracks of a tab in memory so switching back to it is
+                        instant instead of re-drawing every track.</p>
 
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="tabCacheEnabled">Enable Tab Caching</label>
-                            <p class="setting-description">Cache tab content for faster switching</p>
+                            <p class="setting-description">Reuse the rendered view when switching back to a tab</p>
                         </div>
                         <div class="setting-control">
                             <label class="switch">
@@ -4608,39 +4664,45 @@ Supported formats:
                     <div class="setting-item" id="cacheSettingsGroup">
                         <div class="setting-label">
                             <label for="maxCacheSize">Maximum Cached Tabs</label>
-                            <p class="setting-description">Number of tabs to keep in cache</p>
+                            <p class="setting-description">Between 1 and 20. Higher values use more memory.</p>
                         </div>
                         <div class="setting-control">
                             <input type="number" id="maxCacheSize" min="1" max="20" value="10"
                                 class="form-control number-input">
+                            <span class="input-suffix">tabs</span>
                         </div>
                     </div>
 
                     <div class="setting-item" id="cacheTimeoutGroup">
                         <div class="setting-label">
-                            <label for="cacheTimeout">Cache Timeout (minutes)</label>
-                            <p class="setting-description">How long to keep cached content</p>
+                            <label for="cacheTimeout">Cache Timeout</label>
+                            <p class="setting-description">Between 1 and 120. Older entries are re-rendered instead.</p>
                         </div>
                         <div class="setting-control">
                             <input type="number" id="cacheTimeout" min="1" max="120" value="30"
                                 class="form-control number-input">
+                            <span class="input-suffix">minutes</span>
                         </div>
                     </div>
 
-                    <div class="setting-item">
+                    <div class="setting-item setting-item-stacked">
                         <div class="setting-label">
-                            <label>Cache Statistics</label>
-                            <p class="setting-description">Current cache usage information</p>
+                            <label>Cache Status</label>
+                            <p class="setting-description">Live usage of the rendering cache</p>
                         </div>
                         <div class="setting-control">
                             <div id="cacheStats" class="cache-stats">
                                 <div class="stat-item">
-                                    <span class="stat-label">Cached Tabs:</span>
+                                    <span class="stat-label">Cached tabs</span>
                                     <span class="stat-value" id="cachedTabsCount">0</span>
                                 </div>
                                 <div class="stat-item">
-                                    <span class="stat-label">Cache Size:</span>
+                                    <span class="stat-label">Usage</span>
                                     <span class="stat-value" id="cacheSizeInfo">0/10</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Oldest entry</span>
+                                    <span class="stat-value" id="cacheOldestEntry">—</span>
                                 </div>
                                 <button id="clearCacheBtn" class="btn btn-sm btn-secondary">
                                     <i class="fas fa-trash"></i> Clear Cache
@@ -4651,14 +4713,15 @@ Supported formats:
                 </div>
 
                 <!-- Position Indicator Settings Section -->
-                <div class="settings-section">
+                <div class="settings-section tab-settings-pane" id="tabSettingsPaneIndicator" data-pane="indicator"
+                    role="tabpanel">
                     <h4><i class="fas fa-map-marker-alt"></i> Position Indicator Appearance</h4>
-                    <p class="help-text">Customize the appearance of position indicators on tab buttons that show
-                        current browsing location.</p>
+                    <p class="help-text">Customize the marker drawn on each tab button to show where in the genome that
+                        tab is browsing.</p>
 
                     <div class="setting-item">
                         <div class="setting-label">
-                            <label for="indicatorHeight">Indicator Height (px)</label>
+                            <label for="indicatorHeight">Indicator Height</label>
                             <p class="setting-description">Height of the position visualization bar</p>
                         </div>
                         <div class="setting-control">
@@ -4670,7 +4733,7 @@ Supported formats:
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="indicatorColor">Default Indicator Color</label>
-                            <p class="setting-description">Default color for position indicators</p>
+                            <p class="setting-description">Used when chromosome-specific colors are off</p>
                         </div>
                         <div class="setting-control">
                             <input type="color" id="indicatorColor" value="#1a73e8" class="color-picker">
@@ -4692,7 +4755,7 @@ Supported formats:
 
                     <div class="setting-item">
                         <div class="setting-label">
-                            <label for="indicatorBorderWidth">Border Width (px)</label>
+                            <label for="indicatorBorderWidth">Border Width</label>
                             <p class="setting-description">Thickness of indicator border</p>
                         </div>
                         <div class="setting-control">
@@ -4704,9 +4767,10 @@ Supported formats:
                 </div>
 
                 <!-- Chromosome Track Settings Section -->
-                <div class="settings-section">
+                <div class="settings-section tab-settings-pane" id="tabSettingsPaneTrack" data-pane="track"
+                    role="tabpanel">
                     <h4><i class="fas fa-dna"></i> Chromosome Track Styling</h4>
-                    <p class="help-text">Customize the appearance of chromosome tracks that contain position indicators.
+                    <p class="help-text">Customize the miniature chromosome track that hosts the position indicator.
                     </p>
 
                     <div class="setting-item">
@@ -4733,7 +4797,7 @@ Supported formats:
 
                     <div class="setting-item">
                         <div class="setting-label">
-                            <label for="trackBorderRadius">Border Radius (px)</label>
+                            <label for="trackBorderRadius">Border Radius</label>
                             <p class="setting-description">Roundness of track corners</p>
                         </div>
                         <div class="setting-control">
@@ -4745,7 +4809,8 @@ Supported formats:
                     <div class="setting-item">
                         <div class="setting-label">
                             <label for="enableChromosomeColors">Enable Chromosome-Specific Colors</label>
-                            <p class="setting-description">Use different colors for different chromosomes</p>
+                            <p class="setting-description">Colour each track by its chromosome instead of the defaults
+                            </p>
                         </div>
                         <div class="setting-control">
                             <label class="switch">
@@ -4768,36 +4833,36 @@ Supported formats:
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Preview Section -->
-                <div class="settings-section">
-                    <h4><i class="fas fa-eye"></i> Live Preview</h4>
-                    <p class="help-text">Preview how your position indicator settings will look.</p>
-
-                    <div class="preview-container">
-                        <div class="preview-tab">
-                            <span class="tab-index-badge" title="LLM tab_index 0" aria-label="LLM tab_index 0">0</span>
-                            <span class="tab-title">chr1:1,000-50,000</span>
-                            <div class="tab-position-visualization" id="previewVisualization">
-                                <div class="chromosome-track" id="previewTrack">
-                                    <div class="position-indicator" id="previewIndicator"></div>
-                                </div>
+            <!-- Live preview, docked so it stays visible while settings are adjusted -->
+            <div class="tab-settings-preview" id="tabSettingsPreview" hidden>
+                <span class="tab-settings-preview-label"><i class="fas fa-eye"></i> Live preview</span>
+                <div class="preview-container">
+                    <div class="preview-tab">
+                        <span class="tab-index-badge" title="LLM tab_index 0" aria-label="LLM tab_index 0">0</span>
+                        <span class="tab-title">chr1:1,000-50,000</span>
+                        <div class="tab-position-visualization" id="previewVisualization">
+                            <div class="chromosome-track" id="previewTrack">
+                                <div class="position-indicator" id="previewIndicator"></div>
                             </div>
-                            <button class="tab-close-button">
-                                <i class="fas fa-times"></i>
-                            </button>
                         </div>
+                        <button class="tab-close-button">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
                 </div>
             </div>
+
             <div class="modal-footer">
-                <button id="saveTabSettingsBtn" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Save Settings
-                </button>
                 <button id="resetTabSettingsBtn" class="btn btn-warning">
                     <i class="fas fa-undo"></i> Reset to Defaults
                 </button>
+                <span class="modal-footer-spacer"></span>
                 <button class="btn modal-close">Cancel</button>
+                <button id="saveTabSettingsBtn" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
             </div>
 
             <!-- Resize handles -->
@@ -4812,11 +4877,11 @@ Supported formats:
         </div>
     </div>
 
-    <!-- Multi-Agent Settings Modal -->
+    <!-- Agent Settings Modal -->
     <div id="multiAgentSettingsModal" class="modal">
         <div class="modal-content multi-agent-settings-modal resizable">
             <div class="modal-header">
-                <h3><i class="fas fa-users-cog"></i> Multi-Agent System Settings</h3>
+                <h3><i class="fas fa-users-cog"></i> Agent Settings</h3>
                 <div class="modal-controls">
                     <button class="reset-position-btn" title="Reset Position">
                         <i class="fas fa-crosshairs"></i>
@@ -4829,35 +4894,28 @@ Supported formats:
             </div>
             <div class="modal-body">
                 <div class="multi-agent-tabs">
-                    <button class="tab-button active" data-tab="system">System</button>
-                    <button class="tab-button" data-tab="llm">LLM Configuration</button>
-                    <button class="tab-button" data-tab="agents">Agent Management</button>
-
-                    <button class="tab-button" data-tab="memory">Memory System</button>
-                    <button class="tab-button" data-tab="performance">Performance</button>
+                    <button class="tab-button active" data-tab="system">Mode</button>
+                    <button class="tab-button" data-tab="model">Generation</button>
+                    <button class="tab-button" data-tab="execution">Execution</button>
+                    <button class="tab-button" data-tab="context">Context</button>
+                    <button class="tab-button" data-tab="memory">Memory</button>
+                    <button class="tab-button" data-tab="skills">Skills</button>
                 </div>
 
                 <div class="multi-agent-content">
                     <!-- System Tab -->
                     <div id="system-tab" class="tab-content active">
                         <div class="form-section">
-                            <h4>🤖 Multi-Agent System</h4>
+                            <h4>🤖 Execution Mode</h4>
+                            <p class="help-text">Both modes use the same model, context, memory, and skills settings
+                                from the other tabs. The mode only changes who executes the tools.</p>
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="multiAgentSystemEnabled" class="setting-checkbox">
-                                    Enable Multi-Agent System
+                                    Multi-agent mode
                                 </label>
-                                <small class="help-text">Enable intelligent agent-based tool execution and
-                                    coordination</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentAutoOptimize" class="setting-checkbox" checked>
-                                    Auto-optimize execution paths
-                                </label>
-                                <small class="help-text">Automatically optimize tool execution based on memory and
-                                    performance data</small>
+                                <small class="help-text">Off (default): a single assistant plans and calls tools
+                                    directly. On: requests are routed to the specialised agents below.</small>
                             </div>
 
                             <div class="form-group">
@@ -4865,128 +4923,11 @@ Supported formats:
                                     <input type="checkbox" id="multiAgentShowInfo" class="setting-checkbox" checked>
                                     Show agent information
                                 </label>
-                                <small class="help-text">Display which agent is handling each tool execution</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentMemoryEnabled" class="setting-checkbox"
-                                        checked>
-                                    Enable agent memory integration
-                                </label>
-                                <small class="help-text">Enable memory system integration for agents</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentCacheEnabled" class="setting-checkbox" checked>
-                                    Enable agent execution caching
-                                </label>
-                                <small class="help-text">Cache successful agent executions for faster future
-                                    execution</small>
+                                <small class="help-text">Display which agent is handling each tool execution
+                                    (multi-agent mode only)</small>
                             </div>
                         </div>
 
-                        <div class="form-section">
-                            <h4>🎯 Agent Coordination</h4>
-                            <div class="form-group">
-                                <label for="multiAgentMaxConcurrent">Maximum Concurrent Agents:</label>
-                                <input type="number" id="multiAgentMaxConcurrent" class="input-full" min="1" max="10"
-                                    value="3">
-                                <small class="help-text">Maximum number of agents that can execute
-                                    simultaneously</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentTimeout">Agent Execution Timeout (seconds):</label>
-                                <input type="number" id="multiAgentTimeout" class="input-full" min="5" max="300"
-                                    value="30">
-                                <small class="help-text">Timeout for individual agent executions</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentRetryAttempts">Retry Attempts:</label>
-                                <input type="number" id="multiAgentRetryAttempts" class="input-full" min="1" max="5"
-                                    value="3">
-                                <small class="help-text">Number of retry attempts for failed agent executions</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- LLM Configuration Tab -->
-                    <div id="llm-tab" class="tab-content">
-                        <div class="form-section">
-                            <h4>🧠 Agent LLM Configuration</h4>
-                            <div class="form-group">
-                                <label for="multiAgentModelType">Model Type:</label>
-                                <select id="multiAgentModelType" class="input-full">
-                                    <option value="auto">Auto (Use main LLM)</option>
-                                    <option value="reasoning">Reasoning Model</option>
-                                    <option value="task">Task Model</option>
-                                    <option value="code">Code Model</option>
-                                    <option value="multimodal">Multimodal Model</option>
-                                </select>
-                                <small class="help-text">Choose model type for agent decision making. Configure specific
-                                    models in Options → Configure LLMs → Model Selection.</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentLLMTemperature">Temperature:</label>
-                                <input type="range" id="multiAgentLLMTemperature" class="input-full" min="0" max="2"
-                                    step="0.1" value="0.7">
-                                <div class="range-value" id="multiAgentLLMTemperatureValue">0.7</div>
-                                <small class="help-text">Control creativity vs consistency (0 = deterministic, 2 = very
-                                    creative)</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentLLMMaxTokens">Max Tokens:</label>
-                                <input type="number" id="multiAgentLLMMaxTokens" class="input-full" min="1000"
-                                    max="32000" step="1000" value="4000">
-                                <small class="help-text">Maximum tokens for agent LLM responses</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentLLMTimeout">Timeout (seconds):</label>
-                                <input type="number" id="multiAgentLLMTimeout" class="input-full" min="5" max="300"
-                                    step="5" value="30">
-                                <small class="help-text">Timeout for agent LLM requests</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentLLMUseSystemPrompt" class="setting-checkbox"
-                                        checked>
-                                    Use system prompt for agents
-                                </label>
-                                <small class="help-text">Enable system prompts for better agent behavior</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentLLMEnableFunctionCalling"
-                                        class="setting-checkbox" checked>
-                                    Enable function calling for agents
-                                </label>
-                                <small class="help-text">Allow agents to use function calling capabilities</small>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h4>ℹ️ Configuration Info</h4>
-                            <div class="info-box">
-                                <p><strong>Model Configuration:</strong> To configure specific models for each type, go
-                                    to <strong>Options → Configure LLMs → Model Selection</strong>.</p>
-                                <p><strong>API Keys:</strong> API keys are configured in the main LLM configuration. The
-                                    agent system will use the same API keys as the main LLM.</p>
-                                <p><strong>Inheritance:</strong> Agent settings inherit from ChatBox Settings. You can
-                                    override specific parameters here if needed.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Agent Management Tab -->
-                    <div id="agents-tab" class="tab-content">
                         <div class="form-section">
                             <h4>🤖 Agent Configuration</h4>
                             <div class="agent-list">
@@ -5031,45 +4972,6 @@ Supported formats:
 
                                 <div class="agent-item">
                                     <div class="agent-header">
-                                        <h5><i class="fas fa-dna"></i> Sequence Agent</h5>
-                                        <label class="switch">
-                                            <input type="checkbox" id="agentSequenceEnabled" checked>
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="agent-description">
-                                        Handles DNA/RNA sequence analysis and manipulation
-                                    </div>
-                                </div>
-
-                                <div class="agent-item">
-                                    <div class="agent-header">
-                                        <h5><i class="fas fa-atom"></i> Protein Agent</h5>
-                                        <label class="switch">
-                                            <input type="checkbox" id="agentProteinEnabled" checked>
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="agent-description">
-                                        Manages protein structure and function analysis
-                                    </div>
-                                </div>
-
-                                <div class="agent-item">
-                                    <div class="agent-header">
-                                        <h5><i class="fas fa-network-wired"></i> Network Agent</h5>
-                                        <label class="switch">
-                                            <input type="checkbox" id="agentNetworkEnabled" checked>
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="agent-description">
-                                        Handles network analysis and pathway visualization
-                                    </div>
-                                </div>
-
-                                <div class="agent-item">
-                                    <div class="agent-header">
                                         <h5><i class="fas fa-globe"></i> External Agent</h5>
                                         <label class="switch">
                                             <input type="checkbox" id="agentExternalEnabled" checked>
@@ -5093,163 +4995,474 @@ Supported formats:
                                         Handles plugin system integration and management
                                     </div>
                                 </div>
+
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-book-open"></i> Deep Research Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentDeepResearchEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Runs multi-source literature and database research workflows
+                                    </div>
+                                </div>
+
+                                <div class="agent-item">
+                                    <div class="agent-header">
+                                        <h5><i class="fas fa-sitemap"></i> Coordinator Agent</h5>
+                                        <label class="switch">
+                                            <input type="checkbox" id="agentCoordinatorEnabled" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="agent-description">
+                                        Plans multi-step work and delegates to the other agents
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <h4>ℹ️ Where other settings live</h4>
+                            <div class="info-box">
+                                <p><strong>Which model answers:</strong> the selector beside the ChatBox input box.
+                                    Its <em>Auto</em> entry follows the default below.</p>
+                                <p><strong>API keys, providers, default model:</strong> Options → Configure LLMs.</p>
+                                <p><strong>Temperature, token limits, timeouts:</strong> the Generation tab here.</p>
+                                <p><strong>Chat display, history, window:</strong> ChatBox Settings.</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Memory System Tab -->
+
+                    <!-- Generation Tab -->
+                    <div id="model-tab" class="tab-content">
+                            <div class="form-section">
+                                <h4>🎛️ Generation</h4>
+                                <p class="help-text">These apply to whichever model is active. Pick the model itself
+                                    from the selector beside the ChatBox input box, or set the default in
+                                    <strong>Options → Configure LLMs → Model Selection</strong>.</p>
+                                <div class="form-group">
+                                    <label for="chatboxLLMTemperature">Temperature:</label>
+                                    <div class="slider-container">
+                                        <input type="range" id="chatboxLLMTemperature" class="range-slider" min="0" max="2" step="0.1" value="0.7">
+                                        <div class="slider-labels">
+                                            <span class="slider-label-left">0 (Deterministic)</span>
+                                            <span class="slider-value" id="chatboxLLMTemperatureValue">0.7</span>
+                                            <span class="slider-label-right">2 (Creative)</span>
+                                        </div>
+                                    </div>
+                                    <small class="help-text">Control creativity vs consistency in responses</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="chatboxLLMMaxTokens">Max Tokens:</label>
+                                    <input type="number" id="chatboxLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
+                                    <small class="help-text">Maximum tokens for LLM responses</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="chatboxLLMTimeout">Timeout (seconds):</label>
+                                    <input type="number" id="chatboxLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
+                                    <small class="help-text">Timeout for LLM requests</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="chatboxLLMUseSystemPrompt" class="setting-checkbox" checked>
+                                        Use system prompt
+                                    </label>
+                                    <small class="help-text">Enable system prompts for better behavior</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="chatboxLLMEnableFunctionCalling" class="setting-checkbox" checked>
+                                        Enable function calling
+                                    </label>
+                                    <small class="help-text">Allow the AI to use function calling capabilities</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-section">
+                                <h4>ℹ️ Configuration Info</h4>
+                                <div class="info-box">
+                                    <p><strong>Choosing a model:</strong> the selector beside the ChatBox input box switches the model for the current conversation; its <em>Auto</em> entry follows the default set in <strong>Options → Configure LLMs → Model Selection</strong>.</p>
+                                    <p><strong>API Keys:</strong> API keys are configured in the main LLM configuration.</p>
+                                    <p><strong>Scope:</strong> These parameters apply to both single-agent and multi-agent mode.</p>
+                                </div>
+                            </div>
+                    </div>
+
+                    <!-- Execution Tab -->
+                    <div id="execution-tab" class="tab-content">
+                            <div class="form-section">
+                                <h4>Performance</h4>
+                                <div class="form-group">
+                                    <label for="responseTimeout">Response timeout (seconds):</label>
+                                    <input type="number" id="responseTimeout" class="input-full" min="5" max="300" step="5">
+                                    <small class="help-text">How long to wait for LLM responses</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-section">
+                                <h4>Function Call Settings</h4>
+                                <div class="form-group">
+                                    <label for="functionCallRounds">Maximum Function Call Rounds:</label>
+                                    <input type="number" id="functionCallRounds" class="input-full" min="1" max="20" step="1">
+                                    <small class="help-text">Maximum number of consecutive function calls the AI can make (1-20). Higher values allow more complex multi-step operations but may take longer.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableEarlyCompletion" class="setting-checkbox">
+                                        Enable Early Task Completion
+                                    </label>
+                                    <small class="help-text">Allow the AI to end the function call loop early when it determines the task is complete, instead of using all available rounds.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxSameToolDifferentParams">Max Execution of Same Tool (Different Parameters):</label>
+                                    <input type="number" id="maxSameToolDifferentParams" class="input-full" min="1" max="10" step="1">
+                                    <small class="help-text">Maximum number of times the same tool can be called with different parameters in a single conversation. Prevents excessive looping during search or exploration tasks.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxSameToolIdenticalParams">Max Execution of Same Tool (Identical Parameters):</label>
+                                    <input type="number" id="maxSameToolIdenticalParams" class="input-full" min="1" max="10" step="1">
+                                    <small class="help-text">Maximum number of times the same tool can be called with the exact same parameters. Prevents infinite loops when a tool fails or provides unexpected output.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableRepeatedOpenNewTab" class="setting-checkbox">
+                                        Allow Explicit Multi-Tab Requests
+                                    </label>
+                                    <small class="help-text">Allow open_new_tab to run multiple times when the user explicitly requests multiple tabs. Disable this to permit only one new tab per request.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxRepeatedOpenNewTabCalls">Maximum Tabs per Explicit Request:</label>
+                                    <input type="number" id="maxRepeatedOpenNewTabCalls" class="input-full" min="1" max="20" step="1">
+                                    <small class="help-text">Maximum open_new_tab calls allowed in both one model round and the full user request (1-20).</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="completionThreshold">Task Completion Confidence Threshold:</label>
+                                    <div class="slider-container">
+                                        <input type="range" id="completionThreshold" class="range-slider" min="0.5" max="1.0" step="0.05" value="0.7">
+                                        <div class="slider-labels">
+                                            <span class="slider-label-left">50% (Low)</span>
+                                            <span class="slider-value" id="completionThresholdValue">70%</span>
+                                            <span class="slider-label-right">100% (High)</span>
+                                        </div>
+                                    </div>
+                                    <small class="help-text">Minimum confidence level required for the AI to consider a task complete. Higher values reduce false positives but may miss valid completions.</small>
+                                </div>
+                            </div>
+                    </div>
+
+                    <!-- Context Tab -->
+                    <div id="context-tab" class="tab-content">
+                            <div class="form-section">
+                                <h4>Custom System Prompt</h4>
+                                <div class="form-group">
+                                    <label for="customSystemPrompt">Custom System Prompt:</label>
+                                    <textarea id="customSystemPrompt"
+                                        placeholder="Enter your custom system prompt here... Leave empty to use the default system prompt."
+                                        class="input-full system-prompt-textarea" rows="6"></textarea>
+                                    <small class="help-text">
+                                        <strong>Advanced:</strong> Override the default system prompt with your custom instructions.
+                                        <br><strong>Variables:</strong> {{CURRENT_CHROMOSOME}}, {{CURRENT_POSITION}}, {{ANNOTATIONS_COUNT}}, {{USER_FEATURES_COUNT}}
+                                        <br><strong>Leave empty</strong> to use the default system prompt with genomics tools and context.
+                                    </small>
+                                </div>
+                                <div class="system-prompt-controls">
+                                    <button type="button" id="resetCustomSystemPrompt" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-undo"></i> Reset to Default
+                                    </button>
+                                    <button type="button" id="previewCustomSystemPrompt" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-eye"></i> Preview
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4>Prompt Mode</h4>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableDynamicToolsRegistry" class="setting-checkbox">
+                                        Enable Dynamic Tools Registry
+                                    </label>
+                                    <small class="help-text">Intelligently select tools based on user intent and context. When disabled, uses the comprehensive system prompt with all tools.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="limitDynamicToolsSelection" class="setting-checkbox">
+                                        Limit dynamic tools selected per request
+                                    </label>
+                                    <small class="help-text">Keep a high-recall candidate set small enough for local and compact models.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dynamicToolsSelectionLimit">Dynamic tools selection limit:</label>
+                                    <input type="number" id="dynamicToolsSelectionLimit" class="input-full" min="1" max="500" step="1">
+                                    <small class="help-text">Maximum selected tools when the limit option is enabled. The production default is 24.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableNativeFunctionCalling" class="setting-checkbox">
+                                        Enable native function calling
+                                    </label>
+                                    <small class="help-text">Send selected tool JSON Schemas through the provider's native tool protocol.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enableConstrainedToolOutput" class="setting-checkbox">
+                                        Enable constrained tool output
+                                    </label>
+                                    <small class="help-text">Use strict argument schemas, or JSON Schema output when native tools are disabled.</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="useOptimizedPrompt" class="setting-checkbox">
+                                        Use optimized system prompt
+                                    </label>
+                                    <small class="help-text">Use streamlined system prompt for better performance and reduced token usage (only applies when Dynamic Tools Registry is disabled)</small>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4>Prompt Section Configuration</h4>
+                                <small class="help-text" style="margin-bottom: 12px; display: block;">
+                                    Control which sections are included in the system prompt and their order. 
+                                    Drag items or use arrow buttons to reorder. Disable sections to reduce token usage.
+                                </small>
+                                <div id="systemPromptSectionContainer" class="priority-container system-prompt-section-container">
+                                    <div class="priority-item" data-type="systemInstructions" draggable="true">
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeSystemInstructions" class="setting-checkbox" checked>
+                                        </label>
+                                        <div class="priority-info">
+                                            <span class="priority-label">System Instructions</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Identity & behavior</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="currentContext" draggable="true">
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeCurrentContext" class="setting-checkbox" checked>
+                                        </label>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Current Context</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">App state (chromosome, position, files)</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="dynamicTools" draggable="true">
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeDynamicTools" class="setting-checkbox" checked>
+                                        </label>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Dynamic Tools</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Tools based on query</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="toolExamples" draggable="true">
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeToolExamples" class="setting-checkbox" checked>
+                                        </label>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Tool Examples</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Sample operations</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="toolGuidelines" draggable="true">
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeToolGuidelines" class="setting-checkbox" checked>
+                                        </label>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Tool Guidelines</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Rules for chaining</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="responseFormat" draggable="true">
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeResponseFormat" class="setting-checkbox" checked>
+                                        </label>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Response Format</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">JSON spec</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="toolCategories" draggable="true">
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeToolCategories" class="setting-checkbox" checked>
+                                        </label>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Tool Categories</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">Tool relationships</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="priority-item" data-type="memoryContext" draggable="true">
+                                        <div class="priority-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                                        <label class="section-toggle">
+                                            <input type="checkbox" id="systemPromptIncludeMemoryContext" class="setting-checkbox" checked>
+                                        </label>
+                                        <div class="priority-info">
+                                            <span class="priority-label">Memory Context</span>
+                                            <span class="priority-separator">—</span>
+                                            <span class="priority-description">System continuity</span>
+                                        </div>
+                                        <div class="priority-controls">
+                                            <div class="priority-arrows">
+                                                <button type="button" class="priority-btn up" title="Move up"><i class="fas fa-chevron-up"></i></button>
+                                                <button type="button" class="priority-btn down" title="Move down"><i class="fas fa-chevron-down"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="priority-help">
+                                    <small class="help-text">
+                                        <strong>Tip:</strong> Disabling sections reduces token usage. Reordering changes how the AI prioritizes information.
+                                    </small>
+                                    <div class="priority-status" id="systemPromptSectionStatus">
+                                        <small>Current order will be applied to the next conversation</small>
+                                    </div>
+                                </div>
+                            </div>
+                    </div>
+
+                    <!-- Memory Tab -->
                     <div id="memory-tab" class="tab-content">
-                        <div class="form-section">
-                            <h4>🧠 Memory System</h4>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentMemorySystemEnabled" class="setting-checkbox"
-                                        checked>
-                                    Enable Memory System
-                                </label>
-                                <small class="help-text">Enable intelligent memory caching and context
-                                    management</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentMemoryCacheEnabled" class="setting-checkbox"
-                                        checked>
-                                    Enable memory caching
-                                </label>
-                                <small class="help-text">Cache memory operations for improved performance</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentMemoryOptimizationEnabled"
-                                        class="setting-checkbox" checked>
-                                    Enable memory optimization
-                                </label>
-                                <small class="help-text">Automatically optimize memory usage and cleanup</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentMemoryCleanupInterval">Memory cleanup interval (minutes):</label>
-                                <input type="number" id="multiAgentMemoryCleanupInterval" class="input-full" min="1"
-                                    max="60" step="1" value="5">
-                                <small class="help-text">How often to perform memory cleanup operations</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentMemoryMaxEntries">Maximum memory entries:</label>
-                                <input type="number" id="multiAgentMemoryMaxEntries" class="input-full" min="100"
-                                    max="100000" step="100" value="10000">
-                                <small class="help-text">Maximum number of entries to keep in memory</small>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h4>📊 Memory Layers</h4>
-                            <div class="memory-layer">
-                                <h6>Short-term Memory</h6>
+                            <div class="form-section">
+                                <h4>🧠 Memory System</h4>
                                 <div class="form-group">
-                                    <label for="multiAgentShortTermMaxSize">Max size:</label>
-                                    <input type="number" id="multiAgentShortTermMaxSize" class="input-full" min="100"
-                                        max="10000" step="100" value="1000">
+                                    <label>
+                                        <input type="checkbox" id="memorySystemEnabled" class="setting-checkbox">
+                                        Enable Memory System
+                                    </label>
+                                    <small class="help-text">Enable intelligent memory caching and context management</small>
                                 </div>
+                                
                                 <div class="form-group">
-                                    <label for="multiAgentShortTermTTL">TTL (minutes):</label>
-                                    <input type="number" id="multiAgentShortTermTTL" class="input-full" min="1" max="60"
-                                        step="1" value="30">
+                                    <label>
+                                        <input type="checkbox" id="memoryCacheEnabled" class="setting-checkbox">
+                                        Enable memory caching
+                                    </label>
+                                    <small class="help-text">Cache memory operations for improved performance</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="memoryOptimizationEnabled" class="setting-checkbox">
+                                        Enable memory optimization
+                                    </label>
+                                    <small class="help-text">Automatically optimize memory usage and cleanup</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="memoryCleanupInterval">Memory cleanup interval (minutes):</label>
+                                    <input type="number" id="memoryCleanupInterval" class="input-full" min="1" max="60" step="1">
+                                    <small class="help-text">How often to perform memory cleanup operations</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="memoryMaxEntries">Maximum memory entries:</label>
+                                    <input type="number" id="memoryMaxEntries" class="input-full" min="100" max="100000" step="100">
+                                    <small class="help-text">Maximum number of entries to keep in memory</small>
                                 </div>
                             </div>
-
-                            <div class="memory-layer">
-                                <h6>Medium-term Memory</h6>
-                                <div class="form-group">
-                                    <label for="multiAgentMediumTermMaxSize">Max size:</label>
-                                    <input type="number" id="multiAgentMediumTermMaxSize" class="input-full" min="500"
-                                        max="50000" step="500" value="5000">
-                                </div>
-                                <div class="form-group">
-                                    <label for="multiAgentMediumTermTTL">TTL (hours):</label>
-                                    <input type="number" id="multiAgentMediumTermTTL" class="input-full" min="1"
-                                        max="168" step="1" value="24">
-                                </div>
-                            </div>
-
-                            <div class="memory-layer">
-                                <h6>Long-term Memory</h6>
-                                <div class="form-group">
-                                    <label for="multiAgentLongTermMaxSize">Max size:</label>
-                                    <input type="number" id="multiAgentLongTermMaxSize" class="input-full" min="1000"
-                                        max="100000" step="1000" value="10000">
-                                </div>
-                                <div class="form-group">
-                                    <label for="multiAgentLongTermTTL">TTL (days):</label>
-                                    <input type="number" id="multiAgentLongTermLongTermTTL" class="input-full" min="1"
-                                        max="365" step="1" value="30">
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- Performance Tab -->
-                    <div id="performance-tab" class="tab-content">
+                    <!-- Skills Tab -->
+                    <div id="skills-tab" class="tab-content">
                         <div class="form-section">
-                            <h4>⚡ Performance Optimization</h4>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentPerformanceMonitoring" class="setting-checkbox"
-                                        checked>
-                                    Enable performance monitoring
-                                </label>
-                                <small class="help-text">Monitor agent performance and execution metrics</small>
+                            <h4>📚 Agent Skills</h4>
+                            <p class="help-text skills-intro">
+                                Skills are expert, multi-step workflows the assistant can load on demand. Only a short
+                                index is added to the prompt; a skill's full workflow is loaded only when it is used.
+                            </p>
+                            <div class="skills-toolbar">
+                                <input type="search" id="skillsSearchInput" class="input-full skills-search"
+                                    placeholder="Filter skills by name, tag, or trigger…">
+                                <button class="btn btn-secondary" id="skillsReloadBtn" title="Rescan skill folders">
+                                    <i class="fas fa-sync"></i> Reload
+                                </button>
+                                <button class="btn btn-secondary" id="skillsOpenFolderBtn"
+                                    title="Open the user skills folder">
+                                    <i class="fas fa-folder-open"></i> Open Folder
+                                </button>
                             </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="multiAgentAutoScaling" class="setting-checkbox" checked>
-                                    Enable auto-scaling
-                                </label>
-                                <small class="help-text">Automatically scale agent resources based on workload</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentMaxConcurrentTasks">Max concurrent tasks:</label>
-                                <input type="number" id="multiAgentMaxConcurrentTasks" class="input-full" min="1"
-                                    max="20" value="5">
-                                <small class="help-text">Maximum number of concurrent tasks across all agents</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="multiAgentTaskQueueSize">Task queue size:</label>
-                                <input type="number" id="multiAgentTaskQueueSize" class="input-full" min="10" max="1000"
-                                    step="10" value="100">
-                                <small class="help-text">Maximum size of the task queue</small>
+                            <div id="skillsSummary" class="skills-summary"></div>
+                            <div id="skillsDiagnostics" class="skills-diagnostics"></div>
+                            <div id="skillsList" class="skills-list">
+                                <div class="skills-empty">Loading skills…</div>
                             </div>
                         </div>
 
                         <div class="form-section">
-                            <h4>📈 Performance Metrics</h4>
-                            <div class="performance-metrics">
-                                <div class="metric-item">
-                                    <span class="metric-label">Average Response Time:</span>
-                                    <span class="metric-value" id="avgResponseTime">--</span>
-                                </div>
-                                <div class="metric-item">
-                                    <span class="metric-label">Success Rate:</span>
-                                    <span class="metric-value" id="successRate">--</span>
-                                </div>
-                                <div class="metric-item">
-                                    <span class="metric-label">Cache Hit Rate:</span>
-                                    <span class="metric-value" id="cacheHitRate">--</span>
-                                </div>
-                                <div class="metric-item">
-                                    <span class="metric-label">Active Agents:</span>
-                                    <span class="metric-value" id="activeAgents">--</span>
-                                </div>
-                            </div>
-
-                            <button class="btn btn-secondary" id="refreshMetricsBtn">
-                                <i class="fas fa-sync"></i> Refresh Metrics
-                            </button>
+                            <h4>➕ Adding Your Own Skills</h4>
+                            <p class="help-text">
+                                Put a skill in the user skills folder using either layout, then press Reload:
+                            </p>
+                            <pre class="skills-help-block">skills/
+├── my-workflow/
+│   └── SKILL.md        ← name + description frontmatter
+└── my_workflow.md      ← CodeXomics native format</pre>
                         </div>
                     </div>
                 </div>
@@ -5305,6 +5518,7 @@ Supported formats:
     <script src="modules/TrackRenderer.js"></script>
     <script src="modules/tracks/GeneShapeCreators.js"></script>
     <script src="modules/tracks/FeatureGlyphLegend.js"></script>
+    <script src="modules/tracks/PrimerTrackSettingsPanel.js"></script>
     <script src="modules/VariantAnalyzer.js"></script>
     <script src="modules/NavigationManager.js"></script>
     <script src="modules/AdvancedSearchManager.js"></script>
@@ -5317,6 +5531,8 @@ Supported formats:
     <script src="modules/LLMStreamClient.js"></script>
     <script src="modules/LLMConfigManager.js"></script>
     <script src="modules/MultiAgentSettingsManager.js"></script>
+    <script src="modules/SkillsSettingsManager.js"></script>
+    <script src="modules/ChatModelSelector.js"></script>
     <script src="modules/ThemeManager.js"></script>
     <script src="modules/GeneralSettingsManager.js"></script>
     <script src="modules/SidecarManager.js"></script>
@@ -5374,6 +5590,7 @@ Supported formats:
     <script src="modules/chat/services/LLMContextService.js"></script>
     <script src="modules/chat/services/UIService.js"></script>
     <script src="modules/chat/services/TaskService.js"></script>
+    <script src="modules/chat/services/SkillService.js"></script>
 
     <!-- Gel Electrophoresis Visualization -->
     <script src="modules/GelElectrophoresisRenderer.js"></script>

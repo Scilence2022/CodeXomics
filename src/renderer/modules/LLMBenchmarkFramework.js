@@ -1,4 +1,5 @@
 // @ts-check
+/* global StrictAutomaticEvaluator */
 /**
  * LLM Benchmark Framework - Comprehensive system for testing LLM instruction following capabilities
  */
@@ -16,6 +17,20 @@ class LLMBenchmarkFramework {
     this.totalDelayTime = 0; // Track total delay time to subtract from final duration
     this.statisticsEngine = new BenchmarkStatistics();
     this.reportGenerator = new BenchmarkReportGenerator();
+    this.strictAutomaticEvaluator = new StrictAutomaticEvaluator({
+      // The real in-app benchmark scores task completion like the offline
+      // audit tier (equivalent tools, read-only extras, duplicates of
+      // required capabilities, schema-documented alternatives) while still
+      // requiring real execution success for every expected call.
+      assessmentMode: 'completion',
+      requireExecutionForCompletion: true,
+      validateToolCall: (toolName, parameters) => {
+        if (this.chatManager?.dynamicTools?.validateToolCall) {
+          return this.chatManager.dynamicTools.validateToolCall(toolName, parameters);
+        }
+        return { valid: false, errors: ['Dynamic tool schema registry is unavailable'] };
+      },
+    });
 
     // MEMORY OPTIMIZATION: Add memory monitoring with tighter thresholds
     this.memoryMonitor = {
@@ -196,6 +211,8 @@ class LLMBenchmarkFramework {
     const startTime = Date.now();
     let benchmarkRunSessionId = null;
     const previousBenchmarkAutomationActive = this.chatManager?.benchmarkAutomationActive === true;
+    const previousAgentSystemEnabled = this.chatManager?.agentSystemEnabled;
+    const previousSmartExecutionEnabled = this.chatManager?.isSmartExecutionEnabled;
 
     // Set timeout from options if provided
     // If timeout is null, it means use individual test timeouts
@@ -227,6 +244,8 @@ class LLMBenchmarkFramework {
     try {
       if (this.chatManager) {
         this.chatManager.benchmarkAutomationActive = true;
+        this.chatManager.agentSystemEnabled = false;
+        this.chatManager.isSmartExecutionEnabled = false;
         if (this.chatManager.toolExecutionTracker) {
           benchmarkRunSessionId = `benchmark_run_${startTime}`;
           this.chatManager.toolExecutionTracker.startSession(benchmarkRunSessionId, {
@@ -391,6 +410,8 @@ class LLMBenchmarkFramework {
       }
       if (this.chatManager) {
         this.chatManager.benchmarkAutomationActive = previousBenchmarkAutomationActive;
+        this.chatManager.agentSystemEnabled = previousAgentSystemEnabled;
+        this.chatManager.isSmartExecutionEnabled = previousSmartExecutionEnabled;
       }
       this.isRunning = false;
     }
@@ -539,7 +560,7 @@ class LLMBenchmarkFramework {
         break;
       }
 
-      console.log(`Running test: ${test.id} (${i + 1}/${filteredTests.length})`);
+      console.log(`Running test: ${this.formatTestLabel(test, test.id)} (${i + 1}/${filteredTests.length})`);
 
       // CRITICAL FIX: Update test progress BEFORE starting the test to show current test name
       if (options.onTestProgress) {
@@ -549,11 +570,11 @@ class LLMBenchmarkFramework {
           : testProgress;
 
         console.log(
-          `📊 [Test Progress START] Starting test ${i + 1}/${filteredTests.length} in suite, Overall: ${this.framework?.completedTestCount + i || i}/${this.framework?.totalTestCount || filteredTests.length}`
+          `📊 [Test Progress START] Starting test ${this.formatTestLabel(test, test.id)} (${i + 1}/${filteredTests.length} in suite), Overall: ${this.framework?.completedTestCount + i || i}/${this.framework?.totalTestCount || filteredTests.length}`
         );
 
         // Call with null testResult to indicate test is starting
-        options.onTestProgress(overallTestProgress, test.id, null, suiteId);
+        options.onTestProgress(overallTestProgress, test.id, null, suiteId, test.number || null);
       }
 
       // CRITICAL FIX: Clear chat history and previous execution data before test starts to prevent memory bloat and context contamination
@@ -614,9 +635,9 @@ class LLMBenchmarkFramework {
           : testProgress;
 
         console.log(
-          `📊 [Test Progress COMPLETE] Test ${i + 1}/${filteredTests.length} in suite, Overall: ${this.framework?.completedTestCount + i + 1 || i + 1}/${this.framework?.totalTestCount || filteredTests.length}`
+          `📊 [Test Progress COMPLETE] Test ${this.formatTestLabel(test, test.id)} (${i + 1}/${filteredTests.length} in suite), Overall: ${this.framework?.completedTestCount + i + 1 || i + 1}/${this.framework?.totalTestCount || filteredTests.length}`
         );
-        options.onTestProgress(overallTestProgress, test.id, testResult, suiteId);
+        options.onTestProgress(overallTestProgress, test.id, testResult, suiteId, test.number || null);
       }
 
       // MEMORY OPTIMIZATION: Force garbage collection every 5 tests AND check memory
@@ -689,6 +710,23 @@ class LLMBenchmarkFramework {
   }
 
   /**
+   * Format a test's stable suite number for display, e.g. "#12".
+   * Accepts a test object or a bare number, and returns '' when unnumbered.
+   */
+  formatTestNumber(testOrNumber) {
+    const number = typeof testOrNumber === 'number' ? testOrNumber : testOrNumber?.number;
+    return number ? `#${number}` : '';
+  }
+
+  /**
+   * Prefix a label with the test number, e.g. "#12 Set Working Directory".
+   */
+  formatTestLabel(testOrNumber, label) {
+    const number = this.formatTestNumber(testOrNumber);
+    return number ? `${number} ${label}` : String(label);
+  }
+
+  /**
    * Display individual test progress
    */
   displayTestProgress(test, currentIndex, totalTests) {
@@ -699,8 +737,9 @@ class LLMBenchmarkFramework {
     this.chatManager.updateThinkingMessage(
       `</br></br>📍 **TEST PROGRESS:** ${currentIndex}/${totalTests} (${progressPercentage}%)</br>\n` +
         `${progressBar}</br></br>\n\n` +
-        `👩‍🔬 CodeXomics Benchmark Tester: "Proceeding with ${test.name}"</br></br>\n` +
+        `👩‍🔬 CodeXomics Benchmark Tester: "Proceeding with ${this.formatTestLabel(test, test.name)}"</br></br>\n` +
         `**Test Specification:**</br>\n` +
+        `&nbsp;&nbsp;&nbsp;• Test Number: ${this.formatTestNumber(test) || 'N/A'} (position in suite)</br>\n` +
         `&nbsp;&nbsp;&nbsp;• Test ID: ${test.id}</br>\n` +
         `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(test.type)}</br>\n` +
         `&nbsp;&nbsp;&nbsp;• Complexity: ${test.complexity || 'Standard'}</br>\n` +
@@ -820,9 +859,10 @@ class LLMBenchmarkFramework {
   async runSingleTest(test, suiteId) {
     // Check if benchmark was stopped before starting test
     if (!this.isRunning) {
-      console.log(`🛑 Test ${test.id} skipped - benchmark stopped`);
+      console.log(`🛑 Test ${this.formatTestLabel(test, test.id)} skipped - benchmark stopped`);
       return {
         testId: test.id,
+        testNumber: test.number || null,
         testName: test.name,
         suiteId: suiteId,
         startTime: Date.now(),
@@ -847,6 +887,7 @@ class LLMBenchmarkFramework {
 
     const result = {
       testId: test.id,
+      testNumber: test.number || null,
       testName: test.name,
       suiteId: suiteId,
       startTime: startTime,
@@ -935,6 +976,12 @@ class LLMBenchmarkFramework {
         result.warnings.push(...evaluation.warnings);
       }
     } catch (error) {
+      // The timeout only settles the race — the conversation it was racing keeps
+      // running. Cancel it, or a model still looping over tool calls goes on
+      // executing them (re-opening viewers, re-hitting external APIs) underneath
+      // every test that follows.
+      this.abortTimedOutConversation(test, error);
+
       // An earlyReturn test is scored on tool submission, not completion, so a
       // long-running tool (online BLAST against nt, makeblastdb over a whole
       // genome) must not fail the test it already satisfied. The normal
@@ -955,6 +1002,29 @@ class LLMBenchmarkFramework {
         result.score = 0;
         result.errors.push(error.message);
         console.error(`Test ${test.id} failed with error:`, error);
+      }
+
+      // Timeout diagnostics: correlate the framework-side stall with whether
+      // the request ever reached the provider. `lastExecutionData` is
+      // request-scoped and may be null when the request never started; the
+      // tracker keeps session-wide executions keyed by test id.
+      try {
+        const lastExecutionData = this.chatManager?.getLastExecutionData?.();
+        const tracker = this.chatManager?.toolExecutionTracker;
+        let trackedExecutions = [];
+        if (tracker && typeof tracker.getTestExecutions === 'function') {
+          trackedExecutions = tracker.getTestExecutions(test.id) || [];
+        }
+        console.warn(
+          `[Benchmark][timeout] ${test.id}: ` +
+            `lastExecutionData.calls=${lastExecutionData?.functionCalls?.length ?? 0}, ` +
+            `lastExecutionData.results=${lastExecutionData?.toolResults?.length ?? 0}, ` +
+            `tracker.executions=${trackedExecutions.length}, ` +
+            `history.messages=${this.chatManager?.conversationHistory?.length ?? 0}, ` +
+            `lastResponse=${Boolean(this.chatManager?.lastResponse)}`
+        );
+      } catch (diagnosticsError) {
+        console.warn(`[Benchmark][timeout] diagnostics failed for ${test.id}:`, diagnosticsError);
       }
 
       // CRITICAL FIX: Try to capture LLM interaction data even on timeout/error
@@ -990,17 +1060,61 @@ class LLMBenchmarkFramework {
     if (!test?.assertCallOnly || !this.chatManager) return () => {};
 
     const expected = test.expectedResult || {};
-    const names = (Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name]).filter(
-      name => typeof name === 'string' && name
-    );
+    // Flatten grouped alternatives (arrays inside tool_sequence) so every
+    // legitimate spelling of an expected capability is call-only, then expand
+    // with documented tool equivalents: a model that falls back to
+    // blast_search_online (the equivalent of blast_search) must not actually
+    // hit NCBI during a call-only test.
+    const names = (Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name])
+      .flat()
+      .filter(name => typeof name === 'string' && name);
     if (names.length === 0) return () => {};
 
+    const toolEquivalents = this.strictAutomaticEvaluator?.toolEquivalents || {};
+    const callOnlyNames = new Set(names);
+    for (const name of names) {
+      for (const equivalent of toolEquivalents[name] || []) {
+        callOnlyNames.add(equivalent);
+      }
+    }
+
     const previous = this.chatManager.callOnlyTools;
-    this.chatManager.callOnlyTools = new Set(names);
+    this.chatManager.callOnlyTools = callOnlyNames;
     console.log(`🧪 [Benchmark] Call-only mode for ${test.id}: ${names.join(', ')}`);
     return () => {
       this.chatManager.callOnlyTools = previous;
     };
+  }
+
+  /**
+   * Cancel the conversation a timed-out test left running.
+   *
+   * `Promise.race` abandons the losing promise, it does not stop it. Without an
+   * explicit abort the ChatManager turn keeps looping — issuing LLM rounds and
+   * executing their tools for real — while the framework has already moved on to
+   * the next test, which then scores against a genome someone else's tools are
+   * still changing.
+   */
+  abortTimedOutConversation(test, error) {
+    if (!this.isTestTimeoutError(error)) return;
+
+    const chatManager = this.chatManager;
+    if (!chatManager?.conversationState?.isProcessing) return;
+
+    try {
+      if (typeof chatManager.abortCurrentConversation === 'function') {
+        chatManager.abortCurrentConversation();
+      } else {
+        chatManager.conversationState.abortController?.abort();
+      }
+      console.log(`🛑 [Benchmark] Aborted the conversation still running after ${test.id} timed out`);
+    } catch (abortError) {
+      console.warn(`Could not abort the conversation for ${test.id}:`, abortError);
+    }
+  }
+
+  isTestTimeoutError(error) {
+    return /^Test timeout after \d+ms$/.test(String(error?.message || ''));
   }
 
   /**
@@ -1010,13 +1124,11 @@ class LLMBenchmarkFramework {
    */
   findEarlyReturnSubmission(test, error) {
     if (!test?.earlyReturn) return null;
-    if (!/^Test timeout after \d+ms$/.test(String(error?.message || ''))) return null;
+    if (!this.isTestTimeoutError(error)) return null;
 
     const expected = test.expectedResult || {};
-    const expectedNames = (
-      Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name]
-    ).filter(name => typeof name === 'string' && name);
-    if (expectedNames.length === 0) return null;
+    const expectedTools = Array.isArray(expected.tool_sequence) ? expected.tool_sequence : [expected.tool_name];
+    if (expectedTools.length === 0 || expectedTools.some(name => !name)) return null;
 
     const tracker = this.chatManager?.toolExecutionTracker;
     if (!tracker || typeof tracker.getTestExecutions !== 'function') return null;
@@ -1029,13 +1141,33 @@ class LLMBenchmarkFramework {
       return null;
     }
 
-    // 'running' is the expected state here: the tool was dispatched and is still
-    // in flight. 'completed' can also appear if the timeout landed on a later round.
-    return (
-      executions.find(
-        exec => expectedNames.includes(exec?.toolName) && (exec.status === 'running' || exec.status === 'completed')
-      ) || null
+    // 'running' is admissible for early-return tools because the benchmark is
+    // asserting submission. Tool name, order, parameters, and schema must still
+    // be correct; a same-name call with wrong arguments cannot pass on timeout.
+    const submittedCalls = executions
+      .filter(exec => exec && (exec.status === 'running' || exec.status === 'completed'))
+      .sort((left, right) => Number(left.startTime || 0) - Number(right.startTime || 0))
+      .map(exec => ({
+        tool_name: exec.toolName,
+        parameters: exec.parameters || {},
+        success: true,
+        executed: true,
+        execution: exec,
+      }));
+    const expectedParameters = this.strictAutomaticEvaluator.getExpectedParameters(test, expectedTools.length);
+    const matches = this.strictAutomaticEvaluator.matchCalls(
+      submittedCalls,
+      expectedTools,
+      expectedParameters,
+      expected.orderInsensitiveTools || []
     );
+    const allMatched = matches.length === expectedTools.length && matches.every(match => match.matched);
+    const noUnexpectedCalls = submittedCalls.length === expectedTools.length;
+    const schemasValid = submittedCalls.every(
+      call => this.chatManager?.dynamicTools?.validateToolCall?.(call.tool_name, call.parameters)?.valid
+    );
+    if (!allMatched || !noUnexpectedCalls || !schemasValid) return null;
+    return submittedCalls[submittedCalls.length - 1]?.execution || null;
   }
 
   /**
@@ -1124,6 +1256,7 @@ class LLMBenchmarkFramework {
         timeout: timeoutMs, // Pass the actual timeout being used
         testInfo: {
           id: test.id,
+          number: test.number || null,
           name: test.name,
           type: test.type,
           expectedResult: test.expectedResult,
@@ -1227,6 +1360,7 @@ class LLMBenchmarkFramework {
         timeout: test.timeout || this.testTimeout,
         testInfo: {
           id: test.id,
+          number: test.number || null,
           name: test.name,
           type: test.type,
           expectedResult: test.expectedResult,
@@ -1251,6 +1385,7 @@ class LLMBenchmarkFramework {
       // STEP 2: Prepare test data for manual dialog INCLUDING LLM response
       const testData = {
         testId: test.id,
+        testNumber: test.number || null,
         testName: test.name,
         category: test.category || 'manual',
         complexity: test.complexity || 'simple',
@@ -1408,6 +1543,7 @@ class LLMBenchmarkFramework {
     const interactionData = {
       timestamp: new Date().toISOString(),
       testId: options.testInfo?.id || 'unknown',
+      testNumber: options.testInfo?.number || null,
       testName: options.testInfo?.name || 'Unknown Test',
 
       // Request details
@@ -1587,8 +1723,38 @@ class LLMBenchmarkFramework {
             `🔄 **Status:** Sending request to AI model...`
         );
 
-        // Use ChatManager's sendToLLM method
-        response = await this.chatManager.sendToLLM(instruction);
+        // Use ChatManager's sendToLLM method. The markers below are the app-side
+        // "request sent / request returned" boundary: if a timeout happens with
+        // no request-sent log for the test, the stall is before the provider
+        // call; if request-sent appears but no return, the stall is in the
+        // provider fetch / streaming loop.
+        console.log(
+          `[Benchmark][request] sending test ${options.testInfo?.id || 'unknown'} to LLM at ${new Date().toISOString()}`
+        );
+        const requestSentAt = Date.now();
+        // Expected-coverage early stop: once every expected call has been
+        // observed and executed successfully, the round loop stops so the model
+        // cannot over-complete with extra viewer/verification/wrap-up calls.
+        // Uses the same completion+execution evaluator as final scoring, so the
+        // stop decision matches the pass decision.
+        const shouldStopAfterRound = async ({ functionCalls, toolResults }) => {
+          if (!options.testInfo) return false;
+          const partialResult = {
+            actualResult: {
+              nativeFunctionCalls: functionCalls,
+              executedFunctionCalls: functionCalls,
+            },
+            llmInteractionData: {
+              request: { dynamicToolsAnalysis: { selectedToolNames: [] } },
+              response: { functionCalls, toolExecutions: toolResults },
+            },
+          };
+          return this.strictAutomaticEvaluator.evaluate(options.testInfo, partialResult).success === true;
+        };
+        response = await this.chatManager.sendToLLM(instruction, { shouldStopAfterRound });
+        console.log(
+          `[Benchmark][request] test ${options.testInfo?.id || 'unknown'} LLM returned in ${Date.now() - requestSentAt}ms at ${new Date().toISOString()}`
+        );
         const actualPromptMetadata = this.captureDynamicToolsAnalysis();
         if (actualPromptMetadata) {
           interactionData.request.dynamicToolsAnalysis = actualPromptMetadata;
@@ -1650,18 +1816,33 @@ class LLMBenchmarkFramework {
           // which is already available via ChatManager.getLastExecutionData() if needed.
           interactionData.response.functionCalls = functionCallsWithConfidence;
           // Store only summary of tool results (success/failure), not full output
-          interactionData.response.toolExecutions = (executionData.toolResults || []).map(r => ({
-            tool_name: r.tool_name,
-            success: r.success,
-            executionTime: r.executionTime,
-            // Truncate large result data to first 200 chars
-            resultPreview:
-              typeof r.result === 'string'
-                ? r.result.substring(0, 200) + (r.result.length > 200 ? '...[TRUNCATED]' : '')
-                : r.result
-                  ? JSON.stringify(r.result).substring(0, 200) + '...[TRUNCATED]'
-                  : null,
-          }));
+          interactionData.response.toolExecutions = (executionData.toolResults || []).map(r => {
+            const execution = r.execution || r;
+            return {
+              // ChatManager's queue records use `tool`; the evaluator matches on
+              // `tool_name`/`tool`/`name`, so expose both spellings explicitly.
+              tool_name: execution.tool_name ?? execution.tool ?? null,
+              tool: execution.tool_name ?? execution.tool ?? null,
+              success: execution.success,
+              executionTime: execution.executionTime ?? execution.duration ?? null,
+              // Preserve identifiers so the evaluator can pair executions to
+              // specific observed tool calls instead of only by tool name.
+              id: execution.id ?? execution.executionId ?? null,
+              call_id: execution.call_id ?? execution.tool_call_id ?? null,
+              tool_call_id: execution.tool_call_id ?? execution.call_id ?? null,
+              // Truncate large result data to first 200 chars
+              resultPreview:
+                typeof execution.result === 'string'
+                  ? execution.result.substring(0, 200) + (execution.result.length > 200 ? '...[TRUNCATED]' : '')
+                  : execution.result
+                    ? JSON.stringify(execution.result).substring(0, 200) + '...[TRUNCATED]'
+                    : null,
+              // Persist the failure reason so timed-out/failed interactions can
+              // be diagnosed without re-running the app (stripped elsewhere by
+              // memory optimization).
+              error: execution.error ? String(execution.error).substring(0, 300) : null,
+            };
+          });
           interactionData.response.executionRounds = executionData.rounds || 0;
           interactionData.response.totalExecutionTime = executionData.totalExecutionTime || 0;
           // Removed: interactionData.response.actualExecutionData = executionData;
@@ -1889,7 +2070,7 @@ class LLMBenchmarkFramework {
         `═══════════════════════════════════════════════════════════<br><br>` +
         `🧪 INITIATING TEST EXECUTION<br><br>` +
         `📋 Test Specification:<br>` +
-        `&nbsp;&nbsp;&nbsp;• Name: ${testName}<br>` +
+        `&nbsp;&nbsp;&nbsp;• Name: ${this.formatTestLabel(testInfo.number, testName)}<br>` +
         `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(testType)}<br>` +
         `&nbsp;&nbsp;&nbsp;• ID: ${testInfo.id || 'N/A'}<br>` +
         `&nbsp;&nbsp;&nbsp;• Max Score: ${testInfo.maxScore || 100} points<br><br>` +
@@ -4569,6 +4750,26 @@ class LLMBenchmarkFramework {
       return evaluation;
     }
 
+    // Automatic suites are scored only from calls captured during this test.
+    // Prose mentions, debug logs, and tracker records from other tests are not
+    // admissible evidence. Manual suites retain their existing evaluators.
+    if (
+      test.evaluation === 'automatic' &&
+      ['simple', 'complex'].includes(test.complexity) &&
+      ['function_call', 'workflow'].includes(test.type) &&
+      (test.expectedResult?.tool_name || Array.isArray(test.expectedResult?.tool_sequence))
+    ) {
+      const strictEvaluation = this.strictAutomaticEvaluator.evaluate(test, testResult);
+      Object.assign(evaluation, strictEvaluation);
+      console.log('🔒 [Test Evaluation] Strict automatic scorer completed:', {
+        score: evaluation.score,
+        success: evaluation.success,
+        mode: evaluation.details?.scoringMode,
+      });
+      this.displayEvaluationResult(test, evaluation, testResult);
+      return evaluation;
+    }
+
     // Use test-specific evaluator if provided (for automatic tests only)
     if (test.evaluator && typeof test.evaluator === 'function') {
       console.log('🔧 [Test Evaluation] Using custom evaluator for test:', test.id);
@@ -4647,7 +4848,7 @@ class LLMBenchmarkFramework {
         `═══════════════════════════════════════════════════════════<br><br>` +
         `⚖️ **SCORING EVALUATION INITIATED**<br><br>` +
         `**📋 Test Details:**<br>` +
-        `&nbsp;&nbsp;&nbsp;• Name: ${test.name}<br>` +
+        `&nbsp;&nbsp;&nbsp;• Name: ${this.formatTestLabel(test, test.name)}<br>` +
         `&nbsp;&nbsp;&nbsp;• Type: ${this.getTestTypeDescription(test.type)}<br>` +
         `&nbsp;&nbsp;&nbsp;• Evaluator: ${test.evaluator ? 'Custom Algorithm' : 'Standard ' + test.type.charAt(0).toUpperCase() + test.type.slice(1) + ' Evaluator'}<br>` +
         `&nbsp;&nbsp;&nbsp;• Maximum Score: ${test.maxScore || 100} points<br>` +
@@ -4688,7 +4889,8 @@ class LLMBenchmarkFramework {
     this.chatManager.updateThinkingMessage(
       `<br><br>👩‍🔬 **EVALUATION REPORT**<br>` +
         `═══════════════════════════════════════════════════════════<br><br>` +
-        `${gradeEmoji} **FINAL TEST RESULT: ${evaluation.success ? 'PASS' : 'FAIL'}** ${successIcon}<br><br>` +
+        `${gradeEmoji} **FINAL TEST RESULT: ${evaluation.success ? 'PASS' : 'FAIL'}** ${successIcon}<br>` +
+        `&nbsp;&nbsp;&nbsp;${this.formatTestLabel(test, test.name)} (${test.id})<br><br>` +
         `**📊 SCORING BREAKDOWN:**<br>` +
         `&nbsp;&nbsp;&nbsp;• Final Score: ${evaluation.score}/${evaluation.maxScore} points<br>` +
         `&nbsp;&nbsp;&nbsp;• Percentage: ${scorePercentage}%<br>` +
@@ -5595,6 +5797,40 @@ class LLMBenchmarkFramework {
         return this.reconstructInteractionDataFromCachedResponse(test, this.chatManager.lastResponse, error);
       }
 
+      // The conversation-history path above only helps when the LLM actually
+      // produced an assistant message. A request that stalled before/during
+      // the provider call often still has request-scoped tool executions
+      // (submitted calls + results) or tracker entries; without them the
+      // timed-out test is recorded as a bare skeleton with zero calls, which
+      // is indistinguishable from the model producing nothing. Recover those
+      // partial executions so the record shows exactly how far the workflow
+      // got before the hang.
+      const lastExecutionData = this.chatManager?.getLastExecutionData?.();
+      const partialCalls = Array.isArray(lastExecutionData?.functionCalls) ? lastExecutionData.functionCalls : [];
+      const partialResults = Array.isArray(lastExecutionData?.toolResults) ? lastExecutionData.toolResults : [];
+      let trackedExecutions = [];
+      try {
+        const tracker = this.chatManager?.toolExecutionTracker;
+        if (tracker && typeof tracker.getTestExecutions === 'function') {
+          trackedExecutions = tracker.getTestExecutions(test.id) || [];
+        }
+      } catch (trackerError) {
+        console.warn(`Could not read tracker executions for ${test.id}:`, trackerError);
+      }
+      if (partialCalls.length > 0 || trackedExecutions.length > 0) {
+        console.log(
+          `Recovered partial execution data for ${test.id}: ` +
+            `calls=${partialCalls.length}, results=${partialResults.length}, tracker=${trackedExecutions.length}`
+        );
+        return this.reconstructInteractionDataFromPartialExecution(
+          test,
+          partialCalls,
+          partialResults,
+          trackedExecutions,
+          error
+        );
+      }
+
       console.log('No recoverable LLM interaction data found');
       return null;
     } catch (recoveryError) {
@@ -5604,12 +5840,93 @@ class LLMBenchmarkFramework {
   }
 
   /**
+   * Build interaction data from partial request-scoped executions recovered
+   * after a timeout. The shape mirrors the normal execution-data capture so
+   * the strict evaluator can still score whatever was actually submitted.
+   */
+  reconstructInteractionDataFromPartialExecution(test, functionCalls, toolResults, trackerExecutions, error) {
+    const calls = (functionCalls || []).map(call => ({
+      ...call,
+      confidence: call.confidence || 100,
+      executed: true,
+      actualResult: true,
+      detectionMethod: 'actual_execution',
+    }));
+    const seenCalls = new Set(calls.map(call => `${call.tool_name}:${call.round ?? ''}:${call.id ?? ''}`));
+    for (const execution of trackerExecutions || []) {
+      const call = {
+        tool_name: execution.toolName,
+        parameters: execution.parameters || {},
+        id: execution.executionId || null,
+        round: execution.round ?? null,
+        executed: true,
+        actualResult: true,
+        detectionMethod: 'tracker_execution',
+      };
+      const key = `${call.tool_name}:${call.round ?? ''}:${call.id ?? ''}`;
+      if (!seenCalls.has(key)) {
+        seenCalls.add(key);
+        calls.push(call);
+      }
+    }
+    const executions = (toolResults || []).map(execution => {
+      const exec = execution.execution || execution;
+      const preview =
+        typeof exec.result === 'string'
+          ? exec.result.substring(0, 200)
+          : exec.result
+            ? JSON.stringify(exec.result).substring(0, 200)
+            : exec.resultPreview
+              ? String(exec.resultPreview).substring(0, 200)
+              : null;
+      return {
+        tool_name: exec.tool_name ?? exec.tool ?? null,
+        tool: exec.tool_name ?? exec.tool ?? null,
+        success: exec.success,
+        executionTime: exec.executionTime ?? exec.duration ?? null,
+        id: exec.id ?? exec.executionId ?? null,
+        call_id: exec.call_id ?? exec.tool_call_id ?? null,
+        tool_call_id: exec.tool_call_id ?? exec.call_id ?? null,
+        resultPreview: preview,
+      };
+    });
+    return {
+      timestamp: new Date().toISOString(),
+      testId: test.id,
+      testNumber: test.number || null,
+      testName: test.name,
+      request: {
+        instruction: test.instruction,
+        requestId: `partial_${test.id}_${Date.now()}`,
+        recovered: true,
+        recoveryReason: 'timeout_partial_execution',
+      },
+      response: {
+        functionCalls: calls,
+        toolExecutions: executions,
+        rawResponse: null,
+        responseTime: 0,
+        recovered: true,
+      },
+      analysis: {
+        isError: true,
+        errorType: 'timeout',
+        errorMessage: error?.message || 'Test timeout',
+        confidence: 2.5,
+        recoveredData: true,
+        timeoutOccurred: true,
+      },
+    };
+  }
+
+  /**
    * Reconstruct interaction data from conversation messages
    */
   reconstructInteractionDataFromMessages(test, userMessage, assistantMessage, error) {
     return {
       timestamp: new Date().toISOString(),
       testId: test.id,
+      testNumber: test.number || null,
       testName: test.name,
 
       request: {
@@ -5658,6 +5975,7 @@ class LLMBenchmarkFramework {
     return {
       timestamp: new Date().toISOString(),
       testId: test.id,
+      testNumber: test.number || null,
       testName: test.name,
 
       request: {
@@ -5851,6 +6169,7 @@ class LLMBenchmarkFramework {
     // Build a slim copy with fields needed for reporting/scoring AND UI fallback reconstruction
     const slim = {
       testId: result.testId,
+      testNumber: result.testNumber || null,
       testName: result.testName,
       suiteId: result.suiteId,
       startTime: result.startTime,
@@ -5894,6 +6213,7 @@ class LLMBenchmarkFramework {
       const data = result.llmInteractionData;
       slim.llmInteractionDataSummary = {
         testId: data.testId,
+        testNumber: data.testNumber || result.testNumber || null,
         testName: data.testName,
         // Request summary (no full prompts)
         requestProvider: data.request?.provider,

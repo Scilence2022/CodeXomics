@@ -178,12 +178,20 @@ describe('BLAST Tool Registry Consistency', () => {
     it('should name quick BLAST databases from generated FASTA basenames', () => {
       const dbNameToken = '$' + '{dbName}';
 
-      expect(content).toContain('const dbName = this.getQuickDatabaseBaseName(genomeName, dbType)');
+      expect(content).toContain('async createQuickDatabase(dbType, preferredDbName = null)');
+      expect(content).toContain('const dbName = preferredDbName || this.getQuickDatabaseBaseName(genomeName, dbType)');
       expect(content).toContain('dbId = dbName');
       expect(content).toContain(`fileName: \`${dbNameToken}.fasta\``);
       expect(content).toContain("replace(/\\.gz$/i, '')");
       expect(content).toContain("replace(/\\.(fasta|fa|fas|fna|txt|gbk|gb|gbff|genbank)$/i, '')");
       expect(content).not.toContain('dbId = `quick_${dbName');
+    });
+
+    it('should pass the user-named database through the quick DB creation path', () => {
+      const blastFunctionTools = readFile('src/renderer/modules/BlastFunctionTools.js');
+
+      expect(blastFunctionTools).toContain("createQuickDatabase('nucl', genomeName || null)");
+      expect(content).toContain('const dbName = preferredDbName || this.getQuickDatabaseBaseName(genomeName, dbType)');
     });
 
     it('should resolve the quick database source from the genome, not the last loaded file', () => {

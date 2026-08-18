@@ -55,6 +55,12 @@ const allowedInvokeChannels = [
   'tool-registry:get-metadata',
   'tool-registry:get-tool',
   'tool-registry:reload',
+  'skill-registry:get-snapshot',
+  'skill-registry:get-metadata',
+  'skill-registry:get-skill',
+  'skill-registry:get-resource',
+  'skill-registry:reload',
+  'skill-registry:open-user-folder',
   'i18n:getCurrentLanguage',
   'i18n:changeLanguage',
   'get-locale-data',
@@ -225,6 +231,7 @@ const allowedListenChannels = [
   'file-stream-complete',
   'file-read-progress',
   'tool-registry-updated',
+  'skill-registry-updated',
   'window-tabs-updated',
 ];
 
@@ -591,6 +598,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return;
     }
     safeIpcRenderer.on('tool-registry-updated', (event, snapshot) => {
+      callback(snapshot);
+    });
+  },
+
+  // Agent skill registry APIs
+  getSkillRegistrySnapshot: () => ipcRenderer.invoke('skill-registry:get-snapshot'),
+  getSkillRegistryMetadata: () => ipcRenderer.invoke('skill-registry:get-metadata'),
+  getSkill: skillId => ipcRenderer.invoke('skill-registry:get-skill', skillId),
+  getSkillResource: (skillId, resourcePath) => ipcRenderer.invoke('skill-registry:get-resource', skillId, resourcePath),
+  reloadSkillRegistry: () => ipcRenderer.invoke('skill-registry:reload'),
+  openUserSkillsFolder: () => ipcRenderer.invoke('skill-registry:open-user-folder'),
+  onSkillRegistryUpdated: callback => {
+    if (typeof callback !== 'function') {
+      return;
+    }
+    safeIpcRenderer.on('skill-registry-updated', (event, snapshot) => {
       callback(snapshot);
     });
   },

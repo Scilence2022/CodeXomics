@@ -1,8 +1,16 @@
 # CodeXomics Agent Skills
 
-This directory contains **Agent Skills** for the CodeXomics MCP Server — reusable, composable
+This directory contains the **built-in Agent Skills** that ship with CodeXomics — reusable, composable
 multi-step workflows that teach AI agents how to accomplish complex bioinformatics tasks using
 the CodeXomics tool suite.
+
+These skills are loaded at runtime by `SkillRegistryService` and surfaced to the in-app assistant
+through the `list_skills` and `get_skill` tools. Users can add their own skills — in this format or in
+the Anthropic `SKILL.md` bundle format — under the `skills/` folder in their userData directory, and
+manage them from **Multi-Agent Settings -> Skills**.
+
+For the runtime architecture, formats, and limits, see
+[`docs/developer-guides/AGENT_SKILLS.md`](../../docs/developer-guides/AGENT_SKILLS.md).
 
 ## What Are Agent Skills?
 
@@ -21,30 +29,30 @@ With Skills:      AI agent → SKILL_REGISTRY.yaml → expert workflow → relia
 .agent/skills/
 ├── SKILL_REGISTRY.yaml          ← Machine-readable index of all skills (start here)
 ├── SKILL_TEMPLATE.md            ← Template for creating new skills
-├── primer_design.md             ← PCR primer design pipeline
-├── gene_annotation_improvement.md  ← Evidence-based annotation enrichment
-├── automated_research.md        ← Comprehensive gene research report
-├── variant_context_analysis.md  ← Genomic variant functional context
-├── operon_analysis.md           ← Prokaryotic operon characterization
-└── multi_window_routing.md      ← Manage routing to multiple open genome windows
+└── primer_design.md             ← PCR primer design pipeline
 ```
 
 ## Available Skills
 
-| Skill                                                         | Trigger Keywords                                           | Tools Used | Duration |
-| ------------------------------------------------------------- | ---------------------------------------------------------- | ---------- | -------- |
-| [primer_design](primer_design.md)                             | "design primers", "PCR primers", "amplify"                 | 10         | ~30s     |
-| [gene_annotation_improvement](gene_annotation_improvement.md) | "gene function", "improve annotation", "protein domains"   | 10         | ~45s     |
-| [automated_research](automated_research.md)                   | "research", "comprehensive analysis", "deep dive"          | 18         | ~90s     |
-| [variant_context_analysis](variant_context_analysis.md)       | "variant", "SNP", "mutation impact"                        | 12         | ~30s     |
-| [operon_analysis](operon_analysis.md)                         | "operon", "co-regulated genes"                             | 11         | ~45s     |
-| [multi_window_routing](multi_window_routing.md)               | "list open windows", "switch to window", "compare genomes" | 2          | ~5s      |
+| Skill                             | Trigger Keywords                           | Tools Used | Duration |
+| --------------------------------- | ------------------------------------------ | ---------- | -------- |
+| [primer_design](primer_design.md) | "design primers", "PCR primers", "amplify" | 6          | ~20s     |
+
+Only one skill ships built-in. A skill earns its place by encoding knowledge the assistant would
+otherwise get wrong — the exact tool for the job, the parameter names, the failure modes. A
+workflow that just restates what the tool descriptions already say is better left out, because
+every installed skill costs a line in the system prompt.
 
 ## How AI Agents Should Use Skills
 
+Inside CodeXomics, steps 1–3 are handled for you: the skill index is already in the system prompt, and
+`get_skill` returns the parsed workflow. External agents reading this directory directly should follow
+the manual path below.
+
 ### Step 1 — Discover Available Skills
 
-Read `SKILL_REGISTRY.yaml` to get the list of skills and their trigger keywords.
+In-app: the `===AGENT SKILLS===` prompt section, or call `list_skills`.
+Externally: read `SKILL_REGISTRY.yaml` to get the list of skills and their trigger keywords.
 
 ### Step 2 — Match User Intent to a Skill
 
@@ -53,7 +61,8 @@ in the registry to resolve ambiguous cases.
 
 ### Step 3 — Parse the Skill File
 
-Load the matching `skill.md` file and extract the YAML frontmatter for the structured
+In-app: call `get_skill` with the `skill_id`.
+Externally: load the matching `skill.md` file and extract the YAML frontmatter for the structured
 workflow definition (`steps`, `parallel_groups`, `outputs`).
 
 ### Step 4 — Check Preconditions

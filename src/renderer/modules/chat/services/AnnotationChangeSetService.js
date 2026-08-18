@@ -21,6 +21,11 @@ class AnnotationChangeSetService {
     this.annotationService = annotationService;
     this.memoryLedgers = new Map();
     this.ledgerLocks = new Map();
+    // Derived-value caches, keyed by workspace and revalidated against the live
+    // objects they were derived from. Recomputing them per call made every
+    // Review Center interaction re-hash the whole assembly and every feature.
+    this.featureIndexes = new Map();
+    this.assemblyDigests = new Map();
     this.integrityVersion = 2;
     this.hashVersions = Object.freeze({
       current: 'canonical-json-v1',
@@ -1495,6 +1500,34 @@ class AnnotationChangeSetService {
     }
     this._assertWorkspace(workspace);
     this.memoryLedgers.set(workspace.key, snapshot);
+    this._broadcastLedgerState(snapshot, genomePath, 'ledger-saved');
+  }
+
+  /**
+   * Announce the review queue state to the renderer UI. Without this the
+   * header Review badge only learns about a new proposal when the curator
+   * opens the Review Center, so an agent-created ChangeSet stayed invisible.
+   */
+  _broadcastLedgerState(ledger, genomePath, reason) {
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+    if (typeof CustomEvent !== 'function') return;
+    try {
+      const statusCounts = Object.create(null);
+      for (const changeSet of Object.values(ledger?.changeSets || {})) {
+        if (!changeSet) continue;
+        const status = String(changeSet.status || 'unknown');
+        this._ledgerMapSet(statusCounts, status, (statusCounts[status] || 0) + 1);
+      }
+      window.dispatchEvent(
+        new CustomEvent('annotation-ledger-changed', {
+          detail: { reason, genomePath: genomePath || null, revision: ledger?.revision ?? null, statusCounts },
+        })
+      );
+    } catch (error) {
+      // The ledger is already persisted; a failed UI notification must not
+      // turn a successful annotation write into an error.
+      console.warn('[AnnotationChangeSet] ledger change broadcast failed:', error?.message || error);
+    }
   }
 
   async _hash(value) {
@@ -1554,13 +1587,30 @@ class AnnotationChangeSetService {
     if (!sequences || typeof sequences !== 'object' || Object.keys(sequences).length === 0) {
       return 'assembly-unavailable';
     }
+    // Hashing a bacterial assembly costs tens of milliseconds and _featureRef
+    // needs it for every reviewed feature. JavaScript strings are immutable, so
+    // an edited sequence is a different string: comparing the exact values the
+    // digest was taken over keeps the cache as accurate as recomputing it.
+    const cached = this.assemblyDigests.get(workspace.key);
+    if (cached && cached.sequences === sequences && this._sameSequenceContents(cached.entries, sequences)) {
+      this._assertWorkspace(workspace);
+      return cached.digest;
+    }
+    const entries = Object.keys(sequences)
+      .sort()
+      .map(chromosome => [chromosome, sequences[chromosome]]);
     const digest = await this._hash({
-      sequences: Object.keys(sequences)
-        .sort()
-        .map(chromosome => [chromosome, String(sequences[chromosome] || '').toUpperCase()]),
+      sequences: entries.map(([chromosome, sequence]) => [chromosome, String(sequence || '').toUpperCase()]),
     });
     this._assertWorkspace(workspace);
+    this.assemblyDigests.set(workspace.key, { sequences, entries, digest });
     return digest;
+  }
+
+  _sameSequenceContents(entries, sequences) {
+    const names = Object.keys(sequences);
+    if (names.length !== entries.length) return false;
+    return entries.every(([chromosome, sequence]) => sequences[chromosome] === sequence);
   }
 
   async _proteinDigest(annotation) {
@@ -1706,17 +1756,90 @@ class AnnotationChangeSetService {
     return null;
   }
 
+  async _featureId(chromosome, annotation) {
+    return (
+      annotation.codexomicsFeatureId || `feat_${await this._hash(this._stableFeatureIdentity(chromosome, annotation))}`
+    );
+  }
+
+  /**
+   * Feature id lookup table for the loaded genome, one entry per annotation.
+   *
+   * Resolving a ChangeSet target used to hash annotations one by one until the
+   * id matched, so a single reconciliation pass over a committed history
+   * re-hashed the whole genome once per committed chain. The identity behind
+   * the id (coordinates, type, locus tag, protein id) is untouched by the
+   * qualifier operations this service allows, and every hit is re-derived
+   * before it is trusted, so a stale entry degrades to the original scan
+   * instead of resolving the wrong feature.
+   */
+  async _featureIndex(workspace) {
+    this._assertWorkspace(workspace);
+    const annotations = workspace.annotations;
+    if (!annotations) return null;
+    const cached = this.featureIndexes.get(workspace.key);
+    if (cached && cached.annotations === annotations && this._sameAnnotationShape(cached.shape, annotations)) {
+      return cached.byChromosome;
+    }
+    const byChromosome = new Map();
+    for (const [chromosome, list] of Object.entries(annotations)) {
+      const byId = new Map();
+      for (const annotation of list || []) {
+        const featureId = await this._featureId(chromosome, annotation);
+        if (!byId.has(featureId)) byId.set(featureId, annotation);
+      }
+      byChromosome.set(chromosome, byId);
+    }
+    this._assertWorkspace(workspace);
+    this.featureIndexes.set(workspace.key, {
+      annotations,
+      shape: this._annotationShape(annotations),
+      byChromosome,
+    });
+    return byChromosome;
+  }
+
+  _annotationShape(annotations) {
+    return Object.entries(annotations).map(([chromosome, list]) => [chromosome, list, (list || []).length]);
+  }
+
+  _sameAnnotationShape(shape, annotations) {
+    const names = Object.keys(annotations);
+    if (!shape || shape.length !== names.length) return false;
+    return shape.every(
+      ([chromosome, list, length]) =>
+        annotations[chromosome] === list && (annotations[chromosome] || []).length === length
+    );
+  }
+
   async _findFeatureByRef(target, workspace) {
     this._assertWorkspace(workspace);
     if (!workspace.annotations) return null;
+    const index = await this._featureIndex(workspace);
+    const chromosomes = target.chromosome ? [target.chromosome] : Object.keys(workspace.annotations);
+    for (const chromosome of chromosomes) {
+      const annotation = index?.get(chromosome)?.get(target.featureId);
+      if (!annotation) continue;
+      // Re-derive the id from the live annotation so an index built before an
+      // in-place edit can never stand in for the identity check itself.
+      if ((await this._featureId(chromosome, annotation)) !== target.featureId) {
+        this.featureIndexes.delete(workspace.key);
+        break;
+      }
+      const ref = await this._featureRef(
+        chromosome,
+        annotation,
+        { revision: target.annotationRevision || 0 },
+        workspace
+      );
+      return { chromosome, annotation, ref };
+    }
     const candidates = target.chromosome
       ? [[target.chromosome, workspace.annotations[target.chromosome] || []]]
       : Object.entries(workspace.annotations);
     for (const [chromosome, annotations] of candidates) {
       for (const annotation of annotations || []) {
-        const featureId =
-          annotation.codexomicsFeatureId ||
-          `feat_${await this._hash(this._stableFeatureIdentity(chromosome, annotation))}`;
+        const featureId = await this._featureId(chromosome, annotation);
         if (featureId !== target.featureId) continue;
         const ref = await this._featureRef(
           chromosome,
@@ -1876,8 +1999,8 @@ class AnnotationChangeSetService {
     if (!Array.isArray(summary.facts) || summary.facts.length > 100) {
       throw new Error('Research summary facts must be an array of at most 100 facts');
     }
-    if (!Array.isArray(summary.literature) || summary.literature.length > 30) {
-      throw new Error('Research summary literature must be an array of at most 30 records');
+    if (!Array.isArray(summary.literature) || summary.literature.length > 400) {
+      throw new Error('Research summary literature must be an array of at most 400 records');
     }
     if (!Array.isArray(summary.limitations) || summary.limitations.length > 30) {
       throw new Error('Research summary limitations must be an array of at most 30 statements');
@@ -2052,7 +2175,7 @@ class AnnotationChangeSetService {
           (isFullTextBasis &&
             (!/^[a-f0-9]{64}$/i.test(String(basis.documentSha256)) ||
               !/^[a-f0-9]{64}$/i.test(String(basis.textSha256)) ||
-              !['user_upload', 'pmc_xml'].includes(String(basis.sourceOrigin)) ||
+              !['user_upload', 'pmc_xml', 'bioc', 'tei', 'pdf', 'snippet'].includes(String(basis.sourceOrigin)) ||
               basis.canonicalization !== 'dgr.full-text.v1' ||
               (basis.pageNumber !== undefined && (!Number.isSafeInteger(basis.pageNumber) || basis.pageNumber < 1))))
         ) {
@@ -2193,6 +2316,161 @@ class AnnotationChangeSetService {
     return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
   }
 
+  _englishDate(iso) {
+    const date = new Date(String(iso || ''));
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  }
+
+  /**
+   * Validates a no-information-found note: the search itself is recorded
+   * (RefSeq convention), it makes no biological claim, and it carries no
+   * evidence. The note claim/operation binding is still enforced.
+   */
+  _validateNoInformationFoundNote(note, text, claims, operations) {
+    const searchDate = this._englishDate(note.searchConductedAt);
+    if (!searchDate) {
+      throw new Error('No-information curation note requires a valid searchConductedAt timestamp');
+    }
+    const baseText = `No information about this protein was found by a literature search conducted on ${searchDate}.`;
+    let expectedText = baseText;
+    if (note.provenance !== undefined && note.provenance !== null) {
+      const provenance = note.provenance;
+      const updatedDate = this._englishDate(provenance.updatedAt);
+      if (
+        !this._isPlainRecord(provenance) ||
+        provenance.agent !== 'Deep Gene Research' ||
+        !updatedDate ||
+        String(provenance.clause || '') !== `Annotation by Deep Gene Research on ${updatedDate}.`
+      ) {
+        throw new Error('No-information curation note provenance clause is invalid');
+      }
+      expectedText = `${baseText} ${provenance.clause}`;
+    }
+    if (
+      text !== expectedText ||
+      !Array.isArray(note.segments) ||
+      note.segments.length !== 0 ||
+      !Array.isArray(note.factIds) ||
+      note.factIds.length !== 0 ||
+      !Array.isArray(note.evidenceIds) ||
+      note.evidenceIds.length !== 0 ||
+      !Array.isArray(note.allSourceCitations) ||
+      note.allSourceCitations.length !== 0 ||
+      note.citationText !== undefined
+    ) {
+      throw new Error('No-information curation note is not bound to its search provenance');
+    }
+    if (!this._isPlainRecord(note.coverage)) throw new Error('Curation note requires coverage metadata');
+    if (
+      note.coverage.includedFactCount !== 0 ||
+      note.coverage.availableFactCount !== 0 ||
+      !Array.isArray(note.coverage.includedCategories) ||
+      note.coverage.includedCategories.length !== 0 ||
+      !Array.isArray(note.coverage.omittedFactIds) ||
+      note.coverage.omittedFactIds.length !== 0 ||
+      note.coverage.citedSourceCount !== 0 ||
+      note.coverage.totalSourceCount !== 0 ||
+      !Array.isArray(note.coverage.omittedCitationLabels) ||
+      note.coverage.omittedCitationLabels.length !== 0
+    ) {
+      throw new Error('Curation note coverage metadata is inconsistent');
+    }
+    const noteClaims = claims.filter(claim => claim.field === 'note' && String(claim.value) === text);
+    const noteOperations = operations.filter(
+      operation => operation.op === 'addQualifier' && operation.field === 'note' && String(operation.value) === text
+    );
+    if (
+      noteClaims.length !== 1 ||
+      noteOperations.length !== 1 ||
+      !this._canonicalValuesEqual(noteClaims[0].evidenceIds, []) ||
+      !this._canonicalValuesEqual(noteOperations[0].claimIds, [noteClaims[0].id])
+    ) {
+      throw new Error('Curation note is not bound to one evidence-supported note operation');
+    }
+    this._assertSerializableSize(note, 'Curation note');
+    return this._clone(note);
+  }
+
+  /**
+   * Validates the all-source citation clause introduced with the DGR note
+   * contract that backs authoritative-fact narratives with the complete
+   * retained bibliography. Returns true when the note is fully citation-bound
+   * through its bibliography; old-style notes without the clause return false
+   * and must rely on citation-bound literature segments instead.
+   */
+  _validateCurationNoteBibliography(note, researchSummary, noteText) {
+    if (!Array.isArray(note.allSourceCitations) || note.allSourceCitations.length === 0) return false;
+    const knownLiteratureIds = new Set(
+      (Array.isArray(researchSummary.literature) ? researchSummary.literature : []).flatMap(item => {
+        const ids = [];
+        if (item?.pmid) ids.push(`pmid:${String(item.pmid)}`);
+        if (item?.doi) ids.push(`doi:${String(item.doi).toLowerCase()}`);
+        return ids;
+      })
+    );
+    const seenLabels = new Set();
+    for (const citation of note.allSourceCitations) {
+      if (!this._isPlainRecord(citation)) return false;
+      const kind = String(citation.kind || '');
+      const id = String(citation.id || '');
+      if (kind === 'pmid') {
+        if (!/^\d{5,10}$/.test(id)) return false;
+        if (String(citation.label || '') !== `PMID:${id}`) return false;
+        if (String(citation.url || '') !== `https://pubmed.ncbi.nlm.nih.gov/${id}/`) return false;
+        if (!knownLiteratureIds.has(`pmid:${id}`)) return false;
+      } else if (kind === 'doi') {
+        if (!/^10\.\d{4,9}\//.test(id)) return false;
+        if (String(citation.label || '') !== `DOI:${id}`) return false;
+        if (String(citation.url || '') !== `https://doi.org/${id}`) return false;
+        if (!knownLiteratureIds.has(`doi:${id.toLowerCase()}`)) return false;
+      } else {
+        return false;
+      }
+      if (seenLabels.has(String(citation.label))) return false;
+      seenLabels.add(String(citation.label));
+    }
+    const citationText = note.citationText === undefined ? null : String(note.citationText || '');
+    if (citationText === null) return false;
+    // The clause must be exactly "Supporting sources: L1. L2. ..." for an
+    // in-order prefix of the complete bibliography (length-bounded by DGR).
+    const includedLabels = [];
+    for (const citation of note.allSourceCitations) {
+      const candidate = [...includedLabels, String(citation.label)].map(label => `${label}.`).join(' ');
+      const expectedClause = `Supporting sources: ${candidate}`;
+      if (citationText === expectedClause) {
+        includedLabels.push(String(citation.label));
+        break;
+      }
+      if (citationText.startsWith(`${expectedClause} `)) {
+        includedLabels.push(String(citation.label));
+        continue;
+      }
+      break;
+    }
+    if (includedLabels.length === 0) return false;
+    const expectedClause = `Supporting sources: ${includedLabels.map(label => `${label}.`).join(' ')}`;
+    if (citationText !== expectedClause) return false;
+    if (!noteText.endsWith(expectedClause)) return false;
+    const omitted = note.allSourceCitations.slice(includedLabels.length).map(citation => String(citation.label));
+    if (omitted.length > 0 && !this._canonicalValuesEqual(note.coverage?.omittedCitationLabels, omitted)) {
+      return false;
+    }
+    if (
+      Number.isFinite(Number(note.coverage?.citedSourceCount)) &&
+      Number(note.coverage.citedSourceCount) !== includedLabels.length
+    ) {
+      return false;
+    }
+    if (
+      Number.isFinite(Number(note.coverage?.totalSourceCount)) &&
+      Number(note.coverage.totalSourceCount) !== note.allSourceCitations.length
+    ) {
+      return false;
+    }
+    return true;
+  }
+
   async _validateCurationNote(note, researchSummary, evidenceRecords, claims, operations) {
     if (note === undefined || note === null) return null;
     if (!researchSummary || !this._isPlainRecord(note) || note.schema !== 'dgr.curation-note.v1') {
@@ -2207,6 +2485,9 @@ class AnnotationChangeSetService {
     const computedHash = await this._hashSerialized(text, { requireSha256: true });
     if (computedHash !== String(note.textSha256).toLowerCase()) {
       throw new Error('Curation note text hash does not match its text');
+    }
+    if (note.kind === 'no_information_found') {
+      return this._validateNoInformationFoundNote(note, text, claims, operations);
     }
     if (!Array.isArray(note.segments) || note.segments.length === 0 || note.segments.length > 30) {
       throw new Error('Curation note requires between 1 and 30 evidence-bound segments');
@@ -2262,7 +2543,29 @@ class AnnotationChangeSetService {
       includedFactIds.push(String(fact.id));
       includedEvidenceIds.push(...segment.evidenceIds.map(String));
     }
-    if (literatureSegmentCount === 0 || note.segments.map(segment => segment.text).join(' ') !== text) {
+    // Standard notes may end with a verbatim agent/timestamp provenance
+    // clause. Strip it before matching the segments/citation-clause contract.
+    let provenanceSuffix = '';
+    if (note.provenance !== undefined && note.provenance !== null) {
+      const provenance = note.provenance;
+      const updatedDate = this._englishDate(provenance.updatedAt);
+      if (
+        !this._isPlainRecord(provenance) ||
+        provenance.agent !== 'Deep Gene Research' ||
+        !updatedDate ||
+        String(provenance.clause || '') !== `Annotation by Deep Gene Research on ${updatedDate}.`
+      ) {
+        throw new Error('Curation note provenance clause is invalid');
+      }
+      provenanceSuffix = ` ${provenance.clause}`;
+    }
+    const baseText =
+      provenanceSuffix && text.endsWith(provenanceSuffix) ? text.slice(0, text.length - provenanceSuffix.length) : text;
+    const segmentText = note.segments.map(segment => segment.text).join(' ');
+    if (baseText !== segmentText && baseText !== `${segmentText} ${String(note.citationText || '')}`.trim()) {
+      throw new Error('Curation note must include citation-bound literature and exactly match its segments');
+    }
+    if (literatureSegmentCount === 0 && !this._validateCurationNoteBibliography(note, researchSummary, baseText)) {
       throw new Error('Curation note must include citation-bound literature and exactly match its segments');
     }
     const dedupe = values => Array.from(new Set(values));
@@ -2441,6 +2744,11 @@ class AnnotationChangeSetService {
     }
     this._validateOperationPayloads(proposal.operations, 'annotationProposal.operations');
     const claims = new Map();
+    // A no-information-found note records the search itself rather than a
+    // biological claim; its note claim carries no evidence records. Every
+    // other claim still requires evidence present in the manifest.
+    const noInformationNoteText =
+      proposal?.curationNote?.kind === 'no_information_found' ? String(proposal.curationNote?.text || '') : null;
     for (const claim of proposal.claims) {
       if (!this._isPlainRecord(claim)) throw new Error('Every annotation claim must be a JSON object');
       if (!claim?.id || claims.has(claim.id)) {
@@ -2461,9 +2769,11 @@ class AnnotationChangeSetService {
       if (!claim.field || !this.allowedQualifierFields.has(claim.field)) {
         throw new Error(`Claim ${claim.id} uses unsupported annotation field "${claim.field || 'missing'}"`);
       }
+      const isNoInformationNoteClaim =
+        noInformationNoteText !== null && claim.field === 'note' && String(claim.value) === noInformationNoteText;
       if (
         !Array.isArray(claim.evidenceIds) ||
-        claim.evidenceIds.length === 0 ||
+        (claim.evidenceIds.length === 0 && !isNoInformationNoteClaim) ||
         claim.evidenceIds.length > this.inputLimits.referencesPerOperation ||
         claim.evidenceIds.some(id => !evidenceIds.has(id))
       ) {
@@ -2833,6 +3143,14 @@ class AnnotationChangeSetService {
       const restored = Object.values(ledger.changeSets).filter(
         changeSet => changeSet?.status === 'committed' && changeSet.commitReceipt
       ).length;
+      // Build the feature index while the genome is already loading rather than
+      // on the first review action, where it lands inside a click and reads as
+      // a stalled button. Reconciliation warms it whenever committed history
+      // exists, so this only does work for a pending-only queue.
+      if (Object.keys(ledger.changeSets || {}).length > 0) await this._featureIndex(workspace);
+      // Genome load path: the freshly bound ledger may already carry a pending
+      // queue from an earlier session, so the badge is published right away.
+      this._broadcastLedgerState(ledger, workspace.genomePath, 'genome-loaded');
       return { success: true, revision: ledger.revision, committedChangeSets: restored };
     });
   }

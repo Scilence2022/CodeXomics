@@ -112,11 +112,13 @@ Options → Configure LLMs
 - Lists refresh automatically when you open a provider tab (cached for 6 hours) and immediately after you change an API key or endpoint; **Refresh** re-fetches on demand
 - Providers without a model-list endpoint keep the built-in list and say so — nothing is lost when a refresh fails
 
-**Configure Multi-Agent Settings:**
+**Configure Agent Settings:**
 
-- Enable multi-agent mode for complex analysis
-- Set coordinator and worker models
-- Configure collaboration parameters
+- **Mode** — leave multi-agent mode off for a single assistant that plans and calls tools directly, or turn it on to route requests to the specialised agents; enable or disable individual agents here
+- **Generation** — temperature, token limits, and timeouts applied in both modes. The model itself is chosen from the picker beside the ChatBox input box; its _Auto_ entry follows the default in **Options → Configure LLMs → Model Selection**
+- **Execution** — function-call rounds, early completion, tool-repetition limits, and timeouts
+- **Context** — system prompt composition and dynamic tool selection
+- **Memory** and **Skills** — memory system and installed agent skills
 
 **Test Connection:**
 

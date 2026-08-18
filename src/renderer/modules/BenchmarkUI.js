@@ -10,6 +10,10 @@ class BenchmarkUI {
     this.window = null;
     this.manualTestLock = false; // Prevent concurrent manual tests
     this.manualTestResults = {};
+    // Digest of the current run, rendered into the header when the interface is
+    // collapsed. Kept separate from the progress panel's DOM counters so the
+    // header reads correctly on a second run without depending on them.
+    this.runStats = this.createEmptyRunStats();
     this.setupEventHandlers();
     this._registerGlobalHandlers();
   }
@@ -124,6 +128,13 @@ class BenchmarkUI {
       this.updateDynamicSuiteCounts(document);
       setTimeout(() => this.updateDynamicSuiteCounts(document), 1000);
       setTimeout(() => this.updateDynamicSuiteCounts(document), 2000);
+
+      // Seed the collapsed-header digest — reopening mid-run has to show the
+      // run in flight, not a blank line.
+      this.updateHeaderStatus();
+      // The suite counts arrive asynchronously; repaint once they land so an
+      // idle header can name how many tests a run would cover.
+      setTimeout(() => this.updateHeaderStatus(), 2100);
 
       // Restore previous results if available
       if (this.currentResults) {
@@ -312,10 +323,11 @@ class BenchmarkUI {
                
 
                 .benchmark-interface.collapsed .benchmark-container {
-                     height: 60px !important;
-                     min-height: 60px !important;
+                     /* Two lines now: the title and the run digest under it. */
+                     height: 68px !important;
+                     min-height: 68px !important;
                      max-width: 1400px !important;
-                     padding: 10px 30px !important;
+                     padding: 8px 30px !important;
                      box-sizing: border-box !important;
                      
                      background: rgba(255, 255, 255, 0.98) !important; /* More opaque for visibility */
@@ -345,8 +357,78 @@ class BenchmarkUI {
                     margin-bottom: 0;
                 }
 
+                /* Collapsed, the run digest is worth more than the tagline, so
+                   it takes the subtitle's place on the one visible line. */
                 .benchmark-interface.collapsed .benchmark-subtitle {
+                    display: none;
+                }
+
+                .benchmark-header-status {
+                    display: none;
+                }
+
+                .benchmark-interface.collapsed .benchmark-header-status {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-wrap: nowrap;
+                    overflow: hidden;
+                    gap: 6px;
+                    margin-top: 2px;
                     font-size: 12px;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    white-space: nowrap;
+                }
+
+                .benchmark-header-status .status-sep {
+                    opacity: 0.4;
+                }
+
+                .benchmark-header-status .status-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    background: rgba(var(--primary-rgb), 0.12);
+                    color: var(--primary-color);
+                    text-transform: uppercase;
+                    letter-spacing: 0.4px;
+                    font-size: 11px;
+                }
+
+                .benchmark-header-status .status-chip.is-running {
+                    background: rgba(52, 152, 219, 0.15);
+                    color: #2980b9;
+                }
+
+                .benchmark-header-status .status-chip.is-completed {
+                    background: rgba(39, 174, 96, 0.15);
+                    color: #27ae60;
+                }
+
+                .benchmark-header-status .status-chip.is-stopped {
+                    background: rgba(231, 76, 60, 0.15);
+                    color: #c0392b;
+                }
+
+                .benchmark-header-status .status-pass {
+                    color: #27ae60;
+                }
+
+                .benchmark-header-status .status-fail {
+                    color: #e74c3c;
+                }
+
+                /* The test id is the one unbounded field here — let it ellipsis
+                   rather than push the tally and timer off the line. */
+                .benchmark-header-status .status-current {
+                    max-width: 260px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    font-weight: 500;
+                    opacity: 0.85;
                 }
 
                 .expand-indicator {
@@ -652,6 +734,8 @@ class BenchmarkUI {
                             <span class="title-icon">🧪</span>
                         </h1>
                         <div class="benchmark-subtitle">LLM Instruction Following Benchmark</div>
+                        <!-- Collapsed-only digest of the run; see updateHeaderStatus() -->
+                        <div class="benchmark-header-status" id="benchmarkHeaderStatus"></div>
                     </div>
                     <div class="header-controls">
                         <button class="minimize-benchmark-btn" onclick="event.stopPropagation(); window.benchmarkUI.toggleBenchmarkInterface()" title="Minimize/Expand Interface">
@@ -748,6 +832,7 @@ class BenchmarkUI {
                                             <option value="180000">3 minutes</option>
                                             <option value="240000">4 minutes</option>
                                             <option value="300000" selected>5 minutes</option>
+                                            <option value="600000">10 minutes</option>
                                         </select>
                                         <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
                                             ⏱️ Global timeout or use individual test settings
@@ -945,6 +1030,9 @@ class BenchmarkUI {
       if (toggleIcon) {
         toggleIcon.className = 'fas fa-chevron-down';
       }
+      // The header is the only thing left on screen — repaint the digest so it
+      // is current the moment it becomes visible, not a tick later.
+      this.updateHeaderStatus();
       console.log('🔽 Benchmark interface collapsed');
     }
   }
@@ -1132,7 +1220,7 @@ class BenchmarkUI {
       checkbox.addEventListener('change', () => this.updateTestSelectionCount());
 
       const textDiv = document.createElement('div');
-      textDiv.innerHTML = `<strong style="display: block; font-size: 13px;">${test.id}</strong><span style="font-size: 11px; color: #666;">${desc}</span>`;
+      textDiv.innerHTML = `<strong style="display: block; font-size: 13px;">${this.formatTestLabel(test, test.id)}</strong><span style="font-size: 11px; color: #666;">${desc}</span>`;
 
       item.appendChild(checkbox);
       item.appendChild(textDiv);
@@ -1964,7 +2052,7 @@ class BenchmarkUI {
                 <div class="manual-test-header">
                     <h2 class="manual-test-title">
                         <i class="fas fa-hand-paper"></i>
-                        ${testData.testName}
+                        ${this.formatTestLabel(testData, testData.testName)}
                         <span class="test-category">${testData.category}</span>
                         <span class="test-complexity">${testData.complexity}</span>
                     </h2>
@@ -2287,6 +2375,12 @@ class BenchmarkUI {
       this.isRunning = true;
       this.startTime = Date.now(); // CRITICAL: Set startTime for elapsed timer
 
+      // A rerun starts from zero, so the collapsed header does not carry the
+      // previous run's tally forward. The total lands on the first progress
+      // callback, once the framework has counted the selected suites.
+      this.runStats = this.createEmptyRunStats();
+      this.setRunState('running');
+
       // Update UI
       document.getElementById('startBenchmark').disabled = true;
       document.getElementById('stopBenchmark').disabled = false;
@@ -2300,11 +2394,11 @@ class BenchmarkUI {
       this.elapsedTimeInterval = setInterval(() => {
         const elapsedTime = document.getElementById('elapsedTime');
         if (elapsedTime && this.startTime && this.isRunning) {
-          const elapsed = Date.now() - this.startTime;
-          const minutes = Math.floor(elapsed / 60000);
-          const seconds = Math.floor((elapsed % 60000) / 1000);
-          elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          elapsedTime.textContent = this.formatElapsed(Date.now() - this.startTime);
         }
+        // The header timer ticks off the same interval, so a collapsed
+        // interface still shows the run advancing between test callbacks.
+        if (this.isRunning) this.updateHeaderStatus();
       }, 1000); // Update every second
 
       console.log(
@@ -2367,6 +2461,9 @@ class BenchmarkUI {
     } finally {
       this.isRunning = false;
 
+      // A manual stop already moved the digest to 'stopped'; don't relabel it.
+      if (this.runStats?.state === 'running') this.setRunState('completed');
+
       // Clear elapsed time interval
       if (this.elapsedTimeInterval) {
         clearInterval(this.elapsedTimeInterval);
@@ -2394,6 +2491,7 @@ class BenchmarkUI {
     if (!this.isRunning) return;
 
     this.isRunning = false;
+    this.setRunState('stopped');
 
     // Clear elapsed time interval
     if (this.elapsedTimeInterval) {
@@ -2589,6 +2687,7 @@ class BenchmarkUI {
                 ...test.llmInteractionData,
                 testInfo: {
                   testId: test.testId,
+                  testNumber: test.testNumber,
                   testName: test.testName,
                   suiteId: test.suiteId,
                   score: test.score,
@@ -2622,6 +2721,7 @@ class BenchmarkUI {
                 },
                 testInfo: {
                   testId: test.testId,
+                  testNumber: test.testNumber,
                   testName: test.testName,
                   suiteId: test.suiteId,
                   score: test.score,
@@ -2729,6 +2829,7 @@ class BenchmarkUI {
       // Test context information
       testInfo: {
         testId: test.testId,
+        testNumber: test.testNumber,
         testName: test.testName,
         suiteId: test.suiteId,
         score: test.score,
@@ -2898,9 +2999,12 @@ class BenchmarkUI {
             interaction => `
             <div class="interaction">
                 <div class="interaction-header">
-                    <h3 style="margin: 0;">🧪 ${interaction.testInfo?.testName || interaction.testName}</h3>
+                    <h3 style="margin: 0;">🧪 ${this.formatTestLabel(
+                      interaction.testInfo?.testNumber ?? interaction.testNumber,
+                      interaction.testInfo?.testName || interaction.testName
+                    )}</h3>
                     <div style="font-size: 12px; opacity: 0.9;">
-                        Test ID: ${interaction.testInfo?.testId || interaction.testId} | 
+                        Test ID: ${interaction.testInfo?.testId || interaction.testId} |
                         Request ID: ${interaction.request?.requestId || 'N/A'} | 
                         Score: ${interaction.testInfo?.score || 'N/A'}/${interaction.testInfo?.maxScore || 100}
                     </div>
@@ -3617,8 +3721,8 @@ class BenchmarkUI {
       onProgress: (progress, suiteId, suiteResult) => {
         this.updateMainWindowProgress(progress, suiteId, suiteResult);
       },
-      onTestProgress: (progress, testId, testResult, suiteId) => {
-        this.updateMainWindowTestProgress(progress, testId, testResult, suiteId);
+      onTestProgress: (progress, testId, testResult, suiteId, testNumber) => {
+        this.updateMainWindowTestProgress(progress, testId, testResult, suiteId, testNumber);
       },
     };
 
@@ -3671,6 +3775,9 @@ class BenchmarkUI {
       console.log(`🏆 [UI Suite Update] Current suite updated to: ${suiteId}`);
     }
 
+    if (suiteId && this.runStats) this.runStats.currentSuite = suiteId;
+    this.updateHeaderStatus();
+
     // Per-test counting is already handled in updateMainWindowTestProgress via updateIndividualTestCount().
     // Do NOT accumulate suite-level stats here to avoid double-counting.
     if (suiteResult) {
@@ -3687,16 +3794,34 @@ class BenchmarkUI {
   }
 
   /**
+   * Format a test's stable suite number for display, e.g. "#12".
+   * Accepts a test/result object or a bare number, and returns '' when unnumbered.
+   */
+  formatTestNumber(testOrNumber) {
+    const number = typeof testOrNumber === 'number' ? testOrNumber : (testOrNumber?.testNumber ?? testOrNumber?.number);
+    return number ? `#${number}` : '';
+  }
+
+  /**
+   * Prefix a label with the test number, e.g. "#12 Set Working Directory".
+   */
+  formatTestLabel(testOrNumber, label) {
+    const number = this.formatTestNumber(testOrNumber);
+    return number ? `${number} ${label}` : String(label);
+  }
+
+  /**
    * Update test progress in main window with enhanced real-time tracking
    */
-  updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
+  updateMainWindowTestProgress(progress, testId, testResult, suiteId, testNumber) {
     const currentTest = document.getElementById('currentTest');
     const progressFill = document.getElementById('progressFill');
+    const testLabel = this.formatTestLabel(testNumber ?? testResult?.testNumber, testId);
 
     // Always update current test name when provided
     if (currentTest && testId) {
-      currentTest.textContent = testId || '-';
-      console.log(`🎯 [UI Test Update] Current test updated to: ${testId}`);
+      currentTest.textContent = testLabel || '-';
+      console.log(`🎯 [UI Test Update] Current test updated to: ${testLabel}`);
     }
 
     // Update progress bar with real-time test progress
@@ -3710,16 +3835,15 @@ class BenchmarkUI {
         progressPercentage.textContent = `${percentage.toFixed(1)}%`;
       }
 
-      console.log(`📊 [UI Test Progress] Real-time progress: ${percentage.toFixed(1)}% (Test: ${testId})`);
+      console.log(`📊 [UI Test Progress] Real-time progress: ${percentage.toFixed(1)}% (Test: ${testLabel})`);
     }
+
+    if (testId && this.runStats) this.runStats.currentTest = testLabel;
 
     // Update elapsed time
     const elapsedTime = document.getElementById('elapsedTime');
     if (elapsedTime && this.startTime) {
-      const elapsed = Date.now() - this.startTime;
-      const minutes = Math.floor(elapsed / 60000);
-      const seconds = Math.floor((elapsed % 60000) / 1000);
-      elapsedTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      elapsedTime.textContent = this.formatElapsed(Date.now() - this.startTime);
     }
 
     // Update individual test completion count ONLY when test completes (testResult is not null)
@@ -3727,18 +3851,27 @@ class BenchmarkUI {
     if (testResult && testResult.status !== 'running') {
       this.updateIndividualTestCount(testResult);
       console.log(
-        `✅ [UI Test Complete] Test ${testId} completed with status: ${testResult.status} (${testResult.success ? 'PASS' : 'FAIL'})`
+        `✅ [UI Test Complete] Test ${testLabel} completed with status: ${testResult.status} (${testResult.success ? 'PASS' : 'FAIL'})`
       );
     } else if (testResult === null) {
       // Test is starting - this is when we update the current test name
-      console.log(`🚀 [UI Test Start] Test ${testId} is starting...`);
+      console.log(`🚀 [UI Test Start] Test ${testLabel} is starting...`);
     }
+
+    this.updateHeaderStatus();
   }
 
   /**
    * Update individual test completion counts in real-time
    */
   updateIndividualTestCount(testResult) {
+    if (this.runStats) {
+      this.runStats.completed += 1;
+      if (testResult.success) this.runStats.passed += 1;
+      else this.runStats.failed += 1;
+      this.runStats.total = this.getRunTestTotal() || this.runStats.total;
+    }
+
     const completedElement = document.getElementById('completedTests');
     const passedElement = document.getElementById('passedTests');
     const failedElement = document.getElementById('failedTests');
@@ -3779,6 +3912,102 @@ class BenchmarkUI {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Collapsed-header run digest
+  //
+  // Collapsing the interface hides the progress panel, which is exactly when a
+  // long run is left unattended. The header line takes over that job: run state,
+  // progress, pass/fail tally, elapsed time, and the test currently in flight.
+  // ---------------------------------------------------------------------------
+
+  /** Blank digest, for a run that has not started yet. */
+  createEmptyRunStats() {
+    return {
+      state: 'idle',
+      completed: 0,
+      passed: 0,
+      failed: 0,
+      total: 0,
+      currentSuite: '',
+      currentTest: '',
+    };
+  }
+
+  /**
+   * How many tests the current run covers. The framework computes this from the
+   * selected suites once runAllBenchmarks() starts, so it is 0 until then.
+   */
+  getRunTestTotal() {
+    const framework = this.framework || this.benchmarkManager?.framework;
+    const total = Number(framework?.totalTestCount);
+    return Number.isFinite(total) && total > 0 ? total : 0;
+  }
+
+  /** How many tests are loaded across every suite — all the idle header can know. */
+  getLoadedTestTotal() {
+    const framework = this.framework || this.benchmarkManager?.framework;
+    if (typeof framework?.getTotalTestCount !== 'function') return 0;
+    const total = Number(framework.getTotalTestCount());
+    return Number.isFinite(total) && total > 0 ? total : 0;
+  }
+
+  /** Elapsed run time as mm:ss, matching the progress panel's timer. */
+  formatElapsed(ms) {
+    const elapsed = Math.max(0, Number(ms) || 0);
+    const minutes = Math.floor(elapsed / 60000);
+    const seconds = Math.floor((elapsed % 60000) / 1000);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  /** Move the run to a new state and repaint the header. */
+  setRunState(state) {
+    if (!this.runStats) this.runStats = this.createEmptyRunStats();
+    this.runStats.state = state;
+    this.updateHeaderStatus();
+  }
+
+  /** Render the run digest into the collapsed header. */
+  updateHeaderStatus() {
+    const statusEl = document.getElementById('benchmarkHeaderStatus');
+    if (!statusEl) return;
+
+    if (!this.runStats) this.runStats = this.createEmptyRunStats();
+    const stats = this.runStats;
+
+    const chips = {
+      idle: { label: 'Idle', icon: 'fa-circle' },
+      running: { label: 'Running', icon: 'fa-spinner fa-spin' },
+      completed: { label: 'Completed', icon: 'fa-check-circle' },
+      stopped: { label: 'Stopped', icon: 'fa-stop-circle' },
+    };
+    const state = chips[stats.state] ? stats.state : 'idle';
+    const parts = [
+      `<span class="status-chip is-${state}"><i class="fas ${chips[state].icon}"></i>${chips[state].label}</span>`,
+    ];
+
+    const total = this.getRunTestTotal() || stats.total;
+
+    if (state === 'idle' && stats.completed === 0) {
+      // Nothing has run yet, so report what is loaded instead of a 0/0 tally.
+      const loaded = this.getLoadedTestTotal();
+      parts.push(loaded ? `${loaded} tests loaded` : 'Not started');
+    } else {
+      const percent = total ? Math.round((stats.completed / total) * 100) : null;
+      parts.push(`${stats.completed}${total ? `/${total}` : ''}${percent === null ? '' : ` (${percent}%)`}`);
+      parts.push(`<span class="status-pass">✅ ${stats.passed}</span>`);
+      parts.push(`<span class="status-fail">❌ ${stats.failed}</span>`);
+      if (this.startTime) parts.push(`⏱ ${this.formatElapsed(Date.now() - this.startTime)}`);
+      if (state === 'running' && stats.currentTest) {
+        // escapeHtml() covers the text node; the title attribute needs the
+        // quote escaped as well or a test id could close it early.
+        const label = this.escapeHtml(stats.currentTest);
+        parts.push(`<span class="status-current" title="${label.replace(/"/g, '&quot;')}">▶ ${label}</span>`);
+      }
+    }
+
+    statusEl.innerHTML = parts.join('<span class="status-sep">·</span>');
+  }
+
   /**
    * Reset progress counters for new benchmark run
    */
@@ -3814,6 +4043,10 @@ class BenchmarkUI {
 
     // Reset startTime to current time
     this.startTime = Date.now();
+
+    // Keep the collapsed-header digest in step with the panel it mirrors.
+    this.runStats = this.createEmptyRunStats();
+    this.updateHeaderStatus();
 
     console.log(
       '🔄 [UI Reset] Progress counters reset for new benchmark run, startTime set to:',
@@ -4023,7 +4256,7 @@ class BenchmarkUI {
                               .map(
                                 prompt => `
                                 <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
-                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${prompt.testName || prompt.testId || 'Unknown prompt'}</span>
+                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.formatTestLabel(prompt, prompt.testName || prompt.testId || 'Unknown prompt')}</span>
                                     <span>${this.formatBenchmarkInteger(prompt.selectedToolCount)} tools</span>
                                     <span>${this.formatBenchmarkInteger(prompt.estimatedTokensSaved)} tokens saved</span>
                                 </div>
@@ -4116,9 +4349,10 @@ class BenchmarkUI {
                               .map(
                                 test => `
                                 <div style="padding: 12px; margin: 8px 0; border-radius: 6px; background: ${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid ${test.success ? '#28a745' : '#dc3545'};">
-                                    <div style="font-weight: bold; margin-bottom: 5px;">${test.testName}</div>
+                                    <div style="font-weight: bold; margin-bottom: 5px;">${this.formatTestLabel(test, test.testName)}</div>
                                     <div style="font-size: 13px; color: var(--text-secondary);">
-                                        Score: ${test.score}/${test.maxScore} | 
+                                        ${test.testId} |
+                                        Score: ${test.score}/${test.maxScore} |
                                         Duration: ${test.duration}ms | 
                                         Status: ${test.status}
                                     </div>
@@ -4353,6 +4587,7 @@ class BenchmarkUI {
                                 <option value="180000">3 minutes</option>
                                 <option value="240000">4 minutes</option>
                                 <option value="300000">5 minutes</option>
+                                <option value="600000">10 minutes</option>
                             </select>
                         </div>
                     </div>
@@ -4653,6 +4888,7 @@ class BenchmarkUI {
                                         ...test.llmInteractionData,
                                         testInfo: {
                                             testId: test.testId,
+                                            testNumber: test.testNumber,
                                             testName: test.testName,
                                             suiteId: test.suiteId,
                                             score: test.score,
@@ -4686,6 +4922,7 @@ class BenchmarkUI {
                                         },
                                         testInfo: {
                                             testId: test.testId,
+                                            testNumber: test.testNumber,
                                             testName: test.testName,
                                             suiteId: test.suiteId,
                                             score: test.score,
@@ -4791,6 +5028,7 @@ class BenchmarkUI {
                     // Test context information
                     testInfo: {
                         testId: test.testId,
+                        testNumber: test.testNumber,
                         testName: test.testName,
                         suiteId: test.suiteId,
                         score: test.score,
@@ -5081,7 +5319,7 @@ class BenchmarkUI {
                         stopOnError: document.getElementById('stopOnError').checked,
                         timeout: parseInt(document.getElementById('testTimeout').value),
                         onProgress: (progress, suiteId, suiteResult) => this.updateMainWindowProgress(progress, suiteId, suiteResult),
-                        onTestProgress: (progress, testId, testResult, suiteId) => this.updateMainWindowTestProgress(progress, testId, testResult, suiteId)
+                        onTestProgress: (progress, testId, testResult, suiteId, testNumber) => this.updateMainWindowTestProgress(progress, testId, testResult, suiteId, testNumber)
                     };
 
                     console.log('🧪 Starting benchmark:', options);
@@ -5137,9 +5375,28 @@ class BenchmarkUI {
                 if (currentSuite) currentSuite.textContent = suiteId || '-';
             }
 
-            updateTestProgress(testId) {
+            updateTestProgress(testId, testNumber) {
                 const currentTest = document.getElementById('currentTest');
-                if (currentTest) currentTest.textContent = testId || '-';
+                if (currentTest) currentTest.textContent = this.formatTestLabel(testNumber, testId) || '-';
+            }
+
+            /**
+             * Format a test's stable suite number for display, e.g. "#12".
+             * Accepts a test/result object or a bare number, and returns '' when unnumbered.
+             */
+            formatTestNumber(testOrNumber) {
+                const number = typeof testOrNumber === 'number'
+                    ? testOrNumber
+                    : (testOrNumber?.testNumber ?? testOrNumber?.number);
+                return number ? '#' + number : '';
+            }
+
+            /**
+             * Prefix a label with the test number, e.g. "#12 Set Working Directory".
+             */
+            formatTestLabel(testOrNumber, label) {
+                const number = this.formatTestNumber(testOrNumber);
+                return number ? number + ' ' + label : String(label);
             }
 
             updateModelInfo() {
@@ -5235,13 +5492,13 @@ class BenchmarkUI {
                 }
             }
 
-            updateMainWindowTestProgress(progress, testId, testResult, suiteId) {
+            updateMainWindowTestProgress(progress, testId, testResult, suiteId, testNumber) {
                 const currentTest = document.getElementById('currentTest');
                 const progressFill = document.getElementById('progressFill');
                 const progressPercentage = document.getElementById('progressPercentage');
 
                 if (currentTest && testId) {
-                    currentTest.textContent = testId;
+                    currentTest.textContent = this.formatTestLabel(testNumber ?? testResult?.testNumber, testId);
                 }
 
                 if (progressFill && typeof progress === 'number') {
@@ -5387,7 +5644,7 @@ class BenchmarkUI {
                                 <div style="margin-top: 10px; display: grid; gap: 8px;">
                                     \${topPrompts.slice(0, 5).map(prompt => \`
                                         <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px; background: var(--bg-secondary); border-radius: 4px;">
-                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${prompt.testName || prompt.testId || 'Unknown prompt'}</span>
+                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">\${this.formatTestLabel(prompt, prompt.testName || prompt.testId || 'Unknown prompt')}</span>
                                             <span>\${this.formatBenchmarkInteger(prompt.selectedToolCount)} tools</span>
                                             <span>\${this.formatBenchmarkInteger(prompt.estimatedTokensSaved)} tokens saved</span>
                                         </div>
@@ -5468,8 +5725,8 @@ class BenchmarkUI {
                                     <div style="padding: 15px; display: none;">
                                         \${filteredTests.map(test => \`
                                             <div style="padding: 8px; margin: 5px 0; border-radius: 4px; background: \${test.success ? '#d4edda' : '#f8d7da'}; border-left: 4px solid \${test.success ? '#28a745' : '#dc3545'};">
-                                                <strong>\${test.testName}</strong><br>
-                                                <small>Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms</small>
+                                                <strong>\${this.formatTestLabel(test, test.testName)}</strong><br>
+                                                <small>\${test.testId} | Score: \${test.score}/\${test.maxScore} | Duration: \${test.duration}ms</small>
                                                 \${test.errors.length > 0 ? \`<br><small style="color: #dc3545;">Errors: \${test.errors.join(', ')}</small>\` : ''}
                                             </div>
                                         \`).join('')}

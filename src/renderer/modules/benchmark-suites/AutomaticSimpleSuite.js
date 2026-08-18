@@ -11,7 +11,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
     this.description = 'Simple tests with automatic evaluation - Basic genomic analysis operations and system setup';
     this.framework = null;
     this.defaultDirectory = null; // Will be set when framework provides configuration
-    this.tests = this.initializeTests();
+    this.tests = this.numberTests(this.initializeTests());
   }
 
   getName() {
@@ -35,7 +35,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       console.log(`📁 AutomaticSimpleSuite default directory set to: ${this.defaultDirectory}`);
 
       // Regenerate tests with updated paths
-      this.tests = this.initializeTests();
+      this.tests = this.numberTests(this.initializeTests());
     }
   }
 
@@ -291,7 +291,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'navigate_to_position',
           parameters: {
-            chromosome: '<current_chromosome>',
             position: 100000,
           },
         },
@@ -311,7 +310,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'navigate_to_position',
           parameters: {
-            chromosome: '<current_chromosome>',
             position: 3500000,
           },
         },
@@ -331,7 +329,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'navigate_to_position',
           parameters: {
-            chromosome: '<current_chromosome>',
             start: 50000,
             end: 75000,
           },
@@ -371,7 +368,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'zoom_in',
           parameters: {
-            factor: 2,
+            factor: this.schemaDefault(2),
           },
         },
         maxScore: 5,
@@ -409,7 +406,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'zoom_out',
           parameters: {
-            factor: 2,
+            factor: this.schemaDefault(2),
           },
         },
         maxScore: 5,
@@ -544,7 +541,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           parameters: {
             sequence:
               'TCAAAATAGCCCAAGTTGCCCGGTCATAAGTGTAGCAAAATTATCCTCAATAAAAGGGAGTATTCCCTCCGCCACGGGTTGTAGCTGGCGGGTCAG',
-            include_statistics: true,
           },
         },
         maxScore: 5,
@@ -603,10 +599,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         instruction: 'Perform genome-wide codon usage analysis to identify codon preferences and biases.',
         expectedResult: {
           tool_name: 'genome_codon_usage_analysis',
-          parameters: {
-            featureType: 'CDS',
-            minLength: 300,
-          },
+          parameters: {},
         },
         maxScore: 5,
         bonusScore: 1,
@@ -626,7 +619,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'get_sequence',
           parameters: {
-            chromosome: '<current_chromosome>',
             start: 100000,
             end: 101000,
           },
@@ -688,7 +680,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'search_features',
           parameters: {
             query: 'DNA Polymerase',
-            caseSensitive: false,
           },
         },
         maxScore: 5,
@@ -727,7 +718,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'search_sequence_motif',
           parameters: {
             motif: 'TATAAA',
-            strand: 'both',
+            strand: this.schemaDefault('both'),
           },
         },
         maxScore: 5,
@@ -748,9 +739,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'export_fasta_sequence',
           parameters: {
-            format: 'fasta',
-            includeDescription: true,
-            filePath: this.buildFilePath('exported_files/exported_sequences.fasta'),
+            filename: this.buildFilePath('exported_files/exported_sequences.fasta'),
           },
         },
         maxScore: 5,
@@ -769,9 +758,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'export_genbank_format',
           parameters: {
-            includeSequence: true,
-            includeAnnotations: true,
-            filePath: this.buildFilePath('exported_files/exported_data.gbk'),
+            filename: this.buildFilePath('exported_files/exported_data.gbk'),
           },
         },
         maxScore: 5,
@@ -790,9 +777,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'export_gff_annotations',
           parameters: {
-            version: 'gff3',
-            includeSequence: false,
-            filePath: this.buildFilePath('exported_files/exported_annotations.gff3'),
+            filename: this.buildFilePath('exported_files/exported_annotations.gff3'),
           },
         },
         maxScore: 5,
@@ -811,9 +796,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'export_bed_format',
           parameters: {
-            trackName: 'exported_features',
-            includeScore: true,
-            filePath: this.buildFilePath('exported_files/exported_features.bed'),
+            filename: this.buildFilePath('exported_files/exported_features.bed'),
           },
         },
         maxScore: 5,
@@ -832,9 +815,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'export_cds_fasta',
           parameters: {
-            sequenceType: 'cds',
-            includeHeaders: true,
-            filePath: this.buildFilePath('exported_files/exported_cds.fasta'),
+            filename: this.buildFilePath('exported_files/exported_cds.fasta'),
           },
         },
         maxScore: 5,
@@ -853,10 +834,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'export_protein_fasta',
           parameters: {
-            sequenceType: 'protein',
-            includeHeaders: true,
-            translate: true,
-            filePath: this.buildFilePath('exported_files/exported_proteins.fasta'),
+            filename: this.buildFilePath('exported_files/exported_proteins.fasta'),
           },
         },
         maxScore: 5,
@@ -875,10 +853,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'export_current_view_fasta',
           parameters: {
-            format: 'fasta',
-            currentViewOnly: true,
-            includeCoordinates: true,
-            filePath: this.buildFilePath('exported_files/exported_region.fasta'),
+            filename: this.buildFilePath('exported_files/exported_region.fasta'),
           },
         },
         maxScore: 5,
@@ -1044,8 +1019,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'paste_sequence',
           parameters: {
             chromosome: '<current_chromosome>',
-            start: 600000,
-            end: 600000,
+            position: 600000,
           },
         },
         maxScore: 5,
@@ -1109,7 +1083,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
             chromosome: '<current_chromosome>',
             start: 400000,
             end: 400200,
-            newSequence: 'GCTAGCTAGCTAGCTA',
+            sequence: 'GCTAGCTAGCTAGCTA',
           },
         },
         maxScore: 5,
@@ -1150,9 +1124,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'execute_actions',
           parameters: {
-            chromosome: '<current_chromosome>',
-            start: 100000,
-            end: 600000,
+            filename: this.buildFilePath('exported_files/edited_genome_sequence.gbk'),
+            auto_save: true,
           },
         },
         maxScore: 5,
@@ -1170,11 +1143,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         instruction: 'Get the current list of sequence editing actions and their status.',
         expectedResult: {
           tool_name: 'get_action_list',
-          parameters: {
-            chromosome: '<current_chromosome>',
-            start: 100000,
-            end: 600000,
-          },
+          parameters: {},
         },
         maxScore: 5,
         bonusScore: 1,
@@ -1238,6 +1207,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'create_annotation',
           parameters: {
+            chromosome: '<current_chromosome>',
             start: 500000,
             end: 501500,
             name: 'fakG',
@@ -1296,7 +1266,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'get_annotation',
           parameters: {
-            name: 'lacZ',
+            identifier: 'lacZ',
           },
         },
         maxScore: 5,
@@ -1315,8 +1285,10 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'update_annotation',
           parameters: {
-            name: 'fakG',
-            description: 'Updated test gene annotation',
+            identifier: 'fakG',
+            updates: {
+              description: 'Updated fakG gene annotation',
+            },
           },
         },
         maxScore: 5,
@@ -1335,8 +1307,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'delete_annotation',
           parameters: {
-            name: 'fakG',
-            confirm: true,
+            identifier: 'fakG',
           },
         },
         maxScore: 5,
@@ -1376,7 +1347,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'gc_content',
+            track_name: 'gc_content',
             visible: false,
           },
         },
@@ -1396,7 +1367,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'gc_content',
+            track_name: 'gc_content',
             visible: true,
           },
         },
@@ -1416,7 +1387,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'genes',
+            track_name: 'genes',
             visible: false,
           },
         },
@@ -1436,7 +1407,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'genes',
+            track_name: 'genes',
             visible: true,
           },
         },
@@ -1456,7 +1427,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'sequence',
+            track_name: 'sequence',
             visible: false,
           },
         },
@@ -1476,7 +1447,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'sequence',
+            track_name: 'sequence',
             visible: true,
           },
         },
@@ -1496,7 +1467,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'variants',
+            track_name: 'variants',
             visible: false,
           },
         },
@@ -1516,7 +1487,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'variants',
+            track_name: 'variants',
             visible: true,
           },
         },
@@ -1536,7 +1507,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'reads',
+            track_name: 'reads',
             visible: false,
           },
         },
@@ -1556,7 +1527,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'reads',
+            track_name: 'reads',
             visible: true,
           },
         },
@@ -1576,7 +1547,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'proteins',
+            track_name: 'proteins',
             visible: true,
           },
         },
@@ -1596,7 +1567,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'proteins',
+            track_name: 'proteins',
             visible: false,
           },
         },
@@ -1616,7 +1587,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'primers',
+            track_name: 'primers',
             visible: true,
           },
         },
@@ -1636,7 +1607,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'primers',
+            track_name: 'primers',
             visible: false,
           },
         },
@@ -1656,7 +1627,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'actions',
+            track_name: 'actions',
             visible: true,
           },
         },
@@ -1676,7 +1647,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'actions',
+            track_name: 'actions',
             visible: false,
           },
         },
@@ -1696,7 +1667,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'wigTracks',
+            track_name: 'wigTracks',
             visible: false,
           },
         },
@@ -1716,7 +1687,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'wigTracks',
+            track_name: 'wigTracks',
             visible: true,
           },
         },
@@ -1736,7 +1707,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'blast',
+            track_name: 'blast',
             visible: true,
           },
         },
@@ -1756,7 +1727,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'blast',
+            track_name: 'blast',
             visible: false,
           },
         },
@@ -1778,7 +1749,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'get_nearby_features',
           parameters: {
             position: 500000,
-            range: 5000,
+            distance: this.schemaDefault(5000),
           },
         },
         maxScore: 5,
@@ -1800,7 +1771,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'translate_dna',
           parameters: {
-            sequence: 'ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG',
+            dna: 'ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG',
           },
         },
         maxScore: 5,
@@ -1876,6 +1847,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_settings_modal',
           parameters: {
+            modal_name: 'general_settings',
             action: 'open',
           },
         },
@@ -2080,6 +2052,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         maxScore: 5,
         bonusScore: 0,
         timeout: 60000,
+        // Scored on tool selection, not on the side effect: downloading from
+        // NCBI depends on external network reachability, which is unrelated to
+        // what the test asserts (the model picks the download tool with the
+        // exact URL). Same policy as the online-BLAST call-only tests.
+        assertCallOnly: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
       {
@@ -2093,7 +2070,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'view_markdown_file',
           parameters: {
-            fileName: 'README.md',
+            filePath: this.buildFilePath('README.md'),
           },
         },
         maxScore: 5,
@@ -2170,7 +2147,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'blast_search',
           parameters: {
             sequence: 'ATGAAAGCGCTGAAAGCGCTG',
-            blastType: 'blastn',
+            blastType: this.schemaDefault('blastn'),
             database: 'nt',
             maxTargets: 5,
           },
@@ -2179,6 +2156,12 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         bonusScore: 1,
         timeout: 120000,
         earlyReturn: true,
+        // Scored on tool selection, not on the NCBI side effect: blast_search
+        // against nt is an online call that can be blocked by the user's
+        // network (NCBI returns 403/empty replies from some regions), which
+        // previously hung the test until the global timeout. Same policy as
+        // the other online-BLAST and internet-download call-only tests.
+        assertCallOnly: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
       },
 
@@ -2197,8 +2180,8 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
             chromosome: '<current_chromosome>',
             start: 100000,
             end: 100400,
-            blastType: 'blastn',
-            database: 'nt',
+            blastType: this.schemaDefault('blastn'),
+            database: this.schemaDefault('nt'),
           },
         },
         maxScore: 5,
@@ -2342,7 +2325,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'clear_tasks',
           parameters: {
-            confirm: true,
+            confirm: this.schemaDefault(true),
           },
         },
         maxScore: 5,
@@ -2578,10 +2561,10 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'capture_screenshot',
           parameters: {
-            target: 'tracks',
             mode: 'visible',
             filePath: this.buildFilePath('exported_files/benchmark_tracks.png'),
-            format: 'png',
+            format: this.schemaDefault('png'),
+            ...this.anyOfParameters({ target: 'visible_tracks' }, { target: 'tracks' }),
           },
         },
         maxScore: 5,
@@ -2689,7 +2672,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           'List up to 10 gene-associated annotation candidates with quality scores at or below 70, ranked lowest quality first.',
         expectedResult: {
           tool_name: 'list_annotation_quality_candidates',
-          parameters: { maximumQualityScore: 70, sortBy: 'quality', limit: 10 },
+          parameters: { maximumQualityScore: 70, sortBy: this.schemaDefault('quality'), limit: 10 },
         },
         maxScore: 5,
         bonusScore: 1,
@@ -2706,7 +2689,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         instruction: 'List the latest durable annotation research record for each target.',
         expectedResult: {
           tool_name: 'list_annotation_research_history',
-          parameters: { latestPerTarget: true, limit: 100 },
+          parameters: { latestPerTarget: true },
         },
         maxScore: 5,
         bonusScore: 1,
@@ -2728,13 +2711,12 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'advanced_uniprot_search',
           parameters: {
             query_fields: {
-              gene_name: 'lacZ',
+              protein_name: 'beta-galactosidase',
               organism: 'Escherichia coli',
             },
             filters: {
               reviewed_only: true,
             },
-            max_results: 5,
           },
         },
         maxScore: 5,
@@ -2755,7 +2737,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'search_interpro_entry',
           parameters: {
             search_term: 'beta-galactosidase',
-            max_results: 5,
           },
         },
         maxScore: 5,
@@ -2777,7 +2758,6 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           parameters: {
             interpro_id: 'IPR000322',
             output_format: 'minimal',
-            protein_limit: 5,
           },
         },
         maxScore: 5,
@@ -2798,7 +2778,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'fetch_protein_structure',
           parameters: {
             pdb_id: '1TUP',
-            include_ligands: true,
+            include_ligands: this.schemaDefault(true),
           },
         },
         maxScore: 5,
@@ -2859,7 +2839,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'translate_sequence',
           parameters: {
             sequence: 'ATGAAATAA',
-            reading_frame: 1,
+            reading_frame: this.schemaDefault(1),
           },
         },
         maxScore: 5,
@@ -2880,7 +2860,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           parameters: {
             query: 'Eco',
             minRecognitionLength: 6,
-            commercialOnly: true,
+            commercialOnly: this.schemaDefault(true),
           },
         },
         maxScore: 5,

@@ -147,8 +147,13 @@
   align-self: flex-end;
 }
 
-.assistant-message {
-  align-self: flex-start;
+/* Only the user's turn is a right-aligned bubble with an avatar. Everything the
+ * assistant emits (answers, Agent Activity, agent cards) drops the avatar and
+ * runs the full width of the panel — the content is dense enough to need it. */
+.assistant-message,
+.system-message {
+  align-self: stretch;
+  max-width: 100%;
 }
 
 .message-content {
@@ -171,11 +176,6 @@
 
 .user-message .message-icon {
   background: #667eea;
-  color: white;
-}
-
-.assistant-message .message-icon {
-  background: #10b981;
   color: white;
 }
 
@@ -444,22 +444,20 @@
 }
 
 .thinking-process {
-  border-left: 4px solid #667eea !important;
   background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%) !important;
   margin: 4px 0 !important;
   padding: 4px 8px !important;
-  border-radius: 0 10px 10px 0 !important;
-  max-width: 90% !important;
+  border-radius: 10px !important;
+  max-width: 100% !important;
 }
 
 .thinking-process.thinking-completed {
-  border-left: 4px solid #10b981 !important;
   background: linear-gradient(135deg, #f0fdf4 0%, #e6fffa 100%) !important;
   opacity: 0.9;
   margin: 4px 0 !important;
   padding: 4px 8px !important;
-  border-radius: 0 10px 10px 0 !important;
-  max-width: 90% !important;
+  border-radius: 10px !important;
+  max-width: 100% !important;
 }
 
 .thinking-completed .thinking-header {
@@ -468,11 +466,6 @@
 
 .thinking-completed .thinking-header i {
   color: #10b981 !important;
-}
-
-.thinking-completed .message-icon {
-  background: #10b981 !important;
-  color: white;
 }
 
 .thinking-text {
@@ -520,6 +513,17 @@
   transition: transform 0.15s ease;
 }
 
+/* Run state (spinner → check / warning). Lives inline in the header now that the
+ * panel has no avatar column. */
+.activity-status {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.thinking-completed .thinking-header .activity-status {
+  color: #10b981 !important;
+}
+
 .activity-title {
   flex-shrink: 0;
 }
@@ -542,17 +546,13 @@
 
 /* A run that ended with a failing tool reads as a warning, not a success. */
 .thinking-process.thinking-completed.activity-failed {
-  border-left-color: #f59e0b !important;
   background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
 }
 
 .thinking-completed.activity-failed .thinking-header,
-.thinking-completed.activity-failed .thinking-header i {
+.thinking-completed.activity-failed .thinking-header i,
+.thinking-completed.activity-failed .thinking-header .activity-status {
   color: #b45309 !important;
-}
-
-.thinking-completed.activity-failed .message-icon {
-  background: #f59e0b !important;
 }
 
 /* Per-round groups inside the panel. */
@@ -603,7 +603,7 @@
 /* Fix message container for thinking process */
 .thinking-process.message {
   margin: 4px 0 !important;
-  max-width: 90% !important;
+  max-width: 100% !important;
 }
 
 .thinking-process.message .message-content {
@@ -612,24 +612,9 @@
   gap: 6px !important;
 }
 
-.thinking-process.message .message-icon {
-  margin-top: 2px !important;
-  width: 22px !important;
-  height: 22px !important;
-  font-size: 11px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
 .thinking-process.message .message-text {
   padding: 0 !important;
   margin: 0 !important;
-}
-
-.thinking-process .message-icon {
-  background: #667eea;
-  color: white;
 }
 
 .thinking-timestamp {

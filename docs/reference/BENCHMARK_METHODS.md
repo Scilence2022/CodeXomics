@@ -6,37 +6,55 @@ We developed a comprehensive benchmark framework to systematically evaluate the 
 
 ## Benchmark Architecture
 
-The benchmark system was implemented as a modular framework integrated into the CodeXomics platform, consisting of three primary components: the test execution engine, the evaluation module, and the reporting system. The test execution engine manages the interaction between test instructions and the LLM, capturing detailed execution data across multiple function calling rounds. The evaluation module implements a priority-based scoring system that assesses tool selection accuracy, parameter correctness, and task completion rates. The reporting system aggregates results and generates comprehensive performance metrics with statistical analysis.
+The benchmark system is implemented as a modular framework integrated into CodeXomics, consisting of the test execution engine, strict automatic evaluator, and reporting system. The execution engine captures request-scoped calls and results across multiple function-calling rounds. The automatic evaluator assesses retrieval coverage, exact tool sequence, argument correctness, registered JSON Schema validity, and execution success. The reporting system aggregates these results without treating natural-language claims as execution evidence.
 
 ## Test Suite Design
 
-We designed four distinct test suites to evaluate LLM performance across different complexity levels and task categories. The Automatic Simple Suite contains 143 basic function calling tests targeting individual genomic operations such as gene search, sequence retrieval, and navigation tasks. Each test specifies a clear instruction, expected tool name, required parameters, and maximum score. The Automatic Complex Suite extends this with 29 multi-step workflow tests that require coordinated execution of multiple tools, such as loading genome files followed by annotation analysis. The Manual Suite incorporates 23 tests requiring human verification of subjective qualities like user interface responsiveness and result presentation. Finally, the Manual Complex Suite combines elements from all categories to provide holistic performance assessment across 15 diverse genomic analysis scenarios.
+The production tool-calling evaluation covered here contains 172 cases: 143 Automatic Simple tests and 29 Automatic Complex tests. The simple suite targets individual genomic operations such as gene search, sequence retrieval, and navigation. The complex suite covers multi-step workflows and validates every required step in order. Manual suites are outside this evaluation and training-data boundary.
 
 ## Test Execution Protocol
 
-For each test case, the system first establishes a controlled testing environment by configuring the LLM provider, setting timeout parameters (default 120 seconds), and initializing the function calling context. The test instruction is then transmitted to the LLM through the ChatManager interface, which implements a multi-round function calling loop with a maximum of three iterations per test. During execution, the system captures comprehensive logging data including console outputs, function call detection events, tool execution records, and timing metrics. This logging infrastructure employs a custom console.log override that intercepts and stores all debug messages while preserving normal console functionality, ensuring complete traceability of the LLM's decision-making process.
+For each case, the system establishes a request-scoped execution context, applies the configured timeout, retrieves at most 24 high-recall candidate tools in benchmark mode, and sends their strict JSON Schemas through the provider's native function-calling protocol. Benchmark requests use temperature 0, disable provider fallback and streaming, and retain the configured multi-round execution limit. Logs remain available for diagnosis, but only the current request's structured calls and execution results are admissible scoring evidence.
 
 ## Multi-Round Tool Detection
 
-A critical innovation in our framework is the multi-round tool detection mechanism, which addresses the challenge of accurately identifying tool calls across iterative LLM interactions. The system implements a dual-path detection strategy to ensure robust tool identification. The primary path extracts tool calls from captured console logs by parsing messages matching the pattern "Tools to execute: ['tool_name']", which are emitted during the ChatManager's execution loop. These log entries are associated with specific round numbers through temporal correlation with "FUNCTION CALL ROUND X/Y" markers, allowing precise attribution of each tool call to its execution round.
-
-To ensure reliability in cases where log capture may be incomplete, we implemented a fallback mechanism that reconstructs round-by-round tool usage from the executionData structure maintained by the ChatManager. This structure records all successfully executed function calls with their associated round numbers, tool names, parameters, and timestamps. When the primary log-based extraction yields empty results despite evidence of tool execution in the executionData, the system automatically reconstructs the toolCallHistory by grouping function calls according to their round attributes. This dual-path approach guarantees accurate tool detection with greater than 99% reliability across diverse test scenarios.
+A request may contain several function-calling rounds. `ChatManager` records each submitted call, its arguments, round, and execution result in request-local execution data. The evaluator consumes that structured record directly. Console logs and final-answer text may help debugging, but cannot create or upgrade a score.
 
 ## Evaluation Methodology
 
-The evaluation process employs a priority-based scoring system that examines multiple evidence sources in hierarchical order. At the highest priority, the system consults the Tool Execution Tracker, which maintains authoritative records of all tool invocations with their completion status. If the tracker confirms successful execution of the expected tool within the test timeout window, the system immediately awards full points without further analysis. This ensures that actual execution evidence takes precedence over indirect indicators.
+The in-app benchmark scores with the **task-completion-execution** tier: it
+asks whether the observed plan completed the task, not whether it matched one
+hand-written oracle byte for byte. An automatic case passes only when all of
+the following hold:
 
-When tracker data is unavailable or inconclusive, the evaluation proceeds to examine the LLM's response text for explicit success patterns such as "tool execution completed successfully" or "file loaded successfully". These patterns indicate successful task completion even when tool names may differ from expectations due to LLM flexibility in achieving the same outcome through alternative approaches. The third priority level analyzes the structured tool call data extracted from the multi-round detection system, verifying whether the expected tool appears in any of the three possible execution rounds. This multi-round checking is essential because tools may be called in different rounds depending on conversation flow and LLM decision-making strategies.
+1. The current request produced an authoritative structured tool call.
+2. Every expected capability is covered by a matching or explicitly equivalent
+   tool; step order is free because workflows often have several valid orders.
+3. Every expected concrete argument matches, or the call uses a
+   schema-documented alternative key (for example `navigate_to_position`
+   accepts either `position` or a start-only call); omitted schema defaults
+   remain valid.
+4. Every call satisfies the current registered JSON Schema.
+5. Every expected call completed successfully, except tests explicitly marked
+   call-only.
+6. Extra calls are tolerated when they are read-only, another instance of a
+   required capability, or the documented follow-up of a required workflow
+   step (for example `execute_actions` after a queued edit, or
+   `export_genbank_format` repeating the file `execute_actions` already
+   writes). Other unexpected state-changing calls still fail.
 
-Parameter validation constitutes an additional dimension of evaluation, where the system compares extracted parameters against expected values with tolerance for semantic equivalence. For instance, when a test expects a "position" parameter but the LLM provides "start" and "end" coordinates, the system verifies that the position falls within the specified range rather than demanding exact parameter name matching. This flexible parameter validation accounts for legitimate variations in how genomic operations can be specified while maintaining scientific correctness.
+Text mentions, inferred calls, stale tracker entries, and debug-log matches earn no credit. Failed cases may receive diagnostic partial scores, but the pass flag remains strict.
 
-Two further rules keep parameter validation aligned with how models legitimately vary. Parameters whose expected value merely restates the tool schema's own default are declared with `schemaDefault(value)`: models routinely omit them, the tool applies the identical value, and the run is therefore scored as correct whether the parameter is sent or not — while an explicitly wrong value still fails. Fuzzy string comparison is likewise restricted to long values such as file paths and sequences, because on short enumerated values it is misleading: "blastp" is 83% similar to "blastn" yet denotes a different search, so short values must match exactly.
+The stricter **native-function-contract** and **real-tool-execution** tiers
+remain available as diagnostics (exact sequence, exact argument keys, no
+unexpected calls) and are what the offline audit harness reports before the
+task-completion rescore.
 
 ## Scoring and Statistical Analysis
 
-Each test is assigned a maximum score based on task complexity, ranging from 5 points for simple single-tool operations to 15 points for complex multi-tool workflows. The scoring algorithm allocates points proportionally based on multiple factors including correct tool selection (60% of total score), parameter accuracy (30%), and successful execution (10%). Tests that invoke additional relevant tools beyond the minimum requirements can earn bonus points up to 20% of the base score, incentivizing comprehensive problem-solving approaches.
+Diagnostic partial scores never determine the pass flag. Native-contract diagnostics weight expected tool coverage at 45%, arguments at 35%, and Schema validity at 20%. Real-execution diagnostics weight tool coverage at 35%, arguments at 25%, Schema validity at 15%, observed execution at 10%, and successful execution at 15%. A test only passes when every strict condition for its assessment tier succeeds. Unexpected calls cannot earn bonuses.
 
-Aggregate performance metrics are calculated at the suite level and overall benchmark level. The success rate represents the percentage of tests achieving at least 60% of maximum possible points, while the average score provides a continuous performance measure. Statistical significance is assessed using paired t-tests when comparing performance across different LLM models or configuration parameters, with p-values less than 0.05 considered statistically significant. Confidence intervals (95%) are computed for all reported metrics using bootstrap resampling with 1000 iterations to account for variance in LLM responses.
+Aggregate performance metrics are calculated at the suite and overall levels. Strict accuracy is the percentage of tests whose pass flag is true; it is not a threshold over partial score. Average partial score remains a diagnostic measure and must be reported separately from strict accuracy. Contract-only and real-execution results are separate assessment tiers and must not be combined into one accuracy figure.
 
 ## Quality Control and Validation
 
@@ -52,7 +70,7 @@ A particularly innovative feature of the interface is the round-by-round tool vi
 
 ## Reproducibility and Data Management
 
-All benchmark configurations, test definitions, and evaluation criteria are stored in structured YAML files within the tools_registry directory, ensuring complete reproducibility of benchmark runs. Each test execution generates a comprehensive data package including the original instruction, LLM response, execution logs, evaluation details, and final scores. These packages are serialized to JSON format and stored with timestamps, enabling longitudinal analysis of LLM performance over time and across different model versions.
+Automatic benchmark definitions are JavaScript objects in `src/renderer/modules/benchmark-suites/AutomaticSimpleSuite.js` and `AutomaticComplexSuite.js`. Tool contracts are versioned in `tools_registry/`, and the generated registry hash is recorded with dataset and prompt metadata. Each execution package includes the instruction, selected-tool set, structured calls, execution summaries, strict evaluation details, and timing information.
 
 The benchmark framework supports both automated batch execution and interactive single-test modes, accommodating different research workflows. Automated execution processes entire test suites sequentially with configurable delays between tests to prevent resource contention, while interactive mode allows researchers to execute individual tests with detailed real-time logging for debugging and analysis purposes. All execution modes produce standardized output formats compatible with downstream statistical analysis tools and data visualization platforms.
 

@@ -1298,3 +1298,153 @@ describe('AnnotationResearchWorkflowService', () => {
     ).rejects.toThrow('researcher identity is required');
   });
 });
+
+it('forwards literature/full-text budgets to DGR and binds them into the intent hash', async () => {
+  const Service = loadWorkflowService();
+  const target = {
+    workspaceId: 'ws-1',
+    genomeId: 'genome-1',
+    annotationRevision: 0,
+    featureId: 'feature-budget',
+    featureHash: 'hash-budget',
+    chromosome: 'chr1',
+    locusTag: 'b4001',
+    geneSymbol: 'dapA',
+    organism: 'Escherichia coli',
+    featureType: 'CDS',
+  };
+  let budgetCallCount = 0;
+  const executeToolOnServer = vi.fn(async () => {
+    budgetCallCount += 1;
+    return { taskId: `task-budget-${budgetCallCount}`, status: 'queued' };
+  });
+  const service = new Service(
+    { currentChromosome: 'chr1', currentAnnotations: { chr1: [{}] } },
+    {
+      services: { annotation: { resolveAnnotationTarget: vi.fn(async () => ({ target })) } },
+      mcpServerManager: { ensureServerConnected: vi.fn(async () => true), executeToolOnServer },
+    }
+  );
+  const context = { authenticated: true, principal: 'researcher@example.org', permissions: ['annotation:research'] };
+
+  const first = await service.startAnnotationResearch({
+    identifier: 'b4001',
+    maxResult: 40,
+    literatureBudget: 600,
+    fullTextBudget: 30,
+    __executionContext: context,
+  });
+
+  expect(executeToolOnServer).toHaveBeenCalledWith(
+    'deep-gene-research',
+    'deep-gene-research',
+    expect.objectContaining({
+      maxResult: 40,
+      literatureBudget: 600,
+      fullTextBudget: 30,
+    })
+  );
+  expect(first.workflow.idempotencyKey).toBeTruthy();
+
+  // A different budget is a different research intent and must not collapse
+  // into the same idempotency key.
+  const second = await service.startAnnotationResearch({
+    identifier: 'b4001',
+    maxResult: 40,
+    literatureBudget: 800,
+    fullTextBudget: 30,
+    __executionContext: context,
+  });
+  expect(second.duplicate).not.toBe(true);
+  expect(second.workflow.idempotencyKey).not.toBe(first.workflow.idempotencyKey);
+});
+
+it('projects literatureCoverage, llmSynthesis, and annotationNote onto the durable workflow', async () => {
+  const archiveDgrTaskResult = vi.fn(async options => ({
+    success: true,
+    artifact: {
+      taskId: options.taskId,
+      fileName: 'DGR_task-note_abc123.json',
+      storedPath: '/private/dgr/DGR_task-note_abc123.json',
+      size: 4096,
+      sha256: 'a'.repeat(64),
+      currentAnnotationValidation: currentAnnotationValidation(options),
+      storedAt: '2026-07-16T01:00:00.000Z',
+      summary: { title: 'dapA full report', sourceCount: 12 },
+    },
+  }));
+  const AnnotationResearchWorkflowService = loadWorkflowService({ archiveDgrTaskResult });
+  const target = {
+    workspaceId: 'ws-1',
+    genomeId: 'genome-1',
+    annotationRevision: 0,
+    featureId: 'feature-note',
+    featureHash: 'hash-note',
+    chromosome: 'chr1',
+    locusTag: 'b4001',
+    geneSymbol: 'dapA',
+    organism: 'Escherichia coli',
+    featureType: 'CDS',
+  };
+  const literatureCoverage = {
+    literatureBudget: 300,
+    pubmedTotalMatchCount: 412,
+    retainedAbstractCount: 300,
+    linkedBibliographyRequested: 212,
+    linkedBibliographyRetrieved: 212,
+    linkedBibliographyComplete: true,
+  };
+  const llmSynthesis = { supplementalQueryCount: 3, literatureLearningBatches: 12, synthesizedReport: true };
+  const annotationNote = {
+    schema: 'dgr.curation-note.v1',
+    text: 'dapA encodes dihydrodipicolinate synthase (PMID:38253429).',
+    textSha256: 'x'.repeat(64),
+    segments: [],
+    factIds: [],
+    evidenceIds: [],
+    coverage: { availableFactCount: 5, includedFactCount: 2, includedCategories: ['function'], omittedFactIds: [] },
+  };
+  let pollCount = 0;
+  const checkTaskStatus = vi.fn(async () => {
+    pollCount += 1;
+    if (pollCount === 1) {
+      return {
+        status: 'completed',
+        result: {
+          annotationProposal: { schema: 'codexomics.annotation-change-set.v2', status: 'draft_requires_evidence' },
+          annotationNote,
+          metadata: { searchDiagnostics: { literatureCoverage }, llmSynthesis },
+        },
+      };
+    }
+    return { status: 'completed', result: null };
+  });
+  const service = new AnnotationResearchWorkflowService(
+    {
+      currentChromosome: 'chr1',
+      currentAnnotations: { chr1: [{}] },
+      geneAttachmentsManager: { registerGeneratedAttachment: vi.fn(async () => ({ id: 'dgr:task-note' })) },
+    },
+    {
+      services: { annotation: { resolveAnnotationTarget: vi.fn(async () => ({ target })) } },
+      mcpServerManager: {
+        ensureServerConnected: vi.fn(async () => true),
+        executeToolOnServer: vi.fn(async () => ({ taskId: 'task-note', status: 'queued' })),
+        checkTaskStatus,
+      },
+    }
+  );
+
+  await service.startAnnotationResearch({ identifier: 'b4001' });
+  const first = await service.getAnnotationResearchWorkflow({ taskId: 'task-note' });
+
+  expect(first.workflow.literatureCoverage).toEqual(literatureCoverage);
+  expect(first.workflow.llmSynthesis).toEqual(llmSynthesis);
+  expect(first.workflow.annotationNote).toEqual(annotationNote);
+
+  // A later poll whose status carries no result must not wipe the projected
+  // artifacts from the durable workflow.
+  const second = await service.getAnnotationResearchWorkflow({ taskId: 'task-note' });
+  expect(second.workflow.literatureCoverage).toEqual(literatureCoverage);
+  expect(second.workflow.annotationNote).toEqual(annotationNote);
+});

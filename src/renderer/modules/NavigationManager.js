@@ -87,52 +87,91 @@ class NavigationManager {
   }
 
   // Navigation methods
-  navigatePrevious() {
-    const range = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-    const newStart = Math.max(0, this.genomeBrowser.currentPosition.start - range);
-    const newEnd = newStart + range;
+
+  /**
+   * Resolve the chromosome/sequence/window-width the paging buttons operate on.
+   * Returns null when no sequence is loaded, so each button becomes a no-op
+   * instead of moving currentPosition to somewhere nothing can render.
+   */
+  getPagingContext() {
+    const chromosome = document.getElementById('chromosomeSelect').value;
+    if (!chromosome || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[chromosome]) {
+      return null;
+    }
+    const sequence = this.genomeBrowser.currentSequence[chromosome];
+    const { start, end } = this.genomeBrowser.currentPosition;
+    return { chromosome, sequence, range: Math.max(1, end - start) };
+  }
+
+  /**
+   * Commit a position produced by the previous/next/start/end buttons and
+   * refresh everything that mirrors it (stats, tracks, nav bar, tab title).
+   */
+  applyPagedPosition(chromosome, sequence, newStart, newEnd) {
+    if (newStart === this.genomeBrowser.currentPosition.start && newEnd === this.genomeBrowser.currentPosition.end) {
+      return; // Already at that edge - skip a full re-render
+    }
 
     this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
+    this.genomeBrowser.updateStatistics(chromosome, sequence);
+    this.genomeBrowser.displayGenomeView(chromosome, sequence);
+    // Update navigation bar
+    this.genomeBrowser.genomeNavigationBar.update();
 
-    const currentChr = document.getElementById('chromosomeSelect').value;
-    if (currentChr && this.genomeBrowser.currentSequence && this.genomeBrowser.currentSequence[currentChr]) {
-      this.genomeBrowser.updateStatistics(currentChr, this.genomeBrowser.currentSequence[currentChr]);
-      this.genomeBrowser.displayGenomeView(currentChr, this.genomeBrowser.currentSequence[currentChr]);
-      // Update navigation bar
-      this.genomeBrowser.genomeNavigationBar.update();
-
-      // Update current tab title with new position (from navigation buttons)
-      if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, {
-          source: 'navigation',
-        });
-      }
+    // Update current tab title with new position (from navigation buttons)
+    if (this.genomeBrowser.tabManager) {
+      this.genomeBrowser.tabManager.updateCurrentTabPosition(chromosome, newStart + 1, newEnd, {
+        source: 'navigation',
+      });
     }
   }
 
+  navigatePrevious() {
+    const ctx = this.getPagingContext();
+    if (!ctx) return;
+
+    const newStart = Math.max(0, this.genomeBrowser.currentPosition.start - ctx.range);
+    this.applyPagedPosition(
+      ctx.chromosome,
+      ctx.sequence,
+      newStart,
+      Math.min(ctx.sequence.length, newStart + ctx.range)
+    );
+  }
+
   navigateNext() {
-    const currentChr = document.getElementById('chromosomeSelect').value;
-    if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) return;
+    const ctx = this.getPagingContext();
+    if (!ctx) return;
 
-    const sequence = this.genomeBrowser.currentSequence[currentChr];
-    const range = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-    const newStart = this.genomeBrowser.currentPosition.start + range;
-    const newEnd = Math.min(sequence.length, newStart + range);
+    // Clamp the start, not the end: paging into the tail of the sequence keeps
+    // the current window width instead of collapsing the view.
+    const lastPageStart = Math.max(0, ctx.sequence.length - ctx.range);
+    const newStart = Math.min(lastPageStart, this.genomeBrowser.currentPosition.start + ctx.range);
+    this.applyPagedPosition(
+      ctx.chromosome,
+      ctx.sequence,
+      newStart,
+      Math.min(ctx.sequence.length, newStart + ctx.range)
+    );
+  }
 
-    if (newStart < sequence.length) {
-      this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
-      this.genomeBrowser.updateStatistics(currentChr, sequence);
-      this.genomeBrowser.displayGenomeView(currentChr, sequence);
-      // Update navigation bar
-      this.genomeBrowser.genomeNavigationBar.update();
+  navigateToStart() {
+    const ctx = this.getPagingContext();
+    if (!ctx) return;
 
-      // Update current tab title with new position (from navigation buttons)
-      if (this.genomeBrowser.tabManager) {
-        this.genomeBrowser.tabManager.updateCurrentTabPosition(currentChr, newStart + 1, newEnd, {
-          source: 'navigation',
-        });
-      }
-    }
+    this.applyPagedPosition(ctx.chromosome, ctx.sequence, 0, Math.min(ctx.sequence.length, ctx.range));
+  }
+
+  navigateToEnd() {
+    const ctx = this.getPagingContext();
+    if (!ctx) return;
+
+    this.applyPagedPosition(
+      ctx.chromosome,
+      ctx.sequence,
+      Math.max(0, ctx.sequence.length - ctx.range),
+      ctx.sequence.length
+    );
   }
 
   // Zoom methods
@@ -642,10 +681,7 @@ class NavigationManager {
         if (primerElement) {
           const primerContent = primerElement.querySelector('.track-content');
           if (primerContent) {
-            primerTrack.innerHTML = '';
-            while (primerContent.firstChild) {
-              primerTrack.appendChild(primerContent.firstChild);
-            }
+            this.genomeBrowser.trackRenderer.adoptPrimerTrackContent(primerTrack, primerContent);
           }
         }
       }

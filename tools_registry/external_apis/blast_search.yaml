@@ -4,7 +4,8 @@ version: '1.5.0'
 description: >-
   Router for BLAST similarity search: dispatches to NCBI online or local BLAST+ based on the `service`
   parameter (default: online). Prefer blast_search_online or blast_search_local when the backend is
-  known - they state it in the name and need no routing parameter.
+  known - they state it in the name and need no routing parameter. Online execution requires network
+  access to blast.ncbi.nlm.nih.gov, which may be blocked in some regions or environments.
 category: 'external_apis'
 keywords: ['blast', 'search', 'similarity', 'alignment', 'database', 'sequence', 'homology']
 priority: 1

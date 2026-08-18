@@ -46,6 +46,34 @@ function createAdapter() {
 }
 
 describe('DynamicToolsSnapshotAdapter relevance selection', () => {
+  it('merges duplicate registry definitions and keeps the richer parameter schema', () => {
+    const adapter = new DynamicToolsSnapshotAdapter(
+      {
+        tools: [
+          {
+            name: 'load_genome_file',
+            description: 'Load a genome file',
+            parameters: {
+              type: 'object',
+              properties: { filePath: { type: 'string', required: true } },
+            },
+          },
+          {
+            name: 'load_genome_file',
+            description: 'Window-aware loader',
+            parameters: { type: 'object', properties: { clientId: { type: 'string' } } },
+          },
+        ],
+      },
+      { agentSystemEnabled: false }
+    );
+
+    expect(adapter.snapshot.tools).toHaveLength(1);
+    const schema = adapter.toNativeFunctionTool(adapter.toolsByName.get('load_genome_file')).function.parameters;
+    expect(Object.keys(schema.properties)).toEqual(expect.arrayContaining(['filePath', 'clientId']));
+    expect(schema.required).toContain('filePath');
+  });
+
   it('does not select every built-in tool when the prompt has no relevance matches', () => {
     const adapter = createAdapter();
     const selected = adapter.selectRelevantTools('tell me a joke');
@@ -62,6 +90,86 @@ describe('DynamicToolsSnapshotAdapter relevance selection', () => {
     expect(primerTools.map(tool => tool.name)).not.toContain('run_blast_search');
     expect(blastTools.map(tool => tool.name)).toContain('run_blast_search');
     expect(blastTools.map(tool => tool.name)).not.toContain('design_primers');
+  });
+
+  it('emits native schemas and rejects invalid arguments before execution', async () => {
+    const tool = {
+      ...createTool('compute_gc', 'Compute GC content for a sequence', ['compute gc']),
+      parameters: {
+        type: 'object',
+        properties: { sequence: { type: 'string', minLength: 1 } },
+        required: ['sequence'],
+      },
+    };
+    const adapter = new DynamicToolsSnapshotAdapter(
+      {
+        tools: [tool],
+        builtInTools: [{ name: tool.name, category: tool.category, priority: tool.priority }],
+        categories: { categories: {} },
+        counts: { tools: 1, builtInTools: 1 },
+      },
+      { agentSystemEnabled: false }
+    );
+
+    const prompt = await adapter.generateDynamicSystemPrompt('compute GC for this sequence', {}, { selectionLimit: 8 });
+    expect(prompt.nativeTools[0]).toMatchObject({
+      type: 'function',
+      function: { name: 'compute_gc' },
+    });
+    expect(adapter.validateToolCall('compute_gc', {})).toMatchObject({ valid: false });
+    expect(adapter.validateToolCall('compute_gc', { sequence: 'ATGC' })).toMatchObject({ valid: true });
+    expect(adapter.validateToolCall('compute_gc', { sequence: 'ATGC', invented: true })).toMatchObject({
+      valid: false,
+    });
+  });
+
+  it('enforces parent constraints together with anyOf branches', () => {
+    const tool = {
+      ...createTool('toggle_track', 'Change track visibility', ['toggle track']),
+      parameters: {
+        type: 'object',
+        properties: {
+          track_name: { type: 'string', enum: ['genes', 'gc_content'] },
+          visible: { type: 'boolean' },
+          action: { type: 'string', enum: ['toggle'] },
+        },
+        required: ['track_name'],
+        anyOf: [{ required: ['track_name', 'visible'] }, { required: ['track_name', 'action'] }],
+      },
+    };
+    const adapter = new DynamicToolsSnapshotAdapter({ tools: [tool] }, { agentSystemEnabled: false });
+
+    expect(adapter.validateToolCall('toggle_track', { track_name: 'genes', visible: false }).valid).toBe(true);
+    expect(adapter.validateToolCall('toggle_track', { track_name: 'genes', action: 'toggle' }).valid).toBe(true);
+    expect(adapter.validateToolCall('toggle_track', { track_name: 'genes' }).valid).toBe(false);
+    expect(adapter.validateToolCall('toggle_track', { track_name: 'genes', action: 'hide' }).valid).toBe(false);
+    expect(adapter.validateToolCall('toggle_track', { trackName: 'genes', visible: false }).valid).toBe(false);
+  });
+
+  it('requires oneOf arguments to match exactly one branch', () => {
+    const tool = {
+      ...createTool('search_interpro_entry', 'Search InterPro', ['search interpro']),
+      parameters: {
+        type: 'object',
+        properties: {
+          search_term: { type: 'string', minLength: 1 },
+          search_terms: { type: 'array', items: { type: 'string' }, minItems: 1 },
+        },
+        oneOf: [{ required: ['search_term'] }, { required: ['search_terms'] }],
+        additionalProperties: false,
+      },
+    };
+    const adapter = new DynamicToolsSnapshotAdapter({ tools: [tool] }, { agentSystemEnabled: false });
+
+    expect(adapter.validateToolCall('search_interpro_entry', { search_term: 'kinase' }).valid).toBe(true);
+    expect(adapter.validateToolCall('search_interpro_entry', { search_terms: ['kinase'] }).valid).toBe(true);
+    expect(
+      adapter.validateToolCall('search_interpro_entry', {
+        search_term: 'kinase',
+        search_terms: ['kinase'],
+      }).valid
+    ).toBe(false);
+    expect(adapter.validateToolCall('search_interpro_entry', {}).valid).toBe(false);
   });
 
   it('keeps an explicit gene-selection request focused on select_gene', () => {

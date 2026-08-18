@@ -1,6 +1,9 @@
 name: export_data
-version: 1.0.0
-description: Export sequence or annotation data
+version: 1.1.0
+description: >-
+  Generic export of the loaded genome or annotations in a chosen format. Prefer the
+  dedicated tools (export_fasta_sequence, export_genbank_format, export_gff_annotations,
+  export_bed_format, export_cds_fasta, export_protein_fasta) when the format is known.
 category: data_management
 keywords:
   - export
@@ -18,16 +21,60 @@ execution:
 parameters:
   type: object
   properties:
+    format:
+      type: string
+      description: Output format for the export
+      enum:
+        - fasta
+        - genbank
+        - gb
+        - gbk
+        - gff
+        - gff3
+        - bed
+        - cds
+        - protein
+      default: genbank
+    filename:
+      type: string
+      description: >-
+        Output file path. Supports absolute paths (e.g. "/Users/user/output/genome.gbk")
+        and relative paths resolved against the current working directory. Providing it
+        saves without a dialog.
+      examples:
+        - /Users/user/output/genome.gbk
+        - exported_annotations.gff3
+    auto_save:
+      type: boolean
+      description: >-
+        When true, save directly without showing a save dialog. Essential for LLM/agent
+        automated workflows where dialog prompts block execution.
+      default: false
+    chromosome:
+      type: string
+      description: Chromosome for a region-scoped FASTA export (requires start and end)
+    start:
+      type: integer
+      description: Start position for a region-scoped FASTA export (1-based, inclusive)
+      minimum: 1
+    end:
+      type: integer
+      description: End position for a region-scoped FASTA export (1-based, inclusive)
+      minimum: 1
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
   required: []
 sample_usages:
-  - user_query: Use export_data to analyze genomic data
-    tool_call: export_data(parameter1='value1', parameter2='value2')
-    thought: User wants to use export_data for export sequence or annotation data
-    expected_result: Result from export_data analysis
+  - user_query: Export the genome as GenBank to /tmp/genome.gbk
+    tool_call: export_data(format='genbank', filename='/tmp/genome.gbk', auto_save=True)
+    thought: A destination was given, so the export must save directly without a dialog
+    expected_result: GenBank file written to /tmp/genome.gbk
+  - user_query: Export annotations as GFF3 to exported_annotations.gff3
+    tool_call: export_data(format='gff3', filename='exported_annotations.gff3', auto_save=True)
+    thought: Generic export with an explicit format and destination
+    expected_result: GFF3 file written under the current working directory
 relationships:
   depends_on: []
   conflicts_with: []

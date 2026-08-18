@@ -521,3 +521,150 @@ describe('ProteinService - PDB & AlphaFold Merging', () => {
     delete window.GenomeAnalysisService;
   });
 });
+
+describe('ProteinService - cancelling long polls', () => {
+  // The InterPro job poll waits up to five minutes, longer than a benchmark test
+  // is given. When the turn is cancelled the poll has to stop, otherwise it keeps
+  // the tool queue busy well into whatever runs next.
+  let service;
+  let mockChatManager;
+  let controller;
+
+  beforeEach(() => {
+    controller = new AbortController();
+    mockChatManager = { conversationState: { abortController: controller } };
+    service = createService({}, mockChatManager);
+  });
+
+  it('reports the turn as aborted once it is cancelled', () => {
+    expect(service.isConversationAborted()).toBe(false);
+    controller.abort();
+    expect(service.isConversationAborted()).toBe(true);
+  });
+
+  it('treats a turn with no abort controller as live', () => {
+    const bare = createService({}, { conversationState: {} });
+    expect(bare.getConversationAbortSignal()).toBeNull();
+    expect(bare.isConversationAborted()).toBe(false);
+  });
+
+  it('returns from the wait as soon as the turn is aborted', async () => {
+    vi.useFakeTimers();
+    try {
+      let settled = false;
+      const wait = service.waitUnlessAborted(5000).then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(10);
+      expect(settled).toBe(false);
+
+      controller.abort();
+      await wait;
+      expect(settled).toBe(true);
+      // The pending timer must not resolve a second time or leak.
+      await vi.advanceTimersByTimeAsync(5000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still waits the full interval when the turn stays live', async () => {
+    vi.useFakeTimers();
+    try {
+      let settled = false;
+      const wait = service.waitUnlessAborted(5000).then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await wait;
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('resolves immediately when the turn was already aborted', async () => {
+    controller.abort();
+    await expect(service.waitUnlessAborted(5000)).resolves.toBeUndefined();
+  });
+});
+
+describe('ProteinService - PDB search with no hits', () => {
+  // RCSB answers a zero-hit search with HTTP 204 and an empty body. response.ok
+  // is true for 204, so calling response.json() on it threw "Unexpected end of
+  // JSON input" and a gene with no structures (e.g. ygaQ) surfaced as a failure.
+  let service;
+
+  beforeEach(() => {
+    service = createService({}, { services: { ui: { addAlphaFoldSidebarStyles: vi.fn() } } });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reports zero results instead of throwing when RCSB returns 204', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 204,
+        text: async () => '',
+        json: async () => {
+          throw new SyntaxError('Unexpected end of JSON input');
+        },
+      })
+    );
+
+    const result = await service.searchPdbStructures({ geneName: 'ygaQ', organism: 'Escherichia coli' });
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(0);
+    expect(result.results).toEqual([]);
+    expect(result.error).toBeUndefined();
+    expect(result.message).toContain('ygaQ');
+  });
+
+  it('treats an empty 200 body as zero results', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '   ' }));
+
+    const result = await service.searchPdbStructures({ geneName: 'ygaQ' });
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(0);
+  });
+
+  it('honours the snake_case max_results parameter declared in the tool schema', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await service.searchPdbStructures({ geneName: 'lacZ', max_results: 25 });
+
+    const requestedUrl = decodeURIComponent(fetchMock.mock.calls[0][0]);
+    expect(requestedUrl).toContain('"rows":25');
+  });
+
+  it('clamps max_results to the schema maximum of 50', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await service.searchPdbStructures({ geneName: 'lacZ', max_results: 500 });
+
+    const requestedUrl = decodeURIComponent(fetchMock.mock.calls[0][0]);
+    expect(requestedUrl).toContain('"rows":50');
+  });
+
+  it('still surfaces a genuine HTTP failure as an error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => '' }));
+
+    const result = await service.searchPdbStructures({ geneName: 'lacZ' });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('500');
+  });
+});

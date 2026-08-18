@@ -212,6 +212,8 @@ class TrackRenderer {
 
       const samplingInput = document.createElement('select');
       samplingInput.className = 'track-sampling-input';
+      samplingInput.title = 'Choose the percentage of aligned reads to display';
+      samplingInput.setAttribute('aria-label', 'Aligned reads sampling percentage');
       samplingInput.style.cssText = `
                 width: 60px;
                 height: 20px;
@@ -264,13 +266,13 @@ class TrackRenderer {
       readsTogglesContainer.className = 'track-reads-toggles';
       readsTogglesContainer.style.cssText = `display: inline-flex; align-items: center; margin-left: 15px; gap: 4px;`;
 
-      const coverageBtn = this.createReadsToggleButton('chart-area', 'Coverage', 'readsCoverage');
+      const coverageBtn = this.createReadsToggleButton('chart-area', 'Coverage', 'readsCoverage', fileId);
       readsTogglesContainer.appendChild(coverageBtn);
 
-      const referenceBtn = this.createReadsToggleButton('dna', 'Reference', 'readsReference');
+      const referenceBtn = this.createReadsToggleButton('dna', 'Reference', 'readsReference', fileId);
       readsTogglesContainer.appendChild(referenceBtn);
 
-      const readsBtn = this.createReadsToggleButton('align-left', 'Reads', 'readsReads');
+      const readsBtn = this.createReadsToggleButton('align-left', 'Reads', 'readsReads', fileId);
       readsTogglesContainer.appendChild(readsBtn);
 
       trackHeader.appendChild(readsTogglesContainer);
@@ -295,7 +297,7 @@ class TrackRenderer {
       const galleryBtn = document.createElement('button');
       galleryBtn.className = 'track-btn track-gallery-btn';
       galleryBtn.innerHTML = '<i class="fas fa-images"></i>';
-      galleryBtn.title = 'Feature Glyph Legend';
+      this.setTrackControlHint(galleryBtn, 'Open the feature glyph legend');
       galleryBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.openFeatureGlyphLegend();
@@ -326,9 +328,12 @@ class TrackRenderer {
       circularBtn.innerHTML = isCircular
         ? '<i class="fas fa-circle-notch"></i>'
         : '<i class="fas fa-long-arrow-alt-right"></i>';
-      circularBtn.title = isCircular
-        ? 'Circular Mode: ON (click to disable)'
-        : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+      this.setTrackControlHint(
+        circularBtn,
+        isCircular
+          ? 'Circular mode is on. Click to disable wraparound navigation.'
+          : 'Circular mode is off. Click to enable wraparound navigation.'
+      );
       if (isCircular) {
         circularBtn.classList.add('active');
       }
@@ -345,12 +350,13 @@ class TrackRenderer {
       const wiggleBtn = document.createElement('button');
       wiggleBtn.className = 'track-btn track-wiggle-btn';
       wiggleBtn.innerHTML = '<i class="fas fa-sliders-h"></i>';
-      wiggleBtn.title = 'Toggle Management Interface';
+      this.setTrackControlHint(wiggleBtn, 'Hide WIG track management controls');
 
       // Set initial state based on persistent storage
       if (!this.elementVisibilityStates.wigManagement) {
         wiggleBtn.classList.add('active');
         wiggleBtn.style.color = '#ccc';
+        this.setTrackControlHint(wiggleBtn, 'Show WIG track management controls');
       }
 
       wiggleBtn.addEventListener('click', e => {
@@ -373,6 +379,13 @@ class TrackRenderer {
             wiggleBtn.classList.add('active');
             wiggleBtn.style.color = '#ccc';
           }
+
+          this.setTrackControlHint(
+            wiggleBtn,
+            this.elementVisibilityStates.wigManagement
+              ? 'Hide WIG track management controls'
+              : 'Show WIG track management controls'
+          );
         }
       });
       buttonsContainer.appendChild(wiggleBtn);
@@ -388,7 +401,7 @@ class TrackRenderer {
       const baseCompBtn = document.createElement('button');
       baseCompBtn.className = 'track-btn track-base-composition-btn';
       baseCompBtn.innerHTML = '<i class="fas fa-chart-column"></i>';
-      baseCompBtn.title = 'Base composition at selected position';
+      this.setTrackControlHint(baseCompBtn, 'Analyze base composition at a selected position');
       baseCompBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.genomeBrowser.baseCompositionAnalyzer?.open({ fileId, chromosome: this.genomeBrowser.currentChromosome });
@@ -400,7 +413,7 @@ class TrackRenderer {
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'track-btn track-settings-btn';
     settingsBtn.innerHTML = '<i class="fas fa-cog"></i>';
-    settingsBtn.title = 'Track Settings';
+    this.setTrackControlHint(settingsBtn, `Open ${title} track settings`);
     settingsBtn.addEventListener('click', e => {
       e.stopPropagation();
       this.openTrackSettings(trackType, fileId);
@@ -413,7 +426,7 @@ class TrackRenderer {
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'track-btn track-toggle-btn';
     toggleBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
-    toggleBtn.title = 'Lock/Unlock Track Controls';
+    this.setTrackControlHint(toggleBtn, 'Lock track controls');
     toggleBtn.dataset.locked = 'false';
     toggleBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -430,7 +443,7 @@ class TrackRenderer {
     const hideHeaderBtn = document.createElement('button');
     hideHeaderBtn.className = 'track-btn track-hide-header-btn';
     hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
-    hideHeaderBtn.title = 'Minimize Track Header';
+    this.setTrackControlHint(hideHeaderBtn, 'Minimize the track header');
     hideHeaderBtn.addEventListener('click', e => {
       e.stopPropagation();
       this.toggleTrackHeader(trackType, hideHeaderBtn);
@@ -445,7 +458,7 @@ class TrackRenderer {
     if (fileId) {
       // File-specific track - show remove icon and update functionality
       closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-      closeBtn.title = 'Remove Track';
+      this.setTrackControlHint(closeBtn, `Remove ${title} track`);
       closeBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.removeFileTrack(fileId, trackType);
@@ -453,7 +466,7 @@ class TrackRenderer {
     } else {
       // Regular track - show hide icon
       closeBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
-      closeBtn.title = 'Hide Track';
+      this.setTrackControlHint(closeBtn, `Hide ${title} track`);
       closeBtn.addEventListener('click', e => {
         e.stopPropagation();
         this.closeTrack(trackType);
@@ -464,6 +477,13 @@ class TrackRenderer {
     trackHeader.appendChild(buttonsContainer);
 
     return trackHeader;
+  }
+
+  setTrackControlHint(control, hint) {
+    if (!control || !hint) return;
+    control.title = hint;
+    control.dataset.tooltip = hint;
+    control.setAttribute('aria-label', hint);
   }
 
   /**
@@ -856,7 +876,7 @@ class TrackRenderer {
       // Hide the header
       trackHeader.style.display = 'none';
       hideHeaderBtn.innerHTML = '<i class="fas fa-plus"></i>';
-      hideHeaderBtn.title = 'Show Track Header';
+      this.setTrackControlHint(hideHeaderBtn, 'Show the track header');
 
       // Add floating button
       this.createFloatingHeaderButton(trackElement, trackType);
@@ -1101,7 +1121,7 @@ class TrackRenderer {
     if (visiblePrimers.length === 0) {
       const noPrimersMsg = this.createNoDataMessage('No primers in this region', 'no-primers-message');
       trackContent.appendChild(noPrimersMsg);
-      trackContent.style.height = `${settings.height || 80}px`;
+      this.setPrimerTrackHeight(trackContent, TrackRenderer.PRIMER_TRACK_STYLE.emptyTrackHeight);
       return track;
     }
 
@@ -1112,231 +1132,569 @@ class TrackRenderer {
   }
 
   getVisiblePrimerBindings(chromosome, viewport, settings = {}) {
-    if (this.genomeBrowser.primerManager) {
-      return this.genomeBrowser.primerManager.getRenderableBindingSites(chromosome, viewport);
-    }
+    const sites = this.genomeBrowser.primerManager
+      ? this.genomeBrowser.primerManager.getRenderableBindingSites(chromosome, viewport)
+      : this.filterPrimerAnnotations(this.genomeBrowser.currentAnnotations?.[chromosome] || [], viewport, settings);
 
-    const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
-    return this.filterPrimerAnnotations(annotations, viewport, settings);
+    // Real-time off-target predictions can outnumber the pinned sites by a lot,
+    // so they can be turned off from the track settings.
+    if (settings.showPredicted === false) {
+      return sites.filter(site => site.origin !== 'predicted');
+    }
+    return sites;
   }
 
   /**
-   * Render primers as binding footprints, not as gene-like features.
-   * A primer has its own oligo sequence and can bind imperfectly to the genome.
+   * Render primers as oriented oligo arrows sitting on a genome baseline.
+   *
+   * A primer is a ~20 bp oligo, so at anything but base-level zoom its true
+   * footprint is a fraction of a pixel. The glyph therefore has a floor size in
+   * screen space and grows with the viewport only once the real footprint gets
+   * bigger. Rows are packed by rendered pixel extent (arrow plus its label)
+   * rather than by genomic overlap, which is what keeps labels from colliding
+   * when several sites sit within a few hundred bases of each other.
    */
   renderPrimerElements(trackContent, visiblePrimers, viewport, settings = {}) {
-    const primerRows = this.arrangeGenesInRows(visiblePrimers, viewport.start, viewport.end, [], {
-      ...settings,
-      layoutMode: this.normalizeLayoutMode(settings.layoutMode),
-    });
-    const layout = this.calculatePrimerTrackLayout(primerRows, settings);
     const containerWidth = this.getPrimerTrackRenderableWidth(trackContent);
+    const placements = visiblePrimers
+      .map(primer => this.computePrimerPlacement(primer, viewport, containerWidth, settings))
+      .filter(Boolean);
 
-    trackContent.style.height = `${Math.max(layout.totalHeight, 90)}px`;
+    const packing = this.arrangePrimersInRows(placements, settings);
+    const amplicons = this.collectPrimerAmplicons(placements, settings);
+    const layout = this.calculatePrimerTrackLayout(packing.rows, settings, { ampliconCount: amplicons.length });
 
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'primer-binding-svg');
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', String(layout.totalHeight));
-    svg.setAttribute('viewBox', `0 0 ${containerWidth} ${layout.totalHeight}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.style.position = 'absolute';
-    svg.style.left = '0';
-    svg.style.top = '0';
+    this.setPrimerTrackHeight(trackContent, layout.totalHeight);
 
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    const arrowMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-    arrowMarker.setAttribute('id', 'primerArrowHead');
-    arrowMarker.setAttribute('markerWidth', '8');
-    arrowMarker.setAttribute('markerHeight', '8');
-    arrowMarker.setAttribute('refX', '7');
-    arrowMarker.setAttribute('refY', '4');
-    arrowMarker.setAttribute('orient', 'auto');
+    const svg = this.createPrimerSVGNode('svg', {
+      class: 'primer-binding-svg',
+      width: '100%',
+      height: layout.totalHeight,
+      viewBox: `0 0 ${containerWidth} ${layout.totalHeight}`,
+      preserveAspectRatio: 'none',
+    });
 
-    const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    arrowPath.setAttribute('d', 'M 0 0 L 8 4 L 0 8 z');
-    arrowPath.setAttribute('fill', '#7c3aed');
-    arrowMarker.appendChild(arrowPath);
-    defs.appendChild(arrowMarker);
+    const defs = this.createPrimerSVGNode('defs');
     svg.appendChild(defs);
 
-    primerRows.forEach((row, rowIndex) => {
-      if (rowIndex >= layout.maxRows) return;
-      row.forEach(primer => {
-        const element = this.createSVGPrimerElement(primer, viewport, rowIndex, layout, settings, containerWidth);
+    // Baselines first: a sub-pixel primer reads as a position on the genome
+    // instead of a mark floating in an empty box.
+    packing.rows.forEach((_, rowIndex) => {
+      const centerY = this.getPrimerRowCenterY(rowIndex, layout);
+      svg.appendChild(
+        this.createPrimerSVGNode('line', {
+          class: 'primer-row-baseline',
+          x1: 0,
+          x2: containerWidth,
+          y1: centerY,
+          y2: centerY,
+        })
+      );
+    });
+
+    amplicons.forEach(amplicon => {
+      const element = this.createPrimerAmpliconElement(amplicon, layout, settings);
+      if (element) svg.appendChild(element);
+    });
+
+    packing.rows.forEach((row, rowIndex) => {
+      row.forEach(placement => {
+        const element = this.createSVGPrimerElement(placement, rowIndex, layout, settings, defs);
         if (element) svg.appendChild(element);
       });
     });
 
     trackContent.appendChild(svg);
-    this.addPrimerTrackLegend(trackContent, visiblePrimers, layout);
+    this.addPrimerTrackLegend(trackContent, placements, layout, { amplicons, packing });
+  }
+
+  /**
+   * The primer track sizes itself to the rows it just packed, which changes as
+   * you pan. Mark the height as derived so the full redraw does not carry the
+   * previous view's height over (see displayGenomeView) — a manual drag on the
+   * resize handle clears the flag and takes over.
+   */
+  setPrimerTrackHeight(trackContent, height) {
+    trackContent.style.height = `${height}px`;
+    trackContent.dataset.autoHeight = 'true';
+  }
+
+  /**
+   * Swap freshly rendered primer content into the mounted track. The derived
+   * height travels with the content — it is recomputed for every view, so the
+   * mounted track would otherwise keep the previous one.
+   */
+  adoptPrimerTrackContent(mountedContent, freshContent) {
+    mountedContent.innerHTML = '';
+    mountedContent.style.height = freshContent.style.height;
+    if (freshContent.dataset.autoHeight) {
+      mountedContent.dataset.autoHeight = freshContent.dataset.autoHeight;
+    } else {
+      delete mountedContent.dataset.autoHeight;
+    }
+    while (freshContent.firstChild) {
+      mountedContent.appendChild(freshContent.firstChild);
+    }
+  }
+
+  /** Create an SVG node and set its attributes in one call. */
+  createPrimerSVGNode(tag, attributes = {}) {
+    const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attributes).forEach(([name, value]) => {
+      if (value !== undefined && value !== null && value !== '') node.setAttribute(name, String(value));
+    });
+    return node;
   }
 
   getPrimerTrackRenderableWidth(trackContent) {
+    // A freshly built track is not in the document yet, so it measures 0. The
+    // mounted track it is about to replace carries the width it will inherit.
+    const mounted = typeof document !== 'undefined' ? document.querySelector?.('.primer-track .track-content') : null;
     const widthCandidates = [
       trackContent?.getBoundingClientRect?.().width,
       trackContent?.offsetWidth,
       trackContent?.parentElement?.getBoundingClientRect?.().width,
+      mounted?.getBoundingClientRect?.().width,
       typeof window !== 'undefined' ? window.innerWidth - 300 : 0,
     ];
     return widthCandidates.find(width => Number.isFinite(width) && width > 100) || 800;
   }
 
-  calculatePrimerTrackLayout(primerRows, settings = {}) {
-    const primerHeight = settings.primerHeight || settings.geneHeight || 12;
-    const rowSpacing = 10;
-    const rulerHeight = 35;
-    const topPadding = 12;
-    const bottomPadding = 18;
-    const maxRows = settings.maxRows || 6;
-    const effectiveRows = Math.min(primerRows.length, maxRows);
+  /**
+   * Resolve everything about a binding site that does not depend on which row it
+   * lands on: pixel geometry, label text and side, color and mismatches. Row
+   * packing and glyph drawing both read this, so they cannot disagree about how
+   * much space a site occupies.
+   */
+  computePrimerPlacement(primer, viewport, containerWidth, settings = {}) {
+    const style = TrackRenderer.PRIMER_TRACK_STYLE;
+    const range = viewport?.end - viewport?.start;
+    if (!primer || !Number.isFinite(range) || range <= 0) return null;
+
+    const siteStart = Math.min(primer.start, primer.end);
+    const siteEnd = Math.max(primer.start, primer.end);
+    if (!Number.isFinite(siteStart) || !Number.isFinite(siteEnd)) return null;
+
+    // Binding sites are 1-based inclusive while the viewport indexes bases from
+    // zero like the sequence track, so the left edge is start-1. This is the
+    // same convention the gene track uses, which keeps a primer aligned with the
+    // feature it was designed against.
+    const visibleStart = Math.max(siteStart - 1, viewport.start);
+    const visibleEnd = Math.min(siteEnd, viewport.end);
+    if (visibleEnd <= visibleStart) return null;
+
+    const scale = containerWidth / range;
+    const footprintX = (visibleStart - viewport.start) * scale;
+    const footprintWidth = (visibleEnd - visibleStart) * scale;
+    // Below this width the glyph stops being to scale. Lower it to keep more
+    // zoom levels proportional, raise it to keep tiny sites easier to hit.
+    const minGlyphWidth = Math.max(2, Math.min(40, Number(settings.minGlyphWidth) || style.minGlyphWidth));
+    const glyphWidth = Math.max(footprintWidth, minGlyphWidth);
+    // When the footprint is inflated to the legible minimum, keep the glyph
+    // centred on the site so it still points at the right base.
+    const centered = footprintX + footprintWidth / 2 - glyphWidth / 2;
+    const glyphLeft = Math.max(
+      0,
+      Math.min(footprintWidth >= minGlyphWidth ? footprintX : centered, Math.max(0, containerWidth - glyphWidth))
+    );
+    const glyphRight = glyphLeft + glyphWidth;
+
+    const isReverse = primer.strand === -1 || primer.strand === '-';
+    const oligoSequence = this.getPrimerOligoSequence(primer);
+    // Qualifier values are not always strings (GenBank parsing can yield arrays).
+    const name = String(
+      primer.name || this.getPrimerQualifier(primer, 'label') || this.getPrimerQualifier(primer, 'gene') || 'Primer'
+    );
+
+    const fontSize = Math.max(9, Math.min(14, Number(settings.fontSize) || style.fontSize));
+    const labelText = name.length > style.maxLabelChars ? `${name.substring(0, style.maxLabelChars - 1)}…` : name;
+    // Cheap advance-width estimate; SVG text cannot be measured before layout.
+    const labelWidth = labelText.length * fontSize * 0.56;
+    const headLength = Math.max(style.minHeadLength, Math.min(style.maxHeadLength, glyphWidth * style.headFraction));
+
+    // The 5'-phosphate bead hangs off the oligo's tail, so it is only drawn when
+    // that terminus is actually in view; its room is reserved so the label and
+    // the neighbouring site do not run into it.
+    const clippedLeft = siteStart - 1 < viewport.start;
+    const clippedRight = siteEnd > viewport.end;
+    const showPhosphate = primer.fivePrimePhosphate === true && !(isReverse ? clippedRight : clippedLeft);
+    const beadPad = showPhosphate ? style.phosphateOffset + style.phosphateRadius + 1 : 0;
+    const tailLeft = glyphLeft - (isReverse ? 0 : beadPad);
+    const tailRight = glyphRight + (isReverse ? beadPad : 0);
+
+    let labelSide = glyphWidth - headLength - style.labelInsetPadding * 2 >= labelWidth ? 'inside' : null;
+    if (!labelSide) {
+      const roomRight = tailRight + style.labelGap + labelWidth <= containerWidth;
+      const roomLeft = tailLeft - style.labelGap - labelWidth >= 0;
+      const preferred = isReverse ? 'left' : 'right';
+      const fallback = isReverse ? 'right' : 'left';
+      const preferredFits = preferred === 'right' ? roomRight : roomLeft;
+      const fallbackFits = fallback === 'right' ? roomRight : roomLeft;
+      labelSide = preferredFits || !fallbackFits ? preferred : fallback;
+    }
+
+    const labelX =
+      labelSide === 'right'
+        ? tailRight + style.labelGap
+        : labelSide === 'left'
+          ? tailLeft - style.labelGap
+          : glyphLeft + (isReverse ? headLength : 0) + (glyphWidth - headLength) / 2;
+    const labelLeft = labelSide === 'left' ? Math.max(0, labelX - labelWidth) : tailLeft;
+    const labelRight = labelSide === 'right' ? Math.min(containerWidth, labelX + labelWidth) : tailRight;
+
+    return {
+      primer,
+      name,
+      labelText,
+      labelSide,
+      labelWidth,
+      labelX,
+      fontSize,
+      showLabel: true,
+      isReverse,
+      isPredicted: primer.origin === 'predicted',
+      isPhosphorylated: primer.fivePrimePhosphate === true,
+      showPhosphate,
+      oligoSequence,
+      mismatches: this.getPrimerSiteMismatches(primer, oligoSequence),
+      color: this.resolvePrimerColor(primer),
+      start: siteStart,
+      end: siteEnd,
+      lengthBp: siteEnd - siteStart + 1,
+      clippedLeft,
+      clippedRight,
+      glyphLeft,
+      glyphRight,
+      glyphWidth,
+      headLength,
+      leftPx: Math.min(glyphLeft, labelLeft),
+      rightPx: Math.max(glyphRight, labelRight),
+    };
+  }
+
+  /** A primer's own color when the library defines one, else the track accent. */
+  resolvePrimerColor(primer) {
+    const raw = String(primer?.color || this.getPrimerQualifier(primer, 'color') || '').trim();
+    const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(raw);
+    if (short) return `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`;
+    return /^#[0-9a-f]{6}$/i.test(raw) ? raw : TrackRenderer.PRIMER_TRACK_STYLE.defaultColor;
+  }
+
+  /**
+   * Mismatch positions for a binding site, indexed in the primer's own 5'->3'
+   * frame. Predicted sites arrive with the comparison already done by the
+   * binding service; pinned sites fall back to comparing oligo against genome.
+   */
+  getPrimerSiteMismatches(primer, oligoSequence) {
+    if (!Array.isArray(primer?.mismatches)) {
+      return this.getPrimerMismatchSummary(oligoSequence, this.getPrimerGenomeBindingSequence(primer));
+    }
+
+    const positions = primer.mismatches
+      .map(mismatch => (Number.isFinite(mismatch?.primerIndex) ? mismatch.primerIndex : mismatch?.index))
+      .filter(index => Number.isFinite(index));
+    return { count: primer.mismatches.length, positions, comparable: true };
+  }
+
+  /**
+   * Pack sites into rows by their rendered pixel extent. Labels are the first
+   * thing sacrificed when the view gets crowded, and rows past the limit are
+   * folded back onto the last row rather than dropped — a hidden binding site
+   * is worse than a busy one.
+   */
+  arrangePrimersInRows(placements, settings = {}) {
+    const style = TrackRenderer.PRIMER_TRACK_STYLE;
+    const maxRows =
+      this.normalizeLayoutMode(settings.layoutMode) === 'singleRow'
+        ? 1
+        : Math.max(1, Number(settings.maxRows) || style.maxRows);
+    const ordered = [...placements].sort((a, b) => a.leftPx - b.leftPx || a.rightPx - b.rightPx);
+
+    const pack = withLabels => {
+      const rows = [];
+      const rowEnds = [];
+      ordered.forEach(placement => {
+        const left = withLabels ? placement.leftPx : placement.glyphLeft;
+        const right = withLabels ? placement.rightPx : placement.glyphRight;
+        const rowIndex = rowEnds.findIndex(end => end + style.rowGutter <= left);
+        if (rowIndex === -1) {
+          rows.push([placement]);
+          rowEnds.push(right);
+        } else {
+          rows[rowIndex].push(placement);
+          rowEnds[rowIndex] = Math.max(rowEnds[rowIndex], right);
+        }
+      });
+      return rows;
+    };
+
+    let labelsVisible = settings.showLabels !== false;
+    let labelsAutoHidden = false;
+    let rows = pack(labelsVisible);
+    if (labelsVisible && rows.length > maxRows) {
+      labelsVisible = false;
+      labelsAutoHidden = true;
+      rows = pack(false);
+    }
+
+    let overlapping = 0;
+    if (rows.length > maxRows) {
+      const overflow = rows.slice(maxRows).flat();
+      overlapping = overflow.length;
+      rows = rows.slice(0, maxRows);
+      rows[maxRows - 1] = rows[maxRows - 1].concat(overflow).sort((a, b) => a.glyphLeft - b.glyphLeft);
+    }
+
+    ordered.forEach(placement => {
+      placement.showLabel = labelsVisible;
+    });
+
+    return { rows, labelsVisible, labelsAutoHidden, overlapping };
+  }
+
+  /**
+   * Join the forward and reverse sites of a primer pair into the product they
+   * would amplify, so the track shows the amplicon rather than two unrelated
+   * arrows. Only pairs whose sites are both in view and point at each other
+   * produce one.
+   */
+  collectPrimerAmplicons(placements, settings = {}) {
+    const style = TrackRenderer.PRIMER_TRACK_STYLE;
+    if (settings.showAmplicons === false) return [];
+
+    const byPair = new Map();
+    placements.forEach(placement => {
+      const pairId = placement.primer?.pairId;
+      if (!pairId) return;
+      if (!byPair.has(pairId)) byPair.set(pairId, []);
+      byPair.get(pairId).push(placement);
+    });
+
+    const amplicons = [];
+    byPair.forEach((sites, pairId) => {
+      const forwards = sites.filter(site => !site.isReverse).sort((a, b) => a.start - b.start);
+      const reverses = sites.filter(site => site.isReverse).sort((a, b) => a.start - b.start);
+      const paired = new Set();
+
+      forwards.forEach(forward => {
+        const reverse = reverses.find(
+          candidate =>
+            !paired.has(candidate) &&
+            candidate.end > forward.start &&
+            candidate.end - forward.start + 1 <= style.ampliconMaxBp
+        );
+        if (!reverse) return;
+        paired.add(reverse);
+        amplicons.push({
+          pairId,
+          name: this.getPrimerPairName(pairId),
+          productBp: reverse.end - forward.start + 1,
+          left: Math.min(forward.glyphLeft, reverse.glyphLeft),
+          right: Math.max(forward.glyphRight, reverse.glyphRight),
+        });
+      });
+    });
+
+    return amplicons;
+  }
+
+  getPrimerPairName(pairId) {
+    const pair = this.genomeBrowser?.primerManager?.getPair?.(pairId);
+    return pair?.name || '';
+  }
+
+  calculatePrimerTrackLayout(primerRows, settings = {}, options = {}) {
+    const style = TrackRenderer.PRIMER_TRACK_STYLE;
+    const requestedHeight = Number(settings.primerHeight) || Number(settings.geneHeight) || style.glyphHeight;
+    const primerHeight = Math.max(6, Math.min(28, requestedHeight));
+    const rowSpacing = style.rowSpacing;
+    const topPadding = style.topPadding;
+    const bottomPadding = style.bottomPadding;
+    const maxRows =
+      this.normalizeLayoutMode(settings.layoutMode) === 'singleRow'
+        ? 1
+        : Math.max(1, Number(settings.maxRows) || style.maxRows);
+    const effectiveRows = Math.max(1, Math.min(primerRows.length, maxRows));
+    const rowsHeight = effectiveRows * primerHeight + (effectiveRows - 1) * rowSpacing;
+    const ampliconLane = options.ampliconCount > 0 ? style.ampliconLaneHeight : 0;
+    const legendY = topPadding + rowsHeight + ampliconLane + 4;
 
     return {
       primerHeight,
       rowSpacing,
-      rulerHeight,
       topPadding,
       bottomPadding,
       maxRows,
       effectiveRows,
-      totalHeight:
-        rulerHeight +
-        topPadding +
-        Math.max(1, effectiveRows) * (primerHeight + rowSpacing) -
-        rowSpacing +
-        bottomPadding,
+      rowsHeight,
+      ampliconLane,
+      ampliconY: topPadding + rowsHeight + ampliconLane / 2 + 4,
+      legendY,
+      totalHeight: Math.max(style.minTrackHeight, legendY + style.legendLaneHeight + bottomPadding),
     };
   }
 
-  createSVGPrimerElement(primer, viewport, rowIndex, layout, settings = {}, containerWidth = 1000) {
-    const range = viewport.end - viewport.start;
-    if (range <= 0) return null;
+  getPrimerRowCenterY(rowIndex, layout) {
+    return layout.topPadding + rowIndex * (layout.primerHeight + layout.rowSpacing) + layout.primerHeight / 2;
+  }
 
-    const visibleStart = Math.max(primer.start, viewport.start);
-    const visibleEnd = Math.min(primer.end, viewport.end);
-    if (visibleEnd < visibleStart) return null;
+  /**
+   * Outline of one binding site: a flat body with a chevron head at the 3' end.
+   * The head length is capped in pixels so a sub-pixel primer cannot degenerate
+   * into a giant triangle.
+   */
+  buildPrimerArrowPath(x, y, width, height, headLength, isReverse) {
+    const round = value => Math.round(value * 100) / 100;
+    const head = Math.min(headLength, width);
+    // Tie the head's overhang to the width as well as the height, so a glyph at
+    // the minimum width does not end up taller than it is wide.
+    const flare = Math.min(3, height * 0.32, width * 0.25);
+    const top = round(y);
+    const bottom = round(y + height);
+    const midY = round(y + height / 2);
+    const left = round(x);
+    const right = round(x + width);
 
-    const x = ((visibleStart - viewport.start) / range) * containerWidth;
-    const width = Math.max(((visibleEnd - visibleStart) / range) * containerWidth, 5);
-    const y = layout.rulerHeight + layout.topPadding + rowIndex * (layout.primerHeight + layout.rowSpacing);
-    const centerY = y + layout.primerHeight / 2;
-    const isReverse = primer.strand === -1 || primer.strand === '-';
-    // Predicted sites are computed in real time; pinned sites are manual/asserted
-    // placements. They are rendered with distinct emphasis.
-    const isPredicted = primer.origin === 'predicted';
-    const isPhosphorylated = primer.fivePrimePhosphate === true;
-    const oligoSequence = this.getPrimerOligoSequence(primer);
-    const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
-    const mismatchSummary = this.getPrimerMismatchSummary(oligoSequence, genomeSequence);
-    const primerName =
-      primer.name || this.getPrimerQualifier(primer, 'label') || this.getPrimerQualifier(primer, 'gene') || 'Primer';
+    if (isReverse) {
+      const neck = round(x + head);
+      return [
+        `M ${left} ${midY}`,
+        `L ${neck} ${round(y - flare)}`,
+        `L ${neck} ${top}`,
+        `L ${right} ${top}`,
+        `L ${right} ${bottom}`,
+        `L ${neck} ${bottom}`,
+        `L ${neck} ${round(y + height + flare)}`,
+        'Z',
+      ].join(' ');
+    }
 
-    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    group.setAttribute(
-      'class',
-      `primer-binding-element${isReverse ? ' reverse' : ' forward'}${isPredicted ? ' predicted' : ' pinned'}${
-        isPhosphorylated ? ' phosphorylated' : ''
-      }`
+    const neck = round(x + width - head);
+    return [
+      `M ${left} ${top}`,
+      `L ${neck} ${top}`,
+      `L ${neck} ${round(y - flare)}`,
+      `L ${right} ${midY}`,
+      `L ${neck} ${round(y + height + flare)}`,
+      `L ${neck} ${bottom}`,
+      `L ${left} ${bottom}`,
+      'Z',
+    ].join(' ');
+  }
+
+  /**
+   * One gradient per color/origin combination, shared by every site using it.
+   * Pinned sites are solid; predicted ones are washed out to near-hollow, so an
+   * asserted placement and a real-time guess never look alike.
+   */
+  ensurePrimerGradient(defs, color, isPredicted) {
+    const id = `primerFill-${color.replace('#', '')}-${isPredicted ? 'predicted' : 'pinned'}`;
+    if (defs.querySelector(`#${id}`)) return id;
+
+    const gradient = this.createPrimerSVGNode('linearGradient', { id, x1: '0', y1: '0', x2: '0', y2: '1' });
+    gradient.appendChild(
+      this.createPrimerSVGNode('stop', {
+        offset: '0%',
+        'stop-color': this.lightenColor(color, isPredicted ? 48 : 14),
+      })
     );
-    group.style.cursor = 'pointer';
-    if (isPredicted) group.style.opacity = '0.72';
+    gradient.appendChild(
+      this.createPrimerSVGNode('stop', {
+        offset: '100%',
+        'stop-color': isPredicted ? this.lightenColor(color, 32) : this.darkenColor(color, 8),
+      })
+    );
+    defs.appendChild(gradient);
+    return id;
+  }
 
-    const stem = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    stem.setAttribute('x1', String(isReverse ? x + width : x));
-    stem.setAttribute('x2', String(isReverse ? x : x + width));
-    stem.setAttribute('y1', String(centerY));
-    stem.setAttribute('y2', String(centerY));
-    stem.setAttribute('stroke', mismatchSummary.count > 0 ? '#c026d3' : '#7c3aed');
-    stem.setAttribute('stroke-width', String(layout.primerHeight));
-    stem.setAttribute('stroke-linecap', 'round');
-    stem.setAttribute('marker-end', 'url(#primerArrowHead)');
-    if (isPredicted) stem.setAttribute('stroke-dasharray', '4 2');
-    group.appendChild(stem);
+  createSVGPrimerElement(placement, rowIndex, layout, settings = {}, defs = null) {
+    if (!placement) return null;
 
-    const bindingLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    bindingLine.setAttribute('x1', String(x));
-    bindingLine.setAttribute('x2', String(x + width));
-    bindingLine.setAttribute('y1', String(y + layout.primerHeight + 5));
-    bindingLine.setAttribute('y2', String(y + layout.primerHeight + 5));
-    bindingLine.setAttribute('stroke', '#64748b');
-    bindingLine.setAttribute('stroke-width', '1.5');
-    bindingLine.setAttribute('stroke-dasharray', mismatchSummary.count > 0 ? '3 3' : 'none');
-    group.appendChild(bindingLine);
+    const style = TrackRenderer.PRIMER_TRACK_STYLE;
+    const { primer, glyphLeft, glyphRight, glyphWidth, headLength, isReverse, isPredicted } = placement;
+    const height = layout.primerHeight;
+    const y = layout.topPadding + rowIndex * (height + layout.rowSpacing);
+    const centerY = y + height / 2;
+    const hasMismatch = placement.mismatches.count > 0;
 
-    if (mismatchSummary.positions.length > 0 && oligoSequence.length > 0) {
-      mismatchSummary.positions.slice(0, 30).forEach(pos => {
-        const relative = oligoSequence.length <= 1 ? 0.5 : pos / (oligoSequence.length - 1);
-        const markerX = isReverse ? x + width - relative * width : x + relative * width;
-        const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        tick.setAttribute('x1', String(markerX));
-        tick.setAttribute('x2', String(markerX));
-        tick.setAttribute('y1', String(y - 3));
-        tick.setAttribute('y2', String(y + layout.primerHeight + 8));
-        tick.setAttribute('stroke', '#ef4444');
-        tick.setAttribute('stroke-width', '2');
-        tick.setAttribute('vector-effect', 'non-scaling-stroke');
-        group.appendChild(tick);
+    const group = this.createPrimerSVGNode('g', {
+      class: [
+        'primer-binding-element',
+        isReverse ? 'reverse' : 'forward',
+        isPredicted ? 'predicted' : 'pinned',
+        hasMismatch ? 'mismatched' : '',
+        placement.isPhosphorylated ? 'phosphorylated' : '',
+        // Selection survives the re-render that navigation triggers.
+        this.isSelectedPrimerSite(placement) ? 'selected' : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
+      'data-primer-id': primer.primerId || primer.id || '',
+      'data-site-start': placement.start,
+      'data-site-end': placement.end,
+    });
+
+    const arrow = this.createPrimerSVGNode('path', {
+      class: 'primer-arrow',
+      d: this.buildPrimerArrowPath(glyphLeft, y, glyphWidth, height, headLength, isReverse),
+      fill: defs ? `url(#${this.ensurePrimerGradient(defs, placement.color, isPredicted)})` : placement.color,
+      stroke: hasMismatch ? style.mismatchColor : isPredicted ? placement.color : this.darkenColor(placement.color, 18),
+      'stroke-width': hasMismatch ? 1.1 : 1,
+      'stroke-linejoin': 'round',
+    });
+    group.appendChild(arrow);
+
+    // Mismatched bases, marked in place along the oligo when there is room for
+    // them; below that width the red outline is the whole signal.
+    if (hasMismatch && glyphWidth >= style.mismatchTickMinWidth && placement.oligoSequence.length > 1) {
+      const bodyLeft = isReverse ? glyphLeft + headLength : glyphLeft;
+      const bodyRight = isReverse ? glyphRight : glyphRight - headLength;
+      placement.mismatches.positions.slice(0, 40).forEach(position => {
+        const fraction = (position + 0.5) / placement.oligoSequence.length;
+        // Index 0 is the 5' end, which is the tail of the arrow.
+        const tickX = isReverse ? glyphRight - fraction * glyphWidth : glyphLeft + fraction * glyphWidth;
+        group.appendChild(
+          this.createPrimerSVGNode('rect', {
+            class: 'primer-mismatch-tick',
+            x: Math.max(bodyLeft, Math.min(tickX, bodyRight - 1.6)),
+            y: y + 1,
+            width: 1.6,
+            height: Math.max(2, height - 2),
+          })
+        );
       });
     }
 
-    if (isPhosphorylated) {
-      const fivePrimeVisible = isReverse ? visibleEnd === primer.end : visibleStart === primer.start;
-      if (fivePrimeVisible) {
-        const flag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        flag.setAttribute('class', 'primer-phosphate-flag');
-        flag.setAttribute(
-          'x',
-          String(Math.max(10, Math.min(containerWidth - 10, isReverse ? x + width - 10 : x + 10)))
-        );
-        flag.setAttribute('y', String(y - 8));
-        flag.setAttribute('text-anchor', 'middle');
-        flag.textContent = '5P';
-        group.appendChild(flag);
-      }
+    // A 5'-phosphate is a property of the oligo's tail, so it hangs off the tail
+    // of the arrow rather than sitting on top of the body.
+    if (placement.showPhosphate) {
+      group.appendChild(
+        this.createPrimerSVGNode('circle', {
+          class: 'primer-phosphate-dot',
+          cx: isReverse ? glyphRight + style.phosphateOffset : glyphLeft - style.phosphateOffset,
+          cy: centerY,
+          r: style.phosphateRadius,
+        })
+      );
     }
 
-    if (width > 28) {
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', String(x + width / 2));
-      label.setAttribute('y', String(y - 5));
-      label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('font-size', String(settings.fontSize || 11));
-      label.setAttribute('font-weight', '600');
-      label.setAttribute('fill', settings.geneNameColor || '#334155');
-      label.setAttribute('font-family', settings.fontFamily || 'Arial, sans-serif');
-      label.setAttribute('vector-effect', 'non-scaling-stroke');
-      label.textContent = primerName.length > 18 ? `${primerName.substring(0, 17)}...` : primerName;
+    if (placement.showLabel) {
+      const inside = placement.labelSide === 'inside';
+      const label = this.createPrimerSVGNode('text', {
+        class: `primer-label${inside ? ' inside' : ''}`,
+        x: placement.labelX,
+        y: centerY + placement.fontSize * 0.34,
+        'text-anchor': inside ? 'middle' : placement.labelSide === 'right' ? 'start' : 'end',
+        'font-size': placement.fontSize,
+        'font-family': settings.fontFamily || 'Arial, sans-serif',
+        fill: inside ? '#ffffff' : settings.geneNameColor || style.labelColor,
+      });
+      label.textContent = placement.labelText;
       group.appendChild(label);
     }
 
-    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    const sequenceLine = oligoSequence ? `Primer sequence: ${oligoSequence}` : 'Primer sequence: not stored';
-    const genomeLine = genomeSequence
-      ? `Genome binding window: ${genomeSequence}`
-      : 'Genome binding window: unavailable';
-    const mismatchLine =
-      mismatchSummary.count > 0
-        ? `Mismatches vs genome: ${mismatchSummary.count} at ${mismatchSummary.positions.map(pos => pos + 1).join(', ')}`
-        : 'Mismatches vs genome: none detected';
-    const originLine = isPredicted ? 'Source: predicted (real-time)' : 'Source: pinned (manual)';
-    const phosphateLine = isPhosphorylated ? "5' modification: phosphorylated" : '';
-    const scoreLine = Number.isFinite(primer.bindingScore)
-      ? `Binding score: ${primer.bindingScore}${Number.isFinite(primer.tm) ? ` · Tm ${primer.tm}°C` : ''}`
-      : '';
-    title.textContent = [
-      primerName,
-      `Position: ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})`,
-      originLine,
-      sequenceLine,
-      genomeLine,
-      phosphateLine,
-      mismatchLine,
-      scoreLine,
-    ]
-      .filter(Boolean)
-      .join('\n');
-    group.appendChild(title);
-
+    group.appendChild(this.createPrimerTooltip(placement));
     group.addEventListener('click', () => {
       this.genomeBrowser.selectPrimer(primer);
     });
@@ -1344,35 +1702,148 @@ class TrackRenderer {
     return group;
   }
 
-  addPrimerTrackLegend(trackContent, visiblePrimers, layout) {
-    const mismatchCount = visiblePrimers.reduce((count, primer) => {
-      const oligoSequence = this.getPrimerOligoSequence(primer);
-      const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
-      return count + (this.getPrimerMismatchSummary(oligoSequence, genomeSequence).count > 0 ? 1 : 0);
-    }, 0);
+  /** Does this binding site belong to the primer the user last clicked? */
+  isSelectedPrimerSite(placement) {
+    const selected = this.genomeBrowser?.selectedPrimer;
+    if (!selected || !placement) return false;
+    if (selected.id && placement.primer.id) return selected.id === placement.primer.id;
+    return (
+      Math.min(selected.start, selected.end) === placement.start &&
+      Math.max(selected.start, selected.end) === placement.end &&
+      (selected.name || '') === (placement.primer.name || '')
+    );
+  }
 
-    const predictedCount = visiblePrimers.filter(primer => primer.origin === 'predicted').length;
-    const pinnedCount = visiblePrimers.length - predictedCount;
-    const phosphateCount = visiblePrimers.filter(primer => primer.fivePrimePhosphate === true).length;
+  /**
+   * Mark the clicked binding site in the track. Selection feedback used to live
+   * only in the sidebar, which left no way to tell which of several sites for
+   * the same oligo was being described.
+   */
+  highlightSelectedPrimerElement(primer) {
+    if (typeof document === 'undefined') return;
+    document
+      .querySelectorAll('.primer-binding-element.selected')
+      .forEach(element => element.classList.remove('selected'));
+    if (!primer) return;
 
+    const start = Math.min(primer.start, primer.end);
+    const end = Math.max(primer.start, primer.end);
+    document.querySelectorAll('.primer-binding-element').forEach(element => {
+      const matchesSite =
+        Number(element.getAttribute('data-site-start')) === start &&
+        Number(element.getAttribute('data-site-end')) === end;
+      if (matchesSite) element.classList.add('selected');
+    });
+  }
+
+  createPrimerTooltip(placement) {
+    const { primer } = placement;
+    const genomeSequence = this.getPrimerGenomeBindingSequence(primer);
+    const mismatchPositions = placement.mismatches.positions.map(position => position + 1).join(', ');
+
+    const title = this.createPrimerSVGNode('title');
+    title.textContent = [
+      placement.name,
+      `${placement.start.toLocaleString()}–${placement.end.toLocaleString()} (${placement.isReverse ? '−' : '+'}) · ${placement.lengthBp} nt`,
+      placement.isPredicted ? 'Source: predicted (real time)' : 'Source: pinned (manual)',
+      placement.clippedLeft || placement.clippedRight ? 'Extends beyond the current view' : '',
+      placement.oligoSequence ? `Oligo 5'→3': ${placement.oligoSequence}` : "Oligo 5'→3': not stored",
+      genomeSequence ? `Genome window: ${genomeSequence}` : 'Genome window: unavailable',
+      placement.isPhosphorylated ? "5' modification: phosphorylated" : '',
+      placement.mismatches.count > 0
+        ? `Mismatches vs genome: ${placement.mismatches.count}${mismatchPositions ? ` at ${mismatchPositions}` : ''}`
+        : 'Mismatches vs genome: none detected',
+      Number.isFinite(primer.tm) ? `Tm ${primer.tm}°C` : '',
+      Number.isFinite(primer.bindingScore) ? `Binding score ${primer.bindingScore}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    return title;
+  }
+
+  createPrimerAmpliconElement(amplicon, layout, settings = {}) {
+    const style = TrackRenderer.PRIMER_TRACK_STYLE;
+    const span = amplicon.right - amplicon.left;
+    if (span < style.ampliconMinSpan) return null;
+
+    const y = layout.ampliconY;
+    const group = this.createPrimerSVGNode('g', { class: 'primer-amplicon' });
+    group.appendChild(
+      this.createPrimerSVGNode('line', {
+        class: 'primer-amplicon-span',
+        x1: amplicon.left,
+        x2: amplicon.right,
+        y1: y,
+        y2: y,
+      })
+    );
+    [amplicon.left, amplicon.right].forEach(x => {
+      group.appendChild(
+        this.createPrimerSVGNode('line', { class: 'primer-amplicon-cap', x1: x, x2: x, y1: y - 4, y2: y + 4 })
+      );
+    });
+
+    const caption = `${amplicon.name ? `${amplicon.name} · ` : ''}${amplicon.productBp.toLocaleString()} bp`;
+    if (span >= caption.length * 6 + 16) {
+      const label = this.createPrimerSVGNode('text', {
+        class: 'primer-amplicon-label',
+        x: (amplicon.left + amplicon.right) / 2,
+        y: y + 3.5,
+        'text-anchor': 'middle',
+        'font-family': settings.fontFamily || 'Arial, sans-serif',
+      });
+      label.textContent = caption;
+      group.appendChild(label);
+    }
+
+    const title = this.createPrimerSVGNode('title');
+    title.textContent = `Amplicon${amplicon.name ? ` ${amplicon.name}` : ''}: ${amplicon.productBp.toLocaleString()} bp`;
+    group.appendChild(title);
+
+    return group;
+  }
+
+  addPrimerTrackLegend(trackContent, placements, layout, context = {}) {
     const legend = document.createElement('div');
     legend.className = 'primer-track-legend';
-    legend.style.top = `${layout.totalHeight - 18}px`;
-    const parts = [`${visiblePrimers.length} site${visiblePrimers.length === 1 ? '' : 's'} in view`];
-    if (predictedCount > 0 && pinnedCount > 0) {
-      parts.push(`${predictedCount} predicted, ${pinnedCount} pinned`);
-    } else if (predictedCount > 0) {
-      parts.push('predicted in real time');
-    } else if (pinnedCount > 0) {
-      parts.push('pinned');
+    legend.style.top = `${layout.legendY}px`;
+
+    const predicted = placements.filter(placement => placement.isPredicted).length;
+    const pinned = placements.length - predicted;
+    const mismatched = placements.filter(placement => placement.mismatches.count > 0).length;
+    const phosphorylated = placements.filter(placement => placement.isPhosphorylated).length;
+    const amplicons = context.amplicons?.length || 0;
+
+    const chips = [{ text: `${placements.length} site${placements.length === 1 ? '' : 's'}`, strong: true }];
+    if (pinned > 0 && predicted > 0) chips.push({ text: `${pinned} pinned · ${predicted} predicted` });
+    else if (predicted > 0) chips.push({ text: 'predicted in real time' });
+    else chips.push({ text: 'pinned' });
+    if (amplicons > 0) chips.push({ text: `${amplicons} amplicon${amplicons === 1 ? '' : 's'}`, swatch: '#64748b' });
+    if (mismatched > 0) {
+      chips.push({
+        text: `${mismatched} mismatched`,
+        swatch: TrackRenderer.PRIMER_TRACK_STYLE.mismatchColor,
+      });
     }
-    if (mismatchCount > 0) {
-      parts.push(`${mismatchCount} with genome differences`);
+    if (phosphorylated > 0) chips.push({ text: `${phosphorylated} × 5′-phosphate`, swatch: '#0891b2' });
+    if (context.packing?.overlapping > 0) chips.push({ text: `${context.packing.overlapping} stacked` });
+    if (context.packing?.labelsAutoHidden && placements.length > 0) {
+      chips.push({ text: 'names hidden — zoom in' });
     }
-    if (phosphateCount > 0) {
-      parts.push(`${phosphateCount} 5P`);
-    }
-    legend.textContent = parts.join(' · ');
+
+    chips.forEach(chip => {
+      const item = document.createElement('span');
+      item.className = `primer-legend-chip${chip.strong ? ' strong' : ''}`;
+      if (chip.swatch) {
+        const dot = document.createElement('span');
+        dot.className = 'primer-legend-dot';
+        dot.style.background = chip.swatch;
+        item.appendChild(dot);
+      }
+      item.appendChild(document.createTextNode(chip.text));
+      legend.appendChild(item);
+    });
+
     trackContent.appendChild(legend);
   }
 
@@ -2410,9 +2881,12 @@ class TrackRenderer {
     button.innerHTML = newCircularMode
       ? '<i class="fas fa-circle-notch"></i>'
       : '<i class="fas fa-long-arrow-alt-right"></i>';
-    button.title = newCircularMode
-      ? 'Circular Mode: ON (click to disable)'
-      : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+    this.setTrackControlHint(
+      button,
+      newCircularMode
+        ? 'Circular mode is on. Click to disable wraparound navigation.'
+        : 'Circular mode is off. Click to enable wraparound navigation.'
+    );
     button.classList.toggle('active', newCircularMode);
 
     // Update navigation manager with circular mode state
@@ -2443,9 +2917,12 @@ class TrackRenderer {
     circularBtn.innerHTML = isCircular
       ? '<i class="fas fa-circle-notch"></i>'
       : '<i class="fas fa-long-arrow-alt-right"></i>';
-    circularBtn.title = isCircular
-      ? 'Circular Mode: ON (click to disable)'
-      : 'Circular Mode: OFF (click to enable for seamless wraparound navigation)';
+    this.setTrackControlHint(
+      circularBtn,
+      isCircular
+        ? 'Circular mode is on. Click to disable wraparound navigation.'
+        : 'Circular mode is off. Click to enable wraparound navigation.'
+    );
     circularBtn.classList.toggle('active', isCircular);
   }
 
@@ -2460,7 +2937,7 @@ class TrackRenderer {
 
     buttonElement.innerHTML = `<i class="fas ${info.icon}"></i>`;
     // Tooltip states the currently active mode and what a click switches to
-    buttonElement.title = `Layout: ${info.label} (click to switch to ${nextLabel})`;
+    this.setTrackControlHint(buttonElement, `Layout: ${info.label}. Click to switch to ${nextLabel}.`);
     // Expose active mode for styling / inspection
     buttonElement.dataset.layoutMode = mode;
   }
@@ -3901,7 +4378,7 @@ class TrackRenderer {
         // the track for BOTH canvas and SVG modes, so they render identically
         // and stay pinned above the (scrollable) reads. The canvas reads
         // renderer draws only reads - it no longer draws these internally.
-        const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
+        const showCoverage = this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage');
         let coverageHeight = 0;
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
 
@@ -3911,7 +4388,7 @@ class TrackRenderer {
         }
 
         let referenceHeight = 0;
-        const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
+        const showReference = this.isReadsComponentVisible(settings, 'showReference', 'readsReference');
         if (showReference) {
           referenceHeight = parseInt(settings.referenceHeight) || 25;
           this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
@@ -3939,7 +4416,7 @@ class TrackRenderer {
 
           const renderingMode = settings.renderingMode || 'canvas';
 
-          if (this.elementVisibilityStates.readsReads) {
+          if (this.isReadsComponentVisible(settings, 'showReads', 'readsReads')) {
             if (renderingMode === 'canvas') {
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
@@ -4152,7 +4629,7 @@ class TrackRenderer {
 
         // Coverage and reference are fixed DOM bands at the top for both modes
         // (the canvas reads renderer draws only reads).
-        const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
+        const showCoverage = this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage');
         let coverageHeight = 0;
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
 
@@ -4162,7 +4639,7 @@ class TrackRenderer {
         }
 
         let referenceHeight = 0;
-        const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
+        const showReference = this.isReadsComponentVisible(settings, 'showReference', 'readsReference');
         if (showReference) {
           referenceHeight = parseInt(settings.referenceHeight) || 25;
           this.createReferenceVisualization(trackContent, viewport, referenceHeight, settings);
@@ -4192,7 +4669,7 @@ class TrackRenderer {
 
           const renderingMode = settings.renderingMode || 'canvas';
 
-          if (this.elementVisibilityStates.readsReads) {
+          if (this.isReadsComponentVisible(settings, 'showReads', 'readsReads')) {
             if (renderingMode === 'canvas') {
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
@@ -4374,7 +4851,7 @@ class TrackRenderer {
 
         // Coverage and reference are fixed DOM bands at the top for both modes
         // (the canvas reads renderer draws only reads).
-        const showCoverage = settings.showCoverage !== false && this.elementVisibilityStates.readsCoverage;
+        const showCoverage = this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage');
         const isCanvasMode = (settings.renderingMode || 'canvas') === 'canvas';
         let coverageHeight = 0;
 
@@ -4383,7 +4860,7 @@ class TrackRenderer {
           this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
         }
 
-        const showReference = settings.showReference !== false && this.elementVisibilityStates.readsReference;
+        const showReference = this.isReadsComponentVisible(settings, 'showReference', 'readsReference');
         let referenceHeight = 0;
         if (showReference) {
           referenceHeight = parseInt(settings.referenceHeight) || 25;
@@ -4413,7 +4890,7 @@ class TrackRenderer {
           const renderingMode = settings.renderingMode || 'canvas';
 
           // Only render reads if toggle is on
-          if (this.elementVisibilityStates.readsReads) {
+          if (this.isReadsComponentVisible(settings, 'showReads', 'readsReads')) {
             if (renderingMode === 'canvas') {
               // Fetch reference sequence if needed for Canvas rendering
               const referenceSequence =
@@ -4509,8 +4986,6 @@ class TrackRenderer {
    * Create scrollable reads track with vertical scrolling capability
    */
   createScrollableReadsTrack(trackContent, readRows, viewport, layout, settings) {
-    this.ensureReadsScrollDragHandlers();
-
     const { readHeight, rowSpacing, topPadding, bottomPadding, trackHeight } = layout;
     const rowHeight = readHeight + rowSpacing;
 
@@ -4522,6 +4997,13 @@ class TrackRenderer {
     trackContent.style.height = `${trackHeight}px`;
     trackContent.style.position = 'relative';
     trackContent.style.overflow = 'hidden';
+
+    // Keep coverage/reference visible, but skip all read rows when hidden.
+    if (!this.isReadsComponentVisible(settings, 'showReads', 'readsReads')) {
+      return;
+    }
+
+    this.ensureReadsScrollDragHandlers();
 
     // Full height of all rows (the scrollable content). Bands are NOT included
     // here - they live outside the scroll viewport.
@@ -7180,10 +7662,18 @@ class TrackRenderer {
     // taking precedence when it exists.
     gene = this._canonicalGeneDetailsFeature(gene);
 
-    // Call the main CodeXomics's gene selection methods
+    // Update the lightweight selection visuals immediately. Building the Gene
+    // Details sidebar is substantially more expensive, so the real app queues
+    // that work until after the selection has had a chance to paint. Test and
+    // embedding callers without the scheduler retain the synchronous fallback.
     this.genomeBrowser.selectGene(gene, operonInfo);
-    this.genomeBrowser.showGeneDetailsPanel();
-    this.genomeBrowser.populateGeneDetails(gene, operonInfo);
+
+    if (typeof this.genomeBrowser.scheduleGeneDetailsPanelUpdate === 'function') {
+      this.genomeBrowser.scheduleGeneDetailsPanelUpdate(gene, operonInfo);
+    } else {
+      this.genomeBrowser.populateGeneDetails(gene, operonInfo);
+      this.genomeBrowser.showGeneDetailsPanel();
+    }
 
     const genesSettings = this.getTrackSettings('genes');
     if (options.scrollBottomSequence !== false && genesSettings.autoScrollBottomSequenceOnGeneSelect !== false) {
@@ -7655,11 +8145,10 @@ class TrackRenderer {
   /**
    * Create a toggle button for Reads track components (Coverage, Reference, Reads)
    */
-  createReadsToggleButton(iconName, labelText, stateKey) {
+  createReadsToggleButton(iconName, labelText, stateKey, fileId = null) {
     const btn = document.createElement('button');
     btn.className = 'track-btn track-reads-toggle-btn';
     btn.innerHTML = `<i class="fas fa-${iconName}"></i>`;
-    btn.title = `Toggle ${labelText}`;
     btn.style.cssText = `padding: 2px 5px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; transition: background 0.2s, color 0.2s;`;
 
     // Map state keys to renderer options for lookup
@@ -7669,35 +8158,9 @@ class TrackRenderer {
       readsReads: 'showReads',
     };
     const optionKey = optionMap[stateKey];
-
-    // Initialize elementVisibilityStates based on trackSettings if available
-    if (this.trackSettings && this.trackSettings['reads'] && this.trackSettings['reads'][stateKey] !== undefined) {
-      // If setting exists, use it
-      this.elementVisibilityStates[stateKey] = this.trackSettings['reads'][stateKey] !== false;
-    }
-
-    // If we have a mapped setting key, check that too (it's the preferred key)
-    if (
-      optionKey &&
-      this.trackSettings &&
-      this.trackSettings['reads'] &&
-      this.trackSettings['reads'][optionKey] !== undefined
-    ) {
-      this.elementVisibilityStates[stateKey] = this.trackSettings['reads'][optionKey] !== false;
-    }
-
-    // Default to true if no setting is found
-    if (this.elementVisibilityStates[stateKey] === undefined) {
-      this.elementVisibilityStates[stateKey] = true;
-    }
-
-    if (!this.elementVisibilityStates[stateKey]) {
-      btn.style.background = '#eee';
-      btn.style.color = '#aaa';
-      btn.classList.remove('active');
-    } else {
-      btn.classList.add('active');
-    }
+    const currentSettings = this.getTrackSettings('reads', fileId);
+    const isVisible = this.isReadsComponentVisible(currentSettings, optionKey, stateKey);
+    this.updateReadsToggleButtonAppearance(btn, labelText, stateKey, isVisible);
 
     // Mark button for easy finding later
     btn.dataset.toggleType = stateKey;
@@ -7705,50 +8168,28 @@ class TrackRenderer {
     btn.addEventListener('click', e => {
       e.stopPropagation();
 
-      // Toggle state
-      this.elementVisibilityStates[stateKey] = !this.elementVisibilityStates[stateKey];
-      const newValue = this.elementVisibilityStates[stateKey];
-
-      // Update visuals
-      if (newValue) {
-        btn.style.background = 'white';
-        btn.style.color = '#333';
-        btn.classList.add('active');
-      } else {
-        btn.style.background = '#eee';
-        btn.style.color = '#aaa';
-        btn.classList.remove('active');
-      }
+      const newValue = !btn.classList.contains('active');
+      this.updateReadsToggleButtonAppearance(btn, labelText, stateKey, newValue);
 
       // Update settings if mapped
       if (optionKey) {
-        // Detect fileId from the track element for instance-level settings
         const trackElement = btn.closest('.reads-track');
-        const fileId = trackElement?.dataset?.fileId || null;
-        const settingsKey = fileId ? `reads::${fileId}` : 'reads';
+        const resolvedFileId = fileId || trackElement?.dataset?.fileId || null;
+        const settings = { ...this.getTrackSettings('reads', resolvedFileId) };
+        settings[optionKey] = newValue;
+        settings[stateKey] = newValue;
 
-        // Get current settings or init
-        if (!this.trackSettings) this.trackSettings = {};
-        if (!this.trackSettings[settingsKey]) {
-          // Initialize with type-level defaults merged
-          this.trackSettings[settingsKey] = { ...(this.trackSettings['reads'] || {}) };
+        if (!resolvedFileId) {
+          this.elementVisibilityStates[stateKey] = newValue;
         }
-
-        // Update and save
-        this.trackSettings[settingsKey][optionKey] = newValue;
-        // Also update the legacy key if it exists to be safe
-        this.trackSettings[settingsKey][stateKey] = newValue;
 
         // Persist settings
         if (typeof this.saveTrackSettings === 'function') {
-          this.saveTrackSettings('reads', this.trackSettings[settingsKey], fileId);
+          this.saveTrackSettings('reads', settings, resolvedFileId);
         }
-      }
 
-      // Update all active CanvasReadsRenderers
-      if (this.canvasRenderers) {
-        this.canvasRenderers.forEach(renderer => {
-          // Check if it has the updateOptions method (is a CanvasReadsRenderer)
+        trackElement?.querySelectorAll('.reads-canvas-container[data-track-id]').forEach(container => {
+          const renderer = this.canvasRenderers?.get(container.dataset.trackId);
           if (renderer && typeof renderer.updateOptions === 'function') {
             renderer.updateOptions({
               [optionKey]: newValue,
@@ -7766,6 +8207,32 @@ class TrackRenderer {
     });
 
     return btn;
+  }
+
+  isReadsComponentVisible(settings, optionKey, legacyStateKey = null) {
+    if (settings && optionKey && settings[optionKey] !== undefined) {
+      return settings[optionKey] !== false;
+    }
+
+    if (legacyStateKey && this.elementVisibilityStates?.[legacyStateKey] !== undefined) {
+      return this.elementVisibilityStates[legacyStateKey] !== false;
+    }
+
+    return true;
+  }
+
+  updateReadsToggleButtonAppearance(button, labelText, stateKey, isVisible) {
+    button.style.background = isVisible ? 'white' : '#eee';
+    button.style.color = isVisible ? '#333' : '#aaa';
+    button.classList.toggle('active', isVisible);
+    button.setAttribute('aria-pressed', isVisible.toString());
+
+    const hints = {
+      readsCoverage: isVisible ? 'Hide the coverage graph' : 'Show the coverage graph',
+      readsReference: isVisible ? 'Hide the reference sequence' : 'Show the reference sequence',
+      readsReads: isVisible ? 'Hide aligned reads (coverage and reference remain visible)' : 'Show aligned reads',
+    };
+    this.setTrackControlHint(button, hints[stateKey] || `${isVisible ? 'Hide' : 'Show'} ${labelText}`);
   }
 
   genesOverlap(gene1, gene2) {
@@ -7812,7 +8279,7 @@ class TrackRenderer {
     const selectionBtn = document.createElement('button');
     selectionBtn.className = 'track-btn coordinate-ruler-selection-btn';
     selectionBtn.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
-    selectionBtn.title = 'Toggle sequence selection mode on the ruler';
+    this.setTrackControlHint(selectionBtn, 'Enable sequence selection on the coordinate ruler');
     selectionBtn.style.cssText = `
             position: absolute;
             top: 4px;
@@ -10114,7 +10581,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
 
     button.dataset.locked = newLocked.toString();
     button.innerHTML = newLocked ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-lock-open"></i>';
-    button.title = newLocked ? 'Unlock Track Controls' : 'Lock Track Controls';
+    this.setTrackControlHint(button, newLocked ? 'Unlock track controls' : 'Lock track controls');
 
     // Find the track element using multiple strategies
     let trackElement = button.closest('[class*="-track"]');
@@ -10247,7 +10714,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       // Show header
       trackHeader.style.display = '';
       button.innerHTML = '<i class="fas fa-minus"></i>';
-      button.title = 'Hide Track Header';
+      this.setTrackControlHint(button, 'Minimize the track header');
 
       // Update state
       this.headerStates.set(trackType, false);
@@ -10261,7 +10728,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       // Hide header
       trackHeader.style.display = 'none';
       button.innerHTML = '<i class="fas fa-plus"></i>';
-      button.title = 'Show Track Header';
+      this.setTrackControlHint(button, 'Show the track header');
 
       // Update state
       this.headerStates.set(trackType, true);
@@ -10306,6 +10773,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       if (selectionBtn) {
         selectionBtn.style.background = 'rgba(255, 255, 255, 0.8)';
         selectionBtn.style.color = '#6c757d';
+        selectionBtn.setAttribute('aria-pressed', 'false');
+        this.setTrackControlHint(selectionBtn, 'Enable sequence selection on the coordinate ruler');
       }
 
       console.log('Secondary ruler selection mode disabled - dragging re-enabled');
@@ -10321,6 +10790,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       if (selectionBtn) {
         selectionBtn.style.background = '#ef4444';
         selectionBtn.style.color = '#ffffff';
+        selectionBtn.setAttribute('aria-pressed', 'true');
+        this.setTrackControlHint(selectionBtn, 'Disable sequence selection on the coordinate ruler');
       }
 
       console.log('Secondary ruler selection mode enabled - dragging disabled');
@@ -10634,9 +11105,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
     }
 
     const floatingBtn = document.createElement('button');
-    floatingBtn.className = 'floating-header-btn';
+    floatingBtn.className = 'track-btn floating-header-btn';
     floatingBtn.innerHTML = '<i class="fas fa-plus"></i>';
-    floatingBtn.title = 'Show Track Header';
+    this.setTrackControlHint(floatingBtn, 'Show the track header');
     floatingBtn.style.cssText = `
             position: absolute;
             top: 5px;
@@ -10670,7 +11141,7 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
         const hideHeaderBtn = trackHeader.querySelector('.track-hide-header-btn');
         if (hideHeaderBtn) {
           hideHeaderBtn.innerHTML = '<i class="fas fa-minus"></i>';
-          hideHeaderBtn.title = 'Hide Track Header';
+          this.setTrackControlHint(hideHeaderBtn, 'Minimize the track header');
         }
 
         // Adjust track content
@@ -11027,6 +11498,14 @@ This action cannot be undone.`;
         }, 100);
         break;
 
+      case 'primers':
+        titleElement.textContent = 'Primers Track Settings';
+        bodyElement.innerHTML = this.createPrimersSettingsContent(currentSettings);
+        setTimeout(() => {
+          this.setupPrimersSettingsEventListeners(bodyElement);
+        }, 100);
+        break;
+
       default:
         titleElement.textContent = `${trackType} Track Settings`;
         bodyElement.innerHTML = this.createDefaultSettingsContent(trackType, currentSettings);
@@ -11355,6 +11834,14 @@ This action cannot be undone.`;
                 </div>
             </div>
         `;
+  }
+
+  /**
+   * Create primers track settings content. The panel itself lives in
+   * tracks/PrimerTrackSettingsPanel.js.
+   */
+  createPrimersSettingsContent(settings) {
+    return PrimerTrackSettingsPanel.content(this, settings);
   }
 
   /**
@@ -12143,6 +12630,12 @@ This action cannot be undone.`;
         showOperonsSameRow: false,
         height: 80,
         geneHeight: 10,
+        // Width in px below which an oligo arrow stops being drawn to scale.
+        // See TrackRenderer.PRIMER_TRACK_STYLE for the rest of the geometry.
+        minGlyphWidth: 8,
+        showLabels: true,
+        showPredicted: true,
+        showAmplicons: true,
         displayType: 'standard',
         fontSize: 11,
         geneNameColor: '#4a044e',
@@ -12191,6 +12684,8 @@ This action cannot be undone.`;
         coverageHeight: 50,
         coverageColor: '#4a90e2',
         coverageStrokeColor: '#2c5aa0',
+        // Main aligned-read rectangles (independent of coverage/reference)
+        showReads: true,
         // Reference sequence settings
         showReference: true,
         referenceHeight: 25,
@@ -12642,6 +13137,10 @@ This action cannot be undone.`;
         settings.fontFamily = modal.querySelector('#actionsFontFamily')?.value || 'Arial, sans-serif';
         break;
 
+      case 'primers':
+        Object.assign(settings, PrimerTrackSettingsPanel.collect(this, modal));
+        break;
+
       case 'variants':
         // Display options
         settings.height = parseInt(modal.querySelector('#variantsHeight').value) || 80;
@@ -12806,27 +13305,7 @@ This action cannot be undone.`;
    * Setup event listeners for sequence line settings
    */
   setupSequenceLineSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.seqline-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.seqline-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.seqline-settings-tabs');
 
     const showProteinTranslationCheckbox = bodyElement.querySelector('#sequenceLineShowProteinTranslation');
     const translationModeGroup = bodyElement.querySelector('#sequenceLineTranslationModeGroup');
@@ -12911,7 +13390,7 @@ This action cannot be undone.`;
 
     // Sync UI Buttons (specifically for Reads track)
     if (trackType === 'reads') {
-      this.syncReadsToggleButtons(settings);
+      this.syncReadsToggleButtons(settings, fileId);
 
       // Sync sampling header UI when sampling settings change
       if (settings.samplingPercentage !== undefined) {
@@ -13321,10 +13800,7 @@ This action cannot be undone.`;
     const primerContent = primerTrackElement?.querySelector('.track-content');
     if (!primerContent) return;
 
-    trackContent.innerHTML = '';
-    while (primerContent.firstChild) {
-      trackContent.appendChild(primerContent.firstChild);
-    }
+    this.adoptPrimerTrackContent(trackContent, primerContent);
 
     console.log('🧬 Primer track SVG updated');
   }
@@ -14810,31 +15286,7 @@ This action cannot be undone.`;
   }
 
   setupReadsSettingsEventListeners(bodyElement) {
-    // Set up tabs switching
-    const tabButtons = bodyElement.querySelectorAll('.reads-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.reads-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        // Remove active class from all buttons and panels
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        // Add active class to clicked button
-        button.classList.add('active');
-
-        // Show corresponding panel
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.reads-settings-tabs');
 
     // Sampling mode toggle
     const samplingModeSelect = bodyElement.querySelector('#readsSamplingMode');
@@ -15005,31 +15457,7 @@ This action cannot be undone.`;
    * Setup event listeners for variants track settings
    */
   setupVariantsSettingsEventListeners(bodyElement) {
-    // Set up tabs switching
-    const tabButtons = bodyElement.querySelectorAll('.variants-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.variants-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        // Remove active class from all buttons and panels
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        // Add active class to clicked button
-        button.classList.add('active');
-
-        // Show corresponding panel
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.variants-settings-tabs');
 
     // Color mode selection - show/hide custom color group
     const colorModeSelect = bodyElement.querySelector('#variantsColorMode');
@@ -15050,9 +15478,6 @@ This action cannot be undone.`;
    * Setup event listeners for sequence track settings
    */
   setupSequenceSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.sequence-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.sequence-settings-tabs .tab-content');
-
     // Reflect the current line height / spacing in the selects (static options).
     const seqSettings = this.getTrackSettings('sequence') || {};
     const seqUtils = this.genomeBrowser?.sequenceUtils;
@@ -15060,25 +15485,7 @@ This action cannot be undone.`;
     if (lineHeightSelect) lineHeightSelect.value = String(seqSettings.lineHeight ?? seqUtils?.lineHeight ?? 28);
     const lineSpacingSelect = bodyElement.querySelector('#sequenceLineSpacing');
     if (lineSpacingSelect) lineSpacingSelect.value = String(seqSettings.lineSpacing ?? seqUtils?.lineSpacing ?? 8);
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.sequence-settings-tabs');
 
     const colorModeSelect = bodyElement.querySelector('#sequenceColorMode');
     const uniformColorSettings = bodyElement.querySelector('#uniformColorSettings');
@@ -15099,79 +15506,48 @@ This action cannot be undone.`;
    * Setup event listeners for GC track settings
    */
   setupGCSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.gc-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.gc-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.gc-settings-tabs');
   }
 
   /**
    * Setup event listeners for WIG tracks settings
    */
   setupWIGTracksSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.wig-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.wig-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.wig-settings-tabs');
   }
 
   /**
    * Setup event listeners for Actions track settings
    */
   setupActionsSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.actions-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.actions-settings-tabs .tab-content');
+    this.setupSettingsTabs(bodyElement, '.actions-settings-tabs');
+  }
+
+  /**
+   * Setup event listeners for Primers track settings
+   */
+  setupPrimersSettingsEventListeners(bodyElement) {
+    this.setupSettingsTabs(bodyElement, '.primers-settings-tabs');
+  }
+
+  /**
+   * Wire the tab strip shared by the track settings panels: clicking a button
+   * activates its button and the matching `#<data-tab>-tab` panel.
+   */
+  setupSettingsTabs(bodyElement, containerSelector) {
+    const tabButtons = bodyElement.querySelectorAll(`${containerSelector} .tab-button`);
+    const tabPanels = bodyElement.querySelectorAll(`${containerSelector} .tab-content`);
 
     tabButtons.forEach(button => {
       button.addEventListener('click', e => {
         e.preventDefault();
         e.stopPropagation();
 
-        const targetTab = button.getAttribute('data-tab');
-
         tabButtons.forEach(btn => btn.classList.remove('active'));
         tabPanels.forEach(panel => panel.classList.remove('active'));
 
         button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
+        bodyElement.querySelector(`#${button.getAttribute('data-tab')}-tab`)?.classList.add('active');
       });
     });
   }
@@ -15180,27 +15556,7 @@ This action cannot be undone.`;
    * Setup event listeners for default / BLAST track settings
    */
   setupDefaultSettingsEventListeners(bodyElement) {
-    const tabButtons = bodyElement.querySelectorAll('.default-settings-tabs .tab-button');
-    const tabPanels = bodyElement.querySelectorAll('.default-settings-tabs .tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const targetTab = button.getAttribute('data-tab');
-
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanels.forEach(panel => panel.classList.remove('active'));
-
-        button.classList.add('active');
-
-        const targetPanel = bodyElement.querySelector(`#${targetTab}-tab`);
-        if (targetPanel) {
-          targetPanel.classList.add('active');
-        }
-      });
-    });
+    this.setupSettingsTabs(bodyElement, '.default-settings-tabs');
   }
 
   /**
@@ -15613,7 +15969,7 @@ This action cannot be undone.`;
   /**
    * Sync header toggle buttons with current settings
    */
-  syncReadsToggleButtons(settings) {
+  syncReadsToggleButtons(settings, fileId = null) {
     // Map settings keys to toggle types
     const settingToToggle = {
       showCoverage: 'readsCoverage',
@@ -15623,38 +15979,38 @@ This action cannot be undone.`;
 
     Object.keys(settingToToggle).forEach(settingKey => {
       const toggleType = settingToToggle[settingKey];
-      // Find buttons with this toggle type
+      // Find buttons with this toggle type, then scope instance settings to the
+      // matching file-backed track instead of changing every BAM header.
       const buttons = document.querySelectorAll(`.track-reads-toggle-btn[data-toggle-type="${toggleType}"]`);
 
       buttons.forEach(btn => {
-        // Determine state: default to true if undefined, otherwise use setting value
-        const isActive = settings[settingKey] !== false;
+        const buttonFileId = btn.closest('.reads-track')?.dataset?.fileId || null;
+        if ((fileId || null) !== buttonFileId) return;
 
-        // Update internal state
-        this.elementVisibilityStates[toggleType] = isActive;
+        const isActive = this.isReadsComponentVisible(settings, settingKey, toggleType);
 
-        // Update visual state
-        if (isActive) {
-          btn.style.background = 'white';
-          btn.style.color = '#333';
-          btn.classList.add('active');
-        } else {
-          btn.style.background = '#eee';
-          btn.style.color = '#aaa';
-          btn.classList.remove('active');
+        if (!fileId) {
+          this.elementVisibilityStates[toggleType] = isActive;
         }
+
+        const labels = {
+          readsCoverage: 'Coverage',
+          readsReference: 'Reference',
+          readsReads: 'Reads',
+        };
+        this.updateReadsToggleButtonAppearance(btn, labels[toggleType], toggleType, isActive);
       });
     });
 
-    // Also update any active renderers to ensure they match current settings
-    // This handles the case where settings change from the panel -> renderers need update
-    if (this.canvasRenderers) {
-      this.canvasRenderers.forEach(renderer => {
-        if (renderer && typeof renderer.updateOptions === 'function') {
-          renderer.updateOptions(settings);
-        }
+    const targetTracks = Array.from(document.querySelectorAll('.reads-track')).filter(
+      track => (track.dataset.fileId || null) === (fileId || null)
+    );
+    targetTracks.forEach(track => {
+      track.querySelectorAll('.reads-canvas-container[data-track-id]').forEach(container => {
+        const renderer = this.canvasRenderers?.get(container.dataset.trackId);
+        renderer?.updateOptions?.(settings);
       });
-    }
+    });
   }
 
   refreshTrack(trackType) {
@@ -15690,6 +16046,40 @@ This action cannot be undone.`;
 // growth), so the two never switch between letters and blocks at different
 // zooms. Keep the fallbacks in those two renderers equal to this.
 TrackRenderer.SEQUENCE_LETTER_MIN_PX_PER_BP = 8;
+
+// Geometry of the Primers track, in CSS pixels. A primer is ~20 bp, i.e. a
+// fraction of a pixel at anything but base-level zoom, so the glyph has a floor
+// size in screen space and the arrow head is capped in length independently of
+// it. Both matter: the head used to be an SVG marker scaled by stroke-width,
+// which turned every zoomed-out primer into a triangle the height of the track.
+TrackRenderer.PRIMER_TRACK_STYLE = {
+  glyphHeight: 11, // arrow body height when the track settings do not override it
+  minGlyphWidth: 8, // smallest legible arrow; sub-pixel sites are inflated to this
+  minHeadLength: 4,
+  maxHeadLength: 9,
+  headFraction: 0.45, // head length as a share of the glyph, before the cap
+  rowSpacing: 9,
+  rowGutter: 8, // horizontal breathing room required between two sites on a row
+  topPadding: 12,
+  bottomPadding: 6,
+  legendLaneHeight: 16,
+  ampliconLaneHeight: 20,
+  minTrackHeight: 46,
+  emptyTrackHeight: 44,
+  maxRows: 4,
+  fontSize: 11,
+  maxLabelChars: 22,
+  labelGap: 6, // gap between an arrow and a label placed beside it
+  labelInsetPadding: 5, // padding required before a label may sit inside an arrow
+  phosphateRadius: 3, // 5'-phosphate bead on the oligo's tail
+  phosphateOffset: 1.5,
+  mismatchTickMinWidth: 24, // below this the red outline replaces per-base ticks
+  ampliconMinSpan: 36,
+  ampliconMaxBp: 50000, // guards against joining unrelated off-target sites
+  defaultColor: '#7c3aed',
+  mismatchColor: '#dc2626',
+  labelColor: '#334155',
+};
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

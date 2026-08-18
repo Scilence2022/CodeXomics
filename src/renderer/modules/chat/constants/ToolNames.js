@@ -226,6 +226,8 @@ const TOOL_NAMES = {
   SYSTEM: {
     SET_WORKING_DIRECTORY: 'set_working_directory',
     LIST_AVAILABLE_TOOLS: 'list_available_tools',
+    LIST_SKILLS: 'list_skills',
+    GET_SKILL: 'get_skill',
     SWITCH_UI_STYLE: 'switch_ui_style',
     TOGGLE_SETTINGS_MODAL: 'toggle_settings_modal',
     TOGGLE_CHATBOX: 'toggle_chatbox',

@@ -124,6 +124,8 @@ class ToolCapabilityPolicy {
       system_utility: {
         tools: [
           'set_working_directory',
+          'list_skills',
+          'get_skill',
           'utility_download_internet_file',
           'utility_toggle_settings_modal',
           'toggle_settings_modal',

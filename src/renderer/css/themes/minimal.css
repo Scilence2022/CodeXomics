@@ -415,20 +415,12 @@
 }
 
 /* ===== THINKING PROCESS ===== */
-[data-ui-style='minimal'] .thinking-process {
-  border-left-color: var(--primary-color) !important;
-}
-
 [data-ui-style='minimal'] .thinking-header {
   color: var(--primary-color) !important;
 }
 
 [data-ui-style='minimal'] .thinking-header i {
   color: var(--primary-color) !important;
-}
-
-[data-ui-style='minimal'] .thinking-process .message-icon {
-  background: var(--primary-color) !important;
 }
 
 /* ===== WELCOME BUTTONS ===== */
@@ -486,11 +478,6 @@
 
 [data-ui-style='minimal'] .provider-config .help-text a {
   color: var(--primary-color) !important;
-}
-
-/* ===== MULTI-AGENT ACTIVATION ===== */
-[data-ui-style='minimal'] .multi-agent-activation {
-  background: var(--btn-gradient) !important;
 }
 
 /* ===== DROPDOWN ICON ===== */

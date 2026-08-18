@@ -206,7 +206,6 @@
 }
 
 [data-ui-style='amy'] .gene-info-header,
-[data-ui-style='amy'] .thinking-process,
 [data-ui-style='amy'] .progress-item {
   border-left-color: var(--primary-color) !important;
 }
@@ -273,7 +272,6 @@
 [data-ui-style='amy'] #newChatBtn,
 [data-ui-style='amy'] .toolbar-section #toggleChatBtn,
 [data-ui-style='amy'] .welcome-buttons .btn-primary,
-[data-ui-style='amy'] .multi-agent-activation,
 [data-ui-style='amy'] .metric-item,
 [data-ui-style='amy'] .chat-notification.info,
 [data-ui-style='amy'] #addFeaturesBtn,

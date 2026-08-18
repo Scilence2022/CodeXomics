@@ -24,6 +24,8 @@ describe('activity panel', () => {
     cm.activityAutoCollapse = true;
     cm.activityRoundState = null;
     cm.activityTotals = { rounds: 0, tools: 0, failures: 0 };
+    cm.activityPanelElement = null;
+    cm.activityPanelSeq = 0;
     cm.conversationState = { currentRequestId: 'req1', startTime: Date.now() };
     cm.addToEvolutionData = vi.fn();
     cm.chatBoxSettingsManager = {
@@ -137,7 +139,7 @@ describe('activity panel', () => {
       expect(finished.classList.contains('activity-collapsed')).toBe(false);
       expect(finished.classList.contains('activity-failed')).toBe(true);
       expect(document.querySelector('.activity-summary').textContent).toContain('1 failed');
-      expect(finished.querySelector('.message-icon i').classList.contains('fa-exclamation-circle')).toBe(true);
+      expect(finished.querySelector('.activity-status').classList.contains('fa-exclamation-circle')).toBe(true);
     });
 
     it('honours the auto-collapse setting being off', () => {
@@ -185,6 +187,76 @@ describe('activity panel', () => {
 
       expect(rounds()[0].querySelector('summary').textContent).toContain('blast_search');
       expect(cm.activityRoundState).toBeNull();
+    });
+  });
+
+  // The benchmark runner calls sendToLLM() directly instead of going through
+  // startConversation(), so there is no request id to scope panel lookups by for
+  // the whole run. Steps have to keep landing in the panel that is open at the
+  // bottom of the transcript, not the first one ever created.
+  describe('requests with no conversation id (benchmark runs)', () => {
+    const panels = () => [...document.querySelectorAll('.thinking-process')];
+    let clock;
+
+    beforeEach(() => {
+      cm.conversationState = { currentRequestId: null, startTime: Date.now() };
+      // Move the clock on between calls, the way a real run does across LLM
+      // round trips. Panels opened inside one tick share a timestamp, which
+      // would let a timestamp-keyed lookup find the right panel by luck.
+      let tick = 1_700_000_000_000;
+      clock = vi.spyOn(Date, 'now').mockImplementation(() => (tick += 1000));
+    });
+
+    afterEach(() => clock.mockRestore());
+
+    it('appends steps to the newest panel, not the oldest', () => {
+      cm.addThinkingMessage('test progress');
+      cm.addThinkingMessage('llm request');
+      cm.updateThinkingMessage('response received');
+
+      expect(panels()).toHaveLength(2);
+      expect(panels()[0].textContent).toContain('test progress');
+      expect(panels()[0].textContent).not.toContain('response received');
+      expect(panels()[1].textContent).toContain('response received');
+    });
+
+    it('gives each panel its own id so same-tick panels do not replace each other', () => {
+      // Two panels inside one millisecond — back-to-back narration between
+      // awaits. Keying the id off the clock made the second panel reuse the
+      // first one's id, and opening it deleted the first along with its steps.
+      clock.mockReturnValue(1_700_000_000_000);
+
+      cm.addThinkingMessage('first');
+      cm.addThinkingMessage('second');
+
+      const ids = panels().map(p => p.id);
+      expect(panels()).toHaveLength(2);
+      expect(new Set(ids).size).toBe(2);
+      // The benchmark sweeps stale panels with this prefix between tests.
+      expect(ids.every(id => id.startsWith('thinkingProcess_'))).toBe(true);
+    });
+
+    it('routes steps into the open round of the newest panel', () => {
+      cm.addThinkingMessage('earlier test');
+      cm.addThinkingMessage('current test');
+      cm.beginActivityRound(1, 20);
+      cm.updateThinkingMessage('round step');
+
+      expect(rounds()).toHaveLength(1);
+      expect(panels()[1].contains(rounds()[0])).toBe(true);
+      expect(panels()[0].textContent).not.toContain('round step');
+    });
+
+    it('starts a fresh panel after the transcript is cleared between tests', () => {
+      cm.addThinkingMessage('previous test');
+      cm.configManager = { clearChatHistory: vi.fn() };
+      cm.clearChat();
+
+      cm.updateThinkingMessage('next test');
+
+      expect(cm.activityPanelElement).not.toBeNull();
+      expect(panels()).toHaveLength(1);
+      expect(panels()[0].textContent).toContain('next test');
     });
   });
 

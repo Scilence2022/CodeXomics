@@ -31,6 +31,7 @@ class SequenceUtils {
     this.proteinTranslationCache = new Map(); // Cache for CDS translations used by aligned protein rows
     this.colorCache = new Map(); // Cache for color calculations
     this.svgCache = new Map(); // Cache for SVG indicators
+    this.renderedOperonContexts = new Map(); // Reuse operons already calculated for visible sequence indicators
     this.lastRenderParams = null; // Track last render parameters
 
     // Virtual scrolling parameters - FIXED: Use actual line height + spacing
@@ -593,7 +594,13 @@ class SequenceUtils {
 
     const chromosome = target.dataset.chromosome || this.genomeBrowser.currentChromosome;
     const annotations = this.genomeBrowser.currentAnnotations?.[chromosome] || [];
-    const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations, chromosome) : [];
+    const renderedContext = this.renderedOperonContexts.get(chromosome);
+    const operons =
+      renderedContext?.annotations === annotations && renderedContext.annotationCount === annotations.length
+        ? renderedContext.operons
+        : this.genomeBrowser.detectOperons
+          ? this.genomeBrowser.detectOperons(annotations, chromosome)
+          : [];
     const operonInfo = this.genomeBrowser.getGeneOperonInfo(gene, operons);
 
     if (this.genomeBrowser.trackRenderer?.showGeneDetails) {
@@ -952,12 +959,24 @@ class SequenceUtils {
   }
 
   syncSequenceHeaderToggleButtons(settings = this.getSequenceTrackSettings()) {
+    const setButtonHint = (button, hint) => {
+      if (!button) return;
+      const trackRenderer = this.genomeBrowser.trackRenderer;
+      if (trackRenderer?.setTrackControlHint) {
+        trackRenderer.setTrackControlHint(button, hint);
+        return;
+      }
+      button.title = hint;
+      button.dataset.tooltip = hint;
+      button.setAttribute('aria-label', hint);
+    };
+
     const toggleButton = (id, isActive, onTitle, offTitle) => {
       const button = document.getElementById(id);
       if (!button) return;
       button.classList.toggle('active', Boolean(isActive));
       button.setAttribute('aria-pressed', Boolean(isActive).toString());
-      button.title = isActive ? onTitle : offTitle;
+      setButtonHint(button, isActive ? onTitle : offTitle);
     };
 
     toggleButton(
@@ -984,9 +1003,12 @@ class SequenceUtils {
       const copyAsFasta = settings.copyFormat === 'fasta';
       copyFormatButton.classList.toggle('active', copyAsFasta);
       copyFormatButton.setAttribute('aria-pressed', copyAsFasta.toString());
-      copyFormatButton.title = copyAsFasta
-        ? 'Copy format: FASTA (includes a header line). Click to switch to a clean sequence.'
-        : 'Copy format: clean sequence (bases only). Click to switch to FASTA.';
+      setButtonHint(
+        copyFormatButton,
+        copyAsFasta
+          ? 'Copy format: FASTA (includes a header line). Click to switch to a clean sequence.'
+          : 'Copy format: clean sequence (bases only). Click to switch to FASTA.'
+      );
       const label = copyFormatButton.querySelector('span');
       if (label) {
         label.textContent = copyAsFasta ? 'FASTA' : 'Clean';
@@ -1114,9 +1136,17 @@ class SequenceUtils {
       if (icon) icon.className = shouldCollapse ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
       if (label) label.textContent = shouldCollapse ? 'Expand' : 'Collapse';
       button.setAttribute('aria-expanded', (!shouldCollapse).toString());
-      button.title = shouldCollapse
+      const hint = shouldCollapse
         ? 'Expand the sequence track to show the sequence content again'
         : 'Collapse the sequence track (keep only the header visible)';
+      const trackRenderer = this.genomeBrowser.trackRenderer;
+      if (trackRenderer?.setTrackControlHint) {
+        trackRenderer.setTrackControlHint(button, hint);
+      } else {
+        button.title = hint;
+        button.dataset.tooltip = hint;
+        button.setAttribute('aria-label', hint);
+      }
     }
 
     // Let dependent layouts (canvas widths, virtual scroll) recompute.
@@ -1291,6 +1321,11 @@ class SequenceUtils {
     const subsequence = this.getViewportSequence(fullSequence, viewStart, viewEnd, chromosome);
     const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
     const operons = this.genomeBrowser.detectOperons ? this.genomeBrowser.detectOperons(annotations, chromosome) : [];
+    this.renderedOperonContexts.set(chromosome, {
+      annotations,
+      annotationCount: annotations.length,
+      operons,
+    });
 
     // Get sequence track settings
     const sequenceSettings = this.getSequenceTrackSettings();
@@ -2927,18 +2962,13 @@ class SequenceUtils {
     const end = Math.max(selectionStart, selectionEnd);
     let highlightedCount = 0;
 
-    document.querySelectorAll('.sequence-bases span.gene-sequence-selected').forEach(baseElement => {
-      baseElement.classList.remove('sequence-selected');
-      baseElement.classList.remove('gene-sequence-selected');
-    });
-
-    document.querySelectorAll('.sequence-bases span').forEach(baseElement => {
+    const sequenceContainer = document.getElementById('sequenceContent') || document;
+    sequenceContainer.querySelectorAll('.sequence-bases span').forEach(baseElement => {
       const sourcePosition = this.getBaseElementSourcePosition(baseElement);
-      if (sourcePosition !== null && sourcePosition >= start && sourcePosition <= end) {
-        baseElement.classList.add('sequence-selected');
-        baseElement.classList.add('gene-sequence-selected');
-        highlightedCount++;
-      }
+      const isSelected = sourcePosition !== null && sourcePosition >= start && sourcePosition <= end;
+      baseElement.classList.toggle('sequence-selected', isSelected);
+      baseElement.classList.toggle('gene-sequence-selected', isSelected);
+      if (isSelected) highlightedCount++;
     });
 
     return highlightedCount;

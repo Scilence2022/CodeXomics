@@ -838,3 +838,270 @@ describe('ChatManager bounded model-turn recovery', () => {
     expect(decision.finalResponse).toContain('never carried out: edit_annotation');
   });
 });
+
+describe('ChatManager requirements read the action, not the goal', () => {
+  function stateFor(manager, message, tools) {
+    const state = manager.createToolExecutionState(message);
+    for (const tool of tools) state.records.push({ tool, status: 'success' });
+    return state;
+  }
+
+  // Verbatim instruction from the benchmark run that never finished.
+  const PROTEIN_WORKFLOW =
+    'Search the UniProt database for the E.coli protein DapA and verify whether the UniProt ID P0A6L2 is present. ' +
+    'Also search the PDB database to find structurally resolved DapA structures; this PDB lookup may be done during ' +
+    'the initial discovery step because it does not depend on InterPro results. Then retrieve the representative ' +
+    'sequence using that UniProt ID and perform an InterPro domain analysis to identify key domains.';
+
+  const EXECUTED = [
+    'search_uniprot_database',
+    'search_pdb_structures',
+    'get_uniprot_entry',
+    'analyze_interpro_domains',
+  ];
+
+  it('scores "perform an analysis to identify X" as an analysis, not a detection', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    const { requirements } = manager.getSequentialActionRequirements(PROTEIN_WORKFLOW);
+    const capabilities = requirements.map(requirement => requirement.capability);
+
+    expect(capabilities).toContain('analysis');
+    // 'detect' only matches detect_/identify_ tools, so requiring it here left the
+    // request unsatisfiable however many times the analysis actually ran.
+    expect(capabilities).not.toContain('detect');
+  });
+
+  it('treats the protein workflow as complete once its four tools have run', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = stateFor(manager, PROTEIN_WORKFLOW, EXECUTED);
+
+    expect(manager.hasSuccessfulExecutionForRequest(state)).toBe(true);
+    expect(manager.getOutstandingRequestSteps(state)).toEqual([]);
+
+    const decision = manager.getModelTurnRecoveryDecision(
+      {
+        text: 'DapA is P0A6L2. InterPro reports the DHDPS N-terminal and TIM-barrel domains; 6 PDB entries were found.',
+        toolCalls: [],
+        invalidToolCalls: [],
+        isEmpty: false,
+      },
+      state,
+      4,
+      20
+    );
+
+    expect(decision.action).toBe('complete');
+  });
+
+  it('keeps reading the action when "to" introduces the target rather than a goal', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    expect(manager.stripClausePurposePhrase('jump to gene lacZ')).toBe('jump to gene lacZ');
+    expect(manager.stripClausePurposePhrase('navigate to position 1000')).toBe('navigate to position 1000');
+    expect(manager.stripClausePurposePhrase('switch to tab 2')).toBe('switch to tab 2');
+    expect(manager.stripClausePurposePhrase('perform a domain analysis to identify key domains')).toBe(
+      'perform a domain analysis'
+    );
+    expect(manager.stripClausePurposePhrase('export the results in order to share them')).toBe('export the results');
+  });
+
+  it('recognises the noun form of an analysis step', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = stateFor(manager, 'run a codon usage analysis on lysC', ['codon_usage_analysis']);
+
+    expect(manager.hasSuccessfulExecutionForRequest(state)).toBe(true);
+  });
+});
+
+describe('ChatManager repair budget survives a tool that keeps re-running', () => {
+  // The loop that burned the whole turn: repair prompt, model re-runs a tool it
+  // already ran, the success clears the consecutive streak, repair prompt again.
+  // Neither budget ever ran out, so only the round cap or the clock stopped it.
+  const UNSATISFIABLE = 'identify the promoter regions';
+
+  const answer = {
+    text: 'The promoter regions have been identified.',
+    toolCalls: [],
+    invalidToolCalls: [],
+    isEmpty: false,
+  };
+
+  it('gives up instead of alternating repair and re-execution forever', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = manager.createToolExecutionState(UNSATISFIABLE);
+    state.records.push({ tool: 'search_features', status: 'success' });
+
+    expect(manager.hasSuccessfulExecutionForRequest(state)).toBe(false);
+
+    const actions = [];
+    for (let round = 1; round <= 12; round++) {
+      const decision = manager.getModelTurnRecoveryDecision(answer, state, round, 20);
+      actions.push(decision.action);
+      if (decision.action !== 'retry') break;
+      // The model answers the repair prompt by re-running a tool that succeeds,
+      // which is what used to reset the budget.
+      state.protocolRecoveryAttempts = 0;
+    }
+
+    expect(actions.at(-1)).toBe('fail');
+    expect(actions.length).toBeLessThanOrEqual(5);
+  });
+
+  it('still allows the normal two consecutive repairs', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = manager.createToolExecutionState(UNSATISFIABLE);
+    state.records.push({ tool: 'search_features', status: 'success' });
+
+    expect(manager.getModelTurnRecoveryDecision(answer, state, 1, 20).action).toBe('retry');
+    expect(manager.getModelTurnRecoveryDecision(answer, state, 2, 20).action).toBe('retry');
+    expect(manager.getModelTurnRecoveryDecision(answer, state, 3, 20).action).toBe('fail');
+  });
+});
+
+describe('ChatManager requirements match the tools that carry them out', () => {
+  const REGISTRY = [
+    'get_uniprot_entry',
+    'fetch_alphafold_structure',
+    'open_protein_viewer',
+    'search_uniprot_database',
+    'analyze_interpro_domains',
+    'export_data',
+    'select_gene',
+    'create_annotation',
+    'list_annotations',
+  ];
+
+  function managerWithRegistry() {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    manager.builtInToolsMap = new Map(REGISTRY.map(name => [name, {}]));
+    return manager;
+  }
+
+  function stateFor(manager, message, tools) {
+    const state = manager.createToolExecutionState(message);
+    for (const tool of tools) state.records.push({ tool, status: 'success' });
+    return state;
+  }
+
+  // Verbatim instruction from the benchmark run that kept re-downloading.
+  const ALPHAFOLD_WORKFLOW =
+    "Retrieve the UniProt entry details for human protein p53 using accession ID 'P04637', download its " +
+    'AlphaFold 3D structure, and then open the returned AlphaFold structure in the interactive 3D protein ' +
+    'viewer using cartoon representation.';
+
+  const EXECUTED = ['get_uniprot_entry', 'fetch_alphafold_structure', 'open_protein_viewer'];
+
+  it('counts a fetch_ tool as the download the request asked for', () => {
+    const manager = managerWithRegistry();
+    const state = stateFor(manager, ALPHAFOLD_WORKFLOW, EXECUTED);
+
+    expect(manager.hasSuccessfulExecutionForRequest(state)).toBe(true);
+    expect(manager.getOutstandingRequestSteps(state)).toEqual([]);
+  });
+
+  it('does not depend on the order the model ran the tools', () => {
+    const manager = managerWithRegistry();
+    // "retrieve" and "download" both match fetch_alphafold_structure. Claiming the
+    // first match left whichever step lost the race looking unfinished.
+    const reordered = ['fetch_alphafold_structure', 'get_uniprot_entry', 'open_protein_viewer'];
+
+    expect(manager.hasSuccessfulExecutionForRequest(stateFor(manager, ALPHAFOLD_WORKFLOW, reordered))).toBe(true);
+    expect(manager.getOutstandingRequestSteps(stateFor(manager, ALPHAFOLD_WORKFLOW, reordered))).toEqual([]);
+  });
+
+  it('finishes the turn instead of asking for a download that already happened', () => {
+    const manager = managerWithRegistry();
+    const decision = manager.getModelTurnRecoveryDecision(
+      {
+        text: 'Retrieved P04637, downloaded its AlphaFold model and opened it in cartoon representation.',
+        toolCalls: [],
+        invalidToolCalls: [],
+        isEmpty: false,
+      },
+      stateFor(manager, ALPHAFOLD_WORKFLOW, EXECUTED),
+      3,
+      20
+    );
+
+    expect(decision.action).toBe('complete');
+  });
+
+  it('still reports a download step that genuinely never ran', () => {
+    const manager = managerWithRegistry();
+    const state = stateFor(manager, ALPHAFOLD_WORKFLOW, ['get_uniprot_entry', 'open_protein_viewer']);
+
+    expect(manager.getOutstandingRequestSteps(state).map(step => step.capability)).toEqual(['export']);
+    expect(manager.hasSuccessfulExecutionForRequest(state)).toBe(false);
+  });
+
+  it('drops a requirement no registered tool could ever satisfy', () => {
+    const manager = managerWithRegistry();
+    // Nothing in the registry is named detect_/identify_, so requiring it would
+    // send every finished answer into a repair it can never pass.
+    const { requirements } = manager.getSequentialActionRequirements('identify the promoter regions');
+
+    expect(requirements).toEqual([]);
+    expect(
+      manager.hasSuccessfulExecutionForRequest(
+        stateFor(manager, 'identify the promoter regions', ['search_uniprot_database'])
+      )
+    ).toBe(true);
+  });
+
+  it('keeps every requirement when the registry has not loaded yet', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    manager.builtInToolsMap = null;
+
+    const { requirements } = manager.getSequentialActionRequirements('identify the promoter regions');
+
+    expect(requirements.map(requirement => requirement.capability)).toEqual(['detect']);
+  });
+
+  it('keeps a requirement whose matcher constrains parameters rather than availability', () => {
+    const manager = managerWithRegistry();
+    // The gene_selection matcher reads the execution record, so probing it with a
+    // bare tool name says nothing about whether the tool exists.
+    const { requirements } = manager.getSequentialActionRequirements('select the lysC gene');
+
+    expect(requirements.map(requirement => requirement.capability)).toContain('gene_selection');
+  });
+
+  describe('turn termination signals', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    it('treats a missing stop reason as a clean completion', () => {
+      expect(manager.isCleanCompletionStop({})).toBe(true);
+      expect(manager.isCleanCompletionStop({ stopReason: null })).toBe(true);
+      expect(manager.isCleanCompletionStop({ stopReason: '' })).toBe(true);
+    });
+
+    it('treats provider clean stops as completions', () => {
+      for (const stopReason of ['stop', 'end_turn', 'end-turn', 'stop_sequence', 'eos', 'complete']) {
+        expect(manager.isCleanCompletionStop({ stopReason })).toBe(true);
+      }
+    });
+
+    it('rejects abnormal stop reasons as completions', () => {
+      for (const stopReason of ['length', 'max_tokens', 'tool_calls', 'content_filter', 'unknown']) {
+        expect(manager.isCleanCompletionStop({ stopReason })).toBe(false);
+      }
+    });
+
+    it('builds a deterministic empty-response message naming the rounds', () => {
+      const message = manager.buildEmptyResponseMessage(4, 10);
+
+      expect(message).toContain('empty response');
+      expect(message).toContain('rounds 3–4 of 10');
+    });
+  });
+});

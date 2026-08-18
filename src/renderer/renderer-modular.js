@@ -479,6 +479,24 @@ class GenomeBrowser {
       console.error('❌ Error initializing MultiAgentSettingsManager:', error);
     }
 
+    // Step 5.3: Initialize the Skills tab of the Agent Settings modal
+    try {
+      this.skillsSettingsManager = new SkillsSettingsManager(this.chatManager);
+      window.skillsSettingsManager = this.skillsSettingsManager;
+      console.log('✅ SkillsSettingsManager initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing SkillsSettingsManager:', error);
+    }
+
+    // Step 5.4: Inline model picker in the ChatBox composer
+    try {
+      this.chatModelSelector = new ChatModelSelector(this.chatManager);
+      window.chatModelSelector = this.chatModelSelector;
+      console.log('✅ ChatModelSelector initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing ChatModelSelector:', error);
+    }
+
     // Step 5.5: Plugin Management UI and its development tools load on first use.
     this.pluginManagementUI = null;
     this.pluginManagementInitializationPromise = null;
@@ -1017,6 +1035,7 @@ class GenomeBrowser {
       'modules/BenchmarkStatistics.js',
       'modules/BenchmarkReportGenerator.js',
       'modules/benchmark-suites/BenchmarkEvaluatorBase.js',
+      'modules/benchmark-suites/StrictAutomaticEvaluator.js',
       'modules/benchmark-suites/AutomaticComplexSuite.js',
       'modules/benchmark-suites/AutomaticSimpleSuite.js',
       'modules/benchmark-suites/ManualComplexSuite.js',
@@ -1223,6 +1242,12 @@ class GenomeBrowser {
     // Navigation controls (genome view)
     document.getElementById('prevBtnGenome').addEventListener('click', () => this.navigationManager.navigatePrevious());
     document.getElementById('nextBtnGenome').addEventListener('click', () => this.navigationManager.navigateNext());
+
+    // Navigation controls (toolbar)
+    document.getElementById('goToStartBtn').addEventListener('click', () => this.navigationManager.navigateToStart());
+    document.getElementById('pagePrevBtn').addEventListener('click', () => this.navigationManager.navigatePrevious());
+    document.getElementById('pageNextBtn').addEventListener('click', () => this.navigationManager.navigateNext());
+    document.getElementById('goToEndBtn').addEventListener('click', () => this.navigationManager.navigateToEnd());
 
     // Zoom controls
     document.getElementById('zoomInBtn').addEventListener('click', () => this.navigationManager.zoomIn());
@@ -3301,7 +3326,7 @@ class GenomeBrowser {
               // Fallback: show a simple notification
               if (window.genomeBrowser && window.genomeBrowser.showNotification) {
                 window.genomeBrowser.showNotification(
-                  'Multi-Agent Settings system is still initializing. Please try again in a moment.',
+                  'Agent Settings is still initializing. Please try again in a moment.',
                   'warning'
                 );
               }
@@ -3994,6 +4019,11 @@ class GenomeBrowser {
       console.log('[displayGenomeView] Existing tracks found for height preservation:', existingTracks.length);
       existingTracks.forEach(track => {
         const trackContent = track.querySelector('.track-content');
+        // A track that sizes itself to its content (the primer track) recomputes
+        // its height for every view, so carrying the old one over would clip or
+        // pad the redraw. Dragging the resize handle clears the marker and hands
+        // control back to this preservation path.
+        if (trackContent?.dataset.autoHeight === 'true') return;
         if (trackContent && trackContent.style.height && trackContent.style.height !== '') {
           let baseType = null;
           for (const cls of track.classList) {
@@ -4615,6 +4645,8 @@ class GenomeBrowser {
       if (trackContent) {
         const newHeight = Math.max(50, startHeight + deltaY);
         trackContent.style.height = `${newHeight}px`;
+        // The user's drag beats any content-derived height from here on.
+        delete trackContent.dataset.autoHeight;
 
         // Save the new size to track state manager
         this.trackStateManager.saveTrackSize(trackType, `${newHeight}px`);
@@ -5413,14 +5445,25 @@ class GenomeBrowser {
       return;
     }
 
-    // Remove selection from previously selected gene
-    this.clearGeneSelection();
+    const genesSettings = this.trackRenderer?.getTrackSettings('genes') || {};
+
+    // Transition directly between selections. A full clear used to redraw the
+    // genes canvas, scan the sequence DOM, and update sidebar state before the
+    // new selection repeated the same work. Suppress those redundant steps;
+    // highlightSelectedGene() performs the single required redraw/highlight.
+    this.clearGeneSelection({
+      renderCanvas: false,
+      // When automatic sequence highlighting is disabled there is no incoming
+      // range to replace the old one, so clear it here exactly once.
+      clearSequence: genesSettings.autoHighlightSequence === false,
+      updateSidebar: false,
+    });
 
     // Set new selected gene
     this.selectedGene = { gene, operonInfo };
 
     // Add selection styling to gene elements using multiple identification methods
-    this.highlightSelectedGene(gene);
+    this.highlightSelectedGene(gene, genesSettings);
 
     console.log('Selected gene:', gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type);
 
@@ -5453,9 +5496,9 @@ class GenomeBrowser {
    * Highlight the selected gene in the track
    * Uses multiple methods to identify and highlight the correct gene element
    */
-  highlightSelectedGene(gene) {
+  highlightSelectedGene(gene, resolvedGenesSettings = null) {
     // Get highlight effect setting from genes track settings
-    const genesSettings = this.trackRenderer?.getTrackSettings('genes') || {};
+    const genesSettings = resolvedGenesSettings || this.trackRenderer?.getTrackSettings('genes') || {};
     const highlightEffect = genesSettings.highlightEffect || 'pulse';
 
     // Canvas mode: trigger Canvas renderer re-render for selection highlight
@@ -5480,58 +5523,27 @@ class GenomeBrowser {
       // Canvas renderer not available yet (shouldn't happen), fall through to SVG logic
     }
 
-    // SVG mode: find and highlight DOM/SVG gene elements
-    const geneElementsByData = document.querySelectorAll(
-      `[data-gene-start="${gene.start}"][data-gene-end="${gene.end}"]`
+    // SVG/HTML mode: data attributes are present on both renderer variants, so
+    // one targeted lookup replaces several document-wide scans of the same
+    // elements. Keep the title fallback for legacy/custom elements.
+    let matchingElements = Array.from(
+      document.querySelectorAll(
+        `.gene-element[data-gene-start="${gene.start}"][data-gene-end="${gene.end}"], ` +
+          `.svg-gene-element[data-gene-start="${gene.start}"][data-gene-end="${gene.end}"]`
+      )
     );
-    geneElementsByData.forEach(el => {
+    if (matchingElements.length === 0) {
+      const genePosition = `${gene.start}-${gene.end}`;
+      matchingElements = Array.from(document.querySelectorAll('.gene-element, .svg-gene-element')).filter(el =>
+        (el.title || '').includes(genePosition)
+      );
+    }
+    matchingElements.forEach(el => {
       el.classList.add('selected');
       this.applyHighlightEffect(el, highlightEffect);
     });
 
-    // Method 2: Find SVG gene elements
-    const svgGeneElements = document.querySelectorAll(
-      'g.svg-gene-element, rect.svg-gene-element, path.svg-gene-element'
-    );
-    svgGeneElements.forEach(el => {
-      // Check if the element has the correct gene position data
-      const geneStart = el.getAttribute('data-gene-start') || el.getAttribute('data-start');
-      const geneEnd = el.getAttribute('data-gene-end') || el.getAttribute('data-end');
-
-      if (geneStart && parseInt(geneStart) === gene.start && geneEnd && parseInt(geneEnd) === gene.end) {
-        el.classList.add('selected');
-        this.applyHighlightEffect(el, highlightEffect);
-      }
-    });
-
-    // Method 3: Find regular gene elements by position matching (fallback)
-    const allGeneElements = document.querySelectorAll('.gene-element');
-    allGeneElements.forEach(el => {
-      // Check title for position information
-      const elementTitle = el.title || '';
-      const genePosition = `${gene.start}-${gene.end}`;
-
-      // Check if title contains the gene position
-      if (elementTitle.includes(genePosition)) {
-        el.classList.add('selected');
-        this.applyHighlightEffect(el, highlightEffect);
-        return;
-      }
-
-      // Check data attributes as fallback
-      const dataStart = el.getAttribute('data-start') || el.getAttribute('data-gene-start');
-      const dataEnd = el.getAttribute('data-end') || el.getAttribute('data-gene-end');
-
-      if (dataStart && dataEnd && parseInt(dataStart) === gene.start && parseInt(dataEnd) === gene.end) {
-        el.classList.add('selected');
-        this.applyHighlightEffect(el, highlightEffect);
-      }
-    });
-
-    // Method 4: Check if we successfully highlighted any elements
-    const highlightedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
-
-    if (highlightedElements.length === 0) {
+    if (matchingElements.length === 0) {
       // In Canvas mode, it's expected that no SVG/DOM elements exist — don't trigger a full refresh.
       // Only refresh in SVG mode where missing elements indicate a rendering issue.
       if (renderingMode !== 'canvas') {
@@ -5541,7 +5553,7 @@ class GenomeBrowser {
       }
     } else {
       console.log(
-        `Highlighted ${highlightedElements.length} gene element(s) for gene:`,
+        `Highlighted ${matchingElements.length} gene element(s) for gene:`,
         gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type
       );
     }
@@ -5610,20 +5622,54 @@ class GenomeBrowser {
     }
   }
 
-  showGeneDetailsPanel() {
+  showGeneDetailsPanel(options = {}) {
+    const { syncTabState = true } = options;
     const geneDetailsSection = document.getElementById('geneDetailsSection');
     if (geneDetailsSection) {
       geneDetailsSection.style.display = 'block';
       this.uiManager.showSidebarIfHidden();
 
       // Update tab manager about sidebar panel state change
-      if (this.tabManager) {
+      if (syncTabState && this.tabManager) {
         this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
       }
 
       // Scroll sidebar to bring gene details section into view
       this.scrollSidebarToSection(geneDetailsSection);
     }
+  }
+
+  /**
+   * Coalesce rapid gene clicks and render the expensive details panel after the
+   * browser has painted the track selection. This keeps hit feedback immediate
+   * and prevents superseded clicks from building sidebar HTML unnecessarily.
+   */
+  scheduleGeneDetailsPanelUpdate(gene, operonInfo = null) {
+    this._pendingGeneDetailsPanelUpdate = { gene, operonInfo };
+
+    if (this._geneDetailsPanelFrame !== undefined && this._geneDetailsPanelFrame !== null) {
+      cancelAnimationFrame(this._geneDetailsPanelFrame);
+    }
+    if (this._geneDetailsPanelTimer !== undefined && this._geneDetailsPanelTimer !== null) {
+      clearTimeout(this._geneDetailsPanelTimer);
+      this._geneDetailsPanelTimer = null;
+    }
+
+    this._geneDetailsPanelFrame = requestAnimationFrame(() => {
+      this._geneDetailsPanelFrame = null;
+      this._geneDetailsPanelTimer = setTimeout(() => {
+        this._geneDetailsPanelTimer = null;
+        const pending = this._pendingGeneDetailsPanelUpdate;
+        this._pendingGeneDetailsPanelUpdate = null;
+        if (!pending || this.selectedGene?.gene !== pending.gene) return;
+
+        const panelWasVisible = document.getElementById('geneDetailsSection')?.style.display !== 'none';
+        this.populateGeneDetails(pending.gene, pending.operonInfo);
+        // populateGeneDetails already synchronized content when the panel was
+        // visible; a hidden panel needs one synchronization when it is shown.
+        this.showGeneDetailsPanel({ syncTabState: !panelWasVisible });
+      }, 0);
+    });
   }
 
   showPrimerDetailsPanel() {
@@ -5736,6 +5782,30 @@ class GenomeBrowser {
 
     let processedText = text;
 
+    // Pattern for CITS format: |CITS: [PMID1 PMID2]| or |CITS: 1 2 3|.
+    // This runs before the patterns below so the bracketed PMID form is consumed as a
+    // whole marker; otherwise genericPmidPattern eats the [PMID] and leaves the
+    // surrounding "|CITS:" and "|" as literal text in the note.
+    const citsPattern = /\|CITS:\s*(\[[\d\s,]*\]|[\d\s,]*)\|/gi;
+    processedText = processedText.replace(citsPattern, (match, content) => {
+      const ids = content
+        .replace(/[[\]]/g, '')
+        .split(/[\s,]+/)
+        .filter(id => id.trim());
+      if (ids.length === 0) return '';
+      return ids
+        .map(id => {
+          // 6-10 digit values are PubMed IDs. Shorter values are reference numbers the
+          // note already resolved elsewhere, so they must not become PubMed links.
+          if (/^\d{6,10}$/.test(id)) {
+            const citationNumber = this.addUnifiedCitation('PMID', id);
+            return `<a href="https://pubmed.ncbi.nlm.nih.gov/${id}/" target="_blank" class="pmid-link" title="View PubMed article ${id}"><sup>${citationNumber}</sup></a>`;
+          }
+          return `<sup class="cits-ref">${id}</sup>`;
+        })
+        .join('');
+    });
+
     // Pattern for PMID references: PMID:1234567 or PMID 1234567
     const pmidPattern = /\b(PMID:?\s*(\d{6,10}))/gi;
     processedText = processedText.replace(pmidPattern, (match, fullMatch, pmidId) => {
@@ -5781,25 +5851,6 @@ class GenomeBrowser {
       }
       const citationNumber = this.addUnifiedCitation('PMID', pmidId);
       return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmidId}" target="_blank" class="pmid-link" title="View PubMed article ${pmidId}"><sup>${citationNumber}</sup></a>`;
-    });
-
-    // Pattern for CITS format: |CITS: [PMID1 PMID2]| or |CITS: 1 2 3| -> unified numbering (remove |CITS: prefix)
-    const citsPattern = /\|CITS:\s*(\[[\d\s]+\]|[\d\s]+)\|/gi;
-    processedText = processedText.replace(citsPattern, (match, content) => {
-      // Remove brackets if present and split by spaces
-      const numbers = content
-        .replace(/[[\]]/g, '')
-        .split(/\s+/)
-        .filter(p => p.trim());
-      const citationNumbers = numbers.map(num => {
-        // If it's already a citation number, use it directly
-        if (/^\d+$/.test(num)) {
-          return this.addUnifiedCitation('PMID', num);
-        }
-        // Otherwise treat as PMID
-        return this.addUnifiedCitation('PMID', num);
-      });
-      return `<sup>${citationNumbers.join(', ')}</sup>`;
     });
 
     return processedText;
@@ -5865,6 +5916,7 @@ class GenomeBrowser {
     this.selectedPrimer = primer;
     this.selectedGene = { gene: primer, operonInfo: null };
     this.highlightSelectedGene(primer);
+    this.trackRenderer?.highlightSelectedPrimerElement?.(primer);
     this.showPrimerSelectionFeedback(primer);
     this.populatePrimerDetails(primer);
     this.showPrimerDetailsPanel();
@@ -6387,7 +6439,7 @@ class GenomeBrowser {
     const annotationNoteHtml = `
       <div class="gene-annotation-note-section">
         <div class="gene-annotation-note-header">
-          <h4><i class="fas fa-file-signature"></i> Genome Annotation Note</h4>
+          <h4><i class="fas fa-file-signature"></i> Annotation Note</h4>
           <span class="gene-annotation-note-badge">GenBank /note</span>
         </div>
         <p class="gene-annotation-note-help">Part of the genome annotation and included in GenBank exports. Use <strong>Edit Annotation</strong> to change it.</p>
@@ -6400,7 +6452,7 @@ class GenomeBrowser {
                       `<div class="gene-annotation-note-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(value)))}</div>`
                   )
                   .join('')
-              : '<div class="gene-tab-empty">No genome annotation note has been applied.</div>'
+              : '<div class="gene-tab-empty">No annotation note has been applied.</div>'
           }
         </div>
       </div>`;
@@ -7223,6 +7275,13 @@ class GenomeBrowser {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
 
+    // Notes routinely italicise species and gene names (<i>E. coli</i>). Restore that
+    // small set of attribute-free inline tags after escaping so they render instead of
+    // showing as literal markup, while every other tag stays escaped.
+    enhancedValue = enhancedValue
+      .replace(/&lt;(\/?)(i|em|b|strong|sub|sup|u)&gt;/gi, '<$1$2>')
+      .replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+
     // Pattern for GO terms: GO:XXXXXXX or goid XXXXXXX
     const goTermPattern = /\b(GO:\d{7}|goid\s+(\d{7}))\b/gi;
     enhancedValue = enhancedValue.replace(goTermPattern, (match, fullMatch, goidNumber) => {
@@ -8003,15 +8062,12 @@ class GenomeBrowser {
   }
 
   highlightGeneSequence(gene) {
-    // Clear previous highlights and selections
-    this.clearSequenceHighlights();
-    this.clearSequenceSelection();
-
     // Only highlight if the gene is within the current view
     const currentStart = this.currentPosition.start;
     const currentEnd = this.currentPosition.end;
 
     if (gene.end < currentStart || gene.start > currentEnd) {
+      this.clearSequenceSelection();
       console.log('Gene is outside current view, skipping sequence highlight');
       return;
     }
@@ -8026,6 +8082,10 @@ class GenomeBrowser {
       source: 'gene', // Mark that this selection came from a gene click
       geneName: gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type,
     };
+    this.currentSequenceSelection = null;
+    document.querySelectorAll('.reads-reference-selection').forEach(element => element.remove());
+    const selectionInfo = document.getElementById('sequenceSelectionInfo');
+    if (selectionInfo) selectionInfo.style.display = 'none';
 
     // Find sequence bases within the gene range and mark them as selected
     if (this.sequenceUtils && typeof this.sequenceUtils.restoreActiveGeneSequenceHighlight === 'function') {
@@ -8054,11 +8114,10 @@ class GenomeBrowser {
           absolutePos = lineStartPos + baseIndex + 1;
         }
 
-        // Check if this base is within the gene range
-        if (absolutePos !== null && absolutePos >= gene.start && absolutePos <= gene.end) {
-          baseElement.classList.add('sequence-selected');
-          baseElement.classList.add('gene-sequence-selected');
-        }
+        // Update the old and new visual ranges in the same pass.
+        const isSelected = absolutePos !== null && absolutePos >= gene.start && absolutePos <= gene.end;
+        baseElement.classList.toggle('sequence-selected', isSelected);
+        baseElement.classList.toggle('gene-sequence-selected', isSelected);
       });
     }
 
@@ -8100,7 +8159,8 @@ class GenomeBrowser {
       this.sequenceSelection && this.sequenceSelection.active && this.sequenceSelection.source === 'gene';
     const hasManualSelection = this.currentSequenceSelection !== null;
     const hasTextSelection = window.getSelection() && window.getSelection().toString().length > 0;
-    const hasVisualSelection = document.querySelectorAll('.gene-sequence-selected').length > 0;
+    const hasVisualSelection =
+      !hasGeneSelection && !hasManualSelection && document.querySelector('.gene-sequence-selected') !== null;
 
     if (hasGeneSelection) {
       copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
@@ -8934,29 +8994,33 @@ class GenomeBrowser {
     return 'Unknown organism';
   }
 
-  clearGeneSelection() {
+  clearGeneSelection(options = {}) {
+    const { renderCanvas = true, clearSequence = true, updateSidebar = true } = options;
     // Clear selected gene
     this.selectedGene = null;
     this.selectedPrimer = null;
 
     // Remove selection styling from all gene elements (both regular and SVG)
-    const selectedElements = document.querySelectorAll('.gene-element.selected, .svg-gene-element.selected');
+    const selectedElements = document.querySelectorAll(
+      '.gene-element.selected, .svg-gene-element.selected, .primer-binding-element.selected'
+    );
     selectedElements.forEach(el => {
       el.classList.remove('selected', 'border-highlight');
     });
 
     // Canvas mode: re-render Canvas genes renderer to clear selection visual
     const canvasRenderer = this.trackRenderer?.canvasRenderers?.get('genes');
-    if (canvasRenderer && typeof canvasRenderer.render === 'function') {
+    if (renderCanvas && canvasRenderer && typeof canvasRenderer.render === 'function') {
       canvasRenderer.render();
     }
 
     // Clear sequence highlights and selection
-    this.clearSequenceHighlights();
-    this.clearSequenceSelection();
+    if (clearSequence) {
+      this.clearSequenceSelection();
+    }
 
     // Update tab manager about gene selection clear
-    if (this.tabManager) {
+    if (updateSidebar && this.tabManager) {
       this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', false, null);
       this.tabManager.updateCurrentTabSidebarPanel('primerDetailsSection', false, null);
     }

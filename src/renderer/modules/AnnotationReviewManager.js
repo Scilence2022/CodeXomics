@@ -12,6 +12,8 @@ class AnnotationReviewManager {
     this.app = app;
     this.configManager = app?.configManager || null;
     this.changeSets = new Map();
+    this.appliedGeneGroups = new Map();
+    this.expandedAppliedGeneKeys = new Set();
     this.duplicateTargetCounts = new Map();
     this.approvalTokens = new Map();
     this.activeDecisionSession = null;
@@ -23,10 +25,14 @@ class AnnotationReviewManager {
       batchSizeLimit: 50,
       batchReviewEnabled: true,
     });
+    this.badgeWatchIntervalMs = 60000;
+    this.isBadgeRefreshing = false;
+    this.isAppliedLoading = false;
     this.settings = this._loadSettings();
     this.app.localCuratorIdentity = this.settings.curatorIdentity;
     this.app.confirmAnnotationChangeSet = request => this.confirmAnnotationChangeSet(request);
     this._bindStaticEvents();
+    this._startPendingBadgeWatch();
   }
 
   _annotationService() {
@@ -60,7 +66,17 @@ class AnnotationReviewManager {
       const element = document.getElementById(id);
       const bindingKey = `annotationReview${event[0].toUpperCase()}${event.slice(1)}Bound`;
       if (element && !element.dataset[bindingKey]) {
-        element.addEventListener(event, handler);
+        // Surface handler failures instead of letting an exception kill the click silently.
+        element.addEventListener(event, eventObject => {
+          try {
+            const result = handler(eventObject);
+            if (result && typeof result.catch === 'function') {
+              result.catch(error => this._reportHandlerError(id, error));
+            }
+          } catch (error) {
+            this._reportHandlerError(id, error);
+          }
+        });
         element.dataset[bindingKey] = 'true';
       }
     };
@@ -74,6 +90,11 @@ class AnnotationReviewManager {
     bind('annotationReviewApproveApplyBtn', 'click', () => this.approveSelected(true));
     bind('annotationReviewRejectBtn', 'click', () => this.rejectSelected());
     bind('annotationGovernanceSaveBtn', 'click', () => this.saveGovernanceSettings());
+    bind('annotationAppliedRefreshBtn', 'click', () => this.refreshAppliedGenes());
+    bind('annotationAppliedSort', 'change', () => this.refreshAppliedGenes());
+    bind('annotationAppliedSearch', 'input', () => this._debouncedAppliedRefresh());
+    bind('annotationAppliedGenes', 'click', event => this._handleAppliedClick(event));
+    bind('annotationAppliedGenes', 'keydown', event => this._handleAppliedKeydown(event));
     bind('annotationReviewQueue', 'click', event => this._handleQueueClick(event));
     bind('annotationReviewQueue', 'keydown', event => this._handleQueueKeydown(event));
     bind('annotationReviewQueue', 'change', event => this._handleQueueChange(event));
@@ -91,6 +112,11 @@ class AnnotationReviewManager {
     this.refreshTimer = setTimeout(() => this.refreshQueue(), 250);
   }
 
+  _debouncedAppliedRefresh() {
+    clearTimeout(this.appliedRefreshTimer);
+    this.appliedRefreshTimer = setTimeout(() => this.refreshAppliedGenes(), 250);
+  }
+
   showReviewCenter(options = {}) {
     const modal = document.getElementById('annotationReviewModal');
     if (!modal) {
@@ -102,7 +128,21 @@ class AnnotationReviewManager {
     modal.classList.add('show');
     this._initializeModalBehavior();
     this.showModalTab(options.tab || 'queue');
-    void this.refreshQueue({ focusChangeSetId: options.changeSetId || null });
+    // Reading the ledger costs more than a frame, and starting it in the click
+    // handler holds back the paint that shows the modal, so the button feels
+    // dead. Show the spinner first and let the queue load on the next frame.
+    this._renderQueueLoading();
+    const loadQueue = () => void this.refreshQueue({ focusChangeSetId: options.changeSetId || null });
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(loadQueue);
+    else loadQueue();
+  }
+
+  _renderQueueLoading() {
+    const queue = document.getElementById('annotationReviewQueue');
+    if (queue) {
+      queue.innerHTML =
+        '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading ChangeSets…</div>';
+    }
   }
 
   _initializeModalBehavior() {
@@ -136,6 +176,306 @@ class AnnotationReviewManager {
     document.querySelectorAll('#annotationReviewModal .annotation-review-panel').forEach(panel => {
       panel.classList.toggle('active', panel.dataset.reviewPanel === tabName);
     });
+    // The applied list reads the same ledger as the queue, so it is loaded on
+    // demand rather than kept in sync with every queue refresh.
+    if (tabName === 'applied') void this.refreshAppliedGenes();
+  }
+
+  _isAppliedTabActive() {
+    return Boolean(
+      document.querySelector('#annotationReviewModal .annotation-review-panel[data-review-panel="applied"].active')
+    );
+  }
+
+  /**
+   * List every gene whose annotation ChangeSets were applied to the genome.
+   * Committed ChangeSets are grouped per target so a gene curated several
+   * times reads as one entry with its full applied history.
+   */
+  async refreshAppliedGenes() {
+    const list = document.getElementById('annotationAppliedGenes');
+    if (!list || this.isAppliedLoading) return;
+    this.isAppliedLoading = true;
+    list.innerHTML =
+      '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading annotated genes…</div>';
+    try {
+      const query = document.getElementById('annotationAppliedSearch')?.value || '';
+      const result = await this._annotationService().listAnnotationChangesets({
+        statuses: ['committed'],
+        query,
+        limit: 1000,
+      });
+      const groups = this._groupAppliedChangeSets(result.changeSets || []);
+      this.appliedGeneGroups = new Map(groups.map(group => [group.key, group]));
+      // Keep only the expansions that survived the reload, otherwise a stale
+      // key would silently re-expand a different gene later.
+      this.expandedAppliedGeneKeys = new Set(
+        Array.from(this.expandedAppliedGeneKeys).filter(key => this.appliedGeneGroups.has(key))
+      );
+      this._renderAppliedGenes(this._sortAppliedGroups(groups));
+      this._updateAppliedCount(result.statusCounts || {});
+    } catch (error) {
+      list.innerHTML = `<div class="annotation-review-empty error"><i class="fas fa-exclamation-triangle"></i><p>${this._escape(error.message)}</p></div>`;
+    } finally {
+      this.isAppliedLoading = false;
+    }
+  }
+
+  _groupAppliedChangeSets(changeSets) {
+    const groups = new Map();
+    for (const changeSet of changeSets) {
+      const key = this._targetKey(changeSet) || changeSet.id;
+      const target = changeSet.target || {};
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          key,
+          label: target.geneSymbol || target.locusTag || target.proteinId || target.featureId || 'Unknown target',
+          geneSymbol: target.geneSymbol || null,
+          locusTag: target.locusTag || null,
+          chromosome: target.chromosome || null,
+          featureType: target.featureType || null,
+          coordinates: target.coordinates || null,
+          changeSets: [],
+          fields: [],
+          curators: [],
+          lastAppliedAt: null,
+          latestRevision: null,
+        };
+        groups.set(key, group);
+      }
+      group.changeSets.push(changeSet);
+      for (const field of changeSet.fields || []) {
+        if (!group.fields.includes(field)) group.fields.push(field);
+      }
+      if (changeSet.committedBy && !group.curators.includes(changeSet.committedBy)) {
+        group.curators.push(changeSet.committedBy);
+      }
+      const appliedAt = Date.parse(changeSet.committedAt || '');
+      if (Number.isFinite(appliedAt) && (!group.lastAppliedAt || appliedAt > group.lastAppliedAt)) {
+        group.lastAppliedAt = appliedAt;
+      }
+      if (Number.isInteger(changeSet.resultingRevision)) {
+        group.latestRevision = Math.max(group.latestRevision ?? 0, changeSet.resultingRevision);
+      }
+      // Coordinates and identifiers are only present on targets recorded by a
+      // recent service version; take them from whichever record carries them.
+      group.coordinates = group.coordinates || target.coordinates || null;
+      group.chromosome = group.chromosome || target.chromosome || null;
+      group.featureType = group.featureType || target.featureType || null;
+    }
+    for (const group of groups.values()) {
+      group.changeSets.sort((left, right) => Date.parse(right.committedAt || 0) - Date.parse(left.committedAt || 0));
+    }
+    return Array.from(groups.values());
+  }
+
+  _sortAppliedGroups(groups) {
+    const mode = document.getElementById('annotationAppliedSort')?.value || 'recent';
+    const sorted = groups.slice();
+    if (mode === 'gene') {
+      sorted.sort((left, right) => left.label.localeCompare(right.label, undefined, { sensitivity: 'base' }));
+    } else if (mode === 'count') {
+      sorted.sort(
+        (left, right) =>
+          right.changeSets.length - left.changeSets.length || (right.lastAppliedAt || 0) - (left.lastAppliedAt || 0)
+      );
+    } else {
+      sorted.sort((left, right) => (right.lastAppliedAt || 0) - (left.lastAppliedAt || 0));
+    }
+    return sorted;
+  }
+
+  _renderAppliedGenes(groups) {
+    const list = document.getElementById('annotationAppliedGenes');
+    const total = document.getElementById('annotationAppliedTotal');
+    const appliedChangeSets = groups.reduce((count, group) => count + group.changeSets.length, 0);
+    if (total) {
+      total.textContent = `${groups.length} gene${groups.length === 1 ? '' : 's'} · ${appliedChangeSets} applied ChangeSet${appliedChangeSets === 1 ? '' : 's'}`;
+    }
+    if (!list) return;
+    if (groups.length === 0) {
+      list.innerHTML = `
+        <div class="annotation-review-empty">
+          <i class="fas fa-dna"></i>
+          <p>No annotations have been applied yet.</p>
+          <small>Genes appear here once an approved ChangeSet is committed to the genome.</small>
+        </div>`;
+      return;
+    }
+    list.innerHTML = groups.map(group => this._renderAppliedGeneItem(group)).join('');
+  }
+
+  _renderAppliedGeneItem(group) {
+    const expanded = this.expandedAppliedGeneKeys.has(group.key);
+    const locus = group.locusTag && group.locusTag !== group.label ? group.locusTag : '';
+    const coordinates = group.coordinates || {};
+    const hasLocation =
+      group.chromosome && Number.isFinite(Number(coordinates.start)) && Number.isFinite(Number(coordinates.end));
+    const location = hasLocation
+      ? `${group.chromosome}:${Number(coordinates.start).toLocaleString()}–${Number(coordinates.end).toLocaleString()}${coordinates.strand === -1 ? ' (−)' : coordinates.strand === 1 ? ' (+)' : ''}`
+      : group.chromosome || '';
+    const fields = group.fields
+      .slice(0, 8)
+      .map(field => `<span class="annotation-applied-field">${this._escape(this._fieldLabel(field))}</span>`)
+      .join('');
+    const omittedFields = group.fields.length - Math.min(group.fields.length, 8);
+    return `
+      <article class="annotation-applied-item${expanded ? ' is-expanded' : ''}" data-applied-key="${this._escape(group.key)}">
+        <div class="annotation-applied-main" role="button" tabindex="0" data-action="applied-toggle"
+          aria-expanded="${expanded ? 'true' : 'false'}"
+          aria-label="Applied annotation history for ${this._escape(group.label)}">
+          <div class="annotation-review-item-heading">
+            <div>
+              <i class="fas fa-chevron-${expanded ? 'down' : 'right'} annotation-applied-caret" aria-hidden="true"></i>
+              <strong>${this._escape(group.label)}</strong>
+              ${locus ? `<span class="annotation-review-locus">${this._escape(locus)}</span>` : ''}
+              <span class="annotation-review-feature">${this._escape(group.featureType || '')}</span>
+            </div>
+            <div class="annotation-review-badges">
+              <span class="annotation-review-status status-committed">${group.changeSets.length} applied</span>
+            </div>
+          </div>
+          <div class="annotation-review-meta">
+            <span><i class="fas fa-clock"></i> ${this._escape(group.lastAppliedAt ? this._formatDate(group.lastAppliedAt) : 'Unknown time')}</span>
+            <span><i class="fas fa-user-check"></i> ${this._escape(group.curators.join(', ') || 'unknown curator')}</span>
+            ${Number.isInteger(group.latestRevision) ? `<span><i class="fas fa-code-branch"></i> Revision ${group.latestRevision}</span>` : ''}
+            ${location ? `<span><i class="fas fa-map-marker-alt"></i> ${this._escape(location)}</span>` : ''}
+          </div>
+          ${fields ? `<div class="annotation-applied-fields">${fields}${omittedFields > 0 ? `<span class="annotation-applied-field is-muted">+${omittedFields} more</span>` : ''}</div>` : ''}
+        </div>
+        <div class="annotation-applied-actions">
+          <button class="btn btn-sm btn-secondary" data-action="applied-locate" data-applied-key="${this._escape(group.key)}"
+            ${hasLocation ? '' : 'disabled title="This ChangeSet target has no recorded coordinates"'}>
+            <i class="fas fa-crosshairs"></i> Go to gene
+          </button>
+        </div>
+        <div class="annotation-applied-history" ${expanded ? '' : 'hidden'}>
+          ${expanded ? group.changeSets.map(changeSet => this._renderAppliedRecord(changeSet)).join('') : ''}
+        </div>
+      </article>`;
+  }
+
+  _renderAppliedRecord(changeSet) {
+    const changes = (changeSet.preview || [])
+      .map(
+        item =>
+          `<div class="annotation-applied-change"><label>${this._escape(this._fieldLabel(item.field))}</label><span>${this._escape(this._compactValue(item.after, 160))}</span></div>`
+      )
+      .join('');
+    return `
+      <div class="annotation-applied-record">
+        <div class="annotation-applied-record-heading">
+          <code>${this._escape(changeSet.id)}</code>
+          <span><i class="fas fa-clock"></i> ${this._escape(changeSet.committedAt ? this._formatDate(changeSet.committedAt) : 'Unknown time')}</span>
+        </div>
+        <div class="annotation-review-meta">
+          <span><i class="fas fa-list-check"></i> ${changeSet.operationCount} changes</span>
+          <span><i class="fas fa-book"></i> ${changeSet.evidenceCount} evidence records</span>
+          <span><i class="fas fa-robot"></i> proposed by ${this._escape(changeSet.createdBy || 'unknown')}</span>
+          <span><i class="fas fa-user-check"></i> applied by ${this._escape(changeSet.committedBy || 'unknown')}</span>
+          <span class="annotation-review-risk risk-${this._escape(changeSet.riskLevel || 'unknown')}">${this._escape(changeSet.riskLevel || 'unknown')} risk</span>
+        </div>
+        ${changes ? `<div class="annotation-applied-changes">${changes}</div>` : ''}
+        ${changeSet.reportAttachment ? `<div class="annotation-review-report-link"><i class="fas fa-paperclip"></i> Archived report: <code>${this._escape(changeSet.reportAttachment)}</code></div>` : ''}
+        <button class="btn btn-sm btn-secondary annotation-applied-record-btn" data-action="applied-open-record" data-id="${this._escape(changeSet.id)}">
+          <i class="fas fa-clipboard-list"></i> Open audit record
+        </button>
+      </div>`;
+  }
+
+  _handleAppliedClick(event) {
+    const actionElement = event.target.closest('[data-action]');
+    const action = actionElement?.dataset.action;
+    if (action === 'applied-locate') {
+      event.stopPropagation();
+      this.locateAppliedGene(actionElement.dataset.appliedKey);
+      return;
+    }
+    if (action === 'applied-open-record') {
+      event.stopPropagation();
+      this.openAppliedRecord(actionElement.dataset.id);
+      return;
+    }
+    const item = event.target.closest('.annotation-applied-item[data-applied-key]');
+    if (item && !event.target.closest('button, a, input, select, textarea, summary')) {
+      this.toggleAppliedGene(item.dataset.appliedKey);
+    }
+  }
+
+  _handleAppliedKeydown(event) {
+    if (!['Enter', ' '].includes(event.key)) return;
+    const main = event.target.closest('.annotation-applied-main[role="button"]');
+    if (!main || event.target !== main) return;
+    const item = main.closest('.annotation-applied-item[data-applied-key]');
+    if (!item) return;
+    event.preventDefault();
+    this.toggleAppliedGene(item.dataset.appliedKey);
+  }
+
+  toggleAppliedGene(key) {
+    const group = this.appliedGeneGroups.get(key);
+    if (!group) return;
+    if (this.expandedAppliedGeneKeys.has(key)) this.expandedAppliedGeneKeys.delete(key);
+    else this.expandedAppliedGeneKeys.add(key);
+    const item = this._appliedGeneNode(key);
+    if (!item) return;
+    item.outerHTML = this._renderAppliedGeneItem(group);
+    this._appliedGeneNode(key)?.querySelector('.annotation-applied-main')?.focus();
+  }
+
+  _appliedGeneNode(key) {
+    return Array.from(document.querySelectorAll('.annotation-applied-item[data-applied-key]')).find(
+      node => node.dataset.appliedKey === key
+    );
+  }
+
+  /**
+   * Move the genome view to the applied gene. Committed targets record the
+   * coordinates as they were at commit time, so a missing or unresolvable
+   * location is reported instead of silently doing nothing.
+   */
+  locateAppliedGene(key) {
+    const group = this.appliedGeneGroups.get(key);
+    const coordinates = group?.coordinates || {};
+    if (!group || !group.chromosome || !Number.isFinite(Number(coordinates.start))) {
+      this._notify('This ChangeSet target has no recorded coordinates to navigate to.', 'warning');
+      return;
+    }
+    const navigate = this.app?.navigationManager?.navigateToPosition;
+    if (typeof navigate !== 'function') {
+      this._notify('Genome navigation is not available.', 'error');
+      return;
+    }
+    const result = this.app.navigationManager.navigateToPosition(
+      group.chromosome,
+      Number(coordinates.start),
+      Number(coordinates.end ?? coordinates.start)
+    );
+    if (result && result.success === false) {
+      this._notify(result.error || 'Unable to navigate to this gene.', 'error');
+      return;
+    }
+    document.getElementById('annotationReviewModal')?.classList.remove('show');
+    this._notify(`Navigated to ${group.label}.`, 'success');
+  }
+
+  /** Show the full audit record of an applied ChangeSet in the review queue. */
+  async openAppliedRecord(changeSetId) {
+    const filter = document.getElementById('annotationReviewFilter');
+    if (filter && filter.value !== 'committed' && filter.value !== 'all') filter.value = 'committed';
+    const search = document.getElementById('annotationReviewSearch');
+    if (search) search.value = '';
+    this.showModalTab('queue');
+    await this.refreshQueue({ focusChangeSetId: changeSetId });
+  }
+
+  _updateAppliedCount(statusCounts) {
+    const applied = Number(statusCounts.committed || 0);
+    document.querySelectorAll('.annotation-review-applied-count').forEach(badge => {
+      badge.textContent = applied > 999 ? '999+' : String(applied);
+      badge.hidden = applied === 0;
+    });
   }
 
   async refreshQueue(options = {}) {
@@ -143,8 +483,7 @@ class AnnotationReviewManager {
     const queue = document.getElementById('annotationReviewQueue');
     if (!queue) return;
     this.isLoading = true;
-    queue.innerHTML =
-      '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading ChangeSets…</div>';
+    this._renderQueueLoading();
     try {
       const status = document.getElementById('annotationReviewFilter')?.value || 'active';
       const riskLevel = document.getElementById('annotationReviewRiskFilter')?.value || '';
@@ -157,8 +496,10 @@ class AnnotationReviewManager {
         limit: 1000,
       });
       this.changeSets = new Map((result.changeSets || []).map(changeSet => [changeSet.id, changeSet]));
+      this._closeDetachedDetail();
       this._renderQueue(result);
       this._updatePendingBadge(result.statusCounts || {});
+      this._updateAppliedCount(result.statusCounts || {});
       if (options.focusChangeSetId && this.changeSets.has(options.focusChangeSetId)) {
         await this.viewChangeSet(options.focusChangeSetId);
       }
@@ -288,6 +629,19 @@ class AnnotationReviewManager {
     }
   }
 
+  /**
+   * Drop the detail pane once the ChangeSet it describes has left the queue.
+   * Approving, applying, or rejecting moves a ChangeSet out of the review
+   * filter, and the pane used to keep presenting the decided proposal — with
+   * its action buttons — next to an empty queue.
+   */
+  _closeDetachedDetail() {
+    if (!this.activeChangeSetId || this.changeSets.has(this.activeChangeSetId)) return;
+    const detail = document.getElementById('annotationReviewDetail');
+    if (detail) detail.innerHTML = '';
+    this._setActiveChangeSet(null);
+  }
+
   _renderChangeSetDetail(changeSet, summary) {
     const target = changeSet.target || {};
     const previewByField = new Map((summary.preview || []).map(item => [`${item.op}:${item.field}`, item]));
@@ -317,9 +671,7 @@ class AnnotationReviewManager {
     const attachment = reportMetadata?.attachmentId || summary.reportAttachment;
     const fullTextSourceCount = Number(reportMetadata?.summary?.fullTextSourceCount || 0);
     const fullTextFindingCount = Number(reportMetadata?.summary?.fullTextFindingCount || 0);
-    const verifiedFullTextSourceCount = Number(
-      reportMetadata?.citationValidation?.verifiedFullTextSourceCount || 0
-    );
+    const verifiedFullTextSourceCount = Number(reportMetadata?.citationValidation?.verifiedFullTextSourceCount || 0);
     return `
       <div class="annotation-review-detail-header">
         <div>
@@ -505,6 +857,7 @@ class AnnotationReviewManager {
     }
     this._reportBatchResults(results, applyAfterApproval ? 'applied' : 'approved');
     await this.refreshQueue();
+    if (applyAfterApproval) await this.refreshAppliedGenes();
     this._refreshSelectedGene();
   }
 
@@ -518,9 +871,8 @@ class AnnotationReviewManager {
       );
       return;
     }
-    const reason = window.prompt('Reason for rejecting the selected ChangeSets:', 'curator_rejected');
-    if (reason === null || !reason.trim()) return;
-    if (!window.confirm(this._batchConfirmationText(selected, 'reject'))) return;
+    const reason = await this._promptForRejectionReason(selected);
+    if (!reason) return;
     this._startDecisionSession('reject', selected);
     const results = [];
     try {
@@ -541,6 +893,86 @@ class AnnotationReviewManager {
     }
     this._reportBatchResults(results, 'rejected');
     await this.refreshQueue();
+  }
+
+  /**
+   * Collect the rejection reason and the batch confirmation in one dialog.
+   * window.prompt() is unavailable in Electron renderers, so the reason is
+   * gathered with an in-app modal instead.
+   * Resolves with the trimmed reason, or null when the curator cancels.
+   */
+  _promptForRejectionReason(selected) {
+    return new Promise(resolve => {
+      document.getElementById('annotationReviewReasonDialog')?.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'annotationReviewReasonDialog';
+      overlay.className = 'annotation-review-reason-dialog';
+      overlay.innerHTML = `
+        <div class="annotation-review-reason-panel" role="dialog" aria-modal="true"
+             aria-labelledby="annotationReviewReasonTitle">
+          <h4 id="annotationReviewReasonTitle"><i class="fas fa-times-circle"></i> Reject ChangeSets</h4>
+          <pre class="annotation-review-reason-summary"></pre>
+          <label for="annotationReviewReasonInput">Reason for rejection</label>
+          <input id="annotationReviewReasonInput" type="text" maxlength="200" value="curator_rejected">
+          <div class="annotation-review-reason-actions">
+            <button type="button" class="btn btn-secondary" data-reason-action="cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" data-reason-action="confirm">
+              <i class="fas fa-times"></i> Reject ${selected.length} ChangeSet(s)
+            </button>
+          </div>
+        </div>
+      `;
+      overlay.querySelector('.annotation-review-reason-summary').textContent = this._batchConfirmationText(
+        selected,
+        'reject'
+      );
+
+      const input = overlay.querySelector('#annotationReviewReasonInput');
+      let settled = false;
+      const close = value => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener('keydown', onKeydown, true);
+        overlay.remove();
+        resolve(value);
+      };
+      const submit = () => {
+        const value = input.value.trim();
+        if (!value) {
+          input.focus();
+          input.classList.add('is-invalid');
+          return;
+        }
+        close(value);
+      };
+      const onKeydown = event => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          close(null);
+        } else if (event.key === 'Enter' && overlay.contains(event.target)) {
+          event.preventDefault();
+          submit();
+        }
+      };
+
+      overlay.addEventListener('click', event => {
+        const action = event.target.closest('[data-reason-action]')?.dataset.reasonAction;
+        if (action === 'confirm') submit();
+        else if (action === 'cancel' || event.target === overlay) close(null);
+      });
+      input.addEventListener('input', () => input.classList.remove('is-invalid'));
+      document.addEventListener('keydown', onKeydown, true);
+
+      document.body.appendChild(overlay);
+      input.focus();
+      input.select();
+    });
+  }
+
+  _reportHandlerError(elementId, error) {
+    console.error(`[AnnotationReview] handler failed for #${elementId}`, error);
+    this._notify(`Annotation review action failed: ${error?.message || error}`, 'error');
   }
 
   _startDecisionSession(action, changeSets) {
@@ -712,6 +1144,70 @@ class AnnotationReviewManager {
   _refreshSelectedGene() {
     if (this.app?.selectedGene?.gene && typeof this.app.populateGeneDetails === 'function') {
       this.app.populateGeneDetails(this.app.selectedGene.gene, this.app.selectedGene.operonInfo);
+    }
+  }
+
+  /**
+   * Keep the header Review badge current without the curator opening the
+   * Review Center. Ledger writes broadcast their own status counts, so a
+   * proposal made by an agent shows up immediately; the slow poll is the
+   * fallback for ledger state this renderer never observed being written.
+   */
+  _startPendingBadgeWatch() {
+    if (this.badgeWatchStarted || typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
+      return;
+    }
+    this.badgeWatchStarted = true;
+    window.addEventListener('annotation-ledger-changed', event => this._handleLedgerChanged(event));
+    this.badgeWatchTimer = setInterval(() => {
+      // Re-reading the ledger validates every committed receipt, so an
+      // unwatched window pays nothing for the fallback poll.
+      if (document.hidden) return;
+      void this.refreshPendingBadge();
+    }, this.badgeWatchIntervalMs);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) void this.refreshPendingBadge();
+    });
+    void this.refreshPendingBadge();
+  }
+
+  _handleLedgerChanged(event) {
+    const statusCounts = event?.detail?.statusCounts;
+    if (statusCounts) {
+      this._updatePendingBadge(statusCounts);
+      this._updateAppliedCount(statusCounts);
+    } else void this.refreshPendingBadge();
+    // An open queue would otherwise keep showing the pre-change list while the
+    // badge already counts the new ChangeSet. Reloading is only safe while the
+    // curator has nothing selected and no decision is in flight.
+    const modalIsOpen = document.getElementById('annotationReviewModal')?.classList.contains('show');
+    if (modalIsOpen && !this.activeDecisionSession && this._selectedChangeSets().length === 0) {
+      void this.refreshQueue();
+    }
+    if (modalIsOpen && this._isAppliedTabActive()) void this.refreshAppliedGenes();
+  }
+
+  /**
+   * Read only the pending counts. listAnnotationChangesets always reports the
+   * full ledger status counts, so limit=1 keeps the per-item preview work out
+   * of a background poll.
+   */
+  async refreshPendingBadge() {
+    if (this.isLoading || this.isBadgeRefreshing) return;
+    this.isBadgeRefreshing = true;
+    try {
+      const result = await this._annotationService().listAnnotationChangesets({
+        statuses: ['awaiting_approval'],
+        limit: 1,
+      });
+      this._updatePendingBadge(result.statusCounts || {});
+      this._updateAppliedCount(result.statusCounts || {});
+    } catch (error) {
+      // No loaded genome, services still starting, or a genome swap mid-poll:
+      // leave the badge as it is and let the next tick retry.
+      console.debug('[AnnotationReview] pending badge refresh skipped:', error?.message || error);
+    } finally {
+      this.isBadgeRefreshing = false;
     }
   }
 

@@ -106,9 +106,12 @@
   color: #1f2937;
 }
 
-/* Emphasis/Italic */
+/* Emphasis/Italic.
+ * Font Awesome uses <i> as an icon element, not as emphasis. Skipping those
+ * keeps the browser from synthesizing an oblique skew on the glyph (which
+ * squashes round icons like fa-cog) and from repainting them body-text gray. */
 .message-text em,
-.message-text i {
+.message-text i:not([class*='fa-']) {
   font-style: italic;
   color: #4b5563;
 }
@@ -418,7 +421,7 @@
 }
 
 .user-message .message-text em,
-.user-message .message-text i {
+.user-message .message-text i:not([class*='fa-']) {
   color: #000000;
 }
 

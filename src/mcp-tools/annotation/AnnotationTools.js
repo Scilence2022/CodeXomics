@@ -464,7 +464,22 @@ class AnnotationTools {
             diseaseContext: { type: 'string' },
             experimentalApproach: { type: 'string' },
             language: { type: 'string' },
-            maxResult: { type: 'integer', minimum: 1, maximum: 20, default: 5 },
+            maxResult: { type: 'integer', minimum: 1, maximum: 100, default: 5 },
+            literatureBudget: {
+              type: 'integer',
+              minimum: 10,
+              maximum: 2000,
+              default: 300,
+              description:
+                'Total PubMed abstracts DGR retains for synthesis. Comprehensive analysis is the default; the budget bounds NCBI politeness cost, not how much of the literature is read.',
+            },
+            fullTextBudget: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 100,
+              default: 25,
+              description: 'Open-access full texts DGR attempts for verifiable evidence spans.',
+            },
             forceRefresh: {
               type: 'boolean',
               default: false,

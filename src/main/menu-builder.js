@@ -1799,8 +1799,9 @@ function createMenu() {
           },
         },
         {
-          label: 'Multi-Agent Settings',
+          label: 'Agent Settings',
           click: () => {
+            // Channel name kept for compatibility with existing renderer listeners.
             sendToCurrentMainWindow('multi-agent-settings');
           },
         },

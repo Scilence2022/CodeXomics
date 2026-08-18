@@ -475,9 +475,22 @@ class DataAgent extends AgentBase {
   // === BuiltInToolsMap-aligned export methods ===
 
   /**
+   * The export_* tools have one implementation, in FileOperationService: it is
+   * the only one that honours `filename`/`auto_save` and that refuses to open a
+   * save dialog during benchmark automation. These local fallbacks only exist
+   * for the case where that service is unreachable, so they delegate whenever
+   * it is available instead of writing to a second, divergent format.
+   */
+  getFileOperationService() {
+    return this.multiAgentSystem?.chatManager?.services?.file || null;
+  }
+
+  /**
    * Export FASTA sequences
    */
   async exportFastaSequence(parameters) {
+    const fileService = this.getFileOperationService();
+    if (fileService) return await fileService.exportFastaSequence(parameters);
     return await this.exportSequence({ ...parameters, format: 'fasta' });
   }
 
@@ -485,6 +498,8 @@ class DataAgent extends AgentBase {
    * Export GenBank format
    */
   async exportGenbankFormat(parameters) {
+    const fileService = this.getFileOperationService();
+    if (fileService) return await fileService.exportGenBankFormat(parameters);
     return await this.exportSequence({ ...parameters, format: 'genbank' });
   }
 
@@ -492,6 +507,8 @@ class DataAgent extends AgentBase {
    * Export GFF annotations
    */
   async exportGffAnnotations(parameters) {
+    const fileService = this.getFileOperationService();
+    if (fileService) return await fileService.exportGffAnnotations(parameters);
     return await this.exportRegion({ ...parameters, format: 'gff', includeAnnotations: true });
   }
 
@@ -500,8 +517,9 @@ class DataAgent extends AgentBase {
    */
   async exportBedFormat(parameters) {
     try {
-      if (this.services?.file?.exportBedFormat) {
-        return await this.services.file.exportBedFormat(parameters);
+      const fileService = this.getFileOperationService();
+      if (fileService) {
+        return await fileService.exportBedFormat(parameters);
       }
       const { chromosome, start, end } = parameters;
 
@@ -517,6 +535,10 @@ class DataAgent extends AgentBase {
    */
   async exportCdsFasta(parameters) {
     try {
+      const fileService = this.getFileOperationService();
+      if (fileService) {
+        return await fileService.exportCdsFasta(parameters);
+      }
       const { geneName, chromosome, start, end } = parameters;
       const sequence = await this.app.sequenceUtils.getSequence(chromosome, start, end);
       const content = `>${geneName || 'CDS'}:${chromosome}:${start}-${end}\n${sequence}`;
@@ -531,6 +553,10 @@ class DataAgent extends AgentBase {
    */
   async exportProteinFasta(parameters) {
     try {
+      const fileService = this.getFileOperationService();
+      if (fileService) {
+        return await fileService.exportProteinFasta(parameters);
+      }
       const { geneName, proteinSequence } = parameters;
       const content = `>${geneName || 'protein'}\n${proteinSequence || ''}`;
       return { success: true, content, format: 'fasta' };
@@ -544,6 +570,10 @@ class DataAgent extends AgentBase {
    */
   async exportCurrentViewFasta(parameters) {
     try {
+      const fileService = this.getFileOperationService();
+      if (fileService) {
+        return await fileService.exportCurrentViewFasta(parameters);
+      }
       const app = this.app;
       const state = await app.genomeBrowser.getCurrentState();
       return await this.exportSequence({

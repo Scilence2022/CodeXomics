@@ -245,6 +245,7 @@ class BenchmarkStatistics {
 
     return {
       testId: test.testId,
+      testNumber: test.testNumber,
       testName: test.testName,
       suiteId: test.suiteId,
       mode: analysis.mode || 'unknown',

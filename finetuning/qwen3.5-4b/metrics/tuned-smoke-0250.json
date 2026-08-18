@@ -1,0 +1,168 @@
+{
+  "summary": {
+    "schema_version": "1.0",
+    "scorer": "strict-automatic-v1",
+    "model": "qwen3.5:4b-codexomics-tools-v1",
+    "started_at": "2026-08-01T05:16:01.181Z",
+    "completed_at": "2026-08-01T05:16:07.461Z",
+    "deterministic_options": {
+      "temperature": 0,
+      "seed": 42,
+      "stream": false,
+      "candidate_limit": 24
+    },
+    "benchmark_scope": {
+      "automatic_simple": 143,
+      "automatic_complex": 29,
+      "manual_tests_included": 0
+    },
+    "overall": {
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "accuracy": 1,
+      "average_score_ratio": 1,
+      "average_duration_ms": 3128.5,
+      "prompt_tokens": 4834,
+      "generated_tokens": 71
+    },
+    "automatic_simple": {
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "accuracy": 1,
+      "average_score_ratio": 1,
+      "average_duration_ms": 3128.5,
+      "prompt_tokens": 4834,
+      "generated_tokens": 71
+    },
+    "automatic_complex": {
+      "tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "accuracy": 0,
+      "average_score_ratio": 0,
+      "average_duration_ms": 0,
+      "prompt_tokens": 0,
+      "generated_tokens": 0
+    }
+  },
+  "records": [
+    {
+      "test_id": "sys_auto_01",
+      "suite_id": "automatic_simple",
+      "category": "system_setup",
+      "type": "function_call",
+      "prompt_sha256": "aaa1c7b687e463f8cdb0d4c26e4f7b9a2aeed26f58ce2e00ba6b2218c54c7667",
+      "duration_ms": 2714,
+      "prompt_eval_count": 1187,
+      "eval_count": 31,
+      "selected_tools": ["set_working_directory", "start_benchmark", "export_data", "open_benchmark", "jump_to_gene"],
+      "calls": [
+        {
+          "tool_name": "set_working_directory",
+          "parameters": {
+            "directory_path": "./test_data/"
+          },
+          "success": true,
+          "executed": true,
+          "status": "completed"
+        }
+      ],
+      "api_error": null,
+      "evaluation": {
+        "success": true,
+        "score": 5,
+        "maxScore": 5,
+        "errors": [],
+        "warnings": [],
+        "details": {
+          "scoringMode": "strict-automatic-v1",
+          "expectedTools": ["set_working_directory"],
+          "actualTools": ["set_working_directory"],
+          "matchedCount": 1,
+          "parameterMatches": 1,
+          "schemaValidCount": 1,
+          "executionMatches": 1,
+          "unexpectedCalls": [],
+          "retrieval": {
+            "selectedToolCount": 5,
+            "expectedToolCount": 1,
+            "expectedToolsCovered": 1,
+            "recall": 1
+          }
+        }
+      }
+    },
+    {
+      "test_id": "sys_auto_02",
+      "suite_id": "automatic_simple",
+      "category": "system",
+      "type": "function_call",
+      "prompt_sha256": "351053a6c91b679b2d9187544312f119fc7df60c092cd4797ecda1f4040a26dc",
+      "duration_ms": 3543,
+      "prompt_eval_count": 3647,
+      "eval_count": 40,
+      "selected_tools": [
+        "list_available_tools",
+        "list_annotations",
+        "get_chromosome_list",
+        "list_plugins",
+        "list_tasks",
+        "list_highlights",
+        "list_restriction_enzymes",
+        "blast_list_databases",
+        "get_loaded_files_list",
+        "list_dna_markers",
+        "show_action_list",
+        "get_action_list",
+        "get_plugin_functions",
+        "blast_get_installation_status",
+        "get_operons",
+        "toggle_settings_modal",
+        "create_plugin",
+        "get_annotation",
+        "set_working_directory",
+        "get_track_settings_schema",
+        "clear_tasks",
+        "get_nearby_features"
+      ],
+      "calls": [
+        {
+          "tool_name": "list_available_tools",
+          "parameters": {
+            "include_details": true,
+            "format": "detailed"
+          },
+          "success": true,
+          "executed": true,
+          "status": "completed"
+        }
+      ],
+      "api_error": null,
+      "evaluation": {
+        "success": true,
+        "score": 5,
+        "maxScore": 5,
+        "errors": [],
+        "warnings": [],
+        "details": {
+          "scoringMode": "strict-automatic-v1",
+          "expectedTools": ["list_available_tools"],
+          "actualTools": ["list_available_tools"],
+          "matchedCount": 1,
+          "parameterMatches": 1,
+          "schemaValidCount": 1,
+          "executionMatches": 1,
+          "unexpectedCalls": [],
+          "retrieval": {
+            "selectedToolCount": 22,
+            "expectedToolCount": 1,
+            "expectedToolsCovered": 1,
+            "recall": 1
+          }
+        }
+      }
+    }
+  ]
+}

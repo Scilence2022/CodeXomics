@@ -697,7 +697,8 @@
   .toolbar {
     flex-direction: row;
     align-items: center;
-    gap: 10px;
+    column-gap: 8px;
+    row-gap: 8px;
     padding: 10px 12px;
   }
 
@@ -2685,4 +2686,3 @@
     border-right: none;
   }
 }
-

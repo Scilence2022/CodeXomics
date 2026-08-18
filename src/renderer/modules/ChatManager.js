@@ -58,6 +58,12 @@ class ChatManager {
     // tallies used to build the panel's one-line summary once it finishes.
     this.activityRoundState = null;
     this.activityTotals = null;
+    // The panel steps are currently appended to. Tracked as an element rather
+    // than resolved from the DOM every time because callers that bypass
+    // startConversation() — the benchmark runner drives sendToLLM() directly —
+    // have no request id to scope a lookup by.
+    this.activityPanelElement = null;
+    this.activityPanelSeq = 0;
 
     // Live token-streaming render state (null when no stream is in flight)
     this.streamingState = null;
@@ -116,6 +122,7 @@ class ChatManager {
     // Initialize Dynamic Tools Registry System
     this.dynamicTools = null;
     this.dynamicToolsEnabled = true;
+    this.currentNativeTools = [];
     this.builtInTools = null;
     this.builtInToolsMap = new Map();
     this.lastSystemPromptMetadata = null;
@@ -183,6 +190,7 @@ class ChatManager {
       ['restriction', 'RestrictionDigestService'],
       ['gel', 'GelElectrophoresisService'],
       ['task', 'TaskService'],
+      ['skill', 'SkillService'],
     ];
 
     for (const [key, className] of serviceDefinitions) {
@@ -246,7 +254,7 @@ class ChatManager {
         // Set global reference for settings modal
         window.chatBoxSettingsManager = this.chatBoxSettingsManager;
 
-        // Listen for Multi-Agent Settings changes
+        // Listen for Agent Settings changes
         window.addEventListener('multiAgentSettingsChanged', event => {
           this.updateMultiAgentToggleButton();
         });
@@ -584,45 +592,16 @@ class ChatManager {
         ...savedSettings,
       };
 
-      // Also load from multiAgentSettings (used by MultiAgentSettingsManager) for sync
+      // Also load from multiAgentSettings (used by MultiAgentSettingsManager) for sync.
+      // Only the settings the Agent Settings panel actually applies are mapped here; the
+      // former per-agent LLM overrides were written but never read by any request path.
       const masSaved = this.configManager.get('multiAgentSettings', {});
       if (masSaved && Object.keys(masSaved).length > 0) {
-        // Map multiAgentSettings keys to agentSystemSettings keys
         if (masSaved.multiAgentSystemEnabled !== undefined) {
           this.agentSystemSettings.enabled = masSaved.multiAgentSystemEnabled;
         }
-        if (masSaved.multiAgentAutoOptimize !== undefined) {
-          this.agentSystemSettings.autoOptimize = masSaved.multiAgentAutoOptimize;
-        }
         if (masSaved.multiAgentShowInfo !== undefined) {
           this.agentSystemSettings.showAgentInfo = masSaved.multiAgentShowInfo;
-        }
-        if (masSaved.multiAgentMemoryEnabled !== undefined) {
-          this.agentSystemSettings.memoryEnabled = masSaved.multiAgentMemoryEnabled;
-        }
-        if (masSaved.multiAgentCacheEnabled !== undefined) {
-          this.agentSystemSettings.cacheEnabled = masSaved.multiAgentCacheEnabled;
-        }
-        if (masSaved.multiAgentLLMTemperature !== undefined) {
-          this.agentSystemSettings.llmTemperature = masSaved.multiAgentLLMTemperature;
-        }
-        if (masSaved.multiAgentLLMMaxTokens !== undefined) {
-          this.agentSystemSettings.llmMaxTokens = masSaved.multiAgentLLMMaxTokens;
-        }
-        if (masSaved.multiAgentLLMTimeout !== undefined) {
-          this.agentSystemSettings.llmTimeout = masSaved.multiAgentLLMTimeout;
-        }
-        if (masSaved.multiAgentLLMRetryAttempts !== undefined) {
-          this.agentSystemSettings.llmRetryAttempts = masSaved.multiAgentLLMRetryAttempts;
-        }
-        if (masSaved.multiAgentLLMUseSystemPrompt !== undefined) {
-          this.agentSystemSettings.llmUseSystemPrompt = masSaved.multiAgentLLMUseSystemPrompt;
-        }
-        if (masSaved.multiAgentLLMEnableFunctionCalling !== undefined) {
-          this.agentSystemSettings.llmEnableFunctionCalling = masSaved.multiAgentLLMEnableFunctionCalling;
-        }
-        if (masSaved.multiAgentModelType !== undefined) {
-          this.agentSystemSettings.llmProvider = masSaved.multiAgentModelType;
         }
       }
 
@@ -656,7 +635,7 @@ class ChatManager {
     this.agentSystemEnabled = newState;
     this.agentSystemSettings.enabled = newState;
 
-    // Update Multi-Agent Settings
+    // Update Agent Settings
     if (this.configManager) {
       this.configManager.set('multiAgentSettings.multiAgentSystemEnabled', newState);
     }
@@ -1354,6 +1333,30 @@ class ChatManager {
    * @param {Object} parameters.context - Optional studio context used for relevance scoring
    * @returns {Object} List of available tools organized by category
    */
+  /**
+   * List installed Agent Skills (expert multi-step workflows).
+   * @param {Object} parameters - Optional category/query filters
+   * @returns {Object} Skill index without workflow bodies
+   */
+  async listSkills(parameters = {}) {
+    if (!this.services?.skill) {
+      return { success: false, error: 'Skill service is not available' };
+    }
+    return this.services.skill.listSkills(parameters);
+  }
+
+  /**
+   * Load one Agent Skill's full workflow body on demand.
+   * @param {Object} parameters - Must include skill_id
+   * @returns {Object} Skill metadata plus its workflow body
+   */
+  async getSkill(parameters = {}) {
+    if (!this.services?.skill) {
+      return { success: false, error: 'Skill service is not available' };
+    }
+    return this.services.skill.getSkill(parameters);
+  }
+
   async listAvailableTools(parameters = {}) {
     const {
       category = null,
@@ -1862,11 +1865,13 @@ class ChatManager {
   }
 
   getDynamicToolsSelectionLimit() {
-    const shouldLimit = this.configManager.get('chatboxSettings.limitDynamicToolsSelection', false);
+    if (this.benchmarkAutomationActive === true) return 24;
+
+    const shouldLimit = this.configManager.get('chatboxSettings.limitDynamicToolsSelection', true);
     if (!shouldLimit) return Infinity;
 
-    const configuredLimit = Number(this.configManager.get('chatboxSettings.dynamicToolsSelectionLimit', 35));
-    if (!Number.isFinite(configuredLimit) || configuredLimit < 1) return 35;
+    const configuredLimit = Number(this.configManager.get('chatboxSettings.dynamicToolsSelectionLimit', 24));
+    if (!Number.isFinite(configuredLimit) || configuredLimit < 1) return 24;
 
     return Math.floor(configuredLimit);
   }
@@ -2636,12 +2641,30 @@ class ChatManager {
           console.log(`Centering on position ${center} with ±${halfRange}bp range: ${finalStart}-${finalEnd}`);
         }
 
-        if (finalStart && finalEnd) {
-          // Check if chromosome exists
-          if (!genomeBrowser.currentSequence || !genomeBrowser.currentSequence[chromosome]) {
-            throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
-          }
+        // Check if chromosome exists before defaulting any coordinates.
+        if (!genomeBrowser.currentSequence || !genomeBrowser.currentSequence[chromosome]) {
+          throw new Error(`Chromosome ${chromosome} not found in loaded genome data`);
+        }
 
+        // A chromosome-only call (no start/end/position) legitimately means
+        // "open a tab for the current view" when that chromosome is the one
+        // being displayed; default to the current view range instead of
+        // failing the tool for a perfectly reasonable request.
+        if (!finalStart || !finalEnd) {
+          const currentPosition = genomeBrowser.currentPosition;
+          if (
+            genomeBrowser.currentChromosome === chromosome &&
+            currentPosition &&
+            Number.isFinite(currentPosition.start) &&
+            Number.isFinite(currentPosition.end)
+          ) {
+            finalStart = currentPosition.start;
+            finalEnd = currentPosition.end;
+            console.log(`[ChatManager] openNewTab chromosome-only: using current view ${finalStart}-${finalEnd}`);
+          }
+        }
+
+        if (finalStart && finalEnd) {
           // Use the UI response function instead of direct manager access
           tabId = genomeBrowser.tabManager.createTabForPosition(chromosome, finalStart, finalEnd, finalTitle);
           finalTitle = finalTitle || `${chromosome}:${finalStart.toLocaleString()}-${finalEnd.toLocaleString()}`;
@@ -3760,52 +3783,124 @@ class ChatManager {
     throw new Error('Annotation creation not available');
   }
 
-  async exportData(params) {
-    const { format, chromosome, start, end } = params;
+  /**
+   * Generic export entry point.
+   *
+   * Delegates to the same FileOperationService implementations the dedicated
+   * export_* tools use, so `filename`/`auto_save` behave identically here. The
+   * previous implementation called ExportManager's menu handlers, which write
+   * through an anchor download with a hard-coded default name — a tool call
+   * could only ever open a native save dialog nobody is there to dismiss during
+   * automation, and the exported content was discarded from the result.
+   */
+  async exportData(params = {}) {
+    const { format = 'genbank', chromosome, start, end } = params;
+    const normalizedFormat = String(format).toLowerCase();
+    const fileService = this.services?.file;
 
-    if (this.app && this.app.exportManager) {
-      try {
-        let _exportResult;
-
-        switch (format.toLowerCase()) {
-          case 'fasta':
-            if (chromosome && start && end) {
-              // Export specific region
-              const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
-              const fastaContent = `>${chromosome}:${start}-${end}\n${sequence}`;
-              _exportResult = { content: fastaContent, type: 'text' };
-            } else {
-              _exportResult = await this.app.exportManager.exportFASTA();
-            }
-            break;
-          case 'genbank':
-          case 'gb':
-            _exportResult = await this.app.exportManager.exportGenBank();
-            break;
-          case 'gff':
-          case 'gff3':
-            _exportResult = await this.app.exportManager.exportGFF();
-            break;
-          case 'bed':
-            _exportResult = await this.app.exportManager.exportBED();
-            break;
-          default:
-            throw new Error(`Unsupported export format: ${format}`);
-        }
-
-        return {
-          format: format,
-          chromosome: chromosome,
-          start: start,
-          end: end,
-          exported: true,
-          message: `Data exported as ${format.toUpperCase()}`,
-        };
-      } catch (error) {
-        throw new Error(`Export failed: ${error.message}`);
-      }
+    if (!fileService) {
+      throw new Error('Export manager not available');
     }
 
+    const delegate = async (toolName, method) => {
+      const result = await fileService[method](params);
+      return { ...result, tool: 'export_data', delegated_tool: toolName, format: normalizedFormat };
+    };
+
+    try {
+      switch (normalizedFormat) {
+        case 'fasta':
+          if (chromosome && start && end) {
+            return await this.exportRegionFasta(params, normalizedFormat);
+          }
+          return await delegate('export_fasta_sequence', 'exportFastaSequence');
+        case 'genbank':
+        case 'gb':
+        case 'gbk':
+          return await delegate('export_genbank_format', 'exportGenBankFormat');
+        case 'gff':
+        case 'gff3':
+          return await delegate('export_gff_annotations', 'exportGffAnnotations');
+        case 'bed':
+          return await delegate('export_bed_format', 'exportBedFormat');
+        case 'cds':
+          return await delegate('export_cds_fasta', 'exportCdsFasta');
+        case 'protein':
+          return await delegate('export_protein_fasta', 'exportProteinFasta');
+        default:
+          throw new Error(`Unsupported export format: ${format}`);
+      }
+    } catch (error) {
+      throw new Error(`Export failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Region-scoped FASTA export. With a destination the region is written to
+   * disk; without one the sequence is returned inline rather than opening a
+   * dialog, because a region export has no menu equivalent to fall back to.
+   */
+  async exportRegionFasta(params, normalizedFormat) {
+    const { chromosome, start, end } = params;
+    const fileService = this.services.file;
+    const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
+    let fastaContent = `>${chromosome}:${start}-${end}\n`;
+    for (let i = 0; i < sequence.length; i += 80) {
+      fastaContent += sequence.substring(i, i + 80) + '\n';
+    }
+
+    const base = {
+      success: true,
+      tool: 'export_data',
+      delegated_tool: 'export_fasta_sequence',
+      exported_format: 'FASTA',
+      format: normalizedFormat,
+      chromosome,
+      start,
+      end,
+      length: sequence.length,
+    };
+
+    if (!fileService.shouldAutoSaveExport(params)) {
+      return {
+        ...base,
+        content: fastaContent,
+        message: `Extracted ${chromosome}:${start}-${end} as FASTA (no destination given, returned inline)`,
+      };
+    }
+
+    const outputFilename = fileService.getExportFilename(params, `${chromosome}_${start}-${end}.fasta`);
+    const writeResult = await fileService.saveExportContent(
+      fastaContent,
+      outputFilename,
+      'FASTA sequence',
+      params,
+      'export_data'
+    );
+
+    return {
+      ...base,
+      filename: outputFilename,
+      file_path: writeResult?.filePath || outputFilename,
+      filePath: writeResult?.filePath || outputFilename,
+      message: `Successfully exported ${chromosome}:${start}-${end} as FASTA`,
+      details: `Saved to ${writeResult?.filePath || outputFilename}`,
+    };
+  }
+
+  /**
+   * Open the export configuration dialog (built-in tool equivalent of the
+   * Export Config menu action).
+   */
+  async configureExportSettings(parameters = {}) {
+    if (this.app && this.app.exportManager && typeof this.app.exportManager.showExportConfigDialog === 'function') {
+      this.app.exportManager.showExportConfigDialog();
+      return {
+        success: true,
+        tool: 'configure_export_settings',
+        message: 'Export configuration dialog opened',
+      };
+    }
     throw new Error('Export manager not available');
   }
 
@@ -4154,7 +4249,6 @@ class ChatManager {
                     <div class="welcome-message">
                         <div class="message assistant-message">
                             <div class="message-content">
-                                <i class="fas fa-robot message-icon"></i>
                                 <div class="message-text">
                                     <div class="welcome-hero">
                                         <div class="welcome-hero-icon">🧬</div>
@@ -4177,6 +4271,12 @@ class ChatManager {
                 </div>
                 <div class="chat-input-container">
                     <div class="chat-input-options">
+                        <div class="chat-model-picker" title="Model used for this conversation">
+                            <i class="fas fa-microchip"></i>
+                            <select id="chatModelSelect" class="chat-model-select">
+                                <option value="auto::auto">Auto</option>
+                            </select>
+                        </div>
                         <div class="context-mode-toggle">
                             <label class="toggle-label">
                                 <input type="checkbox" id="contextModeToggle" checked />
@@ -4206,6 +4306,10 @@ class ChatManager {
                         <button id="mcpToggleBtn" class="btn btn-sm btn-secondary mcp-tools-btn" title="Toggle MCP Tools" data-connected="false">
                             <i class="fas fa-microchip"></i>
                             MCP Tools
+                        </button>
+                        <button id="chatSkillsBtn" class="btn btn-sm btn-secondary" title="Agent Skills — expert workflows the assistant can load">
+                            <i class="fas fa-book"></i>
+                            Skills
                         </button>
                     </div>
                     <div class="chat-actions secondary-actions">
@@ -4475,6 +4579,19 @@ class ChatManager {
       if (window.genomeBrowser && window.genomeBrowser.showMCPSettingsModal) {
         window.genomeBrowser.showMCPSettingsModal();
       }
+    });
+
+    // Deep-link to the Skills tab of the Agent Settings modal rather than
+    // duplicating the panel, so there is one place where skills are managed.
+    document.getElementById('chatSkillsBtn')?.addEventListener('click', () => {
+      const settingsManager = window.multiAgentSettingsManager;
+      if (!settingsManager || typeof settingsManager.showModal !== 'function') {
+        this.showNotification('Skills settings are unavailable in this window', 'warning');
+        return;
+      }
+      settingsManager.currentTab = 'skills';
+      settingsManager.showModal();
+      window.skillsSettingsManager?.render();
     });
 
     // Multi-Agent System event listeners
@@ -5068,6 +5185,7 @@ class ChatManager {
       const toolReferenceResults = [];
       let lastSuccessfulResults = [];
       let lastSuccessfulTools = [];
+      let consecutiveEmptyResponseRounds = 0;
 
       // Iterative function calling loop
       while (currentRound < maxRounds && !taskCompleted) {
@@ -5109,6 +5227,17 @@ class ChatManager {
             onReasoningToken: token => this.appendStreamingReasoningToken(token),
             onStreamReset: () => this.resetStreamingResponse(),
             signal: this.conversationState.abortController?.signal,
+            modelType: this.chatBoxSettingsManager?.getSetting('chatboxModelType', 'auto'),
+            providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
+            modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
+            tools: this.currentNativeTools,
+            nativeFunctionCalling: this.configManager.get('chatboxSettings.enableNativeFunctionCalling', true),
+            constrainedToolOutput: this.configManager.get('chatboxSettings.enableConstrainedToolOutput', true),
+            toolChoice: 'auto',
+            parallelToolCalls: true,
+            temperatureOverride: this.benchmarkAutomationActive === true ? 0 : undefined,
+            disableFallback: this.benchmarkAutomationActive === true,
+            disableStreaming: this.benchmarkAutomationActive === true,
           });
         } finally {
           // The completed message is rendered by the normal path below, so the
@@ -5159,6 +5288,11 @@ class ChatManager {
         // structured calls while retaining the text-JSON compatibility protocol.
         const detectedTools = responseAnalysis.toolCalls;
         const detectedToolCount = detectedTools.length;
+        if (detectedToolCount > 0) {
+          // A round that produced a tool call is by definition not empty; reset
+          // the guard so only consecutive empty prose rounds count toward it.
+          consecutiveEmptyResponseRounds = 0;
+        }
 
         if (detectedToolCount > 0 && this.shouldRecoverBeforeToolExecution(responseAnalysis)) {
           const recoveryDecision = this.getModelTurnRecoveryDecision(
@@ -5252,9 +5386,7 @@ class ChatManager {
             taskCompleted = true;
             const verifiedToolOnlyCompletion = this.canFinalizeFromSuccessfulToolResults(
               toolExecutionState,
-              lastSuccessfulResults,
-              lastSuccessfulTools,
-              message
+              lastSuccessfulResults
             );
             finalResponse = verifiedToolOnlyCompletion
               ? this.generateCompletionResponseFromToolResults(lastSuccessfulResults, lastSuccessfulTools)
@@ -5272,6 +5404,36 @@ class ChatManager {
         // Previous assistant messages may contain already-executed calls and must not seed a new queue.
 
         if (detectedToolCount === 0) {
+          // Bounded empty-response guard. getModelTurnRecoveryDecision retries
+          // empty rounds through its protocol-repair budget, but a model that
+          // ends its turn cleanly without any visible answer (for example a
+          // reasoning model that streams thinking but never produces prose)
+          // must not be given an unbounded share of the round budget. Two
+          // consecutive cleanly-stopped empty rounds end the turn with a
+          // deterministic message instead of being misread as a finished
+          // conversational reply. Truncated rounds (stop_reason length) are
+          // intentionally excluded: while a thinking model is mid-reasoning
+          // the visible answer is empty by design, and truncation is repaired
+          // by the protocol-recovery path below.
+          if (
+            (responseAnalysis.isEmpty || responseText.trim() === '') &&
+            this.isCleanCompletionStop(responseAnalysis)
+          ) {
+            consecutiveEmptyResponseRounds += 1;
+            if (consecutiveEmptyResponseRounds >= 2) {
+              console.log('=== REPEATED EMPTY MODEL RESPONSES ===');
+              console.log('Terminating after', consecutiveEmptyResponseRounds, 'consecutive empty rounds');
+              console.log('=======================================');
+
+              taskCompleted = true;
+              finalResponse = this.buildEmptyResponseMessage(currentRound, maxRounds);
+              toolExecutionState.terminationReason = 'repeated empty model responses';
+              break;
+            }
+          } else {
+            consecutiveEmptyResponseRounds = 0;
+          }
+
           const recoveryDecision = this.getModelTurnRecoveryDecision(
             responseAnalysis,
             toolExecutionState,
@@ -5306,7 +5468,16 @@ class ChatManager {
 
         // Check for task completion signals if early completion is enabled
         // BUT ONLY if there are NO tool calls to execute
-        if (enableEarlyCompletion && toolsToExecute.length === 0) {
+        // The prose heuristic is a fallback, not the primary signal: it is only
+        // honored when the provider stop reason is clean (or absent) and the
+        // response does not itself announce a follow-up action ("I will ...").
+        if (
+          enableEarlyCompletion &&
+          toolsToExecute.length === 0 &&
+          this.isCleanCompletionStop(responseAnalysis) &&
+          responseText.trim() !== '' &&
+          !this.isInterimActionResponse(responseText)
+        ) {
           const completionResult = this.checkTaskCompletion(responseText);
           if (completionResult.isCompleted) {
             console.log('=== TASK COMPLETION DETECTED (NO TOOL CALLS) ===');
@@ -5456,21 +5627,51 @@ class ChatManager {
               });
             }
 
-            // BENCHMARK INTEGRATION: Track function calls and results for benchmark access
-            if (this.lastExecutionData) {
+            // BENCHMARK INTEGRATION: Track function calls and results for benchmark access.
+            // Write into the request-local `executionData`, never the shared
+            // `this.lastExecutionData`: an aborted request whose tool queue is
+            // still running in the background must not append its calls/results
+            // into the next benchmark test's captured interaction data.
+            if (executionData) {
               // Track function calls
               toolsToExecute.forEach(tool => {
-                this.lastExecutionData.functionCalls.push({
+                executionData.functionCalls.push({
                   tool_name: tool.tool_name,
                   parameters: tool.parameters,
+                  id: tool.tool_call_id ?? tool.id ?? null,
                   round: currentRound,
                   timestamp: new Date().toISOString(),
                 });
               });
 
               // Track tool results
-              this.lastExecutionData.toolResults.push(...toolResults);
-              this.lastExecutionData.rounds = currentRound;
+              executionData.toolResults.push(...toolResults);
+              executionData.rounds = currentRound;
+            }
+
+            // BENCHMARK EARLY STOP: when the benchmark runner supplies a
+            // coverage callback, stop as soon as every expected call has been
+            // observed and executed successfully. A model that already
+            // completed the task must not over-complete with extra
+            // viewer/verification/wrap-up calls that the completion scorer
+            // would otherwise have to tolerate or penalize one tool at a time.
+            if (typeof options?.shouldStopAfterRound === 'function') {
+              let covered = false;
+              try {
+                covered = await options.shouldStopAfterRound({
+                  functionCalls: executionData.functionCalls,
+                  toolResults: executionData.toolResults,
+                  rounds: currentRound,
+                });
+              } catch (coverageError) {
+                console.warn('[Benchmark] shouldStopAfterRound failed:', coverageError);
+              }
+              if (covered) {
+                console.log(`=== [Benchmark] Early stop after round ${currentRound}: expected coverage reached ===`);
+                finalResponse = 'Completed all requested tool calls.';
+                taskCompleted = true;
+                break;
+              }
             }
 
             // Show the tool execution result
@@ -5498,6 +5699,9 @@ class ChatManager {
 
             if (successfulResults.length > 0) {
               toolExecutionState.consecutiveFailureRounds = 0;
+              // Clears the consecutive streak only. The cumulative count in
+              // totalProtocolRecoveryAttempts is what bounds the turn, because a
+              // repair that just re-runs an already-recorded tool is not progress.
               toolExecutionState.protocolRecoveryAttempts = 0;
               successfulResults.forEach(result => {
                 const toolKey = this.getToolExecutionKey(result.tool, result.parameters);
@@ -5525,8 +5729,17 @@ class ChatManager {
                 }
                 return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeToolParams(result.tool, result.parameters))}: ${sanitizedStr}`;
               });
+              // The closing instruction is what keeps the model from re-issuing a call
+              // it just completed. Without it the next round re-reads a request that
+              // still reads as unfulfilled ("zoom out") and the obvious move is to run
+              // the same tool again; suppression then has to catch it after the fact.
               conversationHistory.push(
-                this.createToolExecutionFeedbackMessage(`[Tool Result]\n${successMessages.join('; ')}`)
+                this.createToolExecutionFeedbackMessage(
+                  `[Tool Result]\n${successMessages.join('; ')}\n` +
+                    'These steps are done. Calling one of them again with the same parameters will be rejected. ' +
+                    'If the request has remaining steps, reply with ONLY the next JSON tool call(s); ' +
+                    'otherwise reply with the final answer.'
+                )
               );
 
               // ENHANCED: Check for simple task completion after successful tool execution
@@ -5659,8 +5872,26 @@ class ChatManager {
           console.log('===============================');
 
           // No tool call detected - this is our final response
-          finalResponse = responseText;
-          toolExecutionState.terminationReason = 'final conversational response';
+          // The primary completion signal is the provider stop reason: a clean
+          // stop (or an absent stop reason from adapters that collapse clean
+          // completions into plain strings) means the model ended its turn on
+          // its own. A provider-reported abnormal stop must never be presented
+          // as a completed answer, even if recovery above did not catch it.
+          if (!this.isCleanCompletionStop(responseAnalysis)) {
+            const abnormalStop = String(responseAnalysis?.stopReason || 'unknown');
+            console.warn('=== ABNORMAL PROVIDER STOP NOT RECOVERED ===');
+            console.warn('Stop reason:', abnormalStop);
+            console.warn('===========================================');
+
+            taskCompleted = true;
+            finalResponse =
+              `I stopped responding abnormally (${abnormalStop}) before the request was complete. ` +
+              `No further action was taken; please rephrase or retry the request.`;
+            toolExecutionState.terminationReason = `abnormal provider stop (${abnormalStop})`;
+          } else {
+            finalResponse = responseText;
+            toolExecutionState.terminationReason = 'final conversational response';
+          }
           break;
         }
       }
@@ -6102,6 +6333,7 @@ class ChatManager {
 
   async buildSystemMessage() {
     this.lastSystemPromptMetadata = null;
+    this.currentNativeTools = [];
 
     // [MCP Integration] Check for specific MCP server prompts first
     if (this.mcpServerManager && this.mcpServerManager.serverPrompts) {
@@ -6219,6 +6451,7 @@ class ChatManager {
         const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context, {
           selectionLimit: this.getDynamicToolsSelectionLimit(),
         });
+        this.currentNativeTools = Array.isArray(promptData.nativeTools) ? promptData.nativeTools : [];
         console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
 
         // Apply section configuration filtering to dynamic prompt
@@ -6283,7 +6516,11 @@ class ChatManager {
   }
 
   async createSystemPromptMetadata({ mode, prompt, promptData, context, userQuery }) {
-    const tools = Array.isArray(promptData?.toolsUsed) ? promptData.toolsUsed : [];
+    const tools = Array.isArray(promptData?.toolDefinitions)
+      ? promptData.toolDefinitions
+      : Array.isArray(promptData?.toolsUsed)
+        ? promptData.toolsUsed
+        : [];
     const selectedTools = tools.map(tool => ({
       name: tool.name || String(tool),
       category: tool.category || 'uncategorized',
@@ -6964,9 +7201,21 @@ class ChatManager {
         const mismatchReason = this.getToolCallRequestMismatchReason(toolCall, originalMessage);
         if (mismatchReason) {
           invalidToolCalls.push({ ...toolCall, reason: mismatchReason });
-        } else {
-          requestConsistentCalls.push(toolCall);
+          continue;
         }
+        if (this.dynamicTools && typeof this.dynamicTools.validateToolCall === 'function') {
+          const normalizedParameters = this.normalizeToolParams(toolCall.tool_name, toolCall.parameters || {});
+          const validation = this.dynamicTools.validateToolCall(toolCall.tool_name, normalizedParameters);
+          if (!validation.valid) {
+            invalidToolCalls.push({
+              ...toolCall,
+              reason: `Tool arguments failed schema validation: ${validation.errors.join('; ')}`,
+            });
+            continue;
+          }
+          toolCall.parameters = normalizedParameters;
+        }
+        requestConsistentCalls.push(toolCall);
       }
       toolCalls = requestConsistentCalls;
       const text = String(analyzed.displayText ?? analyzed.text ?? analyzed.content ?? '');
@@ -7261,9 +7510,47 @@ class ChatManager {
     return toolName => pattern.test(String(toolName || ''));
   }
 
-  getRequestClauseEffectRequirement(clause, inheritedDomain = '') {
+  /**
+   * The part of a clause that says what to do, without the trailing phrase that
+   * says why.
+   *
+   * "perform an InterPro domain analysis to identify key domains" asks for one
+   * effect, the analysis. Reading the goal phrase as the effect demands a tool
+   * matching "identify", which no analysis tool is named for, so the request can
+   * never be satisfied: every finished answer is bounced back for repair, the
+   * model re-runs the analysis it already ran, and the turn burns its whole
+   * budget. Only unambiguous goal wording is stripped, so "jump to gene lacZ"
+   * and "switch to tab 2" keep naming their own action.
+   */
+  stripClausePurposePhrase(clause) {
     const text = String(clause || '').trim();
-    const message = text.toLowerCase();
+    const goalVerb =
+      'identify|detect|determine|find|locate|check|verify|confirm|see|understand|' +
+      'characteri[sz]e|reveal|assess|evaluate|obtain|discover|explore|examine|study|compare|validate';
+    const purposeMarker = new RegExp(`\\s+(?:in order to|so as to|so that|to\\s+(?:${goalVerb})\\b)`, 'i');
+
+    const match = text.match(purposeMarker);
+    if (!match || match.index === undefined || match.index === 0) return text;
+    return text.slice(0, match.index).trim();
+  }
+
+  getRequestClauseEffectRequirement(clause, inheritedDomain = '') {
+    const fullClause = String(clause || '').trim();
+    const mainAction = this.stripClausePurposePhrase(fullClause);
+
+    if (mainAction && mainAction !== fullClause) {
+      const mainRequirement = this.deriveClauseEffectRequirement(mainAction, fullClause, inheritedDomain);
+      if (mainRequirement) return mainRequirement;
+    }
+
+    return this.deriveClauseEffectRequirement(fullClause, fullClause, inheritedDomain);
+  }
+
+  deriveClauseEffectRequirement(actionText, fullClause, inheritedDomain = '') {
+    const text = String(fullClause || '').trim();
+    const message = String(actionText || '')
+      .trim()
+      .toLowerCase();
     const contextMessage = `${message} ${inheritedDomain}`.trim();
     const verbTool = (...verbs) => this.verbToolMatcher(...verbs);
     const requirement = (capability, matcher, repeatToolName = capability) => ({
@@ -7372,9 +7659,14 @@ class ChatManager {
       // Provider-namespaced tools put the verb in the middle of the name, so an
       // anchored prefix silently fails to recognize blast_export_results as the
       // export the user asked for.
+      //
+      // "download" is the user's word for it; the tools that do it are named
+      // fetch_/download_/save_. Matching only export_ left "download its
+      // AlphaFold 3D structure" unsatisfiable even though
+      // fetch_alphafold_structure had already downloaded it.
       return requirement(
         'export',
-        toolName => toolName === 'export_data' || verbTool('export')(toolName),
+        toolName => toolName === 'export_data' || verbTool('export', 'download', 'save', 'fetch')(toolName),
         'export_data'
       );
     }
@@ -7455,7 +7747,11 @@ class ChatManager {
         'calculate_molecular_weight'
       );
     }
-    if (/\b(?:analy[sz]e|assess|predict)\b|(?:分析|评估|预测)/.test(message)) {
+    // The noun forms matter as much as the verb: requests phrase this step as
+    // "perform a domain analysis" at least as often as "analyze the domains",
+    // and only the verb was recognized, so the noun form fell through to a rule
+    // that no analysis tool can satisfy.
+    if (/\b(?:analy[sz]e|analys[ei]s|assess(?:ment)?|predict(?:ion)?)\b|(?:分析|评估|预测)/.test(message)) {
       return requirement(
         'analysis',
         toolName => verbTool('analy[sz]e', 'assess', 'predict')(toolName) || /_analysis$/.test(toolName),
@@ -7551,21 +7847,112 @@ class ChatManager {
 
     return {
       actionableClauseCount: actionableClauses.length,
-      requirements: [...requirementsByCapability.values()],
+      requirements: [...requirementsByCapability.values()].filter(requirement =>
+        this.isRequirementSatisfiableByAnyTool(requirement)
+      ),
     };
   }
 
-  doSuccessfulRecordsSatisfyRequirements(successfulRecords, requirements) {
-    const unmatchedRecords = successfulRecords.slice();
-    for (const requirement of requirements) {
+  /**
+   * Tool names this session can execute, or null when the registry is not loaded.
+   */
+  getRegisteredToolNames() {
+    const registry = this.builtInToolsMap;
+    if (!registry || typeof registry.keys !== 'function') return null;
+    const names = [...registry.keys()].filter(name => typeof name === 'string' && name);
+    return names.length > 0 ? names : null;
+  }
+
+  /**
+   * Whether any registered tool could satisfy a requirement at all.
+   *
+   * A capability comes from the user's wording while tools are named for the
+   * effect, and the two pick different verbs for the same thing: "download its
+   * AlphaFold structure" is carried out by fetch_alphafold_structure, "identify
+   * key domains" by analyze_interpro_domains. When a requirement matches no
+   * registered tool, no response can satisfy it, so holding it against the model
+   * sends a finished turn into repair it can never pass. That is missing
+   * knowledge on our side, the same reason an unrecognized clause is not held
+   * against the model.
+   *
+   * Only tool-name matchers are probed. A matcher that also inspects the
+   * execution record (arity > 1) constrains parameters, not availability, and
+   * would always fail against a bare name.
+   */
+  isRequirementSatisfiableByAnyTool(requirement) {
+    if (typeof requirement?.matcher !== 'function' || requirement.matcher.length > 1) return true;
+
+    const toolNames = this.getRegisteredToolNames();
+    // Registry unknown: keep the requirement rather than silently dropping every check.
+    if (!toolNames) return true;
+
+    return toolNames.some(name => {
+      try {
+        return requirement.matcher(name, { tool: name, parameters: {}, normalizedParameters: {} });
+      } catch (e) {
+        return false;
+      }
+    });
+  }
+
+  /**
+   * Assign each required occurrence a distinct successful execution, and report
+   * how many of each requirement went unassigned.
+   *
+   * Claiming the first match and moving on makes the verdict depend on the order
+   * the model happened to run its tools: "retrieve the entry, download the
+   * structure" is satisfied by get_uniprot_entry + fetch_alphafold_structure, but
+   * a greedy "retrieve" takes whichever of the two it sees first, and if that is
+   * the fetch then "download" is left with nothing and a finished request looks
+   * unfinished. Re-assigning through an augmenting path finds an assignment
+   * whenever one exists, so the outcome no longer depends on execution order.
+   */
+  assignRecordsToRequirements(successfulRecords, requirements) {
+    const records = successfulRecords.slice();
+    const slots = [];
+    requirements.forEach((requirement, requirementIndex) => {
       const requiredCount = Math.max(1, Number(requirement.count) || 1);
       for (let occurrence = 0; occurrence < requiredCount; occurrence++) {
-        const matchingIndex = unmatchedRecords.findIndex(record => requirement.matcher(record.tool, record));
-        if (matchingIndex === -1) return false;
-        unmatchedRecords.splice(matchingIndex, 1);
+        slots.push({ requirement, requirementIndex });
       }
-    }
-    return true;
+    });
+
+    const recordAssignedTo = new Array(records.length).fill(-1);
+
+    const assign = (slotIndex, visited) => {
+      const { requirement } = slots[slotIndex];
+      for (let recordIndex = 0; recordIndex < records.length; recordIndex++) {
+        if (visited.has(recordIndex)) continue;
+        const record = records[recordIndex];
+        let matches = false;
+        try {
+          matches = requirement.matcher(record.tool, record);
+        } catch (e) {
+          matches = false;
+        }
+        if (!matches) continue;
+
+        visited.add(recordIndex);
+        const heldBy = recordAssignedTo[recordIndex];
+        if (heldBy === -1 || assign(heldBy, visited)) {
+          recordAssignedTo[recordIndex] = slotIndex;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const unassignedByRequirement = new Map();
+    slots.forEach((slot, slotIndex) => {
+      if (assign(slotIndex, new Set())) return;
+      unassignedByRequirement.set(slot.requirementIndex, (unassignedByRequirement.get(slot.requirementIndex) || 0) + 1);
+    });
+
+    return unassignedByRequirement;
+  }
+
+  doSuccessfulRecordsSatisfyRequirements(successfulRecords, requirements) {
+    return this.assignRecordsToRequirements(successfulRecords, requirements).size === 0;
   }
 
   hasSuccessfulExecutionForRequest(toolExecutionState) {
@@ -7592,35 +7979,30 @@ class ChatManager {
   getOutstandingRequestSteps(toolExecutionState) {
     const successfulRecords = (toolExecutionState?.records || []).filter(record => record.status === 'success');
     const { requirements } = this.getSequentialActionRequirements(String(toolExecutionState?.originalMessage || ''));
-    const unmatchedRecords = successfulRecords.slice();
-    const outstanding = [];
+    const unassigned = this.assignRecordsToRequirements(successfulRecords, requirements);
 
-    for (const requirement of requirements) {
-      const requiredCount = Math.max(1, Number(requirement.count) || 1);
-      let satisfied = 0;
-      for (let occurrence = 0; occurrence < requiredCount; occurrence++) {
-        const matchingIndex = unmatchedRecords.findIndex(record => requirement.matcher(record.tool, record));
-        if (matchingIndex === -1) break;
-        unmatchedRecords.splice(matchingIndex, 1);
-        satisfied++;
-      }
-      if (satisfied >= requiredCount) continue;
-      outstanding.push({
-        capability: requirement.capability,
-        clause: requirement.clause || '',
-        remaining: requiredCount - satisfied,
-      });
-    }
-
-    return outstanding;
+    return requirements
+      .map((requirement, requirementIndex) => ({ requirement, remaining: unassigned.get(requirementIndex) || 0 }))
+      .filter(entry => entry.remaining > 0)
+      .map(entry => ({
+        capability: entry.requirement.capability,
+        clause: entry.requirement.clause || '',
+        remaining: entry.remaining,
+      }));
   }
 
-  canFinalizeFromSuccessfulToolResults(toolExecutionState, successfulResults, successfulTools, originalMessage) {
-    return Boolean(
-      successfulResults.length > 0 &&
-      this.hasSuccessfulExecutionForRequest(toolExecutionState) &&
-      this.shouldTerminateAfterToolExecution(successfulTools, successfulResults, originalMessage)
-    );
+  /**
+   * Whether a turn that is already ending can report the work it completed.
+   *
+   * The bar is that every recognized effect the request asked for is covered by a
+   * successful execution — a check derived from the request itself. It used to also
+   * require shouldTerminateAfterToolExecution, whose hardcoded tool list decides
+   * something else entirely (whether the turn may end a round early). Any tool
+   * missing from that list therefore reported "the model repeated a tool call
+   * beyond the request limit" for work that had in fact succeeded.
+   */
+  canFinalizeFromSuccessfulToolResults(toolExecutionState, successfulResults) {
+    return Boolean(successfulResults.length > 0 && this.hasSuccessfulExecutionForRequest(toolExecutionState));
   }
 
   getRequestedExecutionCountFallback(originalMessage, toolName) {
@@ -7704,6 +8086,45 @@ class ChatManager {
     );
   }
 
+  /**
+   * Whether the provider stop reason means the model ended its turn cleanly.
+   *
+   * A missing stop reason counts as clean: adapters that collapse clean
+   * OpenAI-compatible completions into plain strings drop the finish reason
+   * before ChatManager sees it, so null must keep the legacy behavior instead
+   * of being treated as abnormal. Known abnormal reasons (length, refusal,
+   * tool protocol errors, ...) are handled earlier by
+   * getModelTurnRecoveryDecision; this helper backs the loop's final guard.
+   */
+  isCleanCompletionStop(responseAnalysis) {
+    const stopReason = String(responseAnalysis?.stopReason || '')
+      .trim()
+      .toLowerCase();
+    if (!stopReason) return true;
+    return new Set([
+      'stop',
+      'end_turn',
+      'end-turn',
+      'stop_sequence',
+      'stopsequence',
+      'eos',
+      'complete',
+      'completed',
+      'done',
+      'finish',
+      'finished',
+    ]).has(stopReason);
+  }
+
+  /** Deterministic message for a turn ended by repeated empty model responses. */
+  buildEmptyResponseMessage(currentRound, maxRounds) {
+    return (
+      `The model returned an empty response for two consecutive rounds ` +
+      `(rounds ${Math.max(1, currentRound - 1)}–${currentRound} of ${maxRounds}), so the request could not be ` +
+      `completed and no action was taken. Please rephrase the request or switch to a different model.`
+    );
+  }
+
   getModelTurnRecoveryDecision(responseAnalysis, toolExecutionState, currentRound, maxRounds) {
     const stopReason = String(responseAnalysis?.stopReason || '').toLowerCase();
     const responseText = String(responseAnalysis?.text || '');
@@ -7764,8 +8185,19 @@ class ChatManager {
 
     const outstandingSteps = this.getOutstandingRequestSteps(toolExecutionState);
     const maxRepairRounds = 2;
+    // A successful tool execution clears the consecutive streak, so a request the
+    // model can never satisfy — one whose requirement no available tool matches —
+    // used to alternate repair, re-run, repair forever without either budget
+    // running out, and the turn only ended when it hit the round cap or the clock.
+    // The cumulative count is not cleared, so that alternation terminates.
+    const maxTotalRepairRounds = 4;
     const attemptedRepairs = toolExecutionState?.protocolRecoveryAttempts || 0;
-    if (currentRound >= maxRounds || attemptedRepairs >= maxRepairRounds) {
+    const totalAttemptedRepairs = toolExecutionState?.totalProtocolRecoveryAttempts || 0;
+    if (
+      currentRound >= maxRounds ||
+      attemptedRepairs >= maxRepairRounds ||
+      totalAttemptedRepairs >= maxTotalRepairRounds
+    ) {
       const unfinished =
         outstandingSteps.length > 0
           ? ` The following requested step(s) were never carried out: ${outstandingSteps
@@ -7784,6 +8216,7 @@ class ChatManager {
 
     if (toolExecutionState) {
       toolExecutionState.protocolRecoveryAttempts = attemptedRepairs + 1;
+      toolExecutionState.totalProtocolRecoveryAttempts = totalAttemptedRepairs + 1;
       toolExecutionState.updatedAt = new Date().toISOString();
     }
     return { action: 'retry', reason, outstandingSteps };
@@ -7828,7 +8261,19 @@ class ChatManager {
   }
 
   createToolExecutionFeedbackMessage(content) {
-    const message = { role: 'user', content };
+    // No provider adapter sends native tool schemas, so a result cannot be returned
+    // as a tool_result block bound to a tool_use id — it has to ride in a role the
+    // adapters preserve, and that role is 'user'. A bare result then reads as a
+    // fresh user turn: a repeating run showed the model reasoning "the user is
+    // requesting another genome-wide codon usage analysis" and re-issuing the call
+    // it had just completed. The envelope denies that provenance explicitly.
+    const message = {
+      role: 'user',
+      content:
+        '[CodeXomics automated tool-execution record. This is not a message from the user ' +
+        'and is not a new request. Continue the original request already in progress.]\n' +
+        content,
+    };
     // Keep provenance available to local policy checks without serializing an
     // unsupported field into provider request payloads.
     Object.defineProperty(message, '__codexomicsToolFeedback', {
@@ -7846,6 +8291,7 @@ class ChatManager {
       consecutiveSuppressedRounds: 0,
       consecutiveFailureRounds: 0,
       protocolRecoveryAttempts: 0,
+      totalProtocolRecoveryAttempts: 0,
       terminationReason: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -8033,7 +8479,8 @@ class ChatManager {
     const executionFilter = this.filterExecutableToolInstances(
       detectedTools,
       successfulToolExecutionCounts,
-      originalMessage
+      originalMessage,
+      toolExecutionState
     );
     const pendingTools = [];
     const policyBlockedTools = [];
@@ -8066,6 +8513,7 @@ class ChatManager {
       const queuedTool = {
         tool_name: tool.tool_name,
         parameters: this.cloneToolParameters(tool.parameters),
+        tool_call_id: tool.id ?? tool.tool_call_id ?? tool.call_id ?? null,
       };
       if (executionRecord) {
         queuedTool.executionId = executionRecord.id;
@@ -8086,7 +8534,12 @@ class ChatManager {
     };
   }
 
-  filterExecutableToolInstances(toolsToExecute, successfulToolExecutionCounts, originalMessage) {
+  filterExecutableToolInstances(
+    toolsToExecute,
+    successfulToolExecutionCounts,
+    originalMessage,
+    toolExecutionState = null
+  ) {
     const plannedToolExecutionCounts = new Map();
     const plannedToolNameCounts = new Map();
     const successfulToolNameCounts = new Map();
@@ -8114,22 +8567,35 @@ class ChatManager {
       const alreadyPlanned = useToolNameBudget
         ? plannedToolNameCounts.get(tool.tool_name) || 0
         : plannedToolExecutionCounts.get(toolKey) || 0;
-      const usedRequestBudget = useToolNameBudget ? alreadySucceeded + alreadyPlanned : alreadyPlanned;
+      // Successes from earlier rounds count against the budget for every tool, not
+      // only the ones budgeted by name. They used to be ignored here ("treat a
+      // new-round call as fresh"), which left an identical, already-successful call
+      // executable once per round for the whole round budget: the loop re-prompted
+      // the model with the request still standing, the model re-issued the same
+      // call, and each repeat applied the side effect again — "zoom out" zoomed the
+      // view out once per round until the rounds ran out. Nothing about that is
+      // specific to zoom; it applied to any tool the completion heuristics did not
+      // recognize. The escape hatch below keeps deliberate re-reads working.
+      const usedRequestBudget = alreadySucceeded + alreadyPlanned;
 
       if (usedRequestBudget >= requestedLimit) {
-        console.log(
-          `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
-            `(request budget ${usedRequestBudget}/${requestedLimit}, previous successes ${alreadySucceeded})`
-        );
-        suppressedTools.push(tool);
-        continue;
-      }
+        // A repeat can still return something new when the state it observes has
+        // moved on, which another tool's success since then is the generic evidence
+        // for ("navigate, then read the position again"). Requesting a repeat by
+        // name is an explicit count from the user, so it stays capped at that count.
+        const repeatCanObserveNewState =
+          !useToolNameBudget && alreadySucceeded > 0 && this.hasProgressSinceLastSuccess(toolExecutionState, toolKey);
 
-      if (alreadySucceeded > 0 && !useToolNameBudget) {
-        console.log(
-          `🔄 [ToolLoop] Treating new-round tool call as fresh: ${tool.tool_name} ` +
-            `(previous successes ${alreadySucceeded})`
-        );
+        if (!repeatCanObserveNewState) {
+          console.log(
+            `♻️ [ToolLoop] Suppressing duplicate tool instance: ${tool.tool_name} ` +
+              `(request budget ${usedRequestBudget}/${requestedLimit}, previous successes ${alreadySucceeded})`
+          );
+          suppressedTools.push(tool);
+          continue;
+        }
+
+        console.log(`🔄 [ToolLoop] Allowing repeat of ${tool.tool_name}: another tool succeeded since its last run`);
       }
 
       if (useToolNameBudget) {
@@ -8141,6 +8607,42 @@ class ChatManager {
     }
 
     return { executableTools, suppressedTools };
+  }
+
+  /**
+   * Whether any other tool has succeeded since this exact call last succeeded.
+   *
+   * Re-running a call that already succeeded can only produce something new if the
+   * state it observes has changed in the meantime, and another tool's success is
+   * the generic evidence for that. Deriving it from the execution record keeps the
+   * check free of any per-tool knowledge about which capabilities mutate state —
+   * a list like that is what let the repeat go unnoticed in the first place.
+   *
+   * @param {Object|null} toolExecutionState - execution state for the current request
+   * @param {string} toolKey - `getToolExecutionKey` output for the call being judged
+   * @returns {boolean}
+   */
+  hasProgressSinceLastSuccess(toolExecutionState, toolKey) {
+    const records = toolExecutionState?.records;
+    if (!Array.isArray(records) || records.length === 0) return false;
+
+    const keyOf = record => this.getToolExecutionKey(record.tool, record.parameters || {});
+
+    let lastSuccessIndex = -1;
+    for (let index = records.length - 1; index >= 0; index--) {
+      const record = records[index];
+      if (record.status === 'success' && keyOf(record) === toolKey) {
+        lastSuccessIndex = index;
+        break;
+      }
+    }
+    if (lastSuccessIndex === -1) return false;
+
+    for (let index = lastSuccessIndex + 1; index < records.length; index++) {
+      const record = records[index];
+      if (record.status === 'success' && keyOf(record) !== toolKey) return true;
+    }
+    return false;
   }
 
   async executePendingToolExecutionQueue(pendingToolExecutionQueue, referenceToolResults = []) {
@@ -8158,14 +8660,19 @@ class ChatManager {
 
       try {
         executionParameters = this.resolveToolParameterReferences(recordedParameters, referenceContext);
+        const executionStart = Date.now();
         const result = await this.executeToolByName(tool.tool_name, executionParameters);
         const explicitFailure = result && typeof result === 'object' && result.success === false;
+        const executionTime = Date.now() - executionStart;
         const toolResult = {
           tool: tool.tool_name,
+          tool_name: tool.tool_name,
+          tool_call_id: tool.tool_call_id ?? tool.id ?? null,
           parameters: recordedParameters,
           success: !explicitFailure,
           result: explicitFailure ? null : result,
           error: explicitFailure ? result.error || result.message || 'Tool reported an unsuccessful result' : null,
+          executionTime,
         };
         toolResults.push(toolResult);
         if (toolResult.success) {
@@ -8174,10 +8681,13 @@ class ChatManager {
       } catch (error) {
         toolResults.push({
           tool: tool.tool_name,
+          tool_name: tool.tool_name,
+          tool_call_id: tool.tool_call_id ?? tool.id ?? null,
           parameters: recordedParameters,
           success: false,
           result: null,
           error: error.message,
+          executionTime: 0,
         });
       }
     }
@@ -8480,6 +8990,67 @@ class ChatManager {
   }
 
   /**
+   * Split one execution-feedback message into a record per tool it reports on.
+   *
+   * A round that runs several tools joins every outcome into a single feedback
+   * message, so reading only the first "with parameters:" block attributes those
+   * parameters to every tool named in the message. Every tool after the first
+   * then looks like it was never run, and the repeat guards let the model call it
+   * again on each subsequent round.
+   */
+  parseToolExecutionFeedbackEntries(content) {
+    if (typeof content !== 'string' || !content) {
+      return [];
+    }
+
+    const entries = [];
+    const headerPattern = /([A-Za-z_][A-Za-z0-9_]*) executed( successfully)?/g;
+    const marker = ' with parameters:';
+    let match;
+
+    while ((match = headerPattern.exec(content)) !== null) {
+      const entry = {
+        toolName: match[1],
+        success: Boolean(match[2]),
+        parametersText: null,
+      };
+
+      if (content.startsWith(marker, headerPattern.lastIndex)) {
+        const tail = content.slice(headerPattern.lastIndex);
+        const parametersText = this.extractParametersFromExecutionMessage(tail);
+        if (parametersText) {
+          entry.parametersText = parametersText;
+          // Resume scanning after this tool's parameters so the next header match
+          // belongs to the next tool rather than to text inside these parameters.
+          headerPattern.lastIndex += tail.indexOf(parametersText) + parametersText.length;
+        }
+      }
+
+      entries.push(entry);
+    }
+
+    return entries;
+  }
+
+  /**
+   * Check whether a feedback entry's parameters describe the same call as a tool key
+   */
+  doesFeedbackEntryMatchParameters(toolName, parsedKeyParams, paramsStr, entry) {
+    if (!entry.parametersText) {
+      return false;
+    }
+
+    try {
+      const parsedEntryParams = JSON.parse(entry.parametersText);
+      if (parsedKeyParams) {
+        return this.areToolParametersEqual(toolName, parsedKeyParams, parsedEntryParams);
+      }
+    } catch (e) {}
+
+    return entry.parametersText === paramsStr;
+  }
+
+  /**
    * Check if a tool with specific parameters was executed successfully in conversation history
    */
   wasToolExecutedSuccessfully(toolKey, conversationHistory) {
@@ -8493,36 +9064,27 @@ class ChatManager {
 
     for (const msg of conversationHistory) {
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
-      if (isExecutionFeedback && msg.content && msg.content.includes('executed successfully')) {
-        // Extract tool name and check if it matches
-        if (msg.content.includes(`${toolName} executed successfully`)) {
-          // If message contains parameters, check for exact match
-          if (msg.content.includes('with parameters:')) {
-            const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
-            if (msgParamsStr) {
-              try {
-                const parsedMsgParams = JSON.parse(msgParamsStr);
-                if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
-                  console.log(
-                    `🔍 Found successful execution record for: ${toolName} with matching parameters (robust check)`
-                  );
-                  return true;
-                }
-              } catch (e) {
-                if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-                  return true;
-                }
-              }
-            } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-              return true;
-            }
-          } else if (!msg.content.includes('with parameters:')) {
-            // Legacy support: if message doesn't have the "with parameters" part,
-            // we fall back to name-only match to be safe
-            console.log(`🔍 Found legacy successful execution record for: ${toolName}`);
-            return true;
-          }
-        }
+      if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed successfully`)) {
+        continue;
+      }
+
+      if (!msg.content.includes('with parameters:')) {
+        // Legacy support: if message doesn't have the "with parameters" part,
+        // we fall back to name-only match to be safe
+        console.log(`🔍 Found legacy successful execution record for: ${toolName}`);
+        return true;
+      }
+
+      const matched = this.parseToolExecutionFeedbackEntries(msg.content).some(
+        entry =>
+          entry.success &&
+          entry.toolName === toolName &&
+          this.doesFeedbackEntryMatchParameters(toolName, parsedKeyParams, paramsStr, entry)
+      );
+
+      if (matched) {
+        console.log(`🔍 Found successful execution record for: ${toolName} with matching parameters (robust check)`);
+        return true;
       }
     }
     return false;
@@ -8615,28 +9177,22 @@ class ChatManager {
 
     for (const msg of conversationHistory) {
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
-      if (isExecutionFeedback && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
-        if (msg.content.includes('with parameters:')) {
-          const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
-          if (msgParamsStr) {
-            try {
-              const parsedMsgParams = JSON.parse(msgParamsStr);
-              if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
-                count++;
-              }
-            } catch (e) {
-              if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-                count++;
-              }
-            }
-          } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-            count++;
-          }
-        } else if (!msg.content.includes('with parameters:')) {
-          // Legacy support
-          count++;
-        }
+      if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed successfully`)) {
+        continue;
       }
+
+      if (!msg.content.includes('with parameters:')) {
+        // Legacy support
+        count++;
+        continue;
+      }
+
+      count += this.parseToolExecutionFeedbackEntries(msg.content).filter(
+        entry =>
+          entry.success &&
+          entry.toolName === toolName &&
+          this.doesFeedbackEntryMatchParameters(toolName, parsedKeyParams, paramsStr, entry)
+      ).length;
     }
     return count;
   }
@@ -8668,40 +9224,31 @@ class ChatManager {
 
     for (const msg of conversationHistory) {
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
-      if (isExecutionFeedback && msg.content && msg.content.includes(`${toolName} executed`)) {
-        // Check for parameter match
-        const hasParams = msg.content.includes('with parameters:');
-        if (hasParams) {
-          const msgParamsStr = this.extractParametersFromExecutionMessage(msg.content);
-          if (msgParamsStr) {
-            try {
-              const parsedMsgParams = JSON.parse(msgParamsStr);
-              if (parsedKeyParams && this.areToolParametersEqual(toolName, parsedKeyParams, parsedMsgParams)) {
-                return {
-                  success: msg.content.includes('successfully'),
-                  timestamp: new Date().toISOString(),
-                };
-              }
-            } catch (e) {
-              if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-                return {
-                  success: msg.content.includes('successfully'),
-                  timestamp: new Date().toISOString(),
-                };
-              }
-            }
-          } else if (msg.content.includes(`with parameters: ${paramsStr}`)) {
-            return {
-              success: msg.content.includes('successfully'),
-              timestamp: new Date().toISOString(),
-            };
-          }
-        } else {
-          return {
-            success: msg.content.includes('successfully'),
-            timestamp: new Date().toISOString(), // Approximate
-          };
-        }
+      if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed`)) {
+        continue;
+      }
+
+      if (!msg.content.includes('with parameters:')) {
+        return {
+          success: msg.content.includes('successfully'),
+          timestamp: new Date().toISOString(), // Approximate
+        };
+      }
+
+      // Read the outcome off this tool's own entry: a multi-tool round reports
+      // every tool in one message, so "successfully" anywhere in it says nothing
+      // about the tool being looked up.
+      const entry = this.parseToolExecutionFeedbackEntries(msg.content).find(
+        candidate =>
+          candidate.toolName === toolName &&
+          this.doesFeedbackEntryMatchParameters(toolName, parsedKeyParams, paramsStr, candidate)
+      );
+
+      if (entry) {
+        return {
+          success: entry.success,
+          timestamp: new Date().toISOString(),
+        };
       }
     }
     return null;
@@ -9687,6 +10234,7 @@ ${coreTools}
       export_gff_annotations: () => this.exportGFFAnnotations(parameters),
       export_bed_format: () => this.exportBEDFormat(parameters),
       export_current_view_fasta: () => this.exportCurrentViewFasta(parameters),
+      configure_export_settings: () => this.configureExportSettings(parameters),
       capture_screenshot: () => this.captureScreenshot(parameters),
       open_image_file: () => this.openImageFile(parameters),
 
@@ -9696,6 +10244,8 @@ ${coreTools}
       export_data: () => this.exportData(parameters),
       set_working_directory: () => this.setWorkingDirectory(parameters),
       list_available_tools: () => this.listAvailableTools(parameters),
+      list_skills: () => this.listSkills(parameters),
+      get_skill: () => this.getSkill(parameters),
       download_internet_file: () => this.downloadInternetFile(parameters),
       utility_download_internet_file: () => this.downloadInternetFile(parameters),
       utility_toggle_settings_modal: () => this.toggleSettingsModal(parameters),
@@ -9817,11 +10367,15 @@ ${coreTools}
     const factor = parameters.factor || 2;
     if (!this.app.navigationManager) throw new Error('NavigationManager not available');
     const result = this.app.navigationManager.zoomIn(factor);
+    if (result && result.success === false) {
+      return { success: false, error: result.error || 'Zoom in failed', factor };
+    }
     const state = this.getCurrentState();
+    const appliedFactor = result?.factor || factor;
     return {
       success: true,
-      factor: result.factor || factor,
-      message: `Zoomed in by ${factor}x`,
+      factor: appliedFactor,
+      message: `Zoomed in by ${appliedFactor}x`,
       newRange: state.viewingRegion,
     };
   }
@@ -9833,11 +10387,18 @@ ${coreTools}
     const factor = parameters.factor || 2;
     if (!this.app.navigationManager) throw new Error('NavigationManager not available');
     const result = this.app.navigationManager.zoomOut(factor);
+    // NavigationManager reports "no active chromosome or sequence loaded" as
+    // success:false. Reporting that as a success made a no-op zoom look completed,
+    // so the model kept re-issuing the call instead of surfacing the failure.
+    if (result && result.success === false) {
+      return { success: false, error: result.error || 'Zoom out failed', factor };
+    }
     const state = this.getCurrentState();
+    const appliedFactor = result?.factor || factor;
     return {
       success: true,
-      factor: result.factor || factor,
-      message: `Zoomed out by ${factor}x`,
+      factor: appliedFactor,
+      message: `Zoomed out by ${appliedFactor}x`,
       newRange: state.viewingRegion,
     };
   }
@@ -11783,9 +12344,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     typingDiv.className = 'message assistant-message typing';
     typingDiv.innerHTML = `
             <div class="message-content">
-                <div class="message-icon">
-                    <i class="fas fa-robot"></i>
-                </div>
                 <div class="typing-dots">
                     <span></span>
                     <span></span>
@@ -11812,6 +12370,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     if (welcomeMessage) {
       messagesContainer.appendChild(welcomeMessage);
     }
+
+    // The panel and round group just went with the transcript. Benchmark runs
+    // clear between tests, so leaving these set would point the next run's
+    // steps at detached nodes.
+    this.activityPanelElement = null;
+    this.activityRoundState = null;
+    this.activityTotals = null;
 
     // Clear chat input box
     const chatInput = document.getElementById('chatInput');
@@ -11961,7 +12526,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const safeMessage = this.formatMessage(message);
     const safeDisplayId = displayId.replace(/[^a-zA-Z0-9_-]/g, '');
-    messageDiv.innerHTML = `<div class="message-content"><div class="message-icon"><i class="fas fa-${sender === 'user' ? 'user' : 'robot'}"></i></div><div class="message-text" id="${safeDisplayId}">${safeMessage}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${safeDisplayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
+    // Only the user's turn carries an avatar; assistant replies use the full width.
+    const icon = sender === 'user' ? `<div class="message-icon"><i class="fas fa-user"></i></div>` : '';
+    messageDiv.innerHTML = `<div class="message-content">${icon}<div class="message-text" id="${safeDisplayId}">${safeMessage}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${safeDisplayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
 
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -12135,7 +12702,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   async translateSequence(params) {
-    return this.services.analysis.translateSequence(params);
+    // translate_sequence is a backward-compatible alias of translate_dna;
+    // route it through the same MicrobeGenomics implementation so both the
+    // `sequence` and `dna` parameter spellings and reading_frame work.
+    return this.executeMicrobeFunction('translateDNA', params);
   }
 
   async findOpenReadingFrames(params) {
@@ -16186,12 +16756,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       const failed = totals.failures > 0;
 
       // Remove animations and interactive elements, converting to a static history record
-      // Update message-icon to the completed checkmark icon
-      const messageIcon = thinkingElement.querySelector('.message-icon i');
-      if (messageIcon) {
-        messageIcon.classList.remove('fa-spin');
-        messageIcon.classList.remove('fa-cog');
-        messageIcon.classList.add(failed ? 'fa-exclamation-circle' : 'fa-check-circle');
+      // Swap the header's spinner for the terminal state icon
+      const statusIcon = thinkingElement.querySelector('.activity-status');
+      if (statusIcon) {
+        statusIcon.classList.remove('fa-spin');
+        statusIcon.classList.remove('fa-cog');
+        statusIcon.classList.add(failed ? 'fa-exclamation-circle' : 'fa-check-circle');
       }
 
       // The checkmark already says "done", so the header carries what the run
@@ -16241,13 +16811,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       }
     }
 
-    // Tallies belong to the panel that just closed; the next one starts fresh.
+    // Tallies belong to the panel that just closed; the next one starts fresh,
+    // and no further step should be filed into the sealed panel.
     this.activityTotals = null;
+    this.activityPanelElement = null;
   }
 
   /** Fade a finished activity panel out and drop it from the transcript. */
   removeActivityPanel(panel) {
     if (!panel) return;
+    if (this.activityPanelElement === panel) this.activityPanelElement = null;
     panel.style.transition = 'opacity 0.5s ease-out';
     panel.style.opacity = '0';
     setTimeout(() => panel.remove(), 500);
@@ -16372,10 +16945,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const content = document.createElement('div');
     content.className = 'message-content';
 
-    const icon = document.createElement('div');
-    icon.className = 'message-icon';
-    icon.innerHTML = '<i class="fas fa-robot"></i>';
-
     const text = document.createElement('div');
     text.className = 'message-text streaming-text';
 
@@ -16386,7 +16955,6 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     cursor.className = 'streaming-cursor';
     text.appendChild(cursor);
 
-    content.appendChild(icon);
     content.appendChild(text);
     streamingDiv.appendChild(content);
     messagesContainer.appendChild(streamingDiv);
@@ -16749,8 +17317,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       return;
     }
 
-    // Only remove the currently in-progress thinking process (if any)
-    const currentRequestId = this.conversationState.currentRequestId || Date.now();
+    // Only remove the currently in-progress thinking process (if any).
+    // Panels created outside a tracked request get a sequential id instead.
+    // Date.now() used to fill that slot, so two panels opened within the same
+    // millisecond shared an id and the second one deleted the first.
+    this.activityPanelSeq = (this.activityPanelSeq || 0) + 1;
+    const currentRequestId = this.conversationState.currentRequestId || `detached_${this.activityPanelSeq}`;
     const existingThinking = document.getElementById(`thinkingProcess_${currentRequestId}`);
     if (existingThinking) {
       existingThinking.remove();
@@ -16761,14 +17333,15 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     thinkingDiv.className = 'message assistant-message thinking-process';
     const thinkingId = `thinkingProcess_${currentRequestId}`;
     thinkingDiv.id = thinkingId;
-    // The header doubles as the collapse control: chevron, title, and a
-    // summary slot that stays empty until the request finishes.
+    // The header doubles as the collapse control: chevron, run state, title, and
+    // a summary slot that stays empty until the request finishes. The run state
+    // sits inline here rather than in an avatar column so the log runs full width.
     thinkingDiv.innerHTML =
       `<div class="message-content">` +
-      `<div class="message-icon"><i class="fas fa-cog fa-spin"></i></div>` +
       `<div class="message-text thinking-text">` +
       `<div class="thinking-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse or expand">` +
       `<i class="fas fa-chevron-down activity-chevron" aria-hidden="true"></i>` +
+      `<i class="fas fa-cog fa-spin activity-status" aria-hidden="true"></i>` +
       `<span class="activity-title">Agent Activity</span>` +
       `<span class="activity-summary"></span>` +
       `</div>` +
@@ -16777,9 +17350,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     messagesContainer.appendChild(thinkingDiv);
 
-    // A fresh panel means a fresh set of round groups and tallies.
+    // A fresh panel means a fresh set of round groups and tallies, and it is
+    // now the panel later steps belong to.
     this.activityRoundState = null;
     this.activityTotals = { rounds: 0, tools: 0, failures: 0 };
+    this.activityPanelElement = thinkingDiv;
     this.bindActivityHeaderToggle(thinkingDiv);
 
     // Add to Evolution data structure
@@ -16809,26 +17384,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const messagesContainer = document.getElementById('chatMessages');
     const activationDiv = document.createElement('div');
     activationDiv.className = 'message system-message multi-agent-activation';
-    activationDiv.innerHTML = `
-            <div class="message-content">
-                <div class="multi-agent-banner">
-                    <div class="multi-agent-icon">🤖</div>
-                    <div class="multi-agent-content">
-                        <div class="multi-agent-title">Multi-Agent System Activated</div>
-                        <div class="multi-agent-subtitle">Intelligent agent coordination enabled</div>
-                        <div class="multi-agent-features">
-                            <span class="feature-tag">8 Specialized Agents</span>
-                            <span class="feature-tag">Smart Coordination</span>
-                            <span class="feature-tag">Performance Optimized</span>
-                        </div>
-                    </div>
-                    <div class="multi-agent-status">
-                        <span class="status-indicator active"></span>
-                        <span class="status-text">Active</span>
-                    </div>
-                </div>
-            </div>
-        `;
+    // A quiet, centered status chip. This fires on every request while
+    // multi-agent mode is on, so it stays out of the way; the agent roster and
+    // coordination detail live in the Agent Activity panel instead.
+    activationDiv.innerHTML =
+      `<div class="multi-agent-chip">` +
+      `<i class="fas fa-users-cog" aria-hidden="true"></i>` +
+      `<span>Multi-Agent coordination active</span>` +
+      `</div>`;
 
     messagesContainer.appendChild(activationDiv);
 
@@ -17150,10 +17713,27 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   // to a single summary line when the request finishes.
   // ---------------------------------------------------------------------------
 
-  /** Resolve the activity panel for this request, or any panel on screen. */
+  /** Resolve the activity panel for this request, or the newest one on screen. */
   findActivityPanelElement() {
-    const thinkingId = `thinkingProcess_${this.conversationState?.currentRequestId || Date.now()}`;
-    return document.getElementById(thinkingId) || document.querySelector('.thinking-process');
+    const requestId = this.conversationState?.currentRequestId;
+    if (requestId) {
+      const scoped = document.getElementById(`thinkingProcess_${requestId}`);
+      if (scoped) return scoped;
+    }
+
+    // No request id to scope by: the benchmark runner calls sendToLLM() without
+    // going through startConversation(), so currentRequestId stays null for the
+    // whole run. Fall back to the panel we last opened, then to the newest one
+    // in the transcript — never the oldest. Resolving with querySelector() sent
+    // every step to the first panel in the chat while addThinkingMessage() kept
+    // appending new panels at the bottom, so the log read out of order.
+    if (this.activityPanelElement?.isConnected) return this.activityPanelElement;
+
+    const live = document.querySelectorAll('.thinking-process:not(.thinking-completed)');
+    if (live.length) return live[live.length - 1];
+
+    const all = document.querySelectorAll('.thinking-process');
+    return all.length ? all[all.length - 1] : null;
   }
 
   /**

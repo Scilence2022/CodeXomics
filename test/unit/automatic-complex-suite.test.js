@@ -152,8 +152,8 @@ describe('AutomaticComplexSuite', () => {
       expect(chainedSequenceTest.expectedResult.parameters[2].sequence).toBe('{get_sequence.sequence}');
       expect(chainedSequenceTest.expectedResult.parameters[4]).toEqual({
         dna: '{get_sequence.sequence}',
-        // readingFrame 1 is the tool default, so omitting it must not count against the run.
-        readingFrame: suite.schemaDefault(1),
+        // reading_frame 1 is the tool default, so omitting it must not count against the run.
+        reading_frame: suite.schemaDefault(1),
       });
 
       const taskLifecycleTest = tests.find(t => t.id === 'task_auto_complex_01');
@@ -623,6 +623,63 @@ describe('AutomaticComplexSuite', () => {
       const evalResult = await suite.evaluateWorkflowCall(actualResult, annotationTest.expectedResult, annotationTest);
       expect(evalResult.success).toBe(true);
       expect(evalResult.errors.length).toBe(0);
+    });
+
+    it('evaluateWorkflowCall should accept a bulk update that chains the returned featureId', async () => {
+      const annotationTest = suite.getTests().find(t => t.id === 'annotation_auto_complex_02');
+      const buildCalls = (identifier, updates = { description: 'Bulk benchmark annotation' }) => [
+        {
+          tool_name: 'create_annotation',
+          parameters: {
+            type: 'CDS',
+            name: 'benchmark_bulk_gene',
+            chromosome: 'U00096',
+            start: 160000,
+            end: 160900,
+            strand: 1,
+          },
+        },
+        {
+          tool_name: 'bulk_update_annotations',
+          parameters: { updates: [{ identifier, updates }], agent: 'benchmark' },
+        },
+        { tool_name: 'get_annotation_history', parameters: { identifier: 'benchmark_bulk_gene' } },
+        { tool_name: 'list_annotations', parameters: { chromosome: 'U00096', start: 160000, end: 160900 } },
+      ];
+
+      const chainedId = await suite.evaluateWorkflowCall(
+        buildCalls('user_1785330510478_r79298v2b'),
+        annotationTest.expectedResult,
+        annotationTest
+      );
+      expect(chainedId.success).toBe(true);
+      expect(chainedId.errors.length).toBe(0);
+
+      // description is aliased onto the note qualifier, so writing note is equally correct.
+      const noteField = await suite.evaluateWorkflowCall(
+        buildCalls('benchmark_bulk_gene', { note: 'Bulk benchmark annotation' }),
+        annotationTest.expectedResult,
+        annotationTest
+      );
+      expect(noteField.success).toBe(true);
+      expect(noteField.errors.length).toBe(0);
+
+      // An identifier that is neither the name nor a minted feature id is still a mismatch.
+      const wrongTarget = await suite.evaluateWorkflowCall(
+        buildCalls('some_other_gene'),
+        annotationTest.expectedResult,
+        annotationTest
+      );
+      expect(wrongTarget.success).toBe(false);
+      expect(wrongTarget.errors.join(' ')).toContain('Critical parameters did not match for: bulk_update_annotations');
+
+      // A different qualifier is not the requested change.
+      const wrongField = await suite.evaluateWorkflowCall(
+        buildCalls('benchmark_bulk_gene', { product: 'Bulk benchmark annotation' }),
+        annotationTest.expectedResult,
+        annotationTest
+      );
+      expect(wrongField.success).toBe(false);
     });
 
     it('evaluateWorkflowCall should accept AlphaFold viewer calls that use returned data_ref', async () => {

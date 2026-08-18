@@ -659,6 +659,8 @@ class LLMContextService {
       'scroll left',
       'move right',
       'move left',
+      'zoom in',
+      'zoom out',
       // Analysis patterns
       'codon usage analysis',
       'codon analysis',
@@ -785,6 +787,8 @@ class LLMContextService {
       'pan_left',
       'scroll_right',
       'scroll_left',
+      'zoom_in',
+      'zoom_out',
       // Highlight operations - complete actions that don't need follow-up
       'highlight_region',
       'remove_highlight',
@@ -829,6 +833,8 @@ class LLMContextService {
         'pan_left',
         'scroll_right',
         'scroll_left',
+        'zoom_in',
+        'zoom_out',
         // State information operations
         'get_genome_info',
         'get_current_state',
@@ -907,8 +913,13 @@ class LLMContextService {
 
     // Explicit repeat counts are multi-action requests too. Otherwise commands
     // such as "pan right 3x" or "open three tabs" stop after the first success.
+    // A zoom command's bare "4x" is the magnification a single zoom_out(factor: 4)
+    // already applies, not four sequential zooms, so it is stripped first — matching
+    // ChatManager.getRequestedExecutionCountFallback. Spelled-out repetition
+    // ("zoom in 3 times") still counts, and it survives the strip.
+    const repeatCountText = this.stripZoomMagnitudes(message);
     if (
-      /\b(?:[2-9]|1\d)\s*(?:x|times?|rounds?|steps?|tabs?|windows?)\b/.test(message) ||
+      /\b(?:[2-9]|1\d)\s*(?:x|times?|rounds?|steps?|tabs?|windows?)\b/.test(repeatCountText) ||
       /\b(?:twice|thrice)\b/.test(message) ||
       /\b(?:two|three|four|five|six|seven|eight|nine|ten)\s+(?:times?|rounds?|steps?|tabs?|windows?)\b/.test(message)
     ) {
@@ -949,6 +960,21 @@ class LLMContextService {
     }
 
     return false;
+  }
+
+  /**
+   * Blank out the "Nx" magnification a zoom command carries so repeat-count
+   * detection does not read it as a request for N sequential zooms. Only the
+   * multiplier attached to a zoom verb is removed; every other "3x" in the
+   * message ("pan right 3x") is left for the repeat-count checks.
+   * @param {string} message - already lower-cased user message
+   * @returns {string}
+   */
+  stripZoomMagnitudes(message) {
+    if (!message || typeof message !== 'string') return '';
+    return message
+      .replace(/\bzoom(?:\s+(?:in|out))?(?:\s+(?:by|to))?\s*\d+(?:\.\d+)?\s*x\b/g, 'zoom')
+      .replace(/\b\d+(?:\.\d+)?\s*x\s+zoom\b/g, 'zoom');
   }
 
   normalizeParams(params) {
@@ -1882,10 +1908,12 @@ Primer Tools:
   getOptimizedSystemMessage() {
     const toolPriority = this.chatManager.getToolPriorityString();
     const tasksString = this.chatManager.services?.task ? this.chatManager.services.task.getTasksContextString() : '';
+    const skillsString = this.getSkillsContextString();
 
     return `You are an AI assistant for CodeXomics, a comprehensive bioinformatics application. You have access to powerful genomic analysis, protein structure, and sequence analysis tools.
 
 ${tasksString}
+${skillsString}
 IMPORTANT: Task Completion Instructions
 When you complete a user's task or fully answer their question, end with a clear completion indicator like "Task completed", "Analysis finished", or "In summary" to signal completion efficiently.
 
@@ -2016,6 +2044,7 @@ For data export requests:
 • **"export proteins" → use export_protein_fasta**
 • **"export annotations" → use export_gff_annotations for GFF or export_bed_format for BED**
 • **"export current view" → use export_current_view_fasta**
+• **export_data is a generic fallback only. Prefer the format-specific tool above; if you do call export_data, always pass format plus filename/auto_save.**
 • **IMPORTANT: ALWAYS set auto_save=true by default when calling ANY export tool. This bypasses the save dialog prompt which blocks LLM execution. Only omit auto_save (or set to false) if the user explicitly asks to choose a save location.**
 • **The filename parameter supports absolute paths (e.g., "/Users/user/output/genome.fasta") or relative paths (resolved against CWD). Use absolute paths when you need a specific output directory.**
 • Examples: 
@@ -2164,7 +2193,7 @@ Current CodeXomics State:
 - User-defined features: ${context.genomeBrowser.currentState.userDefinedFeaturesCount}
 
 ${mcpServersInfo}
-
+${this.getSkillsContextString()}
 Available Tools Summary:
 - Total Available Tools: ${context.genomeBrowser.toolSources.total}
 - Local Tools: ${context.genomeBrowser.toolSources.local}
@@ -2318,6 +2347,40 @@ Metabolic Pathway Examples:
 `;
   }
 
+  /**
+   * Compact Agent Skills index for the system prompt.
+   *
+   * Only skill metadata is prompted; bodies load on demand through `get_skill`
+   * so unused workflows never consume context. Returns '' when no skills are
+   * available or enabled, which keeps the prompt unchanged for users without skills.
+   */
+  getSkillsContextString() {
+    const skillService = this.chatManager.services?.skill;
+    if (!skillService || typeof skillService.getSkillIndexForPrompt !== 'function') {
+      return '';
+    }
+
+    // Benchmarks measure tool-calling against a fixed oracle. Adding a skill index
+    // would change every benchmark prompt and invite extra list_skills/get_skill
+    // calls that the oracle does not expect, so skills stay out of benchmark runs.
+    try {
+      if (typeof this.chatManager.isBenchmarkMode === 'function' && this.chatManager.isBenchmarkMode()) {
+        return '';
+      }
+    } catch (error) {
+      console.warn('[LLMContextService] Benchmark-mode check failed; omitting skill index:', error);
+      return '';
+    }
+
+    try {
+      const index = skillService.getSkillIndexForPrompt();
+      return index ? `${index}\n` : '';
+    } catch (error) {
+      console.warn('[LLMContextService] Failed to build skill index:', error);
+      return '';
+    }
+  }
+
   getBaseSystemMessage() {
     const context = this.chatManager.getCurrentContext();
 
@@ -2401,7 +2464,7 @@ Current CodeXomics State:
 - User-defined features: ${context.genomeBrowser.currentState.userDefinedFeaturesCount}
 
 ${mcpServersInfo}
-
+${this.getSkillsContextString()}
 Available Tools Summary:
 - Total Available Tools: ${context.genomeBrowser.toolSources.total}
 - Local Tools: ${context.genomeBrowser.toolSources.local}

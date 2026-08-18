@@ -2807,3 +2807,272 @@ describe('AnnotationChangeSetService', () => {
     });
   });
 });
+
+describe('annotation ledger change broadcast', () => {
+  const agentContext = {
+    authenticated: true,
+    source: 'mcp',
+    principal: 'research-agent',
+    permissions: ['annotation:propose'],
+  };
+
+  function broadcastingService() {
+    const mockWindow = loadServices();
+    const events = [];
+    mockWindow.dispatchEvent = event => {
+      events.push(event);
+      return true;
+    };
+    const sidecarData = {};
+    const app = {
+      loadedGenomePath: '/tmp/broadcast.gbk',
+      currentFile: { path: '/tmp/broadcast.gbk' },
+      currentChromosome: 'NC_000913.3',
+      currentAnnotations: {
+        'NC_000913.3': [
+          {
+            id: 'feature-1',
+            type: 'CDS',
+            start: 12,
+            end: 120,
+            strand: 1,
+            qualifiers: { locus_tag: 'b0001', gene: 'thrL', product: 'hypothetical protein' },
+          },
+        ],
+      },
+      sidecarManager: {
+        get: async (_genomePath, key) => JSON.parse(JSON.stringify(sidecarData[key] || {})),
+        setAndForceSave: async (_genomePath, key, value) => {
+          sidecarData[key] = JSON.parse(JSON.stringify(value));
+        },
+      },
+    };
+    const service = new mockWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+    return { service, ledgerEvents: () => events.filter(event => event.type === 'annotation-ledger-changed') };
+  }
+
+  // Without this the header Review badge only learned about a proposal when the
+  // curator opened the Review Center.
+  it('publishes the pending counts as soon as a ChangeSet is stored', async () => {
+    const { service, ledgerEvents } = broadcastingService();
+
+    await service.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+
+    const latest = ledgerEvents().at(-1);
+    expect(latest).toBeDefined();
+    expect(latest.detail.reason).toBe('ledger-saved');
+    expect(latest.detail.genomePath).toBe('/tmp/broadcast.gbk');
+    expect(latest.detail.statusCounts.awaiting_approval).toBe(1);
+  });
+
+  it('publishes the queue a reloaded genome inherits from an earlier session', async () => {
+    const { service, ledgerEvents } = broadcastingService();
+    await service.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+
+    await service.restoreCommittedAnnotationOverlay();
+
+    const latest = ledgerEvents().at(-1);
+    expect(latest.detail.reason).toBe('genome-loaded');
+    expect(latest.detail.statusCounts.awaiting_approval).toBe(1);
+  });
+});
+
+// Resolving a target used to hash every annotation in the genome, so one pass
+// over a committed history re-hashed the assembly once per committed chain and
+// froze the Review Center for seconds. The derived values are cached now, and
+// these pin the invalidation that keeps the cache from answering for state it
+// was not built from.
+describe('derived lookup caches', () => {
+  const agentContext = {
+    authenticated: true,
+    source: 'mcp',
+    principal: 'research-agent',
+    permissions: ['annotation:propose'],
+  };
+  const readerContext = {
+    authenticated: true,
+    source: 'mcp',
+    principal: 'curator@example.org',
+    permissions: ['annotation:read'],
+  };
+
+  function cachedService() {
+    const mockWindow = loadServices();
+    const annotation = {
+      id: 'feature-1',
+      type: 'CDS',
+      start: 12,
+      end: 120,
+      strand: 1,
+      qualifiers: { locus_tag: 'b0001', gene: 'thrL', product: 'hypothetical protein' },
+    };
+    const sidecarData = {};
+    const app = {
+      loadedGenomePath: '/tmp/cache.gbk',
+      currentFile: { path: '/tmp/cache.gbk' },
+      currentChromosome: 'NC_000913.3',
+      currentAnnotations: { 'NC_000913.3': [annotation] },
+      currentSequence: { 'NC_000913.3': 'ACGTACGTACGT' },
+      sidecarManager: {
+        get: async (_genomePath, key) => JSON.parse(JSON.stringify(sidecarData[key] || {})),
+        setAndForceSave: async (_genomePath, key, value) => {
+          sidecarData[key] = JSON.parse(JSON.stringify(value));
+        },
+      },
+    };
+    const service = new mockWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+    return { service, app, annotation };
+  }
+
+  it('stops resolving a feature whose identity moved after the index was built', async () => {
+    const { service, annotation } = cachedService();
+    await service.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+    const before = await service.listAnnotationChangesets({ __executionContext: readerContext });
+    expect(before.changeSets[0].targetAvailable).toBe(true);
+
+    // Same annotation object, different coordinates: the cached id no longer
+    // describes it, so the target must read as gone rather than resolve here.
+    annotation.start = 5000;
+    annotation.end = 5200;
+
+    const after = await service.listAnnotationChangesets({ __executionContext: readerContext });
+    expect(after.changeSets[0].targetAvailable).toBe(false);
+  });
+
+  it('re-derives the assembly digest when the loaded sequence changes', async () => {
+    const { service, app } = cachedService();
+    const before = await service.resolveAnnotationTarget({ identifier: 'b0001' });
+
+    // Same sequences object, replaced chromosome string.
+    app.currentSequence['NC_000913.3'] = 'TTTTTTTTTTTT';
+
+    const after = await service.resolveAnnotationTarget({ identifier: 'b0001' });
+    expect(after.target.assemblySha256).not.toBe(before.target.assemblySha256);
+    expect(after.target.genomeId).not.toBe(before.target.genomeId);
+  });
+
+  it('picks up an annotation added to the loaded genome after the index was built', async () => {
+    const { service, app } = cachedService();
+    await service.resolveAnnotationTarget({ identifier: 'b0001' });
+
+    app.currentAnnotations['NC_000913.3'].push({
+      id: 'feature-2',
+      type: 'CDS',
+      start: 400,
+      end: 900,
+      strand: 1,
+      qualifiers: { locus_tag: 'b0002', gene: 'thrA' },
+    });
+    const created = await service.createAnnotationChangeset({
+      identifier: 'b0002',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+
+    const listed = await service.listAnnotationChangesets({ __executionContext: readerContext });
+    const summaryForNewFeature = listed.changeSets.find(item => item.id === created.changeSet.id);
+    expect(summaryForNewFeature.targetAvailable).toBe(true);
+  });
+});
+
+describe('feature index warm-up on genome load', () => {
+  const agentContext = {
+    authenticated: true,
+    source: 'mcp',
+    principal: 'research-agent',
+    permissions: ['annotation:propose'],
+  };
+
+  // Building the index inside the first review action put it inside a click,
+  // where it reads as a stalled Review button.
+  it('builds the lookup index while the genome loads, not on the first review action', async () => {
+    const mockWindow = loadServices();
+    const sidecarData = {};
+    const app = {
+      loadedGenomePath: '/tmp/warm.gbk',
+      currentFile: { path: '/tmp/warm.gbk' },
+      currentChromosome: 'NC_000913.3',
+      currentAnnotations: {
+        'NC_000913.3': [
+          {
+            id: 'feature-1',
+            type: 'CDS',
+            start: 12,
+            end: 120,
+            strand: 1,
+            qualifiers: { locus_tag: 'b0001', gene: 'thrL', product: 'hypothetical protein' },
+          },
+        ],
+      },
+      sidecarManager: {
+        get: async (_genomePath, key) => JSON.parse(JSON.stringify(sidecarData[key] || {})),
+        setAndForceSave: async (_genomePath, key, value) => {
+          sidecarData[key] = JSON.parse(JSON.stringify(value));
+        },
+      },
+    };
+    const service = new mockWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+    await service.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'Evidence-backed annotation note.' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+
+    // Reopening the genome starts from a cold service.
+    const reloadedWindow = loadServices();
+    const reloaded = new reloadedWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+    expect(reloaded.changeSetService.featureIndexes.size).toBe(0);
+
+    await reloaded.restoreCommittedAnnotationOverlay();
+
+    expect(reloaded.changeSetService.featureIndexes.size).toBe(1);
+  });
+
+  it('leaves the index unbuilt for a genome with no ChangeSets', async () => {
+    const mockWindow = loadServices();
+    const app = {
+      loadedGenomePath: '/tmp/empty.gbk',
+      currentFile: { path: '/tmp/empty.gbk' },
+      currentChromosome: 'NC_000913.3',
+      currentAnnotations: {
+        'NC_000913.3': [{ id: 'feature-1', type: 'CDS', start: 12, end: 120, strand: 1, qualifiers: {} }],
+      },
+      sidecarManager: {
+        get: async () => ({}),
+        setAndForceSave: async () => {},
+      },
+    };
+    const service = new mockWindow.AnnotationService(app, {
+      _getChangeTracker: () => ({ recordChange: () => ({}) }),
+    });
+
+    await service.restoreCommittedAnnotationOverlay();
+
+    expect(service.changeSetService.featureIndexes.size).toBe(0);
+  });
+});

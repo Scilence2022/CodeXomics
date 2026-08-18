@@ -98,4 +98,64 @@ describe('benchmark runtime hardening', () => {
     expect(source).toContain('isDirectory: stats.isDirectory()');
     expect(source).toContain('isFile: stats.isFile()');
   });
+
+  it('recovers partial execution data on timeout instead of an empty skeleton', () => {
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+
+    expect(framework).toContain('reconstructInteractionDataFromPartialExecution');
+    expect(framework).toContain('timeout_partial_execution');
+    expect(framework).toContain('tracker.getTestExecutions(test.id)');
+    // The recovery path must consult request-scoped execution data, not only
+    // conversation history / lastResponse, or timed-out tests lose all calls.
+    const recoveryStart = framework.indexOf('async attemptToRecoverLLMInteractionData');
+    const recoveryEnd = framework.indexOf('reconstructInteractionDataFromPartialExecution', recoveryStart);
+    const recoverySource = framework.slice(recoveryStart, recoveryEnd);
+    expect(recoverySource).toContain('getLastExecutionData');
+    expect(recoverySource).toContain('trackedExecutions');
+  });
+
+  it('marks provider request boundaries and timeout diagnostics for stall analysis', () => {
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+    const config = readSource('src/renderer/modules/LLMConfigManager.js');
+
+    expect(framework).toContain('[Benchmark][request] sending test');
+    expect(framework).toContain('LLM returned in');
+    expect(framework).toContain('[Benchmark][timeout]');
+    expect(config).toContain('[LLM][local] non-streaming request start');
+    expect(config).toContain('streaming request start');
+  });
+
+  it('exposes a 10-minute global test timeout option in the benchmark UI', () => {
+    const source = readSource('src/renderer/modules/BenchmarkUI.js');
+
+    const occurrences = source.match(/<option value="600000">10 minutes<\/option>/g) || [];
+    expect(occurrences.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('extends call-only mode to grouped alternatives and documented equivalents', () => {
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+
+    const callOnlyStart = framework.indexOf('applyCallOnlyMode(test)');
+    const callOnlyEnd = framework.indexOf('abortTimedOutConversation', callOnlyStart);
+    const callOnlySource = framework.slice(callOnlyStart, callOnlyEnd);
+    expect(callOnlySource).toContain('.flat()');
+    expect(callOnlySource).toContain('toolEquivalents');
+    expect(callOnlySource).toContain('callOnlyNames.add(equivalent)');
+  });
+
+  it('stops the round loop when expected coverage is reached', () => {
+    const chatManager = readSource('src/renderer/modules/ChatManager.js');
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+
+    expect(chatManager).toContain('options?.shouldStopAfterRound');
+    expect(chatManager).toContain('Early stop after round');
+    expect(framework).toContain('shouldStopAfterRound = async');
+    expect(framework).toContain('strictAutomaticEvaluator.evaluate(options.testInfo, partialResult)');
+  });
+
+  it('persists tool failure reasons in interaction records', () => {
+    const framework = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
+
+    expect(framework).toContain('error: execution.error ? String(execution.error).substring(0, 300) : null');
+  });
 });

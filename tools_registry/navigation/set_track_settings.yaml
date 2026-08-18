@@ -29,7 +29,7 @@ parameters:
       description: 'Optional file ID for multi-instance tracks. When provided, settings are saved for that specific track instance only.'
     settings:
       type: object
-      description: 'Settings object with parameters to update (e.g., renderingMode, height, colors, font sizes)'
+      description: 'Settings object with parameters to update (e.g., renderingMode, height, colors, font sizes). Canonical sequence-track keys: showStartMarkers (show/hide gene start markers) and arrowSize (end arrow size in pixels).'
   required:
     - track_type
     - settings

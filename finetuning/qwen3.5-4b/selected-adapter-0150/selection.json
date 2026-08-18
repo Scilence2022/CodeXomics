@@ -1,0 +1,27 @@
+{
+  "selectionPolicy": "maximum_executable_holdout_exact_accuracy_then_tool_name_accuracy_then_earliest_iteration",
+  "selectedIteration": 150,
+  "selectedValidationLoss": 0.156,
+  "executableHoldout": {
+    "records": 21,
+    "benchmarkRecords": 0,
+    "manualTestsIncluded": 0,
+    "exactSuccess": 9,
+    "exactAccuracy": 0.42857142857142855,
+    "toolNamesExact": 21,
+    "toolNameAccuracy": 1
+  },
+  "checkpointComparison": [
+    { "iteration": 0, "exactSuccess": 6, "toolNamesExact": 16 },
+    { "iteration": 50, "exactSuccess": 7, "toolNamesExact": 21 },
+    { "iteration": 100, "exactSuccess": 7, "toolNamesExact": 21 },
+    { "iteration": 150, "exactSuccess": 9, "toolNamesExact": 21 },
+    { "iteration": 200, "exactSuccess": 9, "toolNamesExact": 21 },
+    { "iteration": 250, "exactSuccess": 8, "toolNamesExact": 20 }
+  ],
+  "trainingStop": {
+    "stoppedAfterIteration": 350,
+    "reason": "Validation loss did not improve at iterations 300 and 350 after its minimum at 250."
+  },
+  "adapterSha256": "418124f9bf201ca53a810ede57c0c49bc1a97d0386778447412e774121d5edb4"
+}

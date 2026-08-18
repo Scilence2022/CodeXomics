@@ -31,9 +31,6 @@ parameters:
         - '/Users/user/output/annotated_genome.gbk'
         - 'chromosome_1.gbk'
         - '/tmp/selected_region.gbk'
-    filePath:
-      type: string
-      description: Alias for filename. Supported for benchmark and agent workflows that specify output paths as filePath.
     auto_save:
       type: boolean
       description: >-

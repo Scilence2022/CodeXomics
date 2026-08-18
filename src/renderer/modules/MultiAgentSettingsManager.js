@@ -1,8 +1,28 @@
 /**
- * MultiAgentSettingsManager - Manages comprehensive multi-agent system settings
- * Includes latest LLM providers, models, and advanced configuration options
+ * MultiAgentSettingsManager - Manages the Agent Settings panel.
+ *
+ * Scope is deliberately narrow: this panel owns whether the agent system runs, whether
+ * agent attribution is shown, and which individual agents are enabled. Model parameters,
+ * the memory system, and execution limits belong to ChatBox Settings — mirroring them
+ * here produced a second set of controls that nothing ever read.
  */
 class MultiAgentSettingsManager {
+  /**
+   * Settings key -> registered agent name. Single source of truth for the Agents tab:
+   * the defaults, the change listeners, and syncAgentEnabledState() all derive from it,
+   * so a toggle can never point at an agent that does not exist. Must stay in sync with
+   * MultiAgentSystem.initializeAgents().
+   */
+  static AGENT_TOGGLES = {
+    agentNavigationEnabled: 'NavigationAgent',
+    agentAnalysisEnabled: 'AnalysisAgent',
+    agentDataEnabled: 'DataAgent',
+    agentExternalEnabled: 'ExternalAgent',
+    agentPluginEnabled: 'PluginAgent',
+    agentDeepResearchEnabled: 'DeepResearchAgent',
+    agentCoordinatorEnabled: 'CoordinatorAgent',
+  };
+
   constructor(configManager) {
     this.configManager = configManager;
     this.modal = null;
@@ -234,57 +254,22 @@ class MultiAgentSettingsManager {
       },
     };
 
-    // Default settings
+    // Default settings.
+    //
+    // Only settings this panel actually applies live here. Model parameters, the
+    // memory system, and execution limits are owned by ChatBox Settings; they used
+    // to be mirrored here as agent-specific overrides that nothing ever read.
     this.defaultSettings = {
       // System settings
       multiAgentSystemEnabled: false,
-      multiAgentAutoOptimize: true,
       multiAgentShowInfo: true,
-      multiAgentMemoryEnabled: true,
-      multiAgentCacheEnabled: true,
-      multiAgentMaxConcurrent: 3,
-      multiAgentTimeout: 30,
-      multiAgentRetryAttempts: 3,
 
-      // LLM settings
-      multiAgentModelType: 'auto',
-      multiAgentLLMTemperature: 0.7,
-      multiAgentLLMMaxTokens: 4000,
-      multiAgentLLMTimeout: 30,
-      multiAgentLLMRetryAttempts: 3,
-      multiAgentLLMUseSystemPrompt: true,
-      multiAgentLLMEnableFunctionCalling: true,
-
-      // Agent settings
-      agentNavigationEnabled: true,
-      agentAnalysisEnabled: true,
-      agentDataEnabled: true,
-      agentSequenceEnabled: true,
-      agentProteinEnabled: true,
-      agentNetworkEnabled: true,
-      agentExternalEnabled: true,
-      agentPluginEnabled: true,
-
-      // Memory settings
-      multiAgentMemorySystemEnabled: true,
-      multiAgentMemoryCacheEnabled: true,
-      multiAgentMemoryOptimizationEnabled: true,
-      multiAgentMemoryCleanupInterval: 5,
-      multiAgentMemoryMaxEntries: 10000,
-      multiAgentShortTermMaxSize: 1000,
-      multiAgentShortTermTTL: 30,
-      multiAgentMediumTermMaxSize: 5000,
-      multiAgentMediumTermTTL: 24,
-      multiAgentLongTermMaxSize: 10000,
-      multiAgentLongTermTTL: 30,
-
-      // Performance settings
-      multiAgentPerformanceMonitoring: true,
-      multiAgentAutoScaling: true,
-      multiAgentMaxConcurrentTasks: 5,
-      multiAgentTaskQueueSize: 100,
+      // Per-agent enablement, derived from AGENT_TOGGLES so the settings schema,
+      // the change listeners, and the UI can never drift apart.
+      ...Object.fromEntries(Object.keys(MultiAgentSettingsManager.AGENT_TOGGLES).map(key => [key, true])),
     };
 
+    this.agentToggleIds = Object.keys(MultiAgentSettingsManager.AGENT_TOGGLES);
     this.currentSettings = { ...this.defaultSettings };
     this.loadSettings();
     this.setupEventListeners();
@@ -300,25 +285,12 @@ class MultiAgentSettingsManager {
         const cms = window.chatManager.agentSystemSettings;
         // Merge ChatManager settings into our currentSettings
         if (cms.enabled !== undefined) this.currentSettings.multiAgentSystemEnabled = cms.enabled;
-        if (cms.autoOptimize !== undefined) this.currentSettings.multiAgentAutoOptimize = cms.autoOptimize;
         if (cms.showAgentInfo !== undefined) this.currentSettings.multiAgentShowInfo = cms.showAgentInfo;
-        if (cms.memoryEnabled !== undefined) this.currentSettings.multiAgentMemoryEnabled = cms.memoryEnabled;
-        if (cms.cacheEnabled !== undefined) this.currentSettings.multiAgentCacheEnabled = cms.cacheEnabled;
-        if (cms.llmTemperature !== undefined) this.currentSettings.multiAgentLLMTemperature = cms.llmTemperature;
-        if (cms.llmMaxTokens !== undefined) this.currentSettings.multiAgentLLMMaxTokens = cms.llmMaxTokens;
-        if (cms.llmTimeout !== undefined) this.currentSettings.multiAgentLLMTimeout = cms.llmTimeout;
-        if (cms.llmRetryAttempts !== undefined) this.currentSettings.multiAgentLLMRetryAttempts = cms.llmRetryAttempts;
-        if (cms.llmUseSystemPrompt !== undefined) {
-          this.currentSettings.multiAgentLLMUseSystemPrompt = cms.llmUseSystemPrompt;
-        }
-        if (cms.llmEnableFunctionCalling !== undefined) {
-          this.currentSettings.multiAgentLLMEnableFunctionCalling = cms.llmEnableFunctionCalling;
-        }
       }
 
-      console.log('Multi-Agent Settings loaded:', this.currentSettings);
+      console.log('Agent Settings loaded:', this.currentSettings);
     } catch (error) {
-      console.error('Error loading multi-agent settings:', error);
+      console.error('Error loading agent settings:', error);
       this.currentSettings = { ...this.defaultSettings };
     }
   }
@@ -338,32 +310,23 @@ class MultiAgentSettingsManager {
         window.chatManager.updateMultiAgentToggleButton();
       }
 
-      // Also sync to ChatManager's agentSystemSettings for persistence consistency
+      // Also sync to ChatManager's agentSystemSettings for persistence consistency.
+      // Model parameters are deliberately not mirrored here: agents use the ChatBox
+      // model configuration, and the old per-agent overrides were never read.
       if (window.chatManager) {
         const settings = this.currentSettings;
         window.chatManager.agentSystemSettings = {
           ...window.chatManager.agentSystemSettings,
           enabled: settings.multiAgentSystemEnabled,
-          autoOptimize: settings.multiAgentAutoOptimize,
           showAgentInfo: settings.multiAgentShowInfo,
-          memoryEnabled: settings.multiAgentMemoryEnabled,
-          cacheEnabled: settings.multiAgentCacheEnabled,
-          llmProvider: settings.multiAgentModelType || 'auto',
-          llmModel: 'auto',
-          llmTemperature: settings.multiAgentLLMTemperature,
-          llmMaxTokens: settings.multiAgentLLMMaxTokens,
-          llmTimeout: settings.multiAgentLLMTimeout,
-          llmRetryAttempts: settings.multiAgentLLMRetryAttempts || settings.multiAgentRetryAttempts,
-          llmUseSystemPrompt: settings.multiAgentLLMUseSystemPrompt,
-          llmEnableFunctionCalling: settings.multiAgentLLMEnableFunctionCalling,
         };
         window.chatManager.saveAgentSystemSettings();
       }
 
-      console.log('Multi-Agent Settings saved and synced:', this.currentSettings);
+      console.log('Agent Settings saved and synced:', this.currentSettings);
       return true;
     } catch (error) {
-      console.error('Error saving multi-agent settings:', error);
+      console.error('Error saving agent settings:', error);
       return false;
     }
   }
@@ -394,23 +357,6 @@ class MultiAgentSettingsManager {
         this.switchTab(button.dataset.tab);
       });
     });
-
-    // Temperature range slider
-    const temperatureSlider = document.getElementById('multiAgentLLMTemperature');
-    const temperatureValue = document.getElementById('multiAgentLLMTemperatureValue');
-    if (temperatureSlider && temperatureValue) {
-      temperatureSlider.addEventListener('input', () => {
-        temperatureValue.textContent = temperatureSlider.value;
-      });
-    }
-
-    // Model type change handler to show intelligent recommendations
-    const modelTypeSelect = document.getElementById('multiAgentModelType');
-    if (modelTypeSelect) {
-      modelTypeSelect.addEventListener('change', () => {
-        this.showModelTypeRecommendations(modelTypeSelect.value);
-      });
-    }
 
     // Save settings
     const saveBtn = document.getElementById('saveMultiAgentSettingsBtn');
@@ -474,14 +420,8 @@ class MultiAgentSettingsManager {
       this.saveSettings();
     };
 
-    // System tab checkboxes
-    const systemCheckboxes = [
-      'multiAgentSystemEnabled',
-      'multiAgentAutoOptimize',
-      'multiAgentShowInfo',
-      'multiAgentMemoryEnabled',
-      'multiAgentCacheEnabled',
-    ];
+    // System tab
+    const systemCheckboxes = ['multiAgentSystemEnabled', 'multiAgentShowInfo'];
     systemCheckboxes.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
@@ -489,102 +429,14 @@ class MultiAgentSettingsManager {
       }
     });
 
-    // System tab number inputs
-    const systemInputs = ['multiAgentMaxConcurrent', 'multiAgentTimeout', 'multiAgentRetryAttempts'];
-    systemInputs.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, parseInt(el.value) || el.defaultValue));
-      }
-    });
-
-    // LLM tab
-    const llmCheckboxes = ['multiAgentLLMUseSystemPrompt', 'multiAgentLLMEnableFunctionCalling'];
-    llmCheckboxes.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, el.checked));
-      }
-    });
-
-    const llmRange = document.getElementById('multiAgentLLMTemperature');
-    if (llmRange) {
-      llmRange.addEventListener('change', () => syncSetting('multiAgentLLMTemperature', parseFloat(llmRange.value)));
-    }
-
-    const llmInputs = ['multiAgentLLMMaxTokens', 'multiAgentLLMTimeout'];
-    llmInputs.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, parseInt(el.value) || el.defaultValue));
-      }
-    });
-
-    // Agent Management tab
-    const agentCheckboxes = [
-      'agentNavigationEnabled',
-      'agentAnalysisEnabled',
-      'agentDataEnabled',
-      'agentSequenceEnabled',
-      'agentProteinEnabled',
-      'agentNetworkEnabled',
-      'agentExternalEnabled',
-      'agentPluginEnabled',
-    ];
-    agentCheckboxes.forEach(id => {
+    // Agents tab
+    this.agentToggleIds.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('change', () => {
           syncSetting(id, el.checked);
           this.syncAgentEnabledState();
         });
-      }
-    });
-
-    // Memory System tab
-    const memoryCheckboxes = [
-      'multiAgentMemorySystemEnabled',
-      'multiAgentMemoryCacheEnabled',
-      'multiAgentMemoryOptimizationEnabled',
-    ];
-    memoryCheckboxes.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, el.checked));
-      }
-    });
-
-    const memoryInputs = [
-      'multiAgentMemoryCleanupInterval',
-      'multiAgentMemoryMaxEntries',
-      'multiAgentShortTermMaxSize',
-      'multiAgentShortTermTTL',
-      'multiAgentMediumTermMaxSize',
-      'multiAgentMediumTermTTL',
-      'multiAgentLongTermMaxSize',
-      'multiAgentLongTermTTL',
-    ];
-    memoryInputs.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, parseInt(el.value) || el.defaultValue));
-      }
-    });
-
-    // Performance tab
-    const perfCheckboxes = ['multiAgentPerformanceMonitoring', 'multiAgentAutoScaling'];
-    perfCheckboxes.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, el.checked));
-      }
-    });
-
-    const perfInputs = ['multiAgentMaxConcurrentTasks', 'multiAgentTaskQueueSize'];
-    perfInputs.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', () => syncSetting(id, parseInt(el.value) || el.defaultValue));
       }
     });
   }
@@ -596,19 +448,9 @@ class MultiAgentSettingsManager {
   syncAgentEnabledState() {
     if (!window.chatManager || !window.chatManager.multiAgentSystem) return;
 
-    const agentNameMap = {
-      agentNavigationEnabled: 'NavigationAgent',
-      agentAnalysisEnabled: 'AnalysisAgent',
-      agentDataEnabled: 'DataAgent',
-      agentExternalEnabled: 'ExternalAgent',
-      agentPluginEnabled: 'PluginAgent',
-      agentDeepResearchEnabled: 'DeepResearchAgent',
-      agentCoordinatorEnabled: 'CoordinatorAgent',
-    };
-
     const mas = window.chatManager.multiAgentSystem;
 
-    for (const [settingKey, agentName] of Object.entries(agentNameMap)) {
+    for (const [settingKey, agentName] of Object.entries(MultiAgentSettingsManager.AGENT_TOGGLES)) {
       const enabled = this.currentSettings[settingKey] !== false;
       const agent = mas.agents.get(agentName);
       if (agent) {
@@ -617,43 +459,15 @@ class MultiAgentSettingsManager {
     }
   }
 
-  /**
-   * Show model type recommendations based on selected type
-   */
-  showModelTypeRecommendations(modelType) {
-    if (!window.llmConfigManager || modelType === 'auto') return;
-
-    const modelTypeConfig = window.llmConfigManager.modelTypes[modelType];
-    if (!modelTypeConfig || !modelTypeConfig.preferredProviders) return;
-
-    // Find available providers from preferred list
-    const availablePreferred = modelTypeConfig.preferredProviders.filter(providerKey => {
-      const provider = window.llmConfigManager.providers[providerKey];
-      return provider && provider.enabled;
-    });
-
-    if (availablePreferred.length > 0) {
-      const recommendations = availablePreferred
-        .slice(0, 3)
-        .map(providerKey => {
-          const provider = window.llmConfigManager.providers[providerKey];
-          const preferredModel = modelTypeConfig.preferredModels && modelTypeConfig.preferredModels[providerKey];
-          return `${provider.name}${preferredModel ? ` (${preferredModel})` : ''}`;
-        })
-        .join(', ');
-
-      // Show recommendation in the help text of model type select
-      const helpText = document.querySelector('#multiAgentModelType + .help-text');
-      if (helpText) {
-        helpText.innerHTML = `Choose model type for agent decision making. Recommended for ${modelType}: ${recommendations}. Configure specific models in Options → Configure LLMs → Model Selection.`;
-      }
-    }
-  }
-
   showModal() {
     this.modal = document.getElementById('multiAgentSettingsModal');
     if (this.modal) {
       this.loadSettingsToUI();
+
+      // The Model / Execution / Context / Memory tabs render controls whose values are
+      // stored in `chatboxSettings`. ChatBoxSettingsManager remains their owner, so ask
+      // it to fill them in rather than duplicating the load logic here.
+      this.populateChatBoxOwnedControls();
 
       // Apply saved agent enabled state to MultiAgentSystem
       this.syncAgentEnabledState();
@@ -717,107 +531,56 @@ class MultiAgentSettingsManager {
   loadSettingsToUI() {
     // System settings
     this.setCheckboxValue('multiAgentSystemEnabled', this.currentSettings.multiAgentSystemEnabled);
-    this.setCheckboxValue('multiAgentAutoOptimize', this.currentSettings.multiAgentAutoOptimize);
     this.setCheckboxValue('multiAgentShowInfo', this.currentSettings.multiAgentShowInfo);
-    this.setCheckboxValue('multiAgentMemoryEnabled', this.currentSettings.multiAgentMemoryEnabled);
-    this.setCheckboxValue('multiAgentCacheEnabled', this.currentSettings.multiAgentCacheEnabled);
-    this.setInputValue('multiAgentMaxConcurrent', this.currentSettings.multiAgentMaxConcurrent);
-    this.setInputValue('multiAgentTimeout', this.currentSettings.multiAgentTimeout);
-    this.setInputValue('multiAgentRetryAttempts', this.currentSettings.multiAgentRetryAttempts);
 
-    // LLM settings
-    this.setSelectValue('multiAgentModelType', this.currentSettings.multiAgentModelType);
-    this.setRangeValue('multiAgentLLMTemperature', this.currentSettings.multiAgentLLMTemperature);
-    this.setInputValue('multiAgentLLMMaxTokens', this.currentSettings.multiAgentLLMMaxTokens);
-    this.setInputValue('multiAgentLLMTimeout', this.currentSettings.multiAgentLLMTimeout);
-    this.setCheckboxValue('multiAgentLLMUseSystemPrompt', this.currentSettings.multiAgentLLMUseSystemPrompt);
-    this.setCheckboxValue(
-      'multiAgentLLMEnableFunctionCalling',
-      this.currentSettings.multiAgentLLMEnableFunctionCalling
-    );
+    // Per-agent enablement
+    this.agentToggleIds.forEach(id => {
+      this.setCheckboxValue(id, this.currentSettings[id]);
+    });
+  }
 
-    // Agent settings
-    this.setCheckboxValue('agentNavigationEnabled', this.currentSettings.agentNavigationEnabled);
-    this.setCheckboxValue('agentAnalysisEnabled', this.currentSettings.agentAnalysisEnabled);
-    this.setCheckboxValue('agentDataEnabled', this.currentSettings.agentDataEnabled);
-    this.setCheckboxValue('agentSequenceEnabled', this.currentSettings.agentSequenceEnabled);
-    this.setCheckboxValue('agentProteinEnabled', this.currentSettings.agentProteinEnabled);
-    this.setCheckboxValue('agentNetworkEnabled', this.currentSettings.agentNetworkEnabled);
-    this.setCheckboxValue('agentExternalEnabled', this.currentSettings.agentExternalEnabled);
-    this.setCheckboxValue('agentPluginEnabled', this.currentSettings.agentPluginEnabled);
+  /**
+   * Fill in the controls this panel renders but ChatBoxSettingsManager owns.
+   */
+  populateChatBoxOwnedControls() {
+    const chatBoxSettings = window.chatManager?.chatBoxSettingsManager;
+    if (!chatBoxSettings || typeof chatBoxSettings.populateSettingsForm !== 'function') return;
 
-    // Memory settings
-    this.setCheckboxValue('multiAgentMemorySystemEnabled', this.currentSettings.multiAgentMemorySystemEnabled);
-    this.setCheckboxValue('multiAgentMemoryCacheEnabled', this.currentSettings.multiAgentMemoryCacheEnabled);
-    this.setCheckboxValue(
-      'multiAgentMemoryOptimizationEnabled',
-      this.currentSettings.multiAgentMemoryOptimizationEnabled
-    );
-    this.setInputValue('multiAgentMemoryCleanupInterval', this.currentSettings.multiAgentMemoryCleanupInterval);
-    this.setInputValue('multiAgentMemoryMaxEntries', this.currentSettings.multiAgentMemoryMaxEntries);
-    this.setInputValue('multiAgentShortTermMaxSize', this.currentSettings.multiAgentShortTermMaxSize);
-    this.setInputValue('multiAgentShortTermTTL', this.currentSettings.multiAgentShortTermTTL);
-    this.setInputValue('multiAgentMediumTermMaxSize', this.currentSettings.multiAgentMediumTermMaxSize);
-    this.setInputValue('multiAgentMediumTermTTL', this.currentSettings.multiAgentMediumTermTTL);
-    this.setInputValue('multiAgentLongTermMaxSize', this.currentSettings.multiAgentLongTermMaxSize);
-    this.setInputValue('multiAgentLongTermTTL', this.currentSettings.multiAgentLongTermTTL);
+    try {
+      chatBoxSettings.populateSettingsForm(this.modal);
+    } catch (error) {
+      console.warn('[AgentSettings] Failed to populate ChatBox-owned controls:', error);
+    }
+  }
 
-    // Performance settings
-    this.setCheckboxValue('multiAgentPerformanceMonitoring', this.currentSettings.multiAgentPerformanceMonitoring);
-    this.setCheckboxValue('multiAgentAutoScaling', this.currentSettings.multiAgentAutoScaling);
-    this.setInputValue('multiAgentMaxConcurrentTasks', this.currentSettings.multiAgentMaxConcurrentTasks);
-    this.setInputValue('multiAgentTaskQueueSize', this.currentSettings.multiAgentTaskQueueSize);
+  /**
+   * Persist the controls this panel renders but ChatBoxSettingsManager owns.
+   * saveSettingsFromForm merges, so keys whose controls live in the ChatBox modal
+   * (and are therefore absent here) keep their stored values.
+   */
+  async saveChatBoxOwnedControls() {
+    const chatBoxSettings = window.chatManager?.chatBoxSettingsManager;
+    if (!chatBoxSettings || typeof chatBoxSettings.saveSettingsFromForm !== 'function') return;
+
+    try {
+      await chatBoxSettings.saveSettingsFromForm(this.modal);
+    } catch (error) {
+      console.warn('[AgentSettings] Failed to save ChatBox-owned controls:', error);
+    }
   }
 
   saveCurrentSettings() {
+    // Model / execution / context / memory controls are stored in chatboxSettings.
+    this.saveChatBoxOwnedControls();
+
     // Collect all settings from UI
     const newSettings = {
       // System settings
       multiAgentSystemEnabled: this.getCheckboxValue('multiAgentSystemEnabled'),
-      multiAgentAutoOptimize: this.getCheckboxValue('multiAgentAutoOptimize'),
       multiAgentShowInfo: this.getCheckboxValue('multiAgentShowInfo'),
-      multiAgentMemoryEnabled: this.getCheckboxValue('multiAgentMemoryEnabled'),
-      multiAgentCacheEnabled: this.getCheckboxValue('multiAgentCacheEnabled'),
-      multiAgentMaxConcurrent: parseInt(this.getInputValue('multiAgentMaxConcurrent')),
-      multiAgentTimeout: parseInt(this.getInputValue('multiAgentTimeout')),
-      multiAgentRetryAttempts: parseInt(this.getInputValue('multiAgentRetryAttempts')),
 
-      // LLM settings
-      multiAgentModelType: this.getSelectValue('multiAgentModelType'),
-      multiAgentLLMTemperature: parseFloat(this.getRangeValue('multiAgentLLMTemperature')),
-      multiAgentLLMMaxTokens: parseInt(this.getInputValue('multiAgentLLMMaxTokens')),
-      multiAgentLLMTimeout: parseInt(this.getInputValue('multiAgentLLMTimeout')),
-      multiAgentLLMUseSystemPrompt: this.getCheckboxValue('multiAgentLLMUseSystemPrompt'),
-      multiAgentLLMEnableFunctionCalling: this.getCheckboxValue('multiAgentLLMEnableFunctionCalling'),
-
-      // Agent settings
-      agentNavigationEnabled: this.getCheckboxValue('agentNavigationEnabled'),
-      agentAnalysisEnabled: this.getCheckboxValue('agentAnalysisEnabled'),
-      agentDataEnabled: this.getCheckboxValue('agentDataEnabled'),
-      agentSequenceEnabled: this.getCheckboxValue('agentSequenceEnabled'),
-      agentProteinEnabled: this.getCheckboxValue('agentProteinEnabled'),
-      agentNetworkEnabled: this.getCheckboxValue('agentNetworkEnabled'),
-      agentExternalEnabled: this.getCheckboxValue('agentExternalEnabled'),
-      agentPluginEnabled: this.getCheckboxValue('agentPluginEnabled'),
-
-      // Memory settings
-      multiAgentMemorySystemEnabled: this.getCheckboxValue('multiAgentMemorySystemEnabled'),
-      multiAgentMemoryCacheEnabled: this.getCheckboxValue('multiAgentMemoryCacheEnabled'),
-      multiAgentMemoryOptimizationEnabled: this.getCheckboxValue('multiAgentMemoryOptimizationEnabled'),
-      multiAgentMemoryCleanupInterval: parseInt(this.getInputValue('multiAgentMemoryCleanupInterval')),
-      multiAgentMemoryMaxEntries: parseInt(this.getInputValue('multiAgentMemoryMaxEntries')),
-      multiAgentShortTermMaxSize: parseInt(this.getInputValue('multiAgentShortTermMaxSize')),
-      multiAgentShortTermTTL: parseInt(this.getInputValue('multiAgentShortTermTTL')),
-      multiAgentMediumTermMaxSize: parseInt(this.getInputValue('multiAgentMediumTermMaxSize')),
-      multiAgentMediumTermTTL: parseInt(this.getInputValue('multiAgentMediumTermTTL')),
-      multiAgentLongTermMaxSize: parseInt(this.getInputValue('multiAgentLongTermMaxSize')),
-      multiAgentLongTermTTL: parseInt(this.getInputValue('multiAgentLongTermTTL')),
-
-      // Performance settings
-      multiAgentPerformanceMonitoring: this.getCheckboxValue('multiAgentPerformanceMonitoring'),
-      multiAgentAutoScaling: this.getCheckboxValue('multiAgentAutoScaling'),
-      multiAgentMaxConcurrentTasks: parseInt(this.getInputValue('multiAgentMaxConcurrentTasks')),
-      multiAgentTaskQueueSize: parseInt(this.getInputValue('multiAgentTaskQueueSize')),
+      // Per-agent enablement
+      ...Object.fromEntries(this.agentToggleIds.map(id => [id, this.getCheckboxValue(id)])),
     };
 
     // Update current settings
@@ -825,7 +588,7 @@ class MultiAgentSettingsManager {
 
     // Save to config
     if (this.saveSettings()) {
-      this.showSuccessMessage('Multi-Agent settings saved successfully!');
+      this.showSuccessMessage('Agent settings saved successfully!');
 
       // Emit settings changed event
       if (window.chatManager) {
@@ -1002,61 +765,6 @@ class MultiAgentSettingsManager {
   updateSetting(key, value) {
     this.currentSettings[key] = value;
     this.saveSettings();
-  }
-
-  // Get inherited settings from ChatBox Settings
-  getInheritedSettings() {
-    if (window.chatManager && window.chatManager.chatBoxSettingsManager) {
-      const chatboxSettings = window.chatManager.chatBoxSettingsManager.getAllSettings();
-      return {
-        temperature: chatboxSettings.chatboxLLMTemperature || 0.7,
-        maxTokens: chatboxSettings.chatboxLLMMaxTokens || 4000,
-        timeout: (chatboxSettings.chatboxLLMTimeout || 30) * 1000, // Convert to ms
-        useSystemPrompt: chatboxSettings.chatboxLLMUseSystemPrompt !== false,
-        enableFunctionCalling: chatboxSettings.chatboxLLMEnableFunctionCalling !== false,
-        modelType: chatboxSettings.chatboxModelType || 'auto',
-      };
-    }
-    return {
-      temperature: 0.7,
-      maxTokens: 4000,
-      timeout: 30000,
-      useSystemPrompt: true,
-      enableFunctionCalling: true,
-      modelType: 'auto',
-    };
-  }
-
-  // Get effective settings (inherited + overrides)
-  getEffectiveSettings() {
-    const inherited = this.getInheritedSettings();
-    return {
-      // Use inherited values unless specifically overridden
-      multiAgentLLMTemperature:
-        this.currentSettings.multiAgentLLMTemperature !== undefined
-          ? this.currentSettings.multiAgentLLMTemperature
-          : inherited.temperature,
-      multiAgentLLMMaxTokens:
-        this.currentSettings.multiAgentLLMMaxTokens !== undefined
-          ? this.currentSettings.multiAgentLLMMaxTokens
-          : inherited.maxTokens,
-      multiAgentLLMTimeout:
-        this.currentSettings.multiAgentLLMTimeout !== undefined
-          ? this.currentSettings.multiAgentLLMTimeout
-          : inherited.timeout,
-      multiAgentLLMUseSystemPrompt:
-        this.currentSettings.multiAgentLLMUseSystemPrompt !== undefined
-          ? this.currentSettings.multiAgentLLMUseSystemPrompt
-          : inherited.useSystemPrompt,
-      multiAgentLLMEnableFunctionCalling:
-        this.currentSettings.multiAgentLLMEnableFunctionCalling !== undefined
-          ? this.currentSettings.multiAgentLLMEnableFunctionCalling
-          : inherited.enableFunctionCalling,
-      multiAgentModelType:
-        this.currentSettings.multiAgentModelType !== undefined
-          ? this.currentSettings.multiAgentModelType
-          : inherited.modelType,
-    };
   }
 }
 

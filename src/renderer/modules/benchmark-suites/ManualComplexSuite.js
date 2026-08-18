@@ -9,7 +9,7 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
     this.suiteId = 'manual_complex';
     this.description = 'Complex tests with manual evaluation - Advanced genomic workflows requiring human verification';
     this.framework = null;
-    this.tests = this.initializeTests();
+    this.tests = this.numberTests(this.initializeTests());
   }
 
   getName() {
