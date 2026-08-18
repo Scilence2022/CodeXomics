@@ -6439,7 +6439,7 @@ class GenomeBrowser {
     const annotationNoteHtml = `
       <div class="gene-annotation-note-section">
         <div class="gene-annotation-note-header">
-          <h4><i class="fas fa-file-signature"></i> Genome Annotation Note</h4>
+          <h4><i class="fas fa-file-signature"></i> Annotation Note</h4>
           <span class="gene-annotation-note-badge">GenBank /note</span>
         </div>
         <p class="gene-annotation-note-help">Part of the genome annotation and included in GenBank exports. Use <strong>Edit Annotation</strong> to change it.</p>
@@ -6452,7 +6452,7 @@ class GenomeBrowser {
                       `<div class="gene-annotation-note-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(value)))}</div>`
                   )
                   .join('')
-              : '<div class="gene-tab-empty">No genome annotation note has been applied.</div>'
+              : '<div class="gene-tab-empty">No annotation note has been applied.</div>'
           }
         </div>
       </div>`;
