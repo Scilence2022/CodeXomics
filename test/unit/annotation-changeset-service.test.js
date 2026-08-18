@@ -1702,6 +1702,9 @@ describe('AnnotationChangeSetService', () => {
 
     expect(created.changeSet.claims).toEqual(proposal.claims);
     expect(created.changeSet.evidenceManifest).toEqual(proposal.evidenceManifest);
+    // No explicit evidence strings: the manifest fallback must produce
+    // human-readable references, not opaque record ids.
+    expect(created.changeSet.evidence).toEqual(['PMID:123456']);
     expect(created.changeSet.manifestHash).toMatch(/^[a-f0-9]{64}$/);
     expect(created.changeSet.operations.map(operation => operation.field)).toEqual(['go_terms']);
     expect(created.changeSet.proposalMetadata).toMatchObject({
@@ -1828,6 +1831,52 @@ describe('AnnotationChangeSetService', () => {
         __executionContext: agentContext,
       })
     ).rejects.toThrow('not marked as supporting');
+  });
+
+  it('derives readable evidence references from the manifest when no evidence strings are provided', () => {
+    const service = annotationService.changeSetService;
+    const manifest = {
+      schema: 'dgr.evidence-manifest.v1',
+      sourceRecords: [
+        {
+          id: 'evidence_1',
+          label: 'Some verbose label',
+          identifiers: [{ scheme: 'pmid', value: '24561554' }],
+        },
+        {
+          id: 'evidence_2',
+          label: 'Duplicate of the pmid record',
+          identifiers: [{ scheme: 'pmid', value: '24561554' }],
+        },
+        {
+          id: 'evidence_3',
+          label: 'A DOI-only record',
+          identifiers: [{ scheme: 'doi', value: '10.1128/jb.01234-22' }],
+        },
+        {
+          id: 'evidence_4',
+          label: 'UniProtKB:P45421 db_xref=UniProtKB:P45421',
+          sourceId: 'UniProtKB:P45421',
+        },
+        {
+          id: 'evidence_5',
+          url: 'https://example.test/only-a-url',
+        },
+        {
+          id: 'evidence_6',
+        },
+      ],
+    };
+
+    expect(service._evidenceReferencesFromManifest(manifest)).toEqual([
+      'PMID:24561554',
+      'DOI:10.1128/jb.01234-22',
+      'UniProtKB:P45421 db_xref=UniProtKB:P45421',
+      'https://example.test/only-a-url',
+      'evidence_6',
+    ]);
+    expect(service._evidenceReferencesFromManifest(null)).toEqual([]);
+    expect(service._evidenceReferencesFromManifest({ sourceRecords: 'nope' })).toEqual([]);
   });
 
   it('does not trust caller-provided approval identities or expose plaintext capabilities in the ledger', async () => {
