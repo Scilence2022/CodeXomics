@@ -335,7 +335,7 @@ function validateCitationBoundFacts(task) {
         !Number.isSafeInteger(basis.textLength) ||
         !/^[a-f0-9]{64}$/i.test(String(basis.documentSha256 || '')) ||
         !/^[a-f0-9]{64}$/i.test(String(basis.textSha256 || '')) ||
-        !['user_upload', 'pmc_xml'].includes(String(basis.sourceOrigin || ''))
+        !['user_upload', 'pmc_xml', 'bioc', 'tei', 'pdf', 'snippet'].includes(String(basis.sourceOrigin || ''))
       ) {
         throw new Error(`Citation-bound fact ${fact?.id || 'unknown'} is missing an exact full-text span`);
       }
