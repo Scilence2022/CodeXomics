@@ -117,8 +117,15 @@ class BlastService {
       }
     }
 
-    // Priority 2: Direct BlastManager-backed implementations for core BLAST tools
-    const directResult = await this._executeDirectBlastManagerRequest(methodName, normalizedParams);
+    // Priority 2: Direct BlastManager-backed implementations for core BLAST tools.
+    // Wrapped because a throw here used to escape the whole chain: priorities 3-5,
+    // including the MCP fallback, became unreachable the moment this path failed.
+    let directResult;
+    try {
+      directResult = await this._executeDirectBlastManagerRequest(methodName, normalizedParams);
+    } catch (e) {
+      console.warn(`[BlastService] BlastManager direct path for '${methodName}' failed, falling back:`, e.message);
+    }
     if (directResult !== undefined) {
       return directResult;
     }
@@ -661,7 +668,9 @@ class BlastService {
   }
 
   _detectSequenceTypeFallback(sequence) {
-    const cleaned = String(sequence || '').replace(/[^A-Z]/gi, '').toUpperCase();
+    const cleaned = String(sequence || '')
+      .replace(/[^A-Z]/gi, '')
+      .toUpperCase();
     if (!cleaned) return 'Unknown';
     if (/^[ATGCRYSWKMBDHVN]+$/.test(cleaned)) return 'DNA';
     return 'Protein';

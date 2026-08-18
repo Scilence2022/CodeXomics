@@ -139,6 +139,11 @@ class BlastFunctionTools {
           success: false,
           error: results.errorMessage || 'NCBI BLAST failed',
           source: 'NCBI Online',
+          // Surfaced so a caller can tell a transient network fault from a
+          // rejected query, and resume a job still running at NCBI by its RID
+          // rather than paying for a whole new search.
+          retryable: results.retryable ?? false,
+          rid: results.rid ?? null,
           results: results,
           parameters: { sequence, blastType, database, evalue, maxTargets },
           timestamp: new Date().toISOString(),

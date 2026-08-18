@@ -3903,17 +3903,28 @@ class BlastManager {
     }
   }
 
+  /**
+   * Route a search to the online or local backend.
+   *
+   * The accepted values mirror BlastFunctionTools.executeBlastSearch, which is
+   * the other entry point for the same `blast_search` tool. This one used to
+   * require an exact 'ncbi'/'local' and throw 'Unsupported BLAST service'
+   * otherwise — but callers (the LLM included) routinely omit `service`, so the
+   * two entry points disagreed on the same input and this path always threw.
+   */
   async executeBlastSearch(params) {
-    if (params.service === 'ncbi') {
+    const service = String(params.service || params.searchType || params.search_type || 'online').toLowerCase();
+
+    if (service === 'ncbi' || service === 'online' || service === 'remote') {
       return await this.executeNCBIBlast(params);
-    } else if (params.service === 'local') {
-      return await this.executeLocalBlast(params);
-    } else {
-      throw new Error('Unsupported BLAST service');
     }
+    if (service === 'local' || service === 'blast+') {
+      return await this.executeLocalBlast(params);
+    }
+    throw new Error(`Unsupported BLAST service '${service}'. Use one of: online, ncbi, remote, local, blast+`);
   }
 
-  async executeNCBIBlast(params, retryCount = 0, deadline = null) {
+  async executeNCBIBlast(params, retryCount = 0, deadline = null, existingJob = null) {
     const maxRetries = 3;
     const baseDelay = 2000; // 2 seconds base delay
     // maxWaitTime is a budget for the whole search, not for one attempt. Anchoring an
@@ -3921,13 +3932,20 @@ class BlastManager {
     // (previously 4 x maxWaitTime, plus backoff and an uncounted RTOE delay).
     const effectiveDeadline = deadline ?? Date.now() + Number(this.config?.maxWaitTime || 300000);
 
+    // Carried across retries so a failure while polling resumes the job already
+    // running at NCBI instead of resubmitting it. Resubmitting used to discard a
+    // RID that was minutes into its search, and burned a rate-limit slot doing it.
+    let submittedJob = existingJob;
+
     try {
       console.log('Executing NCBI BLAST with parameters:', params);
 
-      // Step 1: Submit BLAST job to NCBI with retry logic
-      const submittedJob = await this.submitNCBIBlastJobWithRetry(params, retryCount, effectiveDeadline);
+      // Step 1: Submit BLAST job to NCBI with retry logic (skipped when resuming)
+      if (!submittedJob) {
+        submittedJob = await this.submitNCBIBlastJobWithRetry(params, retryCount, effectiveDeadline);
+      }
       const jobId = typeof submittedJob === 'string' ? submittedJob : submittedJob.rid;
-      console.log('BLAST job submitted with ID:', jobId);
+      console.log(existingJob ? 'Resuming BLAST job with ID:' : 'BLAST job submitted with ID:', jobId);
 
       // Step 2: Poll for job completion
       const results = await this.pollNCBIBlastResults(submittedJob, params, null, effectiveDeadline);
@@ -3947,14 +3965,20 @@ class BlastManager {
     } catch (error) {
       console.error('NCBI BLAST error:', error);
 
+      const retryable = this.isRetryableError(error);
+      const resumableRid = typeof submittedJob === 'string' ? submittedJob : submittedJob?.rid || null;
+
       // Retry logic for network errors, but never past the overall deadline.
-      if (retryCount < maxRetries && this.isRetryableError(error)) {
+      if (retryCount < maxRetries && retryable) {
         const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
         if (Date.now() + delay < effectiveDeadline) {
-          console.log(`Retrying BLAST submission in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+          console.log(
+            `Retrying BLAST ${resumableRid ? `poll of RID ${resumableRid}` : 'submission'} in ${delay}ms ` +
+              `(attempt ${retryCount + 1}/${maxRetries})`
+          );
 
           await new Promise(resolve => setTimeout(resolve, delay));
-          return this.executeNCBIBlast(params, retryCount + 1, effectiveDeadline);
+          return this.executeNCBIBlast(params, retryCount + 1, effectiveDeadline, submittedJob);
         }
         console.warn('NCBI BLAST retry budget exhausted: overall deadline reached');
       }
@@ -3962,7 +3986,9 @@ class BlastManager {
       // Show error directly instead of simulated results
       this.showNotification(`NCBI BLAST failed: ${error.message}`, 'error');
 
-      // Return error result instead of mock results
+      // Return error result instead of mock results. `retryable` and `rid` let
+      // callers tell a transient network fault from a rejected query, and say
+      // whether a job is still running at NCBI that could be polled again.
       return {
         searchId: `NCBI_ERROR_${Date.now()}`,
         source: 'NCBI',
@@ -3970,6 +3996,8 @@ class BlastManager {
         isError: true,
         errorMessage: error.message,
         errorType: 'NCBI_BLAST_ERROR',
+        retryable,
+        rid: resumableRid,
         timestamp: new Date().toISOString(),
         queryInfo: {
           length: params.sequence.length,
@@ -4026,7 +4054,18 @@ class BlastManager {
   }
 
   // Rate limiting methods
-  checkRateLimit() {
+
+  /**
+   * Hold the caller until NCBI's minimum submission spacing has elapsed.
+   *
+   * This used to throw "Please wait N seconds" instead of waiting, which made
+   * the retry path self-defeating: every backoff (2s/4s/8s) is shorter than
+   * minSubmissionInterval (10s), so any retry that reached resubmission tripped
+   * this and failed — and the message matches none of isRetryableError's
+   * patterns, so a transient blip became a hard failure. Spacing is a
+   * politeness constraint, so wait it out; only the daily cap is fatal.
+   */
+  async awaitSubmissionSlot(deadline = null) {
     const now = Date.now();
 
     // Reset counter if 24 hours have passed
@@ -4034,19 +4073,27 @@ class BlastManager {
       this.submissionCount = 0;
     }
 
-    // Check daily limit
+    // The daily cap is a real limit, not something waiting can clear.
     if (this.submissionCount >= this.maxSubmissionsPerDay) {
       throw new Error(
         `Daily submission limit reached (${this.maxSubmissionsPerDay} submissions per day). Please try again tomorrow.`
       );
     }
 
-    // Check minimum interval between submissions
-    const timeSinceLastSubmission = now - this.lastBlastSubmission;
-    if (timeSinceLastSubmission < this.minSubmissionInterval) {
-      const waitTime = this.minSubmissionInterval - timeSinceLastSubmission;
-      throw new Error(`Please wait ${Math.ceil(waitTime / 1000)} seconds before submitting another BLAST job.`);
+    const waitTime = this.minSubmissionInterval - (now - this.lastBlastSubmission);
+    if (waitTime <= 0) return;
+
+    // Waiting past the caller's budget helps nobody; fail with the reason.
+    if (deadline && now + waitTime >= deadline) {
+      throw new Error(
+        `NCBI BLAST requires a ${Math.ceil(waitTime / 1000)}s gap between submissions, ` +
+          'which exceeds the remaining time budget for this search.'
+      );
     }
+
+    console.log(`Waiting ${waitTime}ms to respect the NCBI submission interval`);
+    this.updateSearchProgress(`Waiting ${Math.ceil(waitTime / 1000)}s for the NCBI submission interval...`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
   }
 
   updateSubmissionTracking() {
@@ -4189,8 +4236,8 @@ class BlastManager {
   }
 
   async submitNCBIBlastJob(params, deadline = null) {
-    // Check rate limits before submission
-    this.checkRateLimit();
+    // Respect NCBI's submission spacing before submitting (waits, does not throw)
+    await this.awaitSubmissionSlot(deadline);
 
     // NCBI BLAST API endpoint
     const baseUrl = 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi';
@@ -4435,8 +4482,11 @@ class BlastManager {
           resultParams.ALIGNMENTS = String(maxTargets);
         }
 
+        // Both result fetches share the search's overall deadline. Omitting it
+        // fell back to the per-request cap alone, so two large retrievals could
+        // run well past the budget the rest of the search was held to.
         const resultsUrl = this.buildNCBIGetUrl(resultParams);
-        const resultsResponse = await this.fetchWithDeadline(resultsUrl);
+        const resultsResponse = await this.fetchWithDeadline(resultsUrl, {}, effectiveDeadline);
 
         if (!resultsResponse.ok) {
           throw new Error(`Results retrieval failed for NCBI BLAST RID ${jobId}: ${resultsResponse.status}`);
@@ -4449,7 +4499,7 @@ class BlastManager {
           ...resultParams,
           FORMAT_TYPE: 'Text',
         });
-        const textResultsResponse = await this.fetchWithDeadline(textResultsUrl);
+        const textResultsResponse = await this.fetchWithDeadline(textResultsUrl, {}, effectiveDeadline);
         const textResults = textResultsResponse.ok ? await textResultsResponse.text() : 'Text format not available';
 
         // Parse XML results
