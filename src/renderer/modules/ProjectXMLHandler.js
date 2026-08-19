@@ -14,10 +14,14 @@ class ProjectXMLHandler {
    * @returns {string} the XML string
    */
   projectToXML(project) {
+    // The root element declares the format namespace. Child elements are
+    // created WITHOUT an explicit namespace (they inherit the default xmlns
+    // on reparse); xmlToProject intentionally uses unprefixed selectors,
+    // which match these elements in both Chromium and jsdom.
     const doc = document.implementation.createDocument(this.xmlNamespace, 'GenomeExplorerProject', null);
     const root = doc.documentElement;
 
-    // Set XML attributes
+    // `version` is the format version; `created` records the save time
     root.setAttribute('version', this.version);
     root.setAttribute('created', new Date().toISOString());
 
@@ -27,6 +31,7 @@ class ProjectXMLHandler {
     projectInfo.appendChild(this.createTextElement(doc, 'Name', project.name));
     projectInfo.appendChild(this.createTextElement(doc, 'Description', project.description || ''));
     projectInfo.appendChild(this.createTextElement(doc, 'Location', project.location || ''));
+    projectInfo.appendChild(this.createTextElement(doc, 'DataFolderPath', project.dataFolderPath || ''));
     projectInfo.appendChild(this.createTextElement(doc, 'Created', project.created));
     projectInfo.appendChild(this.createTextElement(doc, 'Modified', project.modified));
     root.appendChild(projectInfo);
@@ -67,12 +72,29 @@ class ProjectXMLHandler {
         folderEl.appendChild(this.createTextElement(doc, 'Icon', folder.icon || '📁'));
 
         const pathEl = doc.createElement('Path');
-        folder.path.forEach(pathSegment => {
+        (folder.path || []).forEach(pathSegment => {
           const segmentEl = doc.createElement('Segment');
           segmentEl.textContent = pathSegment;
           pathEl.appendChild(segmentEl);
         });
         folderEl.appendChild(pathEl);
+
+        // Round-trip the user-created folder attributes
+        if (folder.custom) {
+          folderEl.setAttribute('custom', 'true');
+        }
+        if (folder.description) {
+          folderEl.appendChild(this.createTextElement(doc, 'Description', folder.description));
+        }
+        if (folder.parent) {
+          const parentEl = doc.createElement('Parent');
+          folder.parent.forEach(pathSegment => {
+            const segmentEl = doc.createElement('Segment');
+            segmentEl.textContent = pathSegment;
+            parentEl.appendChild(segmentEl);
+          });
+          folderEl.appendChild(parentEl);
+        }
 
         folders.appendChild(folderEl);
       });
@@ -89,6 +111,9 @@ class ProjectXMLHandler {
         fileEl.appendChild(this.createTextElement(doc, 'ID', file.id));
         fileEl.appendChild(this.createTextElement(doc, 'Name', file.name));
         fileEl.appendChild(this.createTextElement(doc, 'Path', file.path));
+        if (file.absolutePath) {
+          fileEl.appendChild(this.createTextElement(doc, 'AbsolutePath', file.absolutePath));
+        }
         fileEl.appendChild(this.createTextElement(doc, 'Type', file.type));
         fileEl.appendChild(this.createTextElement(doc, 'Size', file.size ? file.size.toString() : '0'));
         fileEl.appendChild(this.createTextElement(doc, 'Added', file.added));
@@ -212,6 +237,16 @@ class ProjectXMLHandler {
         throw new Error('Invalid project file: root element must be GenomeExplorerProject');
       }
 
+      // Read the format version (written since v1.0, never previously
+      // enforced). Unknown versions are parsed on a best-effort basis.
+      const formatVersion = root.getAttribute('version') || '1.0';
+      if (!this.isVersionSupported(formatVersion)) {
+        console.warn(
+          `Project file format version "${formatVersion}" is not officially supported ` +
+            `(supported: 1.0); attempting best-effort import.`
+        );
+      }
+
       const project = {};
 
       // Parse the basic project info
@@ -221,6 +256,10 @@ class ProjectXMLHandler {
         project.name = this.getElementText(projectInfo, 'Name');
         project.description = this.getElementText(projectInfo, 'Description');
         project.location = this.getElementText(projectInfo, 'Location');
+        const dataFolderPath = this.getElementText(projectInfo, 'DataFolderPath');
+        if (dataFolderPath) {
+          project.dataFolderPath = dataFolderPath;
+        }
         project.created = this.getElementText(projectInfo, 'Created');
         project.modified = this.getElementText(projectInfo, 'Modified');
       }
@@ -272,6 +311,23 @@ class ProjectXMLHandler {
             });
           }
 
+          // Round-trip the user-created folder attributes (absent in files
+          // written before these fields were serialized)
+          if (folderEl.getAttribute('custom') === 'true') {
+            folder.custom = true;
+          }
+          const folderDescription = this.getElementText(folderEl, 'Description');
+          if (folderDescription) {
+            folder.description = folderDescription;
+          }
+          const parentEl = folderEl.querySelector('Parent');
+          if (parentEl) {
+            folder.parent = [];
+            parentEl.querySelectorAll('Segment').forEach(segment => {
+              folder.parent.push(segment.textContent);
+            });
+          }
+
           project.folders.push(folder);
         });
       }
@@ -291,6 +347,12 @@ class ProjectXMLHandler {
             modified: this.getElementText(fileEl, 'Modified'),
             folder: [],
           };
+
+          // Optional absolute path (absent in older project files)
+          const absolutePath = this.getElementText(fileEl, 'AbsolutePath');
+          if (absolutePath) {
+            file.absolutePath = absolutePath;
+          }
 
           // Parse the folder path
           const folderPathEl = fileEl.querySelector('FolderPath');
@@ -368,6 +430,13 @@ class ProjectXMLHandler {
       console.error('Error parsing project XML:', error);
       throw error;
     }
+  }
+
+  /**
+   * Check whether a project-file format version is supported
+   */
+  isVersionSupported(version) {
+    return ['1.0'].includes(String(version));
   }
 
   /**
@@ -449,21 +518,26 @@ class ProjectXMLHandler {
    * Generate a project XML template
    */
   generateProjectTemplate(name, description = '') {
+    const defaultFolders =
+      typeof ProjectUtils !== 'undefined'
+        ? ProjectUtils.DEFAULT_PROJECT_FOLDERS.map(f => ({ ...f, path: [...f.path] }))
+        : [
+            { name: 'Genomes', icon: '🧬', path: ['genomes'] },
+            { name: 'Annotations', icon: '📋', path: ['annotations'] },
+            { name: 'Variants', icon: '🔄', path: ['variants'] },
+            { name: 'Reads', icon: '📊', path: ['reads'] },
+            { name: 'Analysis', icon: '📈', path: ['analysis'] },
+          ];
+
     const project = {
-      id: `project_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `project_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       name: name,
       description: description,
       location: '',
       created: new Date().toISOString(),
       modified: new Date().toISOString(),
       files: [],
-      folders: [
-        { name: 'Genomes', icon: '🧬', path: ['genomes'] },
-        { name: 'Annotations', icon: '📋', path: ['annotations'] },
-        { name: 'Variants', icon: '🔄', path: ['variants'] },
-        { name: 'Reads', icon: '📊', path: ['reads'] },
-        { name: 'Analysis', icon: '📈', path: ['analysis'] },
-      ],
+      folders: defaultFolders,
       settings: {
         fileFilters: [],
         customAnnotations: [],
@@ -490,4 +564,9 @@ class ProjectXMLHandler {
 // Ensure the class is available globally
 if (typeof window !== 'undefined') {
   window.ProjectXMLHandler = ProjectXMLHandler;
+}
+
+// CommonJS export so the class can be unit tested under Node/Vitest
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ProjectXMLHandler;
 }

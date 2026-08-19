@@ -87,6 +87,7 @@
     "PluginUpdateManager": "readonly",
     "PluginUtils": "readonly",
     "PrimerTrackSettingsPanel": "readonly",
+    "ProjectUtils": "readonly",
     "ProjectXMLHandler": "readonly",
     "ResizableModalManager": "readonly",
     "SkillsSettingsManager": "readonly",

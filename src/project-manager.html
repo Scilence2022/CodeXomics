@@ -2666,7 +2666,7 @@
         <button class="btn btn-primary" onclick="projectManagerWindow.createNewProject()">📂 New Project</button>
         <button class="btn btn-primary" onclick="projectManagerWindow.openProject()">📖 Open Project</button>
         <button
-          class="btn btn-primary"
+          class="btn btn-primary btn-save-project"
           onclick="projectManagerWindow.saveCurrentProject()"
           title="Save current project (Ctrl/Cmd+S)"
         >
@@ -2688,7 +2688,7 @@
           📖 Open
         </button>
         <button
-          class="btn btn-primary btn-compact"
+          class="btn btn-primary btn-compact btn-save-project"
           onclick="projectManagerWindow.saveCurrentProject()"
           title="Save Project"
         >
@@ -2916,6 +2916,7 @@
 
     <div class="status-bar">
       <span id="statusText">Ready</span>
+      <span id="saveStateIndicator" title="Project save state"></span>
       <span id="fileCount">0 items</span>
     </div>
 
@@ -3208,8 +3209,8 @@
     </div>
 
     <script>
-      // Global project manager instance
-      let projectManager = null;
+      // Global project manager window instance (single-instance architecture:
+      // ProjectManagerWindow is the sole class driving this window)
       let projectManagerWindow = null;
 
       // Safe wrapper function
@@ -3250,24 +3251,6 @@
             console.log('✅ Compact mode toggle event listener attached');
           }
         }, 100);
-
-        // Create and integrate the ProjectManager core-logic instance
-        if (typeof ProjectManager !== 'undefined') {
-          projectManager = new ProjectManager();
-          // Integrate ProjectManager into ProjectManagerWindow
-          projectManagerWindow.projectManager = projectManager;
-
-          // Share data and state
-          projectManagerWindow.projects = projectManager.projects;
-          projectManagerWindow.currentProject = projectManager.currentProject;
-          projectManagerWindow.currentPath = projectManager.currentPath;
-
-          console.log('✅ ProjectManager core logic integrated');
-          console.log('ProjectManager instance:', projectManager);
-          console.log('ProjectManagerWindow instance:', projectManagerWindow);
-        } else {
-          console.warn('⚠️ ProjectManager not available, using fallback UI only');
-        }
 
         // Set up IPC event listeners
         if (window.electronAPI && window.electronAPI.onCreateNewProject) {
@@ -3322,10 +3305,6 @@
             if (projectManagerWindow) projectManagerWindow.exportProjectAsJSON();
           });
 
-          ipcRenderer.on('menu-export-archive', () => {
-            if (projectManagerWindow) projectManagerWindow.exportProjectArchive();
-          });
-
           ipcRenderer.on('menu-import-files', (event, filePaths) => {
             if (projectManagerWindow) projectManagerWindow.importFiles(filePaths);
           });
@@ -3339,10 +3318,6 @@
           });
 
           // Edit Menu Events
-          ipcRenderer.on('menu-redo', () => {
-            if (projectManagerWindow) projectManagerWindow.redoLastAction();
-          });
-
           ipcRenderer.on('menu-cut', () => {
             if (projectManagerWindow) projectManagerWindow.cutSelectedFiles();
           });
@@ -3452,18 +3427,6 @@
 
           ipcRenderer.on('menu-check-integrity', () => {
             if (projectManagerWindow) projectManagerWindow.checkFileIntegrity();
-          });
-
-          ipcRenderer.on('menu-convert-fasta-genbank', () => {
-            if (projectManagerWindow) projectManagerWindow.convertFastaToGenBank();
-          });
-
-          ipcRenderer.on('menu-convert-gff-bed', () => {
-            if (projectManagerWindow) projectManagerWindow.convertGffToBed();
-          });
-
-          ipcRenderer.on('menu-custom-conversion', () => {
-            if (projectManagerWindow) projectManagerWindow.showCustomConversionDialog();
           });
 
           ipcRenderer.on('menu-batch-rename', () => {
@@ -3772,8 +3735,8 @@
     </script>
 
     <!-- Dependency scripts -->
-    <script src="renderer/modules/ProjectManagerWindow.js"></script>
+    <script src="renderer/modules/ProjectUtils.js"></script>
     <script src="renderer/modules/ProjectXMLHandler.js"></script>
-    <script src="renderer/modules/ProjectManager.js"></script>
+    <script src="renderer/modules/ProjectManagerWindow.js"></script>
   </body>
 </html>

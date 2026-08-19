@@ -10,7 +10,7 @@
  * @module project-ipc
  */
 
-const { ipcMain, dialog, app, BrowserWindow, Menu, MenuItem } = require('electron');
+const { ipcMain, dialog, app, BrowserWindow, Menu, MenuItem, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { rememberApprovedPath, rememberApprovedDialogPaths, assertAllowedFileAccess } = require('./security-utils');
@@ -1089,6 +1089,52 @@ function registerProjectIpcHandlers(deps) {
       return { success: true, exists: exists };
     } catch (error) {
       return { success: false, exists: false, error: error.message };
+    }
+  });
+
+  // Batch existence check — one IPC round trip for a whole project file list
+  ipcMain.handle('checkFilesExist', async (event, filePaths) => {
+    try {
+      if (!Array.isArray(filePaths)) {
+        throw new Error('filePaths must be an array');
+      }
+      const results = {};
+      await Promise.all(
+        filePaths.map(async filePath => {
+          try {
+            const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'check file' });
+            await fs.promises.access(safeFilePath);
+            results[filePath] = true;
+          } catch (error) {
+            results[filePath] = false;
+          }
+        })
+      );
+      return { success: true, results: results };
+    } catch (error) {
+      return { success: false, results: {}, error: error.message };
+    }
+  });
+
+  // Open a file with the OS default application ("external editor")
+  ipcMain.handle('openFileInExternalEditor', async (event, filePath) => {
+    try {
+      if (!filePath) {
+        throw new Error('File path is required');
+      }
+      const safeFilePath = assertAllowedFileAccess(app, filePath, {
+        operation: 'open in external editor',
+        mustExist: true,
+      });
+      // shell.openPath resolves to '' on success or an error message
+      const openError = await shell.openPath(safeFilePath);
+      if (openError) {
+        throw new Error(openError);
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error opening file in external editor:', error);
+      return { success: false, error: error.message };
     }
   });
 

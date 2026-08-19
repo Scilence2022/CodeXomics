@@ -23,29 +23,11 @@ class ProjectManagerWindow {
 
     // Enhanced project management features
     this.fileRelationships = new Map(); // Track file relationships
-    this.projectTemplates = new Map(); // Store project templates
     this.searchIndex = new Map(); // Search index for files
-    this.fileWatcher = null; // File system watcher
 
-    // File type configurations
-    this.fileTypes = {
-      fasta: { icon: 'FA', color: '#28a745' },
-      genbank: { icon: 'GB', color: '#17a2b8' },
-      gff: { icon: 'GFF', color: '#007bff' },
-      bed: { icon: 'BED', color: '#fd7e14' },
-      vcf: { icon: 'VCF', color: '#6f42c1' },
-      sam: { icon: 'SAM', color: '#e83e8c' },
-      bam: { icon: 'BAM', color: '#dc3545' },
-      fastq: { icon: 'FQ', color: '#20c997' },
-      txt: { icon: 'TXT', color: '#6c757d' },
-      csv: { icon: 'CSV', color: '#198754' },
-      json: { icon: 'JS', color: '#ffc107' },
-      xml: { icon: 'XML', color: '#0d6efd' },
-      html: { icon: 'HTM', color: '#fd7e14' },
-      pdf: { icon: 'PDF', color: '#dc3545' },
-      log: { icon: 'LOG', color: '#6c757d' },
-      tsv: { icon: 'TSV', color: '#198754' },
-    };
+    // File type configurations (single source of truth lives in ProjectUtils;
+    // the extensions arrays are required for detectFileType to work)
+    this.fileTypes = ProjectUtils.FILE_TYPES;
 
     this.expandedProjects = new Set();
     this.expandedFolders = new Set();
@@ -77,6 +59,12 @@ class ProjectManagerWindow {
 
     // Initialize the sidebar splitter
     this.initializeSidebarSplitter();
+
+    // Re-apply the persisted sidebar visibility
+    this.loadSidebarPreference();
+
+    // Enable drag & drop file import
+    this.setupDragAndDrop();
 
     console.log('Project Manager Window initialized successfully');
   }
@@ -169,27 +157,22 @@ class ProjectManagerWindow {
 
   async setDefaultProjectLocation() {
     try {
-      if (window.electronAPI && window.electronAPI.getProjectDirectoryName) {
-        const result = await window.electronAPI.getProjectDirectoryName();
-        if (result.success) {
-          // Use simple path construction to avoid using require in the renderer process
-          const documentsPath = navigator.platform.includes('Win')
-            ? `${process.env.USERPROFILE || 'C:\\Users\\User'}\\Documents`
-            : `${process.env.HOME || '/Users/' + (process.env.USER || 'user')}/Documents`;
-          const defaultLocation = navigator.platform.includes('Win')
-            ? `${documentsPath}\\${result.directoryName}`
-            : `${documentsPath}/${result.directoryName}`;
-          document.getElementById('projectLocation').value = defaultLocation;
-          console.log(`📁 Default project location set to: ${defaultLocation}`);
+      if (window.electronAPI && window.electronAPI.getProjectDirectoryName && window.electronAPI.getDocumentsPath) {
+        const [dirResult, documentsPath] = await Promise.all([
+          window.electronAPI.getProjectDirectoryName(),
+          window.electronAPI.getDocumentsPath(),
+        ]);
+        if (dirResult.success && documentsPath) {
+          // `process.env`/`navigator.platform` are unavailable or deprecated in
+          // a context-isolated renderer — paths come from the main process.
+          const defaultLocation = ProjectUtils.joinPath(documentsPath, dirResult.directoryName);
+          this.defaultProjectsDir = defaultLocation;
+          const locationInput = document.getElementById('projectLocation');
+          if (locationInput) locationInput.value = defaultLocation;
         }
       }
     } catch (error) {
       console.warn('Failed to set default project location:', error);
-      // Set a generic default location
-      const defaultLocation = navigator.platform.includes('Win')
-        ? 'C:\\Users\\User\\Documents\\CodeXomics Projects'
-        : '/Users/user/Documents/CodeXomics Projects';
-      document.getElementById('projectLocation').value = defaultLocation;
     }
   }
 
@@ -261,13 +244,7 @@ class ProjectManagerWindow {
           created: new Date().toISOString(),
           modified: new Date().toISOString(),
           files: [],
-          folders: [
-            { name: 'Genomes', icon: '🧬', path: ['genomes'], files: [] },
-            { name: 'Annotations', icon: '📋', path: ['annotations'], files: [] },
-            { name: 'Variants', icon: '🔄', path: ['variants'], files: [] },
-            { name: 'Reads', icon: '📊', path: ['reads'], files: [] },
-            { name: 'Analysis', icon: '📈', path: ['analysis'], files: [] },
-          ],
+          folders: ProjectUtils.DEFAULT_PROJECT_FOLDERS.map(f => ({ ...f, path: [...f.path], files: [] })),
           metadata: {
             totalFiles: 0,
             totalSize: 0,
@@ -370,17 +347,25 @@ class ProjectManagerWindow {
           combinedIcon = isExpanded ? '📂' : '📁';
         }
 
+        // Project names/descriptions/ids are user- or file-controlled —
+        // escape them before interpolating into markup. Ids embedded in
+        // inline handler strings need JS-string escaping AND HTML escaping.
+        const safeProjectId = ProjectUtils.escapeHtml(projectId);
+        const safeProjectIdJs = ProjectUtils.escapeHtml(ProjectUtils.escapeJsString(projectId));
+        const safeProjectName = ProjectUtils.escapeHtml(project.name);
+        const safeProjectTitle = ProjectUtils.escapeHtml(project.description || project.name);
+
         html += `
                     <div class="tree-item project ${isActive ? 'active' : ''}" 
-                         data-project-id="${projectId}">
-                        <div class="tree-item-content" onclick="projectManagerWindow.selectProject('${projectId}')">
-                            <div class="tree-icon tree-main-icon" onclick="event.stopPropagation(); projectManagerWindow.toggleProjectExpansion('${projectId}')"
+                         data-project-id="${safeProjectId}">
+                        <div class="tree-item-content" onclick="projectManagerWindow.selectProject('${safeProjectIdJs}')">
+                            <div class="tree-icon tree-main-icon" onclick="event.stopPropagation(); projectManagerWindow.toggleProjectExpansion('${safeProjectIdJs}')"
                                  style="cursor: ${hasChildren ? 'pointer' : 'default'};">
                                 ${combinedIcon}
                             </div>
-                            <span class="tree-label" title="${project.description || project.name}">${project.name}</span>
+                            <span class="tree-label" title="${safeProjectTitle}">${safeProjectName}</span>
                             <div class="tree-actions">
-                                <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showProjectContextMenu(event, '${projectId}')" title="More options">⋯</button>
+                                <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showProjectContextMenu(event, '${safeProjectIdJs}')" title="More options">⋯</button>
                             </div>
                         </div>
                 `;
@@ -435,19 +420,26 @@ class ProjectManagerWindow {
         combinedIcon = isExpanded ? '📂' : '📁';
       }
 
+      // Folder paths/names and file ids/names are user-controlled strings.
+      // JSON payloads embedded in attributes are HTML-escaped; ids embedded
+      // in inline handler strings get JS-string + HTML escaping.
+      const folderPathJson = ProjectUtils.escapeHtml(JSON.stringify(folder.path));
+      const safeFolderIdJs = ProjectUtils.escapeHtml(ProjectUtils.escapeJsString(folderId));
+      const safeFolderName = ProjectUtils.escapeHtml(folder.name);
+
       html += `
                 <div class="tree-item folder ${isCurrentPath ? 'active' : ''}" 
                      style="margin-left: ${indent}px;"
-                     data-folder-path="${JSON.stringify(folder.path).replace(/"/g, '&quot;')}">
+                     data-folder-path="${folderPathJson}">
                     <div class="tree-item-content">
-                        <div class="tree-icon tree-main-icon" onclick="event.stopPropagation(); projectManagerWindow.toggleFolderExpansion('${folderId}', ${JSON.stringify(folder.path).replace(/"/g, '&quot;')})"
+                        <div class="tree-icon tree-main-icon" onclick="event.stopPropagation(); projectManagerWindow.toggleFolderExpansion('${safeFolderIdJs}', ${folderPathJson})"
                              style="cursor: ${hasChildren ? 'pointer' : 'default'};">
                             ${combinedIcon}
                         </div>
-                        <span class="tree-label" onclick="${this.isCompactMode ? `projectManagerWindow.toggleFolderExpansion('${folderId}', ${JSON.stringify(folder.path).replace(/"/g, '&quot;')})` : `projectManagerWindow.navigateToFolder(${JSON.stringify(folder.path).replace(/"/g, '&quot;')})`}">${folder.name}</span>
+                        <span class="tree-label" onclick="${this.isCompactMode ? `projectManagerWindow.toggleFolderExpansion('${safeFolderIdJs}', ${folderPathJson})` : `projectManagerWindow.navigateToFolder(${folderPathJson})`}">${safeFolderName}</span>
                         <div class="tree-file-count">${folderFiles.length}</div>
                         <div class="tree-actions">
-                            <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFolderContextMenu(event, ${JSON.stringify(folder.path).replace(/"/g, '&quot;')})" title="More options">⋯</button>
+                            <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFolderContextMenu(event, ${folderPathJson})" title="More options">⋯</button>
                         </div>
                     </div>
             `;
@@ -479,18 +471,23 @@ class ProjectManagerWindow {
             fontSize = '6px';
           }
 
+          const safeFileId = ProjectUtils.escapeHtml(file.id);
+          const safeFileIdJs = ProjectUtils.escapeHtml(ProjectUtils.escapeJsString(file.id));
+          const safeFileName = ProjectUtils.escapeHtml(file.name);
+          const displayName = ProjectUtils.escapeHtml(this.getDisplayFileName(file));
+
           html += `
                         <div class="tree-item file ${isSelected ? 'selected' : ''}" 
                              style="margin-left: ${fileIndent}px;"
-                             data-file-id="${file.id}">
+                             data-file-id="${safeFileId}">
                             <div class="tree-item-content" 
-                                 onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                                 ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')">
+                                 onclick="projectManagerWindow.selectFile('${safeFileIdJs}', event.ctrlKey || event.metaKey)"
+                                 ondblclick="projectManagerWindow.openFileInMainWindow('${safeFileIdJs}')">
                                 <div class="tree-icon file-icon" style="background-color: ${typeConfig.color}; color: var(--pm-on-accent); font-size: ${fontSize}; width: ${iconSize}; height: ${iconSize}; border-radius: 3px; display: flex; align-items: center; justify-content: center;">${typeConfig.icon}</div>
-                                <span class="tree-label" title="${file.name}">${file.name}</span>
+                                <span class="tree-label" title="${safeFileName}">${displayName}</span>
                                 <div class="tree-file-size">${this.formatFileSize(file.size || 0)}</div>
                                 <div class="tree-actions">
-                                    <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview">👁️</button>
+                                    <button class="tree-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${safeFileIdJs}')" title="Preview">👁️</button>
                                 </div>
                             </div>
                         </div>
@@ -556,10 +553,16 @@ class ProjectManagerWindow {
     this.currentPath = [];
 
     if (this.currentProject) {
+      // Normalize older projects that may lack the metadata container
+      ProjectUtils.normalizeProject(this.currentProject);
       this.currentProject.metadata.lastOpened = new Date().toISOString();
 
       // Add to recent projects
       this.addToRecentProjects(projectId);
+
+      // Notify the rest of the app (main window, downloaders) about the
+      // newly active project
+      this.notifyProjectChange(this.currentProject);
 
       // Auto-expand the selected project
       if (!this.expandedProjects) {
@@ -573,8 +576,10 @@ class ProjectManagerWindow {
       this.updateContentTitle();
 
       // Show the project content
-      document.getElementById('projectOverview').style.display = 'none';
-      document.getElementById('projectContent').style.display = 'block';
+      const overviewEl = document.getElementById('projectOverview');
+      const contentEl = document.getElementById('projectContent');
+      if (overviewEl) overviewEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'block';
 
       this.updateStatusBar(`Opened: ${this.currentProject.name}`);
       this.saveProjects(); // save the last-opened time
@@ -674,6 +679,8 @@ class ProjectManagerWindow {
   }
 
   showContextMenu(menu, event) {
+    if (!menu) return;
+
     // Hide all context menus
     document.querySelectorAll('.context-menu').forEach(m => (m.style.display = 'none'));
 
@@ -800,22 +807,29 @@ class ProjectManagerWindow {
    * @param {Array} filteredFiles - the filtered file list
    */
   renderVirtualFileGrid(container, filteredFiles) {
-    // Initialize the virtual-scroll properties
-    if (!this.virtualScrolling) {
-      this.virtualScrolling = {
-        itemHeight: 120, // height of each file card
-        visibleItems: Math.ceil(container.clientHeight / 120) + 5, // number of visible items + buffer
-        scrollTop: 0,
-        startIndex: 0,
-        endIndex: 0,
-        totalItems: 0,
-      };
+    // Measure the real grid geometry. The previous implementation assumed a
+    // single column of 120px rows, which made the scrollable area several
+    // times too tall for a multi-column grid.
+    const geometry = this.measureGridGeometry(container, filteredFiles);
+    if (!geometry) {
+      // Container not measurable (e.g. hidden) — fall back to plain rendering
+      this.renderFullFileGrid(container, filteredFiles);
+      return;
     }
 
-    this.virtualScrolling.totalItems = filteredFiles.length;
+    this.virtualScrolling = {
+      columns: geometry.columns,
+      rowHeight: geometry.rowHeight,
+      scrollTop: 0,
+      startIndex: 0,
+      endIndex: 0,
+      totalItems: filteredFiles.length,
+    };
 
     // Calculate the visible range
     this.updateVirtualScrollRange(container);
+
+    const totalRows = Math.ceil(filteredFiles.length / geometry.columns);
 
     // Create the virtual-scroll container structure
     const virtualContainer = document.createElement('div');
@@ -830,17 +844,21 @@ class ProjectManagerWindow {
     const contentWrapper = document.createElement('div');
     contentWrapper.className = 'virtual-content-wrapper';
     contentWrapper.style.cssText = `
-            height: ${this.virtualScrolling.totalItems * this.virtualScrolling.itemHeight}px;
+            height: ${totalRows * geometry.rowHeight}px;
             position: relative;
         `;
 
-    // Create the visible-items container
+    // Create the visible-items container (a grid itself, so cards keep the
+    // same multi-column layout as the plain grid)
     const visibleContainer = document.createElement('div');
     visibleContainer.className = 'virtual-visible-container';
     visibleContainer.style.cssText = `
             position: absolute;
-            top: ${this.virtualScrolling.startIndex * this.virtualScrolling.itemHeight}px;
+            top: ${Math.floor(this.virtualScrolling.startIndex / geometry.columns) * geometry.rowHeight}px;
             width: 100%;
+            display: grid;
+            grid-template-columns: ${geometry.gridTemplateColumns};
+            gap: ${geometry.gap};
         `;
 
     // Render the visible items
@@ -869,19 +887,55 @@ class ProjectManagerWindow {
   }
 
   /**
-   * Update the virtual-scroll visible range
+   * Measure the grid's column count, row height and gap. Returns null when
+   * the container is not laid out (zero size) so callers can fall back.
+   */
+  measureGridGeometry(container, files) {
+    if (!container || !container.isConnected || container.clientHeight === 0 || container.clientWidth === 0) {
+      return null;
+    }
+
+    const computed = window.getComputedStyle(container);
+    const gridTemplateColumns = computed.gridTemplateColumns || 'none';
+    const columns =
+      gridTemplateColumns === 'none' ? 1 : gridTemplateColumns.split(' ').filter(track => track !== '').length || 1;
+    const gap = parseFloat(computed.rowGap) || 0;
+
+    // Probe the real card height with an offscreen sample card
+    let cardHeight = 0;
+    if (files.length > 0) {
+      const probe = document.createElement('div');
+      probe.style.cssText = 'visibility: hidden; position: absolute; pointer-events: none; width: 100%;';
+      probe.innerHTML = this.generateFileCardHTML(files[0]);
+      container.appendChild(probe);
+      const card = probe.firstElementChild;
+      if (card) {
+        cardHeight = card.getBoundingClientRect().height;
+      }
+      probe.remove();
+    }
+
+    return {
+      columns,
+      rowHeight: (cardHeight > 0 ? cardHeight : 120) + gap,
+      gap: computed.rowGap || '0px',
+      gridTemplateColumns: gridTemplateColumns === 'none' ? '1fr' : gridTemplateColumns,
+    };
+  }
+
+  /**
+   * Update the virtual-scroll visible range (row-snapped for a grid layout)
    * @param {HTMLElement} container - the container element
    */
   updateVirtualScrollRange(container) {
-    const scrollTop = this.virtualScrolling.scrollTop;
-    const containerHeight = container.clientHeight;
+    const vs = this.virtualScrolling;
+    const containerHeight = container.clientHeight || 600;
 
-    this.virtualScrolling.startIndex = Math.max(0, Math.floor(scrollTop / this.virtualScrolling.itemHeight) - 2);
+    const startRow = Math.max(0, Math.floor(vs.scrollTop / vs.rowHeight) - 1);
+    const visibleRows = Math.ceil(containerHeight / vs.rowHeight) + 2;
 
-    this.virtualScrolling.endIndex = Math.min(
-      this.virtualScrolling.totalItems,
-      this.virtualScrolling.startIndex + Math.ceil(containerHeight / this.virtualScrolling.itemHeight) + 5
-    );
+    vs.startIndex = startRow * vs.columns;
+    vs.endIndex = Math.min(vs.totalItems, (startRow + visibleRows) * vs.columns);
   }
 
   /**
@@ -903,8 +957,8 @@ class ProjectManagerWindow {
     const oldStartIndex = this.virtualScrolling.startIndex;
     this.updateVirtualScrollRange(container);
 
-    // Only re-render when the visible range changes significantly
-    if (Math.abs(this.virtualScrolling.startIndex - oldStartIndex) >= 3) {
+    // Re-render when the visible range moved by at least one row
+    if (Math.abs(this.virtualScrolling.startIndex - oldStartIndex) >= this.virtualScrolling.columns) {
       this.updateVirtualVisibleItems(e.target, filteredFiles);
     }
   }
@@ -918,11 +972,13 @@ class ProjectManagerWindow {
     const visibleContainer = scrollContainer.querySelector('.virtual-visible-container');
     if (!visibleContainer) return;
 
-    // Update the container position
-    visibleContainer.style.top = `${this.virtualScrolling.startIndex * this.virtualScrolling.itemHeight}px`;
+    const vs = this.virtualScrolling;
+
+    // Update the container position (row-snapped)
+    visibleContainer.style.top = `${Math.floor(vs.startIndex / vs.columns) * vs.rowHeight}px`;
 
     // Render the new visible items
-    const visibleFiles = filteredFiles.slice(this.virtualScrolling.startIndex, this.virtualScrolling.endIndex);
+    const visibleFiles = filteredFiles.slice(vs.startIndex, vs.endIndex);
 
     visibleContainer.innerHTML = visibleFiles
       .map(file => {
@@ -942,18 +998,23 @@ class ProjectManagerWindow {
     const isSelected = this.selectedFiles.has(file.id);
     const isDeleted = file.fileExists === false; // Check if file was marked as deleted
 
+    const safeFileId = ProjectUtils.escapeHtml(file.id);
+    const safeFileIdJs = ProjectUtils.escapeHtml(ProjectUtils.escapeJsString(file.id));
+    const safeFileName = ProjectUtils.escapeHtml(file.name);
+    const displayName = ProjectUtils.escapeHtml(this.getDisplayFileName(file));
+
     return `
             <div class="file-card ${isSelected ? 'selected' : ''} ${isDeleted ? 'file-deleted' : ''}" 
-                 data-file-id="${file.id}"
-                 onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                 ondblclick="projectManagerWindow.showFilePreview('${file.id}')"
-                 oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')">
+                 data-file-id="${safeFileId}"
+                 onclick="projectManagerWindow.selectFile('${safeFileIdJs}', event.ctrlKey || event.metaKey)"
+                 ondblclick="projectManagerWindow.showFilePreview('${safeFileIdJs}')"
+                 oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${safeFileIdJs}')">
                 <div class="file-icon" style="background-color: ${isDeleted ? 'var(--pm-danger)' : typeConfig.color}">
                     ${isDeleted ? '⚠️' : typeConfig.icon}
                 </div>
                 <div class="file-info">
-                    <div class="file-name" title="${file.name}${isDeleted ? ' (File not found on disk)' : ''}">
-                        ${file.name}${isDeleted ? ' <span style="color: var(--pm-danger); font-size: 0.8em;">(Missing)</span>' : ''}
+                    <div class="file-name" title="${safeFileName}${isDeleted ? ' (File not found on disk)' : ''}">
+                        ${displayName}${isDeleted ? ' <span style="color: var(--pm-danger); font-size: 0.8em;">(Missing)</span>' : ''}
                     </div>
                     <div class="file-details">
                         <span class="file-size">${this.formatFileSize(file.size)}</span>
@@ -961,13 +1022,13 @@ class ProjectManagerWindow {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview" ${isDeleted ? 'disabled' : ''}>
+                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${safeFileIdJs}')" title="Preview" ${isDeleted ? 'disabled' : ''}>
                         👁️
                     </button>
-                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">
+                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${safeFileIdJs}')" title="Rename">
                         ✏️
                     </button>
-                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">
+                    <button class="file-action-btn" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${safeFileIdJs}')" title="Delete">
                         🗑️
                     </button>
                 </div>
@@ -977,7 +1038,7 @@ class ProjectManagerWindow {
 
   // ====== File management features ======
 
-  async addFiles() {
+  async addFiles(folderOverride = null) {
     if (!this.currentProject) {
       this.showNotification('Please select a project first', 'warning');
       return;
@@ -987,7 +1048,13 @@ class ProjectManagerWindow {
       if (window.electronAPI && window.electronAPI.selectMultipleFiles) {
         const result = await window.electronAPI.selectMultipleFiles();
         if (result.success && !result.canceled && result.filePaths.length > 0) {
-          await this.processSelectedFiles(result.filePaths);
+          // Stage the selection and the target folder, then let the user
+          // choose copy vs. reference in the Add Files modal (confirmed via
+          // processFilesWithOptions)
+          this.pendingFilesToAdd = result.filePaths;
+          this.pendingAddFolder = folderOverride ? [...folderOverride] : [...this.currentPath];
+          this.populateAddFilesModal(result.filePaths);
+          this.showModal('addFilesModal');
         }
       } else {
         // Fallback for the browser environment
@@ -1007,8 +1074,83 @@ class ProjectManagerWindow {
     }
   }
 
-  async processSelectedFiles(filePaths) {
+  /**
+   * Populate the Add Files modal with the staged selection
+   */
+  populateAddFilesModal(filePaths) {
+    const listElement = document.getElementById('selectedFilesList');
+    if (!listElement) return;
+
+    listElement.innerHTML = filePaths
+      .map(
+        filePath =>
+          `<div style="padding: 4px 0; border-bottom: 1px solid var(--pm-border-gray);">` +
+          `📄 ${ProjectUtils.escapeHtml(ProjectUtils.getBaseName(filePath))}` +
+          `<div style="font-size: 0.85em; color: var(--pm-text-secondary); word-break: break-all;">${ProjectUtils.escapeHtml(filePath)}</div>` +
+          `</div>`
+      )
+      .join('');
+  }
+
+  /**
+   * Confirm handler of the Add Files modal: add the staged files either by
+   * copying them into the project data folder or by referencing them in place
+   */
+  async processFilesWithOptions() {
+    const stagedFiles = this.pendingFilesToAdd;
+    const stagedFolder = this.pendingAddFolder;
+    this.pendingFilesToAdd = null;
+    this.pendingAddFolder = null;
+    this.closeModal('addFilesModal');
+
+    if (!this.currentProject || !stagedFiles || stagedFiles.length === 0) {
+      return;
+    }
+
+    const handlingOption = document.querySelector('input[name="fileHandling"]:checked');
+    const handling = handlingOption ? handlingOption.value : 'reference';
+    const targetPath = stagedFolder || this.currentPath;
+
+    if (handling === 'copy' && window.electronAPI && window.electronAPI.copyFileToProject) {
+      const copiedPaths = [];
+      let failedCount = 0;
+      const targetFolder = targetPath.join('/');
+
+      for (const sourcePath of stagedFiles) {
+        try {
+          const copyResult = await window.electronAPI.copyFileToProject(
+            sourcePath,
+            this.currentProject.name,
+            targetFolder
+          );
+          if (copyResult && copyResult.success && copyResult.newPath) {
+            copiedPaths.push(copyResult.newPath);
+          } else {
+            failedCount++;
+            console.error('Failed to copy file into project:', sourcePath, copyResult && copyResult.error);
+          }
+        } catch (error) {
+          failedCount++;
+          console.error('Failed to copy file into project:', sourcePath, error);
+        }
+      }
+
+      if (copiedPaths.length > 0) {
+        await this.processSelectedFiles(copiedPaths, targetPath);
+      }
+      if (failedCount > 0) {
+        this.showNotification(`Failed to copy ${failedCount} file(s); ${copiedPaths.length} added`, 'warning');
+      }
+    } else {
+      // Reference mode: register the files at their original location
+      await this.processSelectedFiles(stagedFiles, targetPath);
+    }
+  }
+
+  async processSelectedFiles(filePaths, folderOverride = null) {
     let addedCount = 0;
+    ProjectUtils.normalizeProject(this.currentProject);
+    const targetFolder = folderOverride ? [...folderOverride] : [...this.currentPath];
 
     for (const filePath of filePaths) {
       try {
@@ -1035,7 +1177,7 @@ class ProjectManagerWindow {
             path: filePath,
             size: fileInfo.size || 0,
             type: this.detectFileType(fileInfo.name),
-            folder: [...this.currentPath],
+            folder: [...targetFolder],
             added: new Date().toISOString(),
             modified: fileInfo.modified || new Date().toISOString(),
           };
@@ -1060,6 +1202,7 @@ class ProjectManagerWindow {
 
   async processFileObjects(files) {
     let addedCount = 0;
+    ProjectUtils.normalizeProject(this.currentProject);
 
     for (const file of files) {
       const fileObj = {
@@ -1145,7 +1288,7 @@ class ProjectManagerWindow {
     console.log(`📁 Created folder: ${folderName} at path: ${newPath.join('/')}`);
   }
 
-  async saveProjectAsXML(isAutoSave = false) {
+  async saveProjectAsXML(isAutoSave = false, forceDialog = false) {
     if (!this.currentProject) return;
 
     try {
@@ -1158,34 +1301,40 @@ class ProjectManagerWindow {
       const xmlContent = this.xmlHandler.projectToXML(this.currentProject);
 
       if (window.electronAPI) {
-        // Use existing file path or create new one
-        const fileName = this.currentProject.xmlFileName || `${this.currentProject.name}.prj.gai`;
+        const existingPath = this.currentProject.xmlFilePath || this.currentProject.projectFilePath;
 
-        // If this is auto-save and we have an existing file path, save directly without dialog
-        if (isAutoSave && (this.currentProject.xmlFilePath || this.currentProject.projectFilePath)) {
-          const existingPath = this.currentProject.xmlFilePath || this.currentProject.projectFilePath;
+        // Save directly whenever we already know the target path — this
+        // covers auto-save AND a plain manual Ctrl+S. A dialog is only shown
+        // for an explicit "Save As" or when no path is known yet.
+        if (!forceDialog && existingPath && window.electronAPI.saveProjectFileDirect) {
+          const result = await window.electronAPI.saveProjectFileDirect(existingPath, xmlContent);
 
-          if (window.electronAPI.saveProjectFileDirect) {
-            const result = await window.electronAPI.saveProjectFileDirect(existingPath, xmlContent);
+          if (result.success) {
+            this.currentProject.xmlFilePath = result.filePath;
+            this.currentProject.modified = new Date().toISOString();
+            this.markProjectAsSaved();
 
-            if (result.success) {
-              this.currentProject.xmlFilePath = result.filePath;
-              this.currentProject.modified = new Date().toISOString();
-
-              console.log(`✅ Project XML auto-saved: ${result.filePath}`);
-              return result.filePath;
-            } else {
-              console.warn('Failed to auto-save project XML:', result.error);
+            console.log(`✅ Project XML saved: ${result.filePath}`);
+            if (!isAutoSave) {
+              this.showNotification('Project saved successfully', 'success');
             }
+            return result.filePath;
+          } else {
+            console.warn('Failed to save project XML directly:', result.error);
+            if (isAutoSave) return null;
           }
-        } else if (window.electronAPI.saveProjectFile) {
-          // Manual save - show dialog
+        }
+
+        if (window.electronAPI.saveProjectFile) {
+          // Dialog save (explicit "Save As" or first-time save)
+          const fileName = this.currentProject.xmlFileName || `${this.currentProject.name}.prj.GAI`;
           const result = await window.electronAPI.saveProjectFile(fileName, xmlContent);
 
           if (result.success) {
             this.currentProject.xmlFilePath = result.filePath;
             this.currentProject.xmlFileName = fileName;
             this.currentProject.modified = new Date().toISOString();
+            this.markProjectAsSaved();
 
             console.log(`✅ Project XML saved: ${result.filePath}`);
             this.showNotification('Project saved successfully', 'success');
@@ -1197,7 +1346,11 @@ class ProjectManagerWindow {
       }
     } catch (error) {
       console.error('Error saving project as XML:', error);
+      if (!isAutoSave) {
+        this.showNotification(`Failed to save project: ${error.message}`, 'error');
+      }
     }
+    return null;
   }
 
   /**
@@ -1216,7 +1369,7 @@ class ProjectManagerWindow {
       // Save to localStorage
       await this.saveProjects();
 
-      // Save to XML file (show dialog for manual save)
+      // Save to XML file (reuses the existing path when available)
       await this.saveProjectAsXML(false);
 
       console.log(`💾 Project saved: ${this.currentProject.name}`);
@@ -1227,7 +1380,7 @@ class ProjectManagerWindow {
   }
 
   /**
-   * Save project as (for menu)
+   * Save project as (for menu) — always shows the file dialog
    */
   async saveProjectAs() {
     if (!this.currentProject) {
@@ -1235,8 +1388,7 @@ class ProjectManagerWindow {
       return;
     }
 
-    // Always show dialog for Save As
-    await this.saveProjectAsXML(false);
+    await this.saveProjectAsXML(false, true);
   }
 
   selectFile(fileId, ctrlKey = false) {
@@ -1256,6 +1408,48 @@ class ProjectManagerWindow {
     this.updateDetailsPanel();
   }
 
+  /**
+   * Select all files in the current folder view (Ctrl+A)
+   */
+  selectAllFiles() {
+    if (!this.currentProject) {
+      this.showNotification('Please select a project first', 'warning');
+      return;
+    }
+
+    const visibleFiles = this.filterFiles(this.getCurrentFolderFiles());
+    visibleFiles.forEach(file => this.selectedFiles.add(file.id));
+
+    this.updateFileCardSelection();
+    this.updateStatusBar();
+    this.showNotification(`Selected ${visibleFiles.length} files`, 'info');
+  }
+
+  /**
+   * Clear the current file selection (Escape)
+   */
+  clearSelection() {
+    if (this.selectedFiles.size === 0) return;
+
+    this.selectedFiles.clear();
+    this.updateFileCardSelection();
+    this.updateStatusBar();
+  }
+
+  /**
+   * Delete the selected files from the project records (Delete key)
+   */
+  deleteSelectedFiles() {
+    if (!this.currentProject) return;
+    if (this.selectedFiles.size === 0) {
+      this.showNotification('No files selected to delete', 'warning');
+      return;
+    }
+
+    // Reuse the batch-delete flow (confirm dialog + record removal)
+    this.batchDeleteFiles();
+  }
+
   async openFileInMainWindow(fileId) {
     const file = this.findFileById(fileId);
     if (!file) return;
@@ -1264,10 +1458,6 @@ class ProjectManagerWindow {
       if (window.electronAPI) {
         // Get the absolute path for file operations
         const filePath = this.getFileAbsolutePath(file);
-        console.log('🔍 ProjectManagerWindow.openFileInMainWindow Debug:');
-        console.log('   File object:', file);
-        console.log('   Current project:', this.currentProject);
-        console.log('   Resolved absolute path:', filePath);
 
         // First check if main window exists and its status
         const mainWindowStatus = await window.electronAPI.checkMainWindowStatus();
@@ -1317,79 +1507,32 @@ class ProjectManagerWindow {
    */
   getFileAbsolutePath(file) {
     if (!file || !this.currentProject) {
-      console.log('🔍 getFileAbsolutePath: Missing file or currentProject');
       return '';
     }
 
-    console.log('🔍 getFileAbsolutePath called with file:', {
-      id: file.id,
-      name: file.name,
-      path: file.path,
-      absolutePath: file.absolutePath,
-      hasAbsolutePath: !!file.absolutePath,
-    });
-    console.log('🔍 getFileAbsolutePath current project:', {
-      name: this.currentProject.name,
-      dataFolderPath: this.currentProject.dataFolderPath,
-    });
-
     // If the file has an absolute path, return it directly
     if (file.absolutePath) {
-      console.log('🔍 getFileAbsolutePath: Using existing absolutePath:', file.absolutePath);
       return file.absolutePath;
     }
 
     // If the file path is already absolute, return it directly
-    if (file.path && (file.path.startsWith('/') || file.path.includes(':\\'))) {
-      console.log('🔍 getFileAbsolutePath: Path is already absolute:', file.path);
+    if (file.path && (file.path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(file.path))) {
       return file.path;
     }
 
     // If the file has a relative path, build the absolute path
     if (file.path && this.currentProject.dataFolderPath) {
-      // Use simple path concatenation, since the renderer process can't use require('path') directly
-      const normalizedRelativePath = file.path.replace(/\\/g, '/');
-      let absolutePath;
-
-      // Handle path separators for different operating systems
-      if (this.currentProject.dataFolderPath.includes('\\')) {
-        // Windows path
-        absolutePath = this.currentProject.dataFolderPath + '\\' + normalizedRelativePath.replace(/\//g, '\\');
-      } else {
-        // Unix/Linux/Mac path
-        absolutePath = this.currentProject.dataFolderPath + '/' + normalizedRelativePath;
-      }
-
-      console.log('🔍 getFileAbsolutePath: Constructed from dataFolderPath:', absolutePath);
-      return absolutePath;
+      return ProjectUtils.joinPath(this.currentProject.dataFolderPath, file.path);
     }
 
-    // Fallback case - build the path using the dynamic project directory name
-    if (file.path && this.currentProject.name) {
-      // Use simple path construction to avoid require('path')
-      const documentsPath = navigator.platform.includes('Win')
-        ? `${process.env.USERPROFILE || 'C:\\Users\\User'}\\Documents`
-        : `${process.env.HOME || '/Users/' + (process.env.USER || 'user')}/Documents`;
-
-      const projectsDir = navigator.platform.includes('Win')
-        ? `${documentsPath}\\CodeXomics Projects`
-        : `${documentsPath}/CodeXomics Projects`;
-
-      const projectDataPath = navigator.platform.includes('Win')
-        ? `${projectsDir}\\${this.currentProject.name}`
-        : `${projectsDir}/${this.currentProject.name}`;
-
-      const normalizedRelativePath = file.path.replace(/\\/g, '/');
-      const absolutePath = navigator.platform.includes('Win')
-        ? `${projectDataPath}\\${normalizedRelativePath.replace(/\//g, '\\\\')}`
-        : `${projectDataPath}/${normalizedRelativePath}`;
-
-      console.log('🔍 getFileAbsolutePath: Constructed from project name:', absolutePath);
-      return absolutePath;
+    // Fallback: build from the cached default projects directory (populated
+    // asynchronously via IPC; never from process.env, which is unavailable in
+    // a context-isolated renderer)
+    if (file.path && this.currentProject.name && this.defaultProjectsDir) {
+      return ProjectUtils.joinPath(this.defaultProjectsDir, this.currentProject.name, file.path);
     }
 
     // The final fallback case
-    console.log('🔍 getFileAbsolutePath: Using fallback path:', file.path || '');
     return file.path || '';
   }
 
@@ -1441,17 +1584,7 @@ class ProjectManagerWindow {
 
     // If there's no absolute path, try to build one
     if (!normalizedFile.absolutePath && this.currentProject.dataFolderPath) {
-      // Use simple path concatenation instead of path.resolve
-      const basePath = this.currentProject.dataFolderPath;
-      const relativePath = normalizedFile.path;
-
-      if (basePath.includes('\\')) {
-        // Windows path
-        normalizedFile.absolutePath = basePath + '\\' + relativePath.replace(/\//g, '\\');
-      } else {
-        // Unix/Linux/Mac path
-        normalizedFile.absolutePath = basePath + '/' + relativePath;
-      }
+      normalizedFile.absolutePath = ProjectUtils.joinPath(this.currentProject.dataFolderPath, normalizedFile.path);
     }
 
     return normalizedFile;
@@ -1485,13 +1618,12 @@ class ProjectManagerWindow {
     const fileName = file.name.toLowerCase();
     const baseName = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
 
-    // Detect paired reads files (R1/R2, _1/_2, forward/reverse)
-    if (fileName.includes('_r1') || fileName.includes('_1') || fileName.includes('forward')) {
-      const pairPattern = fileName.replace(/(_r1|_1|forward)/, '(_r2|_2|reverse)');
-      const pair = allFiles.find(f =>
-        f.name.toLowerCase().match(new RegExp(pairPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
-      );
-      if (pair) {
+    // Detect paired reads files (R1/R2, _1/_2) via literal token replacement
+    const lowerCaseNames = new Set(allFiles.map(f => f.name.toLowerCase()));
+    const mateName = ProjectUtils.findPairedReadName(file.name, lowerCaseNames);
+    if (mateName) {
+      const pair = allFiles.find(f => f.name.toLowerCase() === mateName.toLowerCase());
+      if (pair && pair.id !== file.id) {
         relationships.push({ type: 'paired_reads', file: pair });
       }
     }
@@ -1676,9 +1808,48 @@ class ProjectManagerWindow {
   }
 
   filterFiles(files) {
-    if (!this.searchTerm) return files;
+    let result = files;
 
-    return files.filter(file => file.name.toLowerCase().includes(this.searchTerm));
+    // Honor the "show hidden files" toggle (dotfiles are hidden by default)
+    if (!this.showHiddenFiles) {
+      result = result.filter(file => !file.name.startsWith('.'));
+    }
+
+    if (this.searchTerm) {
+      result = result.filter(file => file.name.toLowerCase().includes(this.searchTerm));
+    }
+
+    return this.sortFiles(result);
+  }
+
+  /**
+   * Sort a file list according to the current sortBy setting
+   * (the Sort menu previously stored the choice but never applied it)
+   */
+  sortFiles(files) {
+    const sorted = [...files];
+    const getTime = file => {
+      const t = new Date(file.modified || file.added || file.created || 0).getTime();
+      return Number.isNaN(t) ? 0 : t;
+    };
+
+    switch (this.sortBy) {
+      case 'size':
+        sorted.sort((a, b) => (b.size || 0) - (a.size || 0));
+        break;
+      case 'type':
+        sorted.sort((a, b) => (a.type || '').localeCompare(b.type || '') || a.name.localeCompare(b.name));
+        break;
+      case 'modified': // menu sends 'modified'
+      case 'date':
+        sorted.sort((a, b) => getTime(b) - getTime(a));
+        break;
+      case 'name':
+      default:
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+    return sorted;
   }
 
   updateFileCardSelection() {
@@ -1747,7 +1918,7 @@ class ProjectManagerWindow {
       this.showNotification('🔄 Project directory scanned and refreshed', 'success');
     } else {
       // If there's no current project, load the project list normally
-      this.loadProjects();
+      await this.loadProjects();
       this.renderProjectTree();
       this.showNotification('📂 Projects list refreshed', 'success');
     }
@@ -1872,42 +2043,31 @@ class ProjectManagerWindow {
     }
   }
 
-  // ====== Utility functions ======
+  // ====== Utility functions (delegating to the shared ProjectUtils module) ======
 
   generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    return ProjectUtils.generateId('pmw');
   }
 
   detectFileType(fileName) {
-    if (!fileName || typeof fileName !== 'string') {
-      return 'unknown';
-    }
-
-    const parts = fileName.toLowerCase().split('.');
-    if (parts.length < 2) {
-      return 'text'; // files without an extension default to text
-    }
-
-    const ext = '.' + parts.pop();
-
-    for (const [type, config] of Object.entries(this.fileTypes)) {
-      if (config.extensions && config.extensions.includes(ext)) {
-        return type;
-      }
-    }
-
-    return 'unknown';
+    return ProjectUtils.detectFileType(fileName);
   }
 
   formatFileSize(bytes) {
-    if (bytes === 0) return '0 B';
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round((bytes / Math.pow(1024, i)) * 10) / 10 + ' ' + sizes[i];
+    return ProjectUtils.formatFileSize(bytes);
   }
 
   formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString();
+    return ProjectUtils.formatDate(dateString);
+  }
+
+  /**
+   * Display name honoring the "show file extensions" view toggle
+   */
+  getDisplayFileName(file) {
+    if (this.showFileExtensions) return file.name;
+    const ext = ProjectUtils.getExtension(file.name);
+    return ext ? file.name.slice(0, file.name.length - ext.length) : file.name;
   }
 
   arraysEqual(a, b) {
@@ -2007,41 +2167,74 @@ class ProjectManagerWindow {
       return;
     }
 
-    if (!window.electronAPI || !window.electronAPI.checkFileExists) {
-      console.warn('checkFileExists API not available');
+    if (!window.electronAPI || (!window.electronAPI.checkFilesExist && !window.electronAPI.checkFileExists)) {
+      console.warn('File existence check API not available');
       return;
     }
 
-    console.log(`🔍 Checking file existence for ${this.currentProject.files.length} files...`);
+    // Resolve every path up front
+    const entries = this.currentProject.files.map(file => ({
+      file,
+      path: this.getFileAbsolutePath(file),
+    }));
+
     let missingCount = 0;
 
-    for (const file of this.currentProject.files) {
-      const filePath = this.getFileAbsolutePath(file);
-      if (!filePath) {
-        file.fileExists = false;
-        missingCount++;
-        continue;
-      }
+    if (window.electronAPI.checkFilesExist) {
+      // Batch path: a single IPC round trip for the whole file list
+      const paths = entries.filter(e => e.path).map(e => e.path);
+      entries.forEach(e => {
+        if (!e.path) {
+          e.file.fileExists = false;
+          missingCount++;
+        }
+      });
 
       try {
-        const result = await window.electronAPI.checkFileExists(filePath);
-        file.fileExists = result.exists;
-        if (!result.exists) {
-          missingCount++;
-          console.log(`⚠️ File missing: ${file.name} (${filePath})`);
+        const result = await window.electronAPI.checkFilesExist(paths);
+        if (result.success) {
+          entries.forEach(e => {
+            if (!e.path) return;
+            e.file.fileExists = result.results[e.path] === true;
+            if (!e.file.fileExists) missingCount++;
+          });
+        } else {
+          throw new Error(result.error || 'Batch existence check failed');
         }
       } catch (error) {
-        console.error(`Error checking file: ${file.name}`, error);
-        file.fileExists = false;
-        missingCount++;
+        console.error('Batch file existence check failed:', error);
+        entries.forEach(e => {
+          if (e.path && e.file.fileExists === undefined) {
+            e.file.fileExists = false;
+            missingCount++;
+          }
+        });
+      }
+    } else {
+      // Fallback: sequential per-file checks (older preload)
+      for (const { file, path: filePath } of entries) {
+        if (!filePath) {
+          file.fileExists = false;
+          missingCount++;
+          continue;
+        }
+
+        try {
+          const result = await window.electronAPI.checkFileExists(filePath);
+          file.fileExists = result.exists;
+          if (!result.exists) {
+            missingCount++;
+          }
+        } catch (error) {
+          console.error(`Error checking file: ${file.name}`, error);
+          file.fileExists = false;
+          missingCount++;
+        }
       }
     }
 
     if (missingCount > 0) {
-      console.log(`⚠️ Found ${missingCount} missing files`);
       this.showNotification(`Warning: ${missingCount} file(s) not found on disk (marked in red)`, 'warning');
-    } else {
-      console.log('✅ All files exist on disk');
     }
   }
 
@@ -2203,26 +2396,32 @@ class ProjectManagerWindow {
     await this.exportCurrentProject();
   }
 
-  async exportProjectArchive() {
+  /**
+   * Export the current project as a JSON download
+   */
+  async exportCurrentProject() {
     if (!this.currentProject) {
-      this.showNotification('No project to export', 'warning');
+      this.showNotification('No project selected', 'warning');
       return;
     }
 
     try {
-      if (window.electronAPI && window.electronAPI.selectDirectory) {
-        const result = await window.electronAPI.selectDirectory();
-        if (result.success && !result.canceled) {
-          // Create archive with project files and data
-          this.showNotification(`Project archive export initiated to: ${result.filePath}`, 'info');
-          // TODO: Implement actual archive creation
-        }
-      } else {
-        this.showNotification('Archive export not available in browser mode', 'warning');
-      }
+      const exportData = JSON.stringify(this.currentProject, null, 2);
+      const blob = new Blob([exportData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${this.currentProject.name}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      this.showNotification(`Project "${this.currentProject.name}" exported as JSON`, 'success');
     } catch (error) {
-      console.error('Error exporting project archive:', error);
-      this.showNotification('Failed to export project archive', 'error');
+      console.error('Error exporting project as JSON:', error);
+      this.showNotification('Failed to export project as JSON', 'error');
     }
   }
 
@@ -2242,11 +2441,6 @@ class ProjectManagerWindow {
   }
 
   // ==================== EDIT MENU METHODS ====================
-
-  redoLastAction() {
-    // TODO: Implement redo functionality with redo stack
-    this.showNotification('Redo functionality coming soon', 'info');
-  }
 
   cutSelectedFiles() {
     if (this.selectedFiles.size === 0) {
@@ -2365,9 +2559,10 @@ class ProjectManagerWindow {
     }
 
     let replacedCount = 0;
+    const findPattern = new RegExp(ProjectUtils.escapeRegExp(findTerm), 'g');
     this.currentProject.files.forEach(file => {
       if (file.name.includes(findTerm)) {
-        file.name = file.name.replace(new RegExp(findTerm, 'g'), replaceTerm);
+        file.name = file.name.replace(findPattern, replaceTerm);
         file.modified = new Date().toISOString();
         replacedCount++;
       }
@@ -2477,23 +2672,28 @@ class ProjectManagerWindow {
       const typeConfig = this.fileTypes[fileType] || { icon: '📄', color: 'var(--pm-text-secondary)' };
       const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
 
+      const safeFileId = ProjectUtils.escapeHtml(file.id);
+      const safeFileIdJs = ProjectUtils.escapeHtml(ProjectUtils.escapeJsString(file.id));
+      const safeFileName = ProjectUtils.escapeHtml(file.name);
+      const displayName = ProjectUtils.escapeHtml(this.getDisplayFileName(file));
+
       html += `
                 <div class="file-list-item ${isSelected ? 'selected' : ''}" 
                      draggable="true"
-                     onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                     ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
-                     oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
-                     data-file-id="${file.id}">
+                     onclick="projectManagerWindow.selectFile('${safeFileIdJs}', event.ctrlKey || event.metaKey)"
+                     ondblclick="projectManagerWindow.openFileInMainWindow('${safeFileIdJs}')"
+                     oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${safeFileIdJs}')"
+                     data-file-id="${safeFileId}">
                     <div class="file-icon-small" style="background-color: ${typeConfig.color}">
                         ${typeConfig.icon}
                     </div>
-                    <div class="file-name" title="${file.name}">${file.name}</div>
+                    <div class="file-name" title="${safeFileName}">${displayName}</div>
                     <div class="file-size">${this.formatFileSize(file.size || 0)}</div>
                     <div class="file-date">${file.modified ? this.formatDate(file.modified) : 'Unknown'}</div>
                     <div class="file-actions-list">
-                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview">👁️</button>
-                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
-                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${safeFileIdJs}')" title="Preview">👁️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${safeFileIdJs}')" title="Rename">✏️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${safeFileIdJs}')" title="Delete">🗑️</button>
                     </div>
                 </div>
             `;
@@ -2550,28 +2750,33 @@ class ProjectManagerWindow {
       const isSelected = this.selectedFiles && this.selectedFiles.has(file.id);
       const isDeleted = file.fileExists === false;
 
+      const safeFileId = ProjectUtils.escapeHtml(file.id);
+      const safeFileIdJs = ProjectUtils.escapeHtml(ProjectUtils.escapeJsString(file.id));
+      const safeFileName = ProjectUtils.escapeHtml(file.name);
+      const displayName = ProjectUtils.escapeHtml(this.getDisplayFileName(file));
+
       html += `
                 <tr class="${isSelected ? 'selected' : ''} ${isDeleted ? 'file-deleted' : ''}"
                     draggable="true"
-                    onclick="projectManagerWindow.selectFile('${file.id}', event.ctrlKey || event.metaKey)"
-                    ondblclick="projectManagerWindow.openFileInMainWindow('${file.id}')"
-                    oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${file.id}')"
-                    data-file-id="${file.id}">
+                    onclick="projectManagerWindow.selectFile('${safeFileIdJs}', event.ctrlKey || event.metaKey)"
+                    ondblclick="projectManagerWindow.openFileInMainWindow('${safeFileIdJs}')"
+                    oncontextmenu="projectManagerWindow.showFileContextMenu(event, '${safeFileIdJs}')"
+                    data-file-id="${safeFileId}">
                     <td>
                         <div class="file-icon-small" style="background-color: ${isDeleted ? 'var(--pm-danger)' : typeConfig.color}">
                             ${isDeleted ? '⚠️' : typeConfig.icon}
                         </div>
                     </td>
-                    <td class="file-name" title="${file.name}${isDeleted ? ' (File not found on disk)' : ''}">
-                        ${file.name}${isDeleted ? ' <span style="color: #dc3545; font-size: 0.8em;">(Missing)</span>' : ''}
+                    <td class="file-name" title="${safeFileName}${isDeleted ? ' (File not found on disk)' : ''}">
+                        ${displayName}${isDeleted ? ' <span style="color: #dc3545; font-size: 0.8em;">(Missing)</span>' : ''}
                     </td>
                     <td>${fileType.toUpperCase()}</td>
                     <td>${this.formatFileSize(file.size || 0)}</td>
                     <td>${file.modified ? this.formatDate(file.modified) : 'Unknown'}</td>
                     <td class="file-actions-details">
-                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${file.id}')" title="Preview" ${isDeleted ? 'disabled' : ''}>👁️</button>
-                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${file.id}')" title="Rename">✏️</button>
-                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${file.id}')" title="Delete">🗑️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.showFilePreview('${safeFileIdJs}')" title="Preview" ${isDeleted ? 'disabled' : ''}>👁️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.renameFile('${safeFileIdJs}')" title="Rename">✏️</button>
+                        <button class="file-action-btn-small" onclick="event.stopPropagation(); projectManagerWindow.deleteFile('${safeFileIdJs}')" title="Delete">🗑️</button>
                     </td>
                 </tr>
             `;
@@ -2599,7 +2804,87 @@ class ProjectManagerWindow {
     this.showNotification(`File extensions ${show ? 'shown' : 'hidden'}`, 'info');
   }
 
+  /**
+   * Show/hide the project sidebar (F8)
+   */
+  toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const splitter = document.querySelector('.sidebar-splitter');
+    if (!sidebar) return;
+
+    const show = sidebar.style.display === 'none';
+    sidebar.style.display = show ? '' : 'none';
+    if (splitter) splitter.style.display = show ? '' : 'none';
+
+    localStorage.setItem('projectManager_sidebarHidden', show ? 'false' : 'true');
+    this.showNotification(`Sidebar ${show ? 'shown' : 'hidden'}`, 'info');
+  }
+
+  /**
+   * Re-apply the persisted sidebar visibility at startup
+   */
+  loadSidebarPreference() {
+    if (localStorage.getItem('projectManager_sidebarHidden') !== 'true') return;
+
+    const sidebar = document.querySelector('.sidebar');
+    const splitter = document.querySelector('.sidebar-splitter');
+    if (sidebar) sidebar.style.display = 'none';
+    if (splitter) splitter.style.display = 'none';
+  }
+
   // ==================== PROJECT MENU METHODS ====================
+
+  /**
+   * Compute the statistics displayed by showProjectStatistics
+   */
+  calculateProjectStatistics() {
+    const project = this.currentProject;
+    const stats = {
+      fileTypes: {},
+      totalFiles: 0,
+      totalSize: 0,
+      averageFileSize: 0,
+      oldestFile: null,
+      newestFile: null,
+      folderCount: project ? project.folders.length : 0,
+      rootFiles: 0,
+      folderFiles: 0,
+    };
+    if (!project) return stats;
+
+    let oldestTime = null;
+    let newestTime = null;
+
+    project.files.forEach(file => {
+      stats.totalFiles++;
+      stats.totalSize += Number(file.size) || 0;
+
+      const type = file.type || this.detectFileType(file.name);
+      stats.fileTypes[type] = (stats.fileTypes[type] || 0) + 1;
+
+      if (file.folder && file.folder.length > 0) {
+        stats.folderFiles++;
+      } else {
+        stats.rootFiles++;
+      }
+
+      const timestamp = file.added || file.created || file.modified;
+      const time = timestamp ? new Date(timestamp).getTime() : NaN;
+      if (!Number.isNaN(time)) {
+        if (oldestTime === null || time < oldestTime) {
+          oldestTime = time;
+          stats.oldestFile = timestamp;
+        }
+        if (newestTime === null || time > newestTime) {
+          newestTime = time;
+          stats.newestFile = timestamp;
+        }
+      }
+    });
+
+    stats.averageFileSize = stats.totalFiles > 0 ? Math.round(stats.totalSize / stats.totalFiles) : 0;
+    return stats;
+  }
 
   showProjectStatistics() {
     if (!this.currentProject) {
@@ -2645,25 +2930,30 @@ ${Object.entries(stats.fileTypes)
       const fileType = this.detectFileType(file.name);
       let targetFolder = null;
 
-      // Auto-organize by file type
+      // Auto-organize by file type. Target paths MUST match the canonical
+      // lowercase folder paths created with the project — a case mismatch
+      // makes files disappear from every folder view.
       switch (fileType) {
         case 'fasta':
         case 'genbank':
-          targetFolder = ['Genomes'];
+          targetFolder = ['genomes'];
           break;
         case 'gff':
         case 'bed':
-          targetFolder = ['Annotations'];
+          targetFolder = ['annotations'];
           break;
         case 'vcf':
-          targetFolder = ['Variants'];
+          targetFolder = ['variants'];
           break;
         case 'bam':
         case 'sam':
-          targetFolder = ['Reads'];
+        case 'fastq':
+          targetFolder = ['reads'];
           break;
+        case 'unknown':
+          return; // leave unrecognized files where they are
         default:
-          targetFolder = ['Analysis'];
+          targetFolder = ['analysis'];
       }
 
       if (targetFolder && !this.arraysEqual(file.folder || [], targetFolder)) {
@@ -2688,10 +2978,14 @@ ${Object.entries(stats.fileTypes)
       return;
     }
 
-    // Create date-based folders and move files
+    // Create date-based folders and move files. Files added through the UI
+    // carry `added`, not `created` — accept both and skip invalid dates
+    // instead of crashing on `new Date(undefined)`.
     const dateGroups = {};
     this.currentProject.files.forEach(file => {
-      const date = new Date(file.created).toISOString().split('T')[0]; // YYYY-MM-DD
+      const rawDate = file.added || file.created || file.modified;
+      const parsed = rawDate ? new Date(rawDate) : null;
+      const date = parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString().split('T')[0] : 'undated';
       if (!dateGroups[date]) {
         dateGroups[date] = [];
       }
@@ -2796,9 +3090,14 @@ ${Object.entries(stats.fileTypes)
           reader.onload = event => {
             try {
               const projectData = JSON.parse(event.target.result);
+              if (!projectData || typeof projectData !== 'object' || !projectData.name) {
+                throw new Error('Not a project backup file');
+              }
               const newId = this.generateId();
               projectData.id = newId;
               projectData.name += ' (Restored)';
+              // Older backups may lack metadata/containers — normalize first
+              ProjectUtils.normalizeProject(projectData);
               projectData.metadata.lastOpened = new Date().toISOString();
 
               this.projects.set(newId, projectData);
@@ -2808,7 +3107,7 @@ ${Object.entries(stats.fileTypes)
               this.showNotification('Project restored from backup', 'success');
             } catch (error) {
               console.error('Error parsing backup file:', error);
-              this.showNotification('Invalid backup file format', 'error');
+              this.showNotification(`Invalid backup file: ${error.message}`, 'error');
             }
           };
           reader.readAsText(file);
@@ -2861,17 +3160,16 @@ ${Object.entries(stats.fileTypes)
       return;
     }
 
-    const confirm = window.confirm(
+    const confirmed = window.confirm(
       `⚠️ DELETE PROJECT "${this.currentProject.name}"?\n\n` +
         'This action cannot be undone!\n\n' +
         'This will permanently delete:\n' +
         '• All project metadata\n' +
-        '• File references (actual files may remain on disk)\n' +
-        '• Project configuration\n\n' +
-        'Type "DELETE" to confirm:'
+        '• File references (actual files remain on disk)\n' +
+        '• Project configuration'
     );
 
-    if (confirm === 'DELETE') {
+    if (confirmed) {
       const projectName = this.currentProject.name;
       this.projects.delete(this.currentProject.id);
       this.saveProjects();
@@ -2884,6 +3182,84 @@ ${Object.entries(stats.fileTypes)
     } else {
       this.showNotification('Project deletion cancelled', 'info');
     }
+  }
+
+  /**
+   * Analyze the current project and show a summary
+   * (wired to the "Analyze Project" button in the overview)
+   */
+  analyzeProject() {
+    if (!this.currentProject) {
+      this.showNotification('Please select a project first', 'warning');
+      return;
+    }
+
+    const stats = this.calculateProjectStatistics();
+    const classification = this.smartFileClassification(this.currentProject.files);
+
+    const report = `
+🔬 Project Analysis: ${this.currentProject.name}
+
+📊 Overview:
+• Total Files: ${stats.totalFiles}
+• Total Size: ${this.formatFileSize(stats.totalSize)}
+• Folders: ${stats.folderCount}
+
+🧬 Content Classification:
+• Genomes: ${classification.genomes.length}
+• Annotations: ${classification.annotations.length}
+• Variants: ${classification.variants.length}
+• Reads: ${classification.reads.length}
+• Analysis Results: ${classification.analysis.length}
+• Others: ${classification.others.length}
+
+📂 Organization:
+• Files in Root: ${stats.rootFiles}
+• Files in Folders: ${stats.folderFiles}
+        `.trim();
+
+    alert(report);
+  }
+
+  /**
+   * Import a project from a file (menu: Import Project). When the menu
+   * already carries a file path, load it directly; otherwise ask.
+   */
+  async importProject(filePath = null) {
+    if (filePath) {
+      await this.loadProjectFromFile(filePath);
+    } else {
+      await this.openProject();
+    }
+  }
+
+  /**
+   * Close the current project and return to the overview
+   */
+  closeCurrentProject() {
+    if (!this.currentProject) {
+      this.showNotification('No project is currently open', 'warning');
+      return;
+    }
+
+    const projectName = this.currentProject.name;
+    this.currentProject.isCurrentlyOpen = false;
+    this.currentProject = null;
+    this.currentPath = [];
+    this.selectedFiles.clear();
+
+    // Clear the app-wide active project
+    if (window.electronAPI && window.electronAPI.setActiveProject) {
+      window.electronAPI.setActiveProject(null).catch(error => {
+        console.error('Error clearing active project:', error);
+      });
+    }
+
+    this.renderProjectTree();
+    this.renderProjectContent();
+    this.updateSaveButtonState();
+    this.updateStatusBar('Ready');
+    this.showNotification(`Project "${projectName}" closed`, 'info');
   }
 
   // ==================== TOOLS MENU METHODS ====================
@@ -2942,30 +3318,91 @@ ${issues.length > 10 ? `\n... and ${issues.length - 10} more issues` : ''}
     }
   }
 
-  convertFastaToGenBank() {
-    this.showNotification('FASTA to GenBank conversion: Feature coming soon', 'info');
-    // TODO: Implement actual conversion
-  }
-
-  convertGffToBed() {
-    this.showNotification('GFF to BED conversion: Feature coming soon', 'info');
-    // TODO: Implement actual conversion
-  }
-
-  showCustomConversionDialog() {
-    const conversionOptions = [
-      'FASTA to GenBank',
-      'GenBank to FASTA',
-      'GFF to BED',
-      'BED to GFF',
-      'VCF to BED',
-      'Custom script...',
-    ].join('\n');
-
-    const choice = prompt(`Select conversion type:\n${conversionOptions}\n\nEnter conversion name:`);
-    if (choice) {
-      this.showNotification(`Custom conversion "${choice}": Feature coming soon`, 'info');
+  /**
+   * Validate that all files of the current project still exist on disk
+   * (menu: Tools → Validate Files)
+   */
+  async validateFiles() {
+    if (!this.currentProject) {
+      this.showNotification('No project selected', 'warning');
+      return;
     }
+
+    this.updateStatusBar('Validating files...');
+    try {
+      await this.checkFilesExistence();
+
+      const missingFiles = this.currentProject.files.filter(file => file.fileExists === false);
+      if (missingFiles.length === 0) {
+        this.showNotification(`Validation complete: all ${this.currentProject.files.length} files found`, 'success');
+      } else {
+        const report = `
+File Validation Results:
+
+Total Files: ${this.currentProject.files.length}
+Missing Files: ${missingFiles.length}
+
+Missing:
+${missingFiles
+  .slice(0, 15)
+  .map(file => `• ${file.name}`)
+  .join('\n')}
+${missingFiles.length > 15 ? `\n... and ${missingFiles.length - 15} more` : ''}
+            `.trim();
+        alert(report);
+        this.showNotification(`Validation found ${missingFiles.length} missing file(s)`, 'warning');
+      }
+
+      this.renderProjectContent();
+    } finally {
+      this.updateStatusBar('Ready');
+    }
+  }
+
+  /**
+   * Find duplicate files (same name and size) in the current project
+   * (menu: Tools → Find Duplicates)
+   */
+  findDuplicateFiles() {
+    if (!this.currentProject) {
+      this.showNotification('No project selected', 'warning');
+      return;
+    }
+
+    const groups = new Map();
+    this.currentProject.files.forEach(file => {
+      const key = `${file.name.toLowerCase()}|${file.size || 0}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(file);
+    });
+
+    const duplicates = Array.from(groups.values()).filter(group => group.length > 1);
+    if (duplicates.length === 0) {
+      this.showNotification('No duplicate files found', 'success');
+      return;
+    }
+
+    // Select the redundant copies so the user can act on them directly
+    this.selectedFiles.clear();
+    duplicates.forEach(group => group.slice(1).forEach(file => this.selectedFiles.add(file.id)));
+    this.updateFileCardSelection();
+
+    const report = `
+Duplicate Files Report:
+
+Duplicate Groups: ${duplicates.length}
+Redundant Copies (now selected): ${this.selectedFiles.size}
+
+Groups:
+${duplicates
+  .slice(0, 10)
+  .map(group => `• ${group[0].name} (${group.length} copies, ${this.formatFileSize(group[0].size || 0)} each)`)
+  .join('\n')}
+${duplicates.length > 10 ? `\n... and ${duplicates.length - 10} more groups` : ''}
+        `.trim();
+
+    alert(report);
+    this.showNotification(`Found ${duplicates.length} duplicate group(s); redundant copies selected`, 'warning');
   }
 
   showBatchRenameDialog() {
@@ -3098,7 +3535,7 @@ ${issues.length > 10 ? `\n... and ${issues.length - 10} more issues` : ''}
     }
   }
 
-  openInExternalEditor() {
+  async openInExternalEditor() {
     if (this.selectedFiles.size === 0) {
       this.showNotification('Please select a file to open', 'warning');
       return;
@@ -3107,18 +3544,32 @@ ${issues.length > 10 ? `\n... and ${issues.length - 10} more issues` : ''}
     const fileId = Array.from(this.selectedFiles)[0];
     const file = this.findFileById(fileId);
 
-    if (file) {
-      const filePath = this.getFileAbsolutePath(file);
-      if (filePath && window.electronAPI && window.electronAPI.openFileInExternalEditor) {
-        window.electronAPI.openFileInExternalEditor(filePath);
-        this.showNotification(`Opening "${file.name}" in external editor`, 'info');
-      } else if (!filePath) {
-        this.showNotification('File path not available', 'error');
-      } else {
-        this.showNotification('External editor not available in browser mode', 'warning');
-      }
-    } else {
+    if (!file) {
       this.showNotification('File not found', 'error');
+      return;
+    }
+
+    const filePath = this.getFileAbsolutePath(file);
+    if (!filePath) {
+      this.showNotification('File path not available', 'error');
+      return;
+    }
+
+    if (!window.electronAPI || !window.electronAPI.openFileInExternalEditor) {
+      this.showNotification('External editor not available in browser mode', 'warning');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.openFileInExternalEditor(filePath);
+      if (result && result.success) {
+        this.showNotification(`Opening "${file.name}" in external editor`, 'info');
+      } else {
+        this.showNotification(`Failed to open externally: ${(result && result.error) || 'unknown error'}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error opening file in external editor:', error);
+      this.showNotification('Failed to open file in external editor', 'error');
     }
   }
 
@@ -3186,7 +3637,9 @@ Note: Full preferences dialog coming soon!
 • Ctrl+O - Open Project
 • Ctrl+S - Save Project
 • Ctrl+I - Import Files
+• Ctrl+F - Find Files
 • F5 - Refresh
+• F8 - Toggle Sidebar
 • Del - Delete Selected
 
 🔧 Features:
@@ -3199,13 +3652,51 @@ Note: Full preferences dialog coming soon!
 💡 Tips:
 • Right-click for context menus
 • Use Ctrl+Click for multiple selection
-• Drag files between folders to organize
+• Drag & drop files onto the workspace to import them
 • Export projects regularly for backup
 
 For more help, visit the User Guide or report issues.
         `.trim();
 
     alert(helpContent);
+  }
+
+  /**
+   * Open the documentation (F1) — maps to the built-in user guide
+   */
+  showDocumentation() {
+    this.showUserGuide();
+  }
+
+  /**
+   * List the keyboard shortcuts that are actually implemented
+   */
+  showKeyboardShortcuts() {
+    const shortcuts = `
+⌨️ Keyboard Shortcuts
+
+File Operations:
+• Ctrl/Cmd+N — New Project
+• Ctrl/Cmd+Shift+N — New Folder
+• Ctrl/Cmd+O — Open Project
+• Ctrl/Cmd+S — Save Project
+• Ctrl/Cmd+Shift+S — Save Project As...
+
+Editing:
+• Ctrl/Cmd+A — Select All Files (with a project open)
+• Delete — Delete Selected Files
+• Escape — Clear Selection
+
+View:
+• F5 — Refresh Projects
+• F8 — Toggle Sidebar
+• F9 — Toggle Details Panel
+
+Help:
+• F1 — Documentation
+        `.trim();
+
+    alert(shortcuts);
   }
 
   showUserGuide() {
@@ -3225,20 +3716,19 @@ For more help, visit the User Guide or report issues.
 
 3. PROJECT ORGANIZATION
    • Create custom folders (Project → Create Folder)
-   • Drag files between folders
+   • Move files with Edit → Cut/Paste or Batch Move
    • Use auto-organize features
 
 📁 File Management:
 • VIEW MODES: Grid, List, Details
 • SORTING: Name, Date, Size, Type
 • SEARCH: Find files by name (Ctrl+F)
-• SELECTION: Single click, Ctrl+click, range select
+• SELECTION: Single click, Ctrl+click, Select All (Ctrl+A)
 
 🔧 Advanced Features:
 • BATCH OPERATIONS: Rename, move, delete multiple files
 • FILE VALIDATION: Check integrity and find duplicates
 • PROJECT BACKUP: Export and import projects
-• CONVERSION TOOLS: Transform file formats
 
 ⚙️ Project Settings:
 • Project Properties: View metadata and statistics
@@ -3396,9 +3886,6 @@ System Information:
     }
   }
 
-  // Initialize clipboard for cut/copy/paste operations
-  clipboard = null;
-
   // ==================== ADDITIONAL MENU METHODS ====================
 
   /**
@@ -3418,34 +3905,19 @@ System Information:
           // Parse the project file content
           let project;
           const content = result.content;
-          const fileName = result.fileName;
+          // The IPC result may omit fileName — fall back to the path itself
+          const fileName = result.fileName || ProjectUtils.getBaseName(filePath);
 
-          // Determine file format and parse accordingly
-          const lowerFileName = fileName.toLowerCase();
-          if (
-            lowerFileName.endsWith('.prj.gai') ||
-            lowerFileName.endsWith('.gai') ||
-            lowerFileName.endsWith('.xml') ||
-            lowerFileName.includes('.gai')
-          ) {
-            // XML format - support various .GAI file naming patterns
+          // Unified format detection (file name + content based, case-insensitive)
+          const format = ProjectUtils.detectProjectFormat(fileName, content);
+          if (format === 'xml') {
             if (!this.xmlHandler) {
               this.xmlHandler = new ProjectXMLHandler();
             }
             project = this.xmlHandler.xmlToProject(content);
-          } else if (lowerFileName.endsWith('.json') || lowerFileName.endsWith('.genomeproj')) {
-            // JSON format
-            project = JSON.parse(content);
           } else {
-            throw new Error(`Unsupported file format: ${fileName}. 
-                            Supported formats include:
-                            • .prj.gai (XML project file)
-                            • .gai (GAI project file)
-                            • .xml (XML project file)
-                            • .json (JSON project file)
-                            • .genomeproj (GenomeProj file)
-                            
-                            Please ensure your project file has the correct extension.`);
+            // JSON format (backward compatible)
+            project = JSON.parse(content);
           }
 
           // Validate project data
@@ -3453,10 +3925,11 @@ System Information:
             throw new Error('Invalid project data structure');
           }
 
+          // Normalize containers/metadata so legacy files cannot crash the UI
+          ProjectUtils.normalizeProject(project);
+
           // If there's a current project open, show dialog to ask user's choice
           if (this.currentProject && this.currentProject.name) {
-            console.log('⚠️ Current project exists, showing open dialog...');
-
             if (window.electronAPI.showProjectOpenDialog) {
               const dialogResult = await window.electronAPI.showProjectOpenDialog(project.name);
 
@@ -3467,12 +3940,9 @@ System Information:
               // Handle user's choice
               switch (dialogResult.choice) {
                 case 0: // Open in Current Window
-                  console.log('📝 User chose: Open in Current Window');
-                  // Continue with normal project loading (will close current project)
                   break;
 
                 case 1: // Open in New Window
-                  console.log('🆕 User chose: Open in New Window');
                   if (window.electronAPI.openProjectInNewProcess) {
                     const newProcessResult = await window.electronAPI.openProjectInNewProcess(filePath);
                     if (newProcessResult.success) {
@@ -3485,37 +3955,35 @@ System Information:
 
                 case 2: // Cancel
                 default:
-                  console.log('❌ User chose: Cancel');
                   this.showNotification('Project opening cancelled', 'info');
                   return; // Don't load the project
               }
             }
           }
 
-          // Set up project paths for new directory structure
+          // Set up project paths (separator-agnostic; the renderer cannot rely
+          // on Node's path module under contextIsolation)
           project.projectFilePath = filePath;
 
-          // ... existing code ...
-
-          // Check whether it's the new structure (Project.GAI inside the project directory)
-          if (fileName === 'Project.GAI') {
-            // New structure: Project.GAI inside the project directory
-            const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
+          // New structure: Project.GAI inside the project directory
+          // (name comparison is case-insensitive). Old structure:
+          // <ProjectName>.prj.GAI alongside the data folder.
+          const projectDir = ProjectUtils.getParentPath(filePath);
+          if (fileName.toLowerCase() === 'project.gai') {
             project.dataFolderPath = projectDir;
-            project.location = projectDir.substring(0, projectDir.lastIndexOf('/'));
+            project.location = ProjectUtils.getParentPath(projectDir);
           } else {
-            // Old structure: ProjectName.prj.GAI alongside the project directory
-            const projectDir = filePath.substring(0, filePath.lastIndexOf('/'));
-            project.dataFolderPath = `${projectDir}/${project.name}`;
+            project.dataFolderPath = ProjectUtils.joinPath(projectDir, project.name);
             project.location = projectDir;
           }
 
           // Update project metadata
           project.xmlFileName = fileName;
           project.loadedFromFile = true;
-          project.lastOpened = new Date().toISOString();
+          project.metadata.lastOpened = new Date().toISOString();
           project.isCurrentlyOpen = true;
           project.hasUnsavedChanges = false;
+          project.justLoaded = true;
 
           // Close previous project
           if (this.currentProject) {
@@ -3532,62 +4000,28 @@ System Information:
           this.renderProjectTree();
           this.selectProject(project.id);
 
-          // Auto-scan project directory after loading to ensure workspace shows current files
+          // Auto-scan the project directory after loading so the workspace
+          // shows current files. The loaded project id is captured so the
+          // delayed scan aborts if the user switched projects meanwhile.
+          const loadedProjectId = project.id;
           setTimeout(async () => {
-            console.log('🔄 Auto-scanning project directory after loading...');
-            console.log('🔍 Current project:', this.currentProject?.name);
-            console.log('🔍 Project location:', this.currentProject?.location);
-            console.log('🔍 Data folder path:', this.currentProject?.dataFolderPath);
-            console.log('🔍 ElectronAPI available:', !!window.electronAPI);
-            console.log('🔍 scanProjectFolder available:', !!window.electronAPI?.scanProjectFolder);
-
-            // Force scan execution even if initial state is empty
-            if (this.currentProject) {
-              // Ensure project has basic array structures
-              if (!this.currentProject.files) {
-                this.currentProject.files = [];
-                console.log('📁 Initialized empty files array');
-              }
-              if (!this.currentProject.folders) {
-                this.currentProject.folders = [];
-                console.log('📁 Initialized empty folders array');
-              }
-
-              // Execute scan
-              try {
-                await this.scanAndAddNewFiles();
-                console.log('✅ Directory scan completed');
-              } catch (error) {
-                console.error('❌ Directory scan failed:', error);
-                // If scan fails, at least ensure basic structure is displayed
-                this.showNotification('Directory scan failed, but project loaded. Use manual refresh.', 'warning');
-              }
+            if (!this.currentProject || this.currentProject.id !== loadedProjectId) {
+              return; // user switched projects within the delay — do not clobber
+            }
+            try {
+              await this.scanAndAddNewFiles();
+            } catch (error) {
+              console.error('Directory scan failed:', error);
+              this.showNotification('Directory scan failed, but project loaded. Use manual refresh.', 'warning');
             }
 
-            // Force UI refresh regardless of scan success
             this.renderProjectTree();
-            if (this.currentProject) {
-              this.selectProject(this.currentProject.id);
-              this.renderProjectContent(); // Ensure workspace content is also refreshed
+            if (this.currentProject && this.currentProject.id === loadedProjectId) {
+              this.renderProjectContent();
             }
-
-            console.log('🎯 UI refresh completed - check workspace for files/folders');
-            console.log('📊 Final project state:', {
-              files: this.currentProject?.files?.length || 0,
-              folders: this.currentProject?.folders?.length || 0,
-            });
           }, 300);
 
-          this.showNotification(`✅ Project "${project.name}" loaded successfully`, 'success');
-
-          console.log('📊 Project loaded successfully:', {
-            id: project.id,
-            name: project.name,
-            files: project.files?.length || 0,
-            folders: project.folders?.length || 0,
-            projectFile: project.projectFilePath,
-            dataFolder: project.dataFolderPath,
-          });
+          this.showNotification(`Project "${project.name}" loaded successfully`, 'success');
         } else {
           throw new Error(result.error || 'Failed to load project file');
         }
@@ -3605,6 +4039,61 @@ System Information:
    */
   createNewProject() {
     this.showModal('newProjectModal');
+  }
+
+  /**
+   * Drag & drop file import. Dropped File objects no longer carry a path
+   * (Electron >= 32), so paths are resolved through webUtils in the preload.
+   * The resolved files flow through the same staging + Add Files modal as
+   * the file-picker path.
+   */
+  setupDragAndDrop() {
+    const dropZone = document.querySelector('.main-container') || document.body;
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    dropZone.addEventListener('drop', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!this.currentProject) {
+        this.showNotification('Please select a project first', 'warning');
+        return;
+      }
+
+      if (!window.electronAPI || !window.electronAPI.getPathForFile) {
+        this.showNotification('Drag & drop import is not available in this environment', 'warning');
+        return;
+      }
+
+      const droppedFiles = Array.from(e.dataTransfer ? e.dataTransfer.files : []);
+      if (droppedFiles.length === 0) return;
+
+      const filePaths = [];
+      for (const droppedFile of droppedFiles) {
+        try {
+          const resolvedPath = window.electronAPI.getPathForFile(droppedFile);
+          if (resolvedPath) {
+            filePaths.push(resolvedPath);
+          }
+        } catch (error) {
+          console.error('Failed to resolve dropped file path:', droppedFile.name, error);
+        }
+      }
+
+      if (filePaths.length === 0) {
+        this.showNotification('Could not resolve any dropped file paths', 'warning');
+        return;
+      }
+
+      this.pendingFilesToAdd = filePaths;
+      this.pendingAddFolder = [...this.currentPath];
+      this.populateAddFilesModal(filePaths);
+      this.showModal('addFilesModal');
+    });
   }
 
   /**
@@ -3653,7 +4142,7 @@ System Information:
 • Projects Count: ${this.projects.size}
 • Files in Current Project: ${this.currentProject ? this.currentProject.files?.length || 0 : 0}
 • Timestamp: ${new Date().toISOString()}
-• Project Manager Version: 1.0.0
+• CodeXomics Version: 0.722.0
             `.trim();
 
       const mailtoLink = `mailto:support@codexomics.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -3675,8 +4164,7 @@ System Information:
 📁 Project Manager
 Part of CodeXomics
 
-Version: 1.0.0 Beta
-Build: ${new Date().toISOString().split('T')[0]}
+Version: 0.722.0
 
 🎯 Purpose:
 Advanced project management for genomic data analysis and bioinformatics workflows.
@@ -3692,16 +4180,13 @@ Advanced project management for genomic data analysis and bioinformatics workflo
 👥 Development Team:
 CodeXomics Development Team
 
-📧 Support:
-support@codexomics.com
-
 📖 Documentation:
 Visit Help → User Guide for comprehensive documentation
 
 🐛 Report Issues:
 Use Help → Report Issue to submit bug reports
 
-© 2024 CodeXomics. All rights reserved.
+© 2026 CodeXomics. All rights reserved.
 
 Built with ❤️ for the bioinformatics community.
         `.trim();
@@ -3722,9 +4207,9 @@ Built with ❤️ for the bioinformatics community.
     if (this.isCompactMode) {
       // Enable minimal mode
       body.classList.add('compact-mode');
-      headerActions.style.display = 'none';
-      headerActionsCompact.style.display = 'flex';
-      compactToggle.checked = true;
+      if (headerActions) headerActions.style.display = 'none';
+      if (headerActionsCompact) headerActionsCompact.style.display = 'flex';
+      if (compactToggle) compactToggle.checked = true;
 
       // Update the status-bar info
       this.updateStatusBar('Simple Mode: Showing workspace only');
@@ -3736,9 +4221,9 @@ Built with ❤️ for the bioinformatics community.
     } else {
       // Disable minimal mode
       body.classList.remove('compact-mode');
-      headerActions.style.display = 'flex';
-      headerActionsCompact.style.display = 'none';
-      compactToggle.checked = false;
+      if (headerActions) headerActions.style.display = 'flex';
+      if (headerActionsCompact) headerActionsCompact.style.display = 'none';
+      if (compactToggle) compactToggle.checked = false;
 
       // Restore the normal status-bar info
       if (this.currentProject) {
@@ -4344,13 +4829,13 @@ Built with ❤️ for the bioinformatics community.
 
     const newName = prompt('Enter name for duplicated project:', project.name + ' Copy');
     if (newName && newName.trim()) {
-      const newProject = {
-        ...project,
-        id: this.generateId(),
-        name: newName.trim(),
-        created: new Date().toISOString(),
-        modified: new Date().toISOString(),
-      };
+      // Deep-copy so the duplicate never shares files/folders/metadata arrays
+      // with the original (a shallow {...project} copy mutates both projects)
+      const newProject = ProjectUtils.deepClone(project);
+      newProject.id = this.generateId();
+      newProject.name = newName.trim();
+      newProject.created = new Date().toISOString();
+      newProject.modified = new Date().toISOString();
 
       this.projects.set(newProject.id, newProject);
       this.saveProjects();
@@ -4493,14 +4978,10 @@ Modified: ${this.formatDate(project.modified)}
     this.hideContextMenus();
     if (!this.currentContextFolderPath || !this.currentProject) return;
 
-    // Temporarily set the current path to the folder path, then call add-file
-    const originalPath = this.currentPath;
-    this.currentPath = this.currentContextFolderPath;
-
-    this.addFiles().then(() => {
-      // Restore the original path
-      this.currentPath = originalPath;
-    });
+    // Stage the target folder WITHOUT mutating currentPath — the Add Files
+    // modal confirms asynchronously, and restoring currentPath early would
+    // both clobber user navigation and misplace the added files.
+    this.addFiles(this.currentContextFolderPath);
   }
 
   openFolderInExplorer() {
@@ -4511,8 +4992,31 @@ Modified: ${this.formatDate(project.modified)}
 
     if (!folder) return;
 
-    // Logic to open the system file manager could be added here
-    this.showNotification(`Would open folder "${folder.name}" in file explorer`, 'info');
+    // Resolve the folder's on-disk path and open it via the main process
+    const basePath = this.currentProject.dataFolderPath || this.currentProject.location;
+    if (!basePath) {
+      this.showNotification('Project path not available', 'warning');
+      return;
+    }
+
+    const folderPath = ProjectUtils.joinPath(basePath, folder.path.join('/'));
+
+    if (window.electronAPI && window.electronAPI.openFolderInExplorer) {
+      window.electronAPI
+        .openFolderInExplorer(folderPath)
+        .then(result => {
+          if (result && result.success === false) {
+            this.showNotification(`Failed to open folder: ${result.error || 'unknown error'}`, 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error opening folder in explorer:', error);
+          this.showNotification('Failed to open folder in file explorer', 'error');
+        });
+      this.showNotification(`Opening folder "${folder.name}" in file explorer`, 'info');
+    } else {
+      this.showNotification('File explorer not available in browser mode', 'warning');
+    }
   }
 
   /**
@@ -4619,8 +5123,8 @@ Modified: ${this.formatDate(project.modified)}
 
     infoSection.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 14px;">
-                <div><strong>File Name:</strong> ${file.name}</div>
-                <div><strong>File Type:</strong> ${fileType.toUpperCase()}</div>
+                <div><strong>File Name:</strong> ${ProjectUtils.escapeHtml(file.name)}</div>
+                <div><strong>File Type:</strong> ${ProjectUtils.escapeHtml(fileType.toUpperCase())}</div>
                 <div><strong>Size:</strong> ${this.formatFileSize(file.size || 0)}</div>
                 <div><strong>Modified:</strong> ${file.modified ? this.formatDate(file.modified) : 'Unknown'}</div>
             </div>
@@ -4751,7 +5255,7 @@ To view the actual file content, click "Open in Main Window".`,
       placeholderContent[fileType] ||
       `📄 Preview not available for ${fileType.toUpperCase()} files.
 
-File: ${file.name}
+File: ${ProjectUtils.escapeHtml(file.name)}
 Type: ${fileType.toUpperCase()}
 Size: ${this.formatFileSize(file.size || 0)}
 
@@ -5067,12 +5571,101 @@ To view this file, click "Open in Main Window".`;
   }
 
   /**
+   * Release every file lock recorded on project files. Called from the
+   * window's beforeunload handler — must never reject.
+   */
+  async unlockAllProjectFiles() {
+    if (!window.electronAPI || !window.electronAPI.unlockProjectFile) return;
+
+    const unlockTasks = [];
+    this.projects.forEach(project => {
+      (project.files || []).forEach(file => {
+        const lockId = file.lockInfo && file.lockInfo.lockId;
+        if (!lockId) return;
+
+        const filePath = this.getFileAbsolutePath(file);
+        if (!filePath) return;
+
+        unlockTasks.push(
+          window.electronAPI
+            .unlockProjectFile(filePath, lockId)
+            .then(() => {
+              delete file.lockInfo;
+            })
+            .catch(error => {
+              console.warn(`Failed to unlock file ${file.name}:`, error);
+            })
+        );
+      });
+    });
+
+    if (unlockTasks.length > 0) {
+      await Promise.allSettled(unlockTasks);
+    }
+  }
+
+  /**
    * Mark project as modified
    */
   markProjectAsModified() {
     if (this.currentProject) {
       this.currentProject.hasUnsavedChanges = true;
       this.currentProject.modified = new Date().toISOString();
+      this.updateSaveButtonState();
+    }
+  }
+
+  /**
+   * Mark project as saved (clears the dirty flag)
+   */
+  markProjectAsSaved() {
+    if (this.currentProject) {
+      this.currentProject.hasUnsavedChanges = false;
+      delete this.currentProject.justLoaded;
+      this.updateSaveButtonState();
+    }
+  }
+
+  /**
+   * Reflect the dirty state on the save buttons (stable `.btn-save-project`
+   * selector) and on the dedicated status-bar indicator.
+   */
+  updateSaveButtonState() {
+    const hasChanges = !!(this.currentProject && this.currentProject.hasUnsavedChanges);
+
+    document.querySelectorAll('.btn-save-project').forEach(btn => {
+      btn.textContent = hasChanges ? '💾 Save *' : '💾 Save';
+      btn.title = hasChanges
+        ? 'Save project - You have unsaved changes (Ctrl/Cmd+S)'
+        : 'Save current project (Ctrl/Cmd+S)';
+      btn.classList.toggle('has-unsaved-changes', hasChanges);
+    });
+
+    const indicator = document.getElementById('saveStateIndicator');
+    if (indicator) {
+      indicator.textContent = hasChanges ? '● Unsaved changes' : '';
+    }
+  }
+
+  /**
+   * Notify the rest of the app (main window, genomic-data downloader, ...)
+   * about the currently active project.
+   */
+  async notifyProjectChange(project) {
+    if (!project || !window.electronAPI || !window.electronAPI.setActiveProject) return;
+
+    try {
+      const projectInfo = {
+        id: project.id,
+        name: project.name,
+        location: project.location,
+        dataFolderPath: project.dataFolderPath || (project.location ? `${project.location}/data` : null),
+        projectFilePath: project.projectFilePath || project.filePath || null,
+      };
+
+      await window.electronAPI.setActiveProject(projectInfo);
+    } catch (error) {
+      console.error('Error notifying project change:', error);
     }
   }
 }
