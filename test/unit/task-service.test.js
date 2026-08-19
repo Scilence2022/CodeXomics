@@ -200,3 +200,64 @@ describe('TaskService - LLM prompt formatting', () => {
     expect(contextStr).toContain('==============================');
   });
 });
+
+describe('TaskService - Panel visibility toggle', () => {
+  let taskService;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<main class="main-content"></main>';
+    taskService = createTaskService();
+  });
+
+  it('should be hidden by default when there are no tasks', () => {
+    expect(taskService.isPanelVisible()).toBe(false);
+  });
+
+  it('should become visible automatically once a task is added', async () => {
+    await taskService.addTask({ title: 'Task A' });
+    expect(taskService.isPanelVisible()).toBe(true);
+    expect(document.getElementById('tasksDockContainer').style.display).toBe('flex');
+  });
+
+  it('should open an empty panel when toggled on with no tasks', () => {
+    expect(taskService.togglePanelVisibility()).toBe(true);
+    expect(taskService.isCollapsed).toBe(false);
+    expect(document.getElementById('tasksDockContainer').style.display).toBe('flex');
+    expect(document.getElementById('tasksPanel').style.display).toBe('flex');
+    expect(document.querySelector('.tasks-empty-state')).not.toBeNull();
+  });
+
+  it('should hide the panel when toggled off even though tasks exist', async () => {
+    await taskService.addTask({ title: 'Task A' });
+
+    expect(taskService.togglePanelVisibility()).toBe(false);
+    expect(document.getElementById('tasksDockContainer').style.display).toBe('none');
+    expect(document.getElementById('tasksPanel').style.display).toBe('none');
+
+    expect(taskService.togglePanelVisibility()).toBe(true);
+    expect(document.getElementById('tasksDockContainer').style.display).toBe('flex');
+  });
+
+  it('should re-show a manually hidden panel when a new task arrives', async () => {
+    await taskService.addTask({ title: 'Task A' });
+    taskService.setPanelVisible(false);
+    expect(taskService.isPanelVisible()).toBe(false);
+
+    await taskService.addTask({ title: 'Task B' });
+    expect(taskService.panelVisibilityOverride).toBeNull();
+    expect(taskService.isPanelVisible()).toBe(true);
+  });
+
+  it('should broadcast visibility changes for the ChatBox header toggle', async () => {
+    const seen = [];
+    const handler = e => seen.push(e.detail.visible);
+    window.addEventListener('tasks-panel-visibility-changed', handler);
+
+    await taskService.addTask({ title: 'Task A' });
+    taskService.setPanelVisible(false);
+    taskService.setPanelVisible(true);
+
+    window.removeEventListener('tasks-panel-visibility-changed', handler);
+    expect(seen).toEqual([true, false, true]);
+  });
+});

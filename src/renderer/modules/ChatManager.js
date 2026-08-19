@@ -4193,6 +4193,7 @@ class ChatManager {
   initializeUI() {
     this.createChatInterface();
     this.setupEventListeners();
+    this.updateTasksPanelToggleButton();
   }
 
   createChatInterface() {
@@ -4228,6 +4229,9 @@ class ChatManager {
                         </button>
                     </div>
                     <div class="chat-controls">
+                        <button id="toggleTasksPanelBtn" class="btn btn-sm chat-btn" title="Show Tasks panel" aria-pressed="false">
+                            <i class="fas fa-tasks"></i>
+                        </button>
                         <button id="dockChatBtn" class="btn btn-sm chat-btn" title="Dock to right side">
                             <i class="fas fa-columns"></i>
                         </button>
@@ -4623,6 +4627,16 @@ class ChatManager {
       this.toggleDockState();
     });
 
+    // Tasks panel show/hide button
+    document.getElementById('toggleTasksPanelBtn')?.addEventListener('click', () => {
+      this.toggleTasksPanel();
+    });
+
+    // Keep the header toggle in sync when the Tasks panel opens/closes on its own
+    window.addEventListener('tasks-panel-visibility-changed', e => {
+      this.updateTasksPanelToggleButton(e.detail?.visible);
+    });
+
     // Context mode toggle
     document.getElementById('contextModeToggle')?.addEventListener('change', e => {
       this.contextModeEnabled = e.target.checked;
@@ -4736,6 +4750,35 @@ class ChatManager {
     }
 
     this.configManager.set('chat.visible', visible);
+  }
+
+  /**
+   * Show/hide the Tasks dock from the ChatBox header
+   */
+  toggleTasksPanel() {
+    const taskService = this.services?.task;
+    if (!taskService || typeof taskService.togglePanelVisibility !== 'function') {
+      console.warn('[ChatManager] TaskService unavailable; cannot toggle Tasks panel');
+      return;
+    }
+
+    const visible = taskService.togglePanelVisibility();
+    this.updateTasksPanelToggleButton(visible);
+  }
+
+  /**
+   * Reflect Tasks dock visibility on the header toggle button
+   * @param {boolean} [visible] - resolved from TaskService when omitted
+   */
+  updateTasksPanelToggleButton(visible) {
+    const btn = document.getElementById('toggleTasksPanelBtn');
+    if (!btn) return;
+
+    const isVisible = typeof visible === 'boolean' ? visible : !!this.services?.task?.isPanelVisible?.();
+
+    btn.classList.toggle('active', isVisible);
+    btn.setAttribute('aria-pressed', String(isVisible));
+    btn.title = isVisible ? 'Hide Tasks panel' : 'Show Tasks panel';
   }
 
   /**

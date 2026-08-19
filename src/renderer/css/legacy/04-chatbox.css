@@ -91,6 +91,18 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
+/* Toggle buttons (e.g. Tasks panel) highlight while their panel is open */
+.chat-btn.active {
+  background: #ffffff;
+  color: #1f2937;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85);
+}
+
+.chat-btn.active:hover {
+  background: rgba(255, 255, 255, 0.88);
+  color: #1f2937;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
