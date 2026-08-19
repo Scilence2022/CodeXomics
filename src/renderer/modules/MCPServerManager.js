@@ -264,16 +264,43 @@ class MCPServerManager {
   }
 
   async _executeDgrProxyTool(toolName, parameters) {
+    const args = { ...(parameters || {}) };
+    if (toolName === 'deep-gene-research') {
+      // Research tasks run for minutes server-side and their report/data
+      // download URLs only exist when URL mode is requested at submission time.
+      // Default both on so the ChatBox can always offer downloadable artifacts
+      // once the task completes; explicit caller values win.
+      if (args.returnReportAsUrl === undefined) args.returnReportAsUrl = true;
+      if (args.returnDetailsAsUrl === undefined) args.returnDetailsAsUrl = true;
+    }
     const response = await this._requestDgrProxy(
       {
         jsonrpc: '2.0',
         method: 'tools/call',
-        params: { name: toolName, arguments: parameters || {} },
+        params: { name: toolName, arguments: args },
         id: this.generateRequestId(),
       },
       Math.min((this.servers.get('deep-gene-research')?.timeout || 120) * 1000, 120000)
     );
     return this.unwrapMcpToolResult(response);
+  }
+
+  /**
+   * Resolve a possibly-relative URL returned by an MCP server (e.g. DGR's
+   * taskUrl/progressUrl/download URLs) against that server's origin, so links
+   * rendered in the ChatBox work even when the server omits its base URL.
+   */
+  resolveServerUrl(serverId, url) {
+    const raw = String(url || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const server = this.servers.get(serverId);
+    if (!server?.url) return raw;
+    try {
+      return new URL(raw, new URL(server.url).origin).toString();
+    } catch {
+      return raw;
+    }
   }
 
   // Connect to a specific server

@@ -204,6 +204,7 @@ class ToolExecutionPolicy {
       'system_utility',
       'repeatable_ui_operations',
       'screenshot_operations',
+      'research_task_polling',
     ];
     if (exemptedPolicies.includes(applicablePolicyName)) {
       return true;
@@ -241,6 +242,7 @@ class ToolExecutionPolicy {
       'track_operations',
       'system_utility',
       'screenshot_operations',
+      'research_task_polling',
     ];
 
     if (!exemptedFromTotalLimit.includes(applicablePolicyName)) {

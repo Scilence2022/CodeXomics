@@ -5721,6 +5721,11 @@ class ChatManager {
             const successfulResults = toolResults.filter(r => r.success);
             const failedResults = toolResults.filter(r => !r.success);
 
+            // Kick off programmatic status polling as soon as a queued Deep
+            // Gene Research task descriptor arrives — the research runs for
+            // minutes server-side and the LLM cannot poll it reliably itself.
+            this.startDgrTaskPollingFromResults(successfulResults);
+
             if (successfulResults.length > 0) {
               toolExecutionState.consecutiveFailureRounds = 0;
               // Clears the consecutive streak only. The cumulative count in
@@ -5757,12 +5762,18 @@ class ChatManager {
               // it just completed. Without it the next round re-reads a request that
               // still reads as unfulfilled ("zoom out") and the obvious move is to run
               // the same tool again; suppression then has to catch it after the fact.
+              const queuedResearchTask = successfulResults.some(result =>
+                this.extractDgrTaskDescriptor(result.result, result.parameters)
+              );
               conversationHistory.push(
                 this.createToolExecutionFeedbackMessage(
                   `[Tool Result]\n${successMessages.join('; ')}\n` +
                     'These steps are done. Calling one of them again with the same parameters will be rejected. ' +
                     'If the request has remaining steps, reply with ONLY the next JSON tool call(s); ' +
-                    'otherwise reply with the final answer.'
+                    'otherwise reply with the final answer.' +
+                    (queuedResearchTask
+                      ? ' The research call returned a queued background task (taskId), not the final report: the application polls the task status automatically and will present the final report, download URLs, and annotation proposal in the chat when it completes. Do NOT poll the task yourself (get-task-status, get_annotation_research_workflow) or resubmit the research (deep-gene-research, start_annotation_research); reply to the user confirming the research has started and that results will follow automatically.'
+                      : '')
                 )
               );
 
@@ -9582,19 +9593,141 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
   activeTasks = new Map();
 
   /**
-   * Start polling for task status updates
+   * Detect a Deep Gene Research task envelope in a tool result.
+   *
+   * The DGR server answers `deep-gene-research` immediately with
+   * { taskId, status: 'pending', taskUrl, progressUrl, ... } and runs the
+   * research asynchronously (typically ~10 minutes); `get-task-status` returns
+   * the same envelope while running. Idempotent resubmits and semantic cache
+   * hits can also return an already-terminal envelope — still without the
+   * result payload. Envelopes that DO carry the final payload
+   * (result/finalReport) are not descriptors: they belong to the normal
+   * report rendering path.
+   */
+  extractDgrTaskDescriptor(resultData, toolParameters = {}) {
+    const value = resultData && typeof resultData === 'object' ? resultData : null;
+    if (!value) return null;
+
+    // Two envelope shapes carry an async Deep Gene Research task:
+    //  - direct MCP tool results: { taskId, status, taskUrl, progressUrl, ... }
+    //  - annotation workflow results (start_annotation_research /
+    //    get_annotation_research_workflow): { success, workflow: { taskId,
+    //    status, progress, step, geneSymbol, ... }, result, taskUrl, ... }
+    const workflow =
+      value.workflow && typeof value.workflow === 'object' && typeof value.workflow.taskId === 'string'
+        ? value.workflow
+        : null;
+    const envelope = workflow || value;
+
+    const taskId = typeof envelope.taskId === 'string' ? envelope.taskId.trim() : '';
+    const status = typeof envelope.status === 'string' ? envelope.status.trim() : '';
+    if (!taskId || !status) return null;
+
+    // Envelopes that already carry the final payload are not descriptors: they
+    // belong to the normal report/completion rendering path. For workflow
+    // envelopes the payload is the sibling `result` field; the nested workflow
+    // object itself only carries run state.
+    const hasFinalPayload =
+      workflow !== null ? value.result != null : value.result != null || typeof value.finalReport === 'string';
+    if (hasFinalPayload) return null;
+
+    return {
+      taskId,
+      status,
+      kind: workflow ? 'workflow' : 'mcp',
+      createdAt: envelope.createdAt || value.createdAt || new Date().toISOString(),
+      geneSymbol:
+        (typeof toolParameters?.geneSymbol === 'string' && toolParameters.geneSymbol) ||
+        envelope.geneSymbol ||
+        envelope.parameters?.geneSymbol ||
+        value.geneSymbol ||
+        'Unknown',
+      taskUrl: value.taskUrl || envelope.taskUrl || '',
+      progressUrl: value.progressUrl || envelope.progressUrl || '',
+      progress: typeof envelope.progress === 'number' ? envelope.progress : null,
+      currentStep: typeof envelope.step === 'string' ? envelope.step : null,
+    };
+  }
+
+  /**
+   * Resolve which MCP server owns an async research task tool. Tool-call
+   * objects in the LLM loop do not carry serverId, so consult the tool
+   * inventory and fall back to the well-known Deep Gene Research server id —
+   * it is currently the only server with long-running queued tasks.
+   */
+  resolveDgrTaskServerId(toolName) {
+    const inventoryHit = this.mcpServerManager
+      ?.getAllAvailableTools?.()
+      ?.find(tool => tool.name === toolName)?.serverId;
+    // Deep Gene Research is currently the only server with long-running
+    // queued tasks, so it is the safe fallback when the inventory has no hit.
+    return inventoryHit || 'deep-gene-research';
+  }
+
+  /**
+   * Scan executed tool results for queued Deep Gene Research tasks and start
+   * programmatic status polling. Runs for every successful tool round so the
+   * LLM never has to poll get-task-status itself (repeated identical calls are
+   * blocked by policy anyway).
+   */
+  startDgrTaskPollingFromResults(successfulResults) {
+    for (const result of successfulResults || []) {
+      const descriptor = this.extractDgrTaskDescriptor(result?.result, result?.parameters);
+      if (!descriptor) continue;
+      this.startTaskPolling({
+        taskId: descriptor.taskId,
+        serverId: this.resolveDgrTaskServerId(result.tool),
+        toolName: result.tool,
+        kind: descriptor.kind,
+        geneSymbol: descriptor.geneSymbol,
+        status: descriptor.status,
+        createdAt: descriptor.createdAt,
+        taskUrl: descriptor.taskUrl,
+        progressUrl: descriptor.progressUrl,
+        progress: descriptor.progress ?? undefined,
+        currentStep: descriptor.currentStep || undefined,
+        lastUpdated: new Date().toISOString(),
+        consecutiveErrors: 0,
+        messageElement: null,
+      });
+    }
+  }
+
+  /**
+   * Start polling for task status updates (idempotent per taskId)
    */
   startTaskPolling(taskInfo) {
+    const existing = this.activeTasks.get(taskInfo.taskId);
+    if (existing) {
+      // A second start request only contributes fresher metadata (e.g. the
+      // message element once the task-started bubble exists); never run two
+      // polling intervals for the same task.
+      if (taskInfo.messageElement) existing.messageElement = taskInfo.messageElement;
+      if (taskInfo.geneSymbol && (!existing.geneSymbol || existing.geneSymbol === 'Unknown')) {
+        existing.geneSymbol = taskInfo.geneSymbol;
+      }
+      return;
+    }
+
     // Add task to active tasks map
     this.activeTasks.set(taskInfo.taskId, taskInfo);
 
-    // Start the polling interval
+    // Create a dedicated, self-owned status bubble right away. Relying on the
+    // LLM's final answer to contain the raw task id (and searching bubbles by
+    // text) is brittle — if the model phrases its reply differently, progress
+    // updates have nowhere to go.
+    this.createTaskStatusBubble(taskInfo);
+
+    // Start the polling interval (Deep Gene Research documents 5 seconds)
     const pollInterval = setInterval(async () => {
       await this.checkTaskStatus(taskInfo);
-    }, 5000); // Check every 5 seconds
+    }, 5000);
 
     // Store the interval ID for cleanup
     taskInfo.pollInterval = pollInterval;
+
+    // Check immediately so a fast task never waits a full interval.
+    this.checkTaskStatus(taskInfo);
 
     console.log(`🔄 Started polling for task ${taskInfo.taskId} with 5-second interval`);
   }
@@ -9603,38 +9736,72 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
    * Check task status and update the message
    */
   async checkTaskStatus(taskInfo) {
+    // The task may have completed or been removed between scheduling and run.
+    if (!this.activeTasks.has(taskInfo.taskId)) return;
+
     try {
-      // Get the latest status from the server
-      const statusResult = await this.mcpServerManager.checkTaskStatus(taskInfo.serverId, taskInfo.taskId);
+      // Get the latest status from the server. Workflow-kind tasks go through
+      // the annotation workflow service so its durable finalization (report
+      // archival, proposal materialization) runs on completion.
+      const statusResult =
+        taskInfo.kind === 'workflow'
+          ? await this.checkWorkflowTaskStatus(taskInfo)
+          : await this.mcpServerManager.checkTaskStatus(taskInfo.serverId, taskInfo.taskId);
+      if (!this.activeTasks.has(taskInfo.taskId)) return;
 
       console.log(`📊 Task ${taskInfo.taskId} status:`, statusResult);
 
       // Update task info
+      taskInfo.consecutiveErrors = 0;
+      taskInfo.lastStatusResult = statusResult;
       const oldStatus = taskInfo.status;
       taskInfo.status = statusResult.status || taskInfo.status;
       taskInfo.lastUpdated = new Date().toISOString();
-      taskInfo.progress = statusResult.progress || taskInfo.progress;
-      taskInfo.currentStep = statusResult.currentStep || taskInfo.currentStep;
+      // DGR reports progress as a 0-100 integer and the current step as a
+      // machine string (`step`); older servers used currentStep/totalSteps.
+      if (typeof statusResult.progress === 'number') {
+        taskInfo.progress = statusResult.progress;
+      }
+      taskInfo.currentStep = statusResult.step || statusResult.currentStep || taskInfo.currentStep;
       taskInfo.totalSteps = statusResult.totalSteps || taskInfo.totalSteps;
       taskInfo.error = statusResult.error || null;
 
       // If status has changed or we have new progress info, update the message
-      if (oldStatus !== taskInfo.status || statusResult.progress || statusResult.currentStep || statusResult.error) {
+      // (always render after the first successful check).
+      if (
+        !taskInfo.hasRendered ||
+        oldStatus !== taskInfo.status ||
+        statusResult.progress !== undefined ||
+        statusResult.step ||
+        statusResult.currentStep ||
+        statusResult.error
+      ) {
         // Update the chat message
         this.updateTaskMessage(taskInfo, statusResult);
+        taskInfo.hasRendered = true;
+      }
 
-        // If task is completed or failed, stop polling
-        if (['completed', 'failed', 'cancelled'].includes(taskInfo.status)) {
-          this.stopTaskPolling(taskInfo.taskId);
+      // If task is completed or failed, stop polling
+      if (['completed', 'failed', 'cancelled'].includes(taskInfo.status)) {
+        this.stopTaskPolling(taskInfo.taskId);
 
-          // If completed, get the final results
-          if (taskInfo.status === 'completed') {
-            await this.getFinalTaskResults(taskInfo);
-          }
+        // If completed, get the final results
+        if (taskInfo.status === 'completed') {
+          await this.getFinalTaskResults(taskInfo);
+        } else {
+          // Make sure the bubble reflects the terminal state even when no
+          // progress fields changed on this poll.
+          this.updateTaskMessage(taskInfo, statusResult);
+          this.handleFailedResearchTask(taskInfo);
         }
       }
     } catch (error) {
       console.error(`❌ Error checking status for task ${taskInfo.taskId}:`, error);
+
+      // Tolerate transient transport failures during long-running research;
+      // only give up after several consecutive errors.
+      taskInfo.consecutiveErrors = (taskInfo.consecutiveErrors || 0) + 1;
+      if (taskInfo.consecutiveErrors < 5) return;
 
       // Update message with error
       taskInfo.status = 'error';
@@ -9644,74 +9811,159 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         error: error.message,
       });
 
-      // Stop polling on error
+      // Stop polling on persistent error
       this.stopTaskPolling(taskInfo.taskId);
+
+      this.persistTaskOutcomeMessage(
+        `❌ **Deep Gene Research task status updates failed**\n\n` +
+          `📋 **Task ID**: \`${taskInfo.taskId}\`\n` +
+          `❌ **Error**: ${error.message}\n\n` +
+          `Status polling stopped after repeated errors — check the Deep Gene Research server connection and ask for a status refresh.`
+      );
     }
+  }
+
+  /**
+   * Poll an annotation-workflow research task through the workflow service.
+   * The service persists the authoritative run state and performs durable
+   * finalization (report archival, proposal materialization) on completion.
+   * Returns the same normalized shape as mcpServerManager.checkTaskStatus.
+   */
+  async checkWorkflowTaskStatus(taskInfo) {
+    const workflowService = this.services?.annotationWorkflow;
+    if (!workflowService || typeof workflowService.getAnnotationResearchWorkflow !== 'function') {
+      throw new Error('Annotation research workflow service is unavailable');
+    }
+    const response = await workflowService.getAnnotationResearchWorkflow({ taskId: taskInfo.taskId });
+    const workflow = response?.workflow || {};
+    if (workflow.geneSymbol && (!taskInfo.geneSymbol || taskInfo.geneSymbol === 'Unknown')) {
+      taskInfo.geneSymbol = workflow.geneSymbol;
+    }
+    return {
+      status: typeof workflow.status === 'string' ? workflow.status : 'pending',
+      progress: typeof workflow.progress === 'number' ? workflow.progress : undefined,
+      step: workflow.step || undefined,
+      error: workflow.error || undefined,
+      workflow,
+      result: response?.result ?? null,
+    };
+  }
+
+  /**
+   * Create the dedicated status bubble for a tracked task and store a direct
+   * element reference on taskInfo. The bubble content always contains the task
+   * id so the legacy text-based lookup keeps working as a fallback.
+   */
+  createTaskStatusBubble(taskInfo) {
+    try {
+      const statusLabel = String(taskInfo.status || 'pending')
+        .replace(/_/g, ' ')
+        .toUpperCase();
+      let content = `🧬 **Deep Gene Research Task — ${statusLabel}**\n\n`;
+      if (taskInfo.geneSymbol && taskInfo.geneSymbol !== 'Unknown') {
+        content += `🧫 **Gene**: ${taskInfo.geneSymbol}\n`;
+      }
+      content += `📋 **Task ID**: \`${taskInfo.taskId}\`\n`;
+      content += `⏱️ **Started**: ${new Date(taskInfo.createdAt).toLocaleString()}\n`;
+      if (typeof taskInfo.progress === 'number') content += `📈 **Progress**: ${taskInfo.progress}%\n`;
+      if (taskInfo.currentStep) content += `🔢 **Current step**: \`${taskInfo.currentStep}\`\n`;
+      content += `\n🔄 Research runs asynchronously (typically several minutes). This message updates automatically as the run progresses.`;
+
+      this.addMessageToChat(content, 'assistant');
+
+      // addMessageToChat appends synchronously — the new bubble is the last
+      // message element in the chat container.
+      const container = document.getElementById('chatMessages');
+      const bubble = container?.lastElementChild;
+      if (bubble && bubble.classList?.contains('message')) {
+        taskInfo.messageElement = bubble;
+      }
+    } catch (error) {
+      console.warn(`Failed to create status bubble for task ${taskInfo.taskId}:`, error);
+    }
+  }
+
+  /**
+   * Resolve the DOM element for a task's status bubble. Uses the stored
+   * reference while it is connected, falls back to a text search for bubbles
+   * that contain the task id (e.g. created before this fix), and recreates
+   * the bubble when neither works so progress always has somewhere to render.
+   */
+  ensureTaskMessageElement(taskInfo) {
+    if (taskInfo.messageElement && taskInfo.messageElement.isConnected) {
+      return taskInfo.messageElement;
+    }
+    taskInfo.messageElement = null;
+
+    // Chat bubbles render as div.message.(user|assistant)-message under
+    // #chatMessages — the historical '.chat-message' selector matched
+    // nothing, which is why task progress never updated on screen.
+    const chatMessages = document.querySelectorAll('#chatMessages .message');
+    for (const message of chatMessages) {
+      if (message.textContent.includes(taskInfo.taskId)) {
+        taskInfo.messageElement = message;
+        return message;
+      }
+    }
+
+    // No bubble exists yet (or it was cleared with the chat): create one.
+    this.createTaskStatusBubble(taskInfo);
+    return taskInfo.messageElement;
   }
 
   /**
    * Update the chat message with current task status
    */
   updateTaskMessage(taskInfo, statusResult) {
-    // Find the message element containing the task ID
-    if (!taskInfo.messageElement) {
-      // First time, find the message element
-      const chatMessages = document.querySelectorAll('.chat-message');
-      for (const message of chatMessages) {
-        if (message.textContent.includes(taskInfo.taskId)) {
-          taskInfo.messageElement = message;
-          break;
-        }
-      }
-    }
-
-    if (!taskInfo.messageElement) {
-      console.warn(`⚠️ Could not find message element for task ${taskInfo.taskId}`);
+    const messageElement = this.ensureTaskMessageElement(taskInfo);
+    if (!messageElement) {
+      console.warn(`⚠️ Could not find or create a message element for task ${taskInfo.taskId}`);
       return;
     }
 
-    // Create updated message content
-    let updatedContent = `✅ **Deep Gene Research Task - ${taskInfo.status.toUpperCase()}**\n\n`;
-    updatedContent += `📋 **Task ID**: ${taskInfo.taskId}\n`;
-    updatedContent += `📊 **Status**: ${taskInfo.status}\n`;
-    updatedContent += `⏱️ **Created**: ${new Date(taskInfo.createdAt).toLocaleString()}\n`;
-    updatedContent += `🔄 **Last Updated**: ${new Date(taskInfo.lastUpdated).toLocaleString()}\n\n`;
+    const statusLabel = String(taskInfo.status || 'unknown')
+      .replace(/_/g, ' ')
+      .toUpperCase();
+    let updatedContent = `🧬 **Deep Gene Research Task — ${statusLabel}**\n\n`;
+    if (taskInfo.geneSymbol && taskInfo.geneSymbol !== 'Unknown') {
+      updatedContent += `🧫 **Gene**: ${taskInfo.geneSymbol}\n`;
+    }
+    updatedContent += `📋 **Task ID**: \`${taskInfo.taskId}\`\n`;
+    updatedContent += `⏱️ **Started**: ${new Date(taskInfo.createdAt).toLocaleString()}\n`;
 
     // Add progress information if available
-    if (taskInfo.progress || taskInfo.currentStep) {
-      updatedContent += `📈 **Progress**: ${taskInfo.progress || 'N/A'}%\n`;
+    if (typeof taskInfo.progress === 'number' || taskInfo.currentStep) {
+      updatedContent += `📈 **Progress**: ${typeof taskInfo.progress === 'number' ? `${taskInfo.progress}%` : 'N/A'}\n`;
       if (taskInfo.currentStep && taskInfo.totalSteps) {
         updatedContent += `🔢 **Step**: ${taskInfo.currentStep}/${taskInfo.totalSteps}\n`;
       } else if (taskInfo.currentStep) {
-        updatedContent += `🔢 **Current Step**: ${taskInfo.currentStep}\n`;
+        updatedContent += `🔢 **Current step**: \`${taskInfo.currentStep}\`\n`;
       }
-      updatedContent += `\n`;
-    }
-
-    // Add current step details if available
-    if (statusResult.currentStepInfo) {
-      updatedContent += `📝 **Current Activity**: ${statusResult.currentStepInfo}\n\n`;
     }
 
     // Add error message if any
     if (taskInfo.error) {
-      updatedContent += `❌ **Error**: ${taskInfo.error}\n\n`;
+      updatedContent += `\n❌ **Error**: ${taskInfo.error}\n`;
     }
 
     // Add final status messages
     if (taskInfo.status === 'completed') {
-      updatedContent += `🎉 Research completed successfully! Final results will be available shortly...\n\n`;
-    } else if (taskInfo.status === 'failed') {
-      updatedContent += `❌ Research failed. Please check the error message above.\n\n`;
+      updatedContent += `\n🎉 Research completed — fetching the final report…\n`;
+    } else if (taskInfo.status === 'failed' || taskInfo.status === 'error') {
+      updatedContent += `\n❌ Research failed. You can resubmit the request or check the Deep Gene Research server.\n`;
+    } else if (taskInfo.status === 'cancelled') {
+      updatedContent += `\n⏹️ Research was cancelled.\n`;
     } else {
-      updatedContent += `🔄 The system will continue to update this message as the research progresses...\n\n`;
+      updatedContent += `\n🔄 Research typically takes several minutes — this message updates automatically as the run progresses.\n`;
     }
 
-    // Update the message content
-    const messageContent = taskInfo.messageElement.querySelector('.message-content');
-    if (messageContent) {
-      // Use markdown to render the updated content
-      messageContent.innerHTML = this.renderMarkdown(updatedContent);
+    // Update the message content. Prefer .message-text so the copy-action
+    // button in .message-content is preserved.
+    const messageText =
+      taskInfo.messageElement.querySelector('.message-text') ||
+      taskInfo.messageElement.querySelector('.message-content');
+    if (messageText) {
+      messageText.innerHTML = this.formatMessage(updatedContent);
     }
 
     console.log(`📝 Updated message for task ${taskInfo.taskId} with status: ${taskInfo.status}`);
@@ -9724,70 +9976,194 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
     try {
       console.log(`📥 Getting final results for task ${taskInfo.taskId}`);
 
-      // Get the final results from the server
-      const result = await this.mcpServerManager.getTaskResult(taskInfo.serverId, taskInfo.taskId);
+      // Get the full result payload. Workflow-kind tasks were finalized by the
+      // workflow service on the completing poll, so their annotation-mode
+      // projection is already on taskInfo.lastStatusResult; direct MCP tasks
+      // fetch the full record (resultMode 'full') here.
+      const isWorkflow = taskInfo.kind === 'workflow';
+      const workflowState = isWorkflow ? taskInfo.lastStatusResult?.workflow || null : null;
+      const payload = isWorkflow
+        ? taskInfo.lastStatusResult?.result || null
+        : await this.mcpServerManager.getTaskResult(taskInfo.serverId, taskInfo.taskId);
 
-      console.log(`✅ Got final results for task ${taskInfo.taskId}:`, result);
+      console.log(`✅ Got final results for task ${taskInfo.taskId}:`, payload);
 
-      // Find the message element
-      if (!taskInfo.messageElement) {
-        console.warn(`⚠️ Could not find message element for task ${taskInfo.taskId}`);
-        return;
-      }
+      const geneSymbol =
+        (taskInfo.geneSymbol && taskInfo.geneSymbol !== 'Unknown' && taskInfo.geneSymbol) ||
+        payload?.parameters?.geneSymbol ||
+        payload?.geneResearch?.workflow?.geneIdentification?.geneSymbol ||
+        'Unknown';
 
-      // Create final message content
-      let finalContent = `✅ **Deep Gene Research Task - COMPLETED**\n\n`;
-      finalContent += `📋 **Task ID**: ${taskInfo.taskId}\n`;
-      finalContent += `📊 **Status**: ${taskInfo.status}\n`;
-      finalContent += `⏱️ **Created**: ${new Date(taskInfo.createdAt).toLocaleString()}\n`;
-      finalContent += `🔄 **Last Updated**: ${new Date(taskInfo.lastUpdated).toLocaleString()}\n\n`;
+      const finalReport = typeof payload?.finalReport === 'string' ? payload.finalReport : '';
+      const metadata = payload?.metadata || {};
+      const proposal = payload?.annotationProposal || null;
+      const download = payload?.download || {};
 
-      // Add results information
-      finalContent += `📚 **Research Results**\n\n`;
-
-      if (result.summary || result.message) {
-        finalContent += `${result.summary || result.message}\n\n`;
-      } else if (result.result && typeof result.result === 'object') {
-        // Try to format the results
+      // Direct MCP tasks: save the markdown report locally (the server's
+      // download links live in process memory and expire after 24 h) and
+      // archive the full result in the main-process artifact store. Workflow
+      // tasks already archive the full report as a gene attachment during the
+      // completing poll, and their annotation projection carries no report
+      // text to save.
+      let savedFileName = null;
+      if (!isWorkflow && finalReport.trim()) {
         try {
-          const resultString = JSON.stringify(result.result, null, 2);
-          finalContent += `**Full Results**:\n\`\`\`json\n${resultString}\n\`\`\`\n\n`;
-        } catch (e) {
-          finalContent += `Results obtained but could not be formatted.\n\n`;
+          const saver = window.electronAPI?.saveGeneResearchReport;
+          if (saver) {
+            const saveResult = await saver(geneSymbol, finalReport);
+            if (saveResult?.success) savedFileName = saveResult.fileName || null;
+          }
+        } catch (saveError) {
+          console.warn('Deep Gene Research report save failed:', saveError);
+        }
+      }
+      if (!isWorkflow) {
+        try {
+          const archiver = window.electronAPI?.archiveDgrTaskResult;
+          if (typeof archiver === 'function') await archiver({ taskId: taskInfo.taskId });
+        } catch (archiveError) {
+          console.warn('Deep Gene Research artifact archival failed:', archiveError);
         }
       }
 
-      // Add download links if available
-      if (result.downloadLinks) {
-        finalContent += `📥 **Download Reports**\n\n`;
-        for (const [format, link] of Object.entries(result.downloadLinks)) {
-          finalContent += `- [${format.toUpperCase()} Report](${link})\n`;
+      let content = `✅ **Deep Gene Research Complete: ${geneSymbol}**\n\n`;
+      content += `📋 **Task ID**: \`${taskInfo.taskId}\`\n`;
+      if (payload?.title) content += `📄 **Title**: ${payload.title}\n`;
+      if (typeof metadata.confidence === 'number') {
+        content += `🎯 **Confidence**: ${(metadata.confidence * 100).toFixed(0)}%\n`;
+      }
+      if (typeof metadata.researchTime === 'number') {
+        content += `⏱️ **Research time**: ${(metadata.researchTime / 1000 / 60).toFixed(1)} min\n`;
+      }
+      const sourceCount = metadata.sourceCoverage?.uniqueSourceCount || payload?.sources?.length || 0;
+      if (sourceCount) content += `📚 **Sources**: ${sourceCount}\n`;
+
+      const reportUrl = download.reportUrl
+        ? this.mcpServerManager.resolveServerUrl(taskInfo.serverId, download.reportUrl)
+        : '';
+      const detailsUrl = download.detailsUrl
+        ? this.mcpServerManager.resolveServerUrl(taskInfo.serverId, download.detailsUrl)
+        : '';
+      if (reportUrl || detailsUrl) {
+        content += `\n📥 **Downloads** (server links expire after 24 h)\n\n`;
+        if (reportUrl) content += `- [Research report (Markdown)](${reportUrl})\n`;
+        if (detailsUrl) content += `- [Detailed research data — workflow, sources, metadata (JSON)](${detailsUrl})\n`;
+      }
+      if (savedFileName) {
+        content += `\n💾 Report saved locally to \`reports/${savedFileName}\`\n`;
+      }
+
+      if (proposal) {
+        content += `\n🧩 **CodeXomics Annotation Proposal**\n\n`;
+        if (proposal.status) content += `- **Status**: \`${proposal.status}\`\n`;
+        if (typeof proposal.confidence === 'number') {
+          content += `- **Confidence**: ${(proposal.confidence * 100).toFixed(0)}%\n`;
         }
-        finalContent += `\n`;
+        const termLists = [
+          ['EC', proposal.ecNumbers],
+          ['GO', proposal.goTerms],
+          ['KO', proposal.koTerms],
+          ['Pathway', proposal.pathwayTerms],
+        ];
+        for (const [label, terms] of termLists) {
+          if (Array.isArray(terms) && terms.length) content += `- **${label}**: ${terms.join(', ')}\n`;
+        }
+        const updateFields = proposal.updates ? Object.keys(proposal.updates) : [];
+        if (updateFields.length) content += `- **Proposed updates**: ${updateFields.join(', ')}\n`;
+        const operationCount = Array.isArray(proposal.operations) ? proposal.operations.length : 0;
+        if (operationCount) content += `- **Operations**: ${operationCount}\n`;
+        if (!isWorkflow) {
+          content +=
+            `\nThe full proposal JSON is in the detailed research data` +
+            (detailsUrl ? ' download above' : '') +
+            `. Use the annotation change-set workflow (\`create_annotation_changeset\`) to review and merge these conservative updates into the selected gene.\n`;
+        }
+      }
+
+      if (isWorkflow && workflowState) {
+        if (workflowState.reportAttachment) {
+          content += `\n🧬 The full report has been archived as a gene attachment for ${geneSymbol} (see the gene's Attachments tab).\n`;
+        }
+        if (workflowState.changeSetId) {
+          content +=
+            `\n📋 **Annotation ChangeSet**: \`${workflowState.changeSetId}\`` +
+            (workflowState.changeSetStatus ? ` (${workflowState.changeSetStatus})` : '') +
+            ` — review it with \`get_annotation_changeset\` and merge it with \`apply_annotation_changeset\`.\n`;
+        } else if (workflowState.proposalReason) {
+          content += `\n📋 **Annotation proposal**: ${workflowState.proposalReason}\n`;
+        }
+      }
+
+      if (finalReport.trim()) {
+        const preview = finalReport.length > 1200 ? `${finalReport.substring(0, 1200)}…` : finalReport;
+        content += `\n<details><summary>📄 Report preview</summary>\n\n<pre>${this.escapeHtml(preview)}</pre>\n\n</details>\n`;
+      }
+
+      // Update the tracked bubble in place, and persist the outcome so later
+      // turns see the deliverables in the conversation history. When no
+      // task bubble can be resolved at all, post the completion as a new
+      // visible assistant message instead.
+      const messageElement = this.ensureTaskMessageElement(taskInfo);
+      const messageText = messageElement
+        ? messageElement.querySelector('.message-text') || messageElement.querySelector('.message-content')
+        : null;
+      if (messageText) {
+        messageText.innerHTML = this.formatMessage(content);
+        this.persistTaskOutcomeMessage(content);
       } else {
-        // Add manual download options
-        finalContent += `📥 **Download Reports**\n\n`;
-        finalContent += `- [Markdown Report](javascript:chatManager.downloadTaskReport('${taskInfo.taskId}', 'markdown'))\n`;
-        finalContent += `- [PDF Report](javascript:chatManager.downloadTaskReport('${taskInfo.taskId}', 'pdf'))\n`;
-        finalContent += `- [DOCX Report](javascript:chatManager.downloadTaskReport('${taskInfo.taskId}', 'docx'))\n\n`;
-      }
-
-      // Update the message content
-      const messageContent = taskInfo.messageElement.querySelector('.message-content');
-      if (messageContent) {
-        messageContent.innerHTML = this.renderMarkdown(finalContent);
+        this.addMessageToChat(content, 'assistant');
       }
     } catch (error) {
       console.error(`❌ Error getting final results for task ${taskInfo.taskId}:`, error);
 
       // Update message with error
-      if (taskInfo.messageElement) {
-        const messageContent = taskInfo.messageElement.querySelector('.message-content');
-        if (messageContent) {
-          const currentHtml = messageContent.innerHTML;
-          messageContent.innerHTML = currentHtml + `\n\n❌ **Error retrieving final results**: ${error.message}`;
+      const failedElement = this.ensureTaskMessageElement(taskInfo);
+      if (failedElement) {
+        const messageText =
+          failedElement.querySelector('.message-text') || failedElement.querySelector('.message-content');
+        if (messageText) {
+          messageText.innerHTML += this.formatMessage(`\n\n❌ **Error retrieving final results**: ${error.message}`);
         }
       }
+    }
+  }
+
+  /**
+   * Record a failed/cancelled research task so later turns know the outcome.
+   */
+  handleFailedResearchTask(taskInfo) {
+    const geneText = taskInfo.geneSymbol && taskInfo.geneSymbol !== 'Unknown' ? ` for ${taskInfo.geneSymbol}` : '';
+    const content =
+      `❌ **Deep Gene Research${geneText} ${taskInfo.status === 'cancelled' ? 'was cancelled' : 'failed'}**\n\n` +
+      `📋 **Task ID**: \`${taskInfo.taskId}\`\n` +
+      (taskInfo.error ? `❌ **Error**: ${taskInfo.error}\n` : '');
+    if (this.ensureTaskMessageElement(taskInfo)) {
+      // The tracked bubble already shows the terminal state.
+      this.persistTaskOutcomeMessage(content);
+    } else {
+      this.addMessageToChat(content, 'assistant');
+    }
+  }
+
+  /**
+   * Persist a task outcome as an assistant chat message without rendering a
+   * second bubble — the tracked task bubble already shows the same content.
+   * Persisting keeps the result in the conversation history the LLM sees on
+   * later turns.
+   */
+  persistTaskOutcomeMessage(content) {
+    try {
+      const timestamp = new Date().toISOString();
+      this.configManager.addChatMessage(content, 'assistant', timestamp);
+      this.addToEvolutionData({
+        type: 'message',
+        timestamp,
+        sender: 'assistant',
+        content,
+        metadata: { source: 'dgr_task_outcome', visible: true },
+      });
+    } catch (error) {
+      console.warn('Failed to persist research task outcome message:', error);
     }
   }
 
