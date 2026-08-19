@@ -1318,3 +1318,232 @@
   font-weight: 600;
   color: var(--text-primary);
 }
+
+/* ==========================================================================
+   Deep Gene Research progress dock
+
+   A research run takes minutes and its status bubble is pinned where the run
+   was submitted, so it scrolls out of the transcript almost immediately. This
+   dock sits between the transcript and the composer, never scrolls away, and
+   carries the live progress, current step and elapsed time for every run the
+   ChatBox is polling.
+   ========================================================================== */
+
+.research-progress-dock {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 12px;
+  color: var(--text-primary);
+  max-height: 42%;
+  overflow-y: auto;
+}
+
+.research-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.research-progress-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.research-progress-header:focus-visible {
+  outline: 2px solid var(--focus-ring-intense);
+  outline-offset: -2px;
+}
+
+.research-progress-icon {
+  color: var(--accent-indigo);
+}
+
+.research-progress-title {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.research-progress-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.research-progress-caret {
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.research-progress-dock.collapsed .research-progress-caret {
+  transform: rotate(-90deg);
+}
+
+.research-progress-list {
+  padding: 0 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.research-progress-item {
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-indigo);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  padding: 6px 8px;
+}
+
+.research-progress-item.is-completed {
+  border-left-color: var(--success-color);
+}
+
+.research-progress-item.is-failed {
+  border-left-color: var(--error-color);
+}
+
+.research-progress-item.is-cancelled {
+  border-left-color: var(--text-muted);
+}
+
+.research-progress-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.research-progress-gene {
+  font-weight: 600;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+}
+
+.research-progress-status {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.research-progress-item.is-failed .research-progress-status {
+  color: var(--error-color);
+}
+
+.research-progress-item.is-completed .research-progress-status {
+  color: var(--success-color);
+}
+
+.research-progress-elapsed {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.research-progress-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.research-progress-actions button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+
+.research-progress-actions button:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.research-progress-track {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.research-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent-indigo);
+  transition: width 0.4s ease;
+}
+
+.research-progress-item.is-completed .research-progress-fill {
+  width: 100%;
+  background: var(--success-color);
+}
+
+.research-progress-item.is-failed .research-progress-fill {
+  background: var(--error-color);
+}
+
+/* No percentage yet (queued, or a server that omits progress): keep the bar
+   moving so the run never reads as stalled. */
+.research-progress-fill.indeterminate {
+  width: 35%;
+  animation: researchProgressSlide 1.4s ease-in-out infinite;
+}
+
+@keyframes researchProgressSlide {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.research-progress-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+.research-progress-step {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-progress-error {
+  color: var(--error-color);
+}
+
+.research-progress-percent {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Flash the transcript bubble the dock row points at. */
+.message.research-progress-highlight .message-content {
+  box-shadow: 0 0 0 2px var(--focus-ring-intense);
+  border-radius: var(--radius-md);
+  transition: box-shadow 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-progress-fill.indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
