@@ -2,7 +2,7 @@
 /**
  * TaskService Unit Tests
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -207,6 +207,15 @@ describe('TaskService - Panel visibility toggle', () => {
   beforeEach(() => {
     document.body.innerHTML = '<main class="main-content"></main>';
     taskService = createTaskService();
+    // _setTasksDockVisible schedules a real window.setTimeout to fire a resize
+    // event; fake timers let each test flush it deterministically instead of
+    // leaking a callback that fires after jsdom's window is torn down.
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   it('should be hidden by default when there are no tasks', () => {
