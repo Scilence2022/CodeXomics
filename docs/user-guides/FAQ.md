@@ -234,6 +234,22 @@ Yes, with Ollama:
 - **Privacy options**: Configure what data to share
 - **Local option**: Use local models for complete privacy
 
+### Deep Gene Research takes minutes — how do I know it is still running?
+
+A **research progress dock** appears between the conversation and the input box while a run is active, and stays put no matter how far the conversation scrolls. It shows the gene, status, a progress bar, the current step, and a ticking elapsed-time clock — so a run whose percentage has not moved for a while is still visibly alive. Use its buttons to cancel the run or jump back to its full status message.
+
+You do not need to ask for progress, and the assistant is told not to poll the task itself. See [Long-Running Research](USER_GUIDE.md#long-running-research) in the User Guide.
+
+### Does Deep Gene Research change my genome automatically?
+
+No. When a run finishes, CodeXomics automatically creates an **annotation ChangeSet** — a reviewable proposal naming the exact qualifiers it would change — but the ChangeSet is created `awaiting_approval` and is **never applied on its own**. Your genome is unchanged until you review the diff and approve it in the **Review** panel.
+
+If the research could not be grounded in evidence, could not be bound to an exact gene, or already matches the current annotation, no ChangeSet is created and the completion message says why.
+
+### Do I still have to run `create_annotation_changeset` after research?
+
+No. CodeXomics runs that step for you when the task completes, and the completion message names the resulting ChangeSet ID. Re-checking a completed task returns that same ChangeSet instead of adding a duplicate to your review queue. You only need the manual tools to _approve_ and _apply_ it.
+
 ## 🗂️ Project Management
 
 ### How do projects work?

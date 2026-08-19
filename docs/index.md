@@ -78,6 +78,7 @@ The current release is `v0.722`. Download installers from [GitHub Releases](http
 - Configure OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, or local LLM-compatible endpoints.
 - Ask the ChatBox to navigate, search, analyze sequence content, design primers, run BLAST workflows, retrieve protein structures, and manage tasks.
 - Use multi-agent routing for complex workflows that need decomposition and tool coordination.
+- Run evidence-backed Deep Gene Research as a background task: live progress stays pinned in the ChatBox while it runs, and a reviewable annotation ChangeSet is created automatically when it completes — never applied without curator approval.
 
 ### Extensibility
 

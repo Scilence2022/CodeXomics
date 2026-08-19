@@ -195,6 +195,34 @@ ChatBox intent
 
 ChatBox may choose the research intent, but it does not free-form the target binding, task association, proposal conversion, approval, or commit checks. If a DGR task is still running, call `get_annotation_research_workflow` again later. Use `cancel_annotation_research` to request cancellation; the task record remains available for audit.
 
+### Automatic task polling and progress
+
+A research run takes minutes, and the model cannot be relied on to poll it. `ChatManager` detects a queued task descriptor in any successful tool result — the `{ taskId, status, taskUrl, progressUrl }` envelope from `deep-gene-research`, or the `{ workflow: { taskId, status, progress, step } }` envelope from `start_annotation_research` / `get_annotation_research_workflow` — and starts its own five-second poll. Workflow-kind tasks are polled through `AnnotationResearchWorkflowService` so its durable finalization still runs; direct tasks poll `get-task-status`. Polling is idempotent per `taskId`, tolerates several consecutive transport failures before giving up, and the conversation prompt tells the model **not** to poll or resubmit the run itself.
+
+Each tracked run is surfaced twice:
+
+- A **status bubble** in the transcript, rewritten in place on every poll and carrying the full task detail and, on completion, the report links and outcome.
+- A **progress dock** pinned between the transcript and the composer. The bubble stays where the run was submitted and scrolls out of view as soon as the conversation moves on, so the dock is what makes a long run legible: gene, status, progress bar, current step, and a ticking elapsed clock that keeps reading as alive even while the percentage sits still. It also carries per-run cancel and jump-to-bubble actions. Completed runs clear themselves after a short linger; failures stay until dismissed.
+
+### Automatic ChangeSet materialization
+
+Both entry points end at a reviewable ChangeSet without a further curator command:
+
+- **Workflow runs.** On the completing poll, `AnnotationResearchWorkflowService` archives the report, binds the proposal, and calls `createAnnotationChangeset` itself when the caller holds `annotation:propose`. A research-only caller records completion with the proposal preserved, and a later propose-capable caller materializes that exact snapshot.
+- **Direct runs.** `ChatManager.autoCreateResearchChangeSet` merges the returned proposal through `merge_gene_research_report`, binding it to the run with `researchRun: taskId`.
+
+The ChangeSet is created `awaiting_approval` and is never applied — approval and commit are unchanged. Materialization is deliberately fail-closed and reports the reason in the chat instead of forcing a proposal through:
+
+| Situation                                                      | Outcome                                                              |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `draft_requires_evidence`                                      | Not created; the run found no evidence-backed claims safe to propose |
+| `draft_requires_target`                                        | Not created; the proposal is not bound to an exact genome feature    |
+| No genome annotations loaded                                   | Not created; load the genome and merge the report explicitly         |
+| Incomplete provenance chain (unarchived report, hash mismatch) | Not created; the underlying validation error is shown verbatim       |
+| Proposal already satisfied by the current annotation           | Not needed; nothing is written                                       |
+
+Deduplication for direct runs goes through the ledger, not an idempotency key. The merge stamps each proposal with the current time, so a re-processed task hashes differently and a fixed key would be rejected as a _conflicting reuse_ rather than returning the ChangeSet that already exists. `ChatManager` therefore looks the run up by `researchRun` before creating anything, and reports the existing ChangeSet when one is found.
+
 ## Restart and recovery behavior
 
 - DGR persists task parameters, status, progress, attempt count, result, errors, and idempotency association to `MCP_TASK_STORAGE_FILE` with atomic replacement.
