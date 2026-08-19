@@ -169,6 +169,18 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
 - MCP system prompts are fetched through `getCachedMcpPrompt()`. Anything that
   changes a server's prompt content must call `invalidateMcpPromptCache()`.
 
+## 5f. Transcript Service Rules
+
+- Everything about the transcript the model sees lives in
+  `ConversationTranscriptService`: tool-round replay, the structured execution
+  ledger, and the context budget. ChatManager keeps one-line delegations; add new
+  transcript logic to the service, not back into ChatManager.
+- Reach it through `ChatManager.getTranscriptService()`, which constructs the
+  service lazily so a ChatManager built without the full registry (tests,
+  benchmark harnesses) still works.
+- The service must stay in the `index.html` script list ahead of
+  `modules/ChatManager.js`, and registered in `initializeServices()`.
+
 ## 6. Multi-Agent Routing Rules
 
 - Sequential AI behavior belongs in an agent capability, not brittle UI callbacks.

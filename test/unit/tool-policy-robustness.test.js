@@ -183,6 +183,12 @@ function loadChatManagerClass() {
       ${getToolExecutionCountCode}
       ${getToolExecutionCountByNameCode}
       ${findExistingExecutionCode}
+      // Declared last so it wins over the extracted copy: ChatManager delegates
+      // this to ConversationTranscriptService, and the mock has no services.
+      getMessageToolExecutions(message) {
+        const executions = message?.__codexomicsToolExecutions;
+        return Array.isArray(executions) && executions.length > 0 ? executions : null;
+      }
     }
     return MockChatManager;
   `;

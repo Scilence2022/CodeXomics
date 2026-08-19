@@ -29,6 +29,7 @@ const ToolCapabilityPolicy = require('../../src/renderer/modules/chat/services/T
 // LLMContextService resolves its policy class at runtime.
 require('../../src/renderer/modules/chat/services/ToolExecutionPolicy.js');
 const LLMContextService = require('../../src/renderer/modules/chat/services/LLMContextService.js');
+const ConversationTranscriptService = require('../../src/renderer/modules/chat/services/ConversationTranscriptService.js');
 
 /** Minimal dot-path config store with the ConfigManager.get(path, fallback) contract. */
 function createConfigManager(overrides = {}) {
@@ -192,6 +193,7 @@ function createAgentLoopHarness(spec = {}) {
   cm.services = {
     intent: new IntentParserService(cm.app, cm),
     context: new LLMContextService(cm.app, cm),
+    transcript: new ConversationTranscriptService(cm.app, cm),
   };
 
   // --- Tool execution seam --------------------------------------------------
