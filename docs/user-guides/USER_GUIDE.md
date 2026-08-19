@@ -420,6 +420,22 @@ _The ChatBox can drive analyses such as AlphaFold structure lookup, opening an i
 "Analyze all genes in region 1000-10000 and generate summary"
 ```
 
+#### Long-Running Research
+
+Some requests — Deep Gene Research above all — start a background task that runs for several minutes rather than answering in one turn. CodeXomics polls those tasks for you; you do not need to ask "is it done yet?", and the assistant is told not to poll them either.
+
+While a run is active, a **research progress dock** sits between the conversation and the input box and never scrolls away:
+
+- **Gene and status** — `Queued`, `Researching`, `Completed`, `Failed`, or `Cancelled`
+- **Progress bar and percentage** — an animated indeterminate bar until the server reports a figure
+- **Current step** — for example _Gene search_ or _Literature full text_
+- **Elapsed time** — a ticking clock, so a run whose percentage has not moved for a while is still visibly alive
+- **Actions** — jump back to the run's full status message in the conversation, cancel the run, or dismiss the row
+
+Click the dock header to collapse it to a single line; the summary still shows gene, percentage, and current step. Several runs can be tracked at once. Completed runs disappear on their own after a short pause; failed runs stay until you dismiss them, with the reason shown inline.
+
+The conversation also keeps a detailed status message for each run, updated in place, which is where the final report, download links, and outcome are delivered when the run finishes.
+
 ### Understanding AI Responses
 
 **Thinking Process:**
@@ -507,6 +523,38 @@ Keyboard: Cmd/Ctrl+Shift+D
 - Safe import of externally started DGR tasks through `archive_annotation_research`; CodeXomics re-derives and verifies the exact current CDS qualifier snapshot together with the task, citations, proposal, and target binding before allowing a ChangeSet
 
 Research does not edit the genome directly. When direct literature evidence is available, the proposal includes a compact, citation-rich CDS Note that summarizes the report's key functional, pathway, regulatory, structural, and phenotype findings. Each literature sentence is bound to a verified PubMed abstract span. Review the proposed qualifier diff and its citations before approving a ChangeSet. The full report attachment is integrity checked each time it is opened.
+
+**While the research runs**
+
+A run typically takes several minutes. CodeXomics polls it for you and shows live progress in the ChatBox — see [Long-Running Research](#long-running-research) for the progress dock, its status fields, and how to cancel a run.
+
+**When the research finishes**
+
+The run's status message in the ChatBox becomes the result summary: confidence, research time, source count, download links for the report and the detailed research data, and the proposed annotation terms.
+
+CodeXomics then **creates the annotation ChangeSet for you**. You no longer have to ask for the proposal to be turned into a reviewable change — the completion message names the ChangeSet directly:
+
+```
+📋 Annotation ChangeSet: cs_… (awaiting_approval)
+- Qualifiers: product, note, go_terms, EC_number, …
+- Risk: medium
+```
+
+!!! warning "A ChangeSet is a proposal, not an edit"
+
+    The ChangeSet is created `awaiting_approval` and is **never applied automatically**. Your genome is unchanged until you review the diff and approve it — in the **Review** panel in the toolbar, or with the `request_annotation_approval` and `apply_annotation_changeset` tools. Approval always requires a curator, and the ChangeSet's creator cannot approve their own proposal.
+
+Research that cannot be turned into a safe change says so instead of proposing one. The completion message reports the reason, and nothing is written:
+
+| Message                                              | What it means                                                                               |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `draft_requires_evidence`                            | The research found no evidence-backed claims safe enough to propose                         |
+| `draft_requires_target`                              | The proposal could not be bound to an exact gene in the loaded genome                       |
+| `no genome annotations are loaded`                   | Load the genome first, then merge the report with `merge_gene_research_report`              |
+| `not needed`                                         | The gene already carries everything the research proposed                                   |
+| `Archive DGR research task … as a gene report first` | The run was not target-bound; start it with `start_annotation_research` for full provenance |
+
+Re-running or re-checking a completed task returns the ChangeSet that already exists rather than adding a duplicate to your review queue.
 
 ### CHOPCHOP 🔬
 

@@ -145,6 +145,55 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
    window.conversationEvolutionManager.resetSystem();
    ```
 
+### Deep Gene Research Shows No Progress
+
+**Symptoms**: A research run was started but the ChatBox shows nothing happening
+
+**Solutions**:
+
+1. **Look above the input box, not in the conversation**:
+   - The research progress dock is pinned between the transcript and the composer so it never scrolls away
+   - Its elapsed-time clock ticks every second while the run is alive, even when the percentage is unchanged
+   - If the dock is collapsed, click its header to expand the run list
+
+2. **Confirm the run was actually queued**:
+   - A queued run answers with a task ID; if the reply has no task ID, the research never started
+   - Check that the Deep Gene Research server is connected (**MCP Servers** in the ChatBox action bar)
+
+3. **Check the server connection if the dock turns red**:
+   - Polling gives up after several consecutive transport failures and the row shows the reason inline
+   - Verify `DGR_MCP_URL` points at a running DGR process and that `DGR_MCP_TOKEN` matches its `ACCESS_PASSWORD`
+
+4. **Confirm polling is running**:
+   ```javascript
+   // In developer console — one entry per tracked run
+   Array.from(window.chatManager.activeTasks.keys());
+   ```
+
+### No ChangeSet Created After Research
+
+**Symptoms**: Research completed, but no annotation ChangeSet appeared for review
+
+**Solutions**:
+
+1. **Read the reason in the completion message** — creation is deliberately fail-closed and always says why:
+   - `draft_requires_evidence` — no evidence-backed claims safe enough to propose
+   - `draft_requires_target` — the proposal is not bound to an exact gene in the loaded genome
+   - `not needed` — the gene already carries everything the research proposed
+   - `Archive DGR research task … as a gene report first` — the run was not target-bound
+
+2. **Load the genome before researching**:
+   - A ChangeSet needs a resolvable target; with no primary annotations loaded, nothing can be proposed
+   - For FASTA + GFF, merge the GFF features into the primary annotation set first
+
+3. **Use a target-bound run for full provenance**:
+   - `start_annotation_research` resolves the exact CDS target and sends its current-annotation snapshot to DGR, which is what lets the report be archived and the proposal validated
+   - A raw `deep-gene-research` call cannot satisfy that chain retroactively
+
+4. **Check whether it already exists**:
+   - Re-checking a completed task returns the existing ChangeSet rather than creating a second one
+   - List pending proposals with the `list_annotation_changesets` tool or the **Review** panel
+
 ## 📁 File Loading Issues
 
 ### Large File Performance
