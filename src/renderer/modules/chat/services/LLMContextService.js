@@ -1655,34 +1655,77 @@ ${data.mostFrequentCodons
           // Check if result.result is an object with useful data
           if (typeof result.result === 'object' && result.result !== null) {
             // Check if this is a task ID response (from Deep Gene Research)
-            if (result.result.taskId && result.result.status) {
-              // This is a task ID response - we'll start polling for status updates
-              const taskId = result.result.taskId;
-              const initialStatus = result.result.status;
-              const createdAt = result.result.createdAt || new Date().toISOString();
+            const taskDescriptor = this.chatManager.extractDgrTaskDescriptor
+              ? this.chatManager.extractDgrTaskDescriptor(result.result, tool.parameters)
+              : null;
+            if (taskDescriptor) {
+              // This is a task ID response - polling runs programmatically
+              const taskId = taskDescriptor?.taskId || result.result.taskId;
+              const initialStatus = taskDescriptor?.status || result.result.status;
+              const createdAt = taskDescriptor?.createdAt || result.result.createdAt || new Date().toISOString();
+              const geneSymbol = taskDescriptor?.geneSymbol || 'Unknown';
 
-              // Store task info for polling
-              const taskInfo = {
+              // Start polling for task status. Idempotent per taskId: the
+              // tool-result round already started polling for DGR tasks.
+              this.chatManager.startTaskPolling({
                 taskId: taskId,
-                serverId: tool.serverId,
+                serverId:
+                  typeof this.chatManager.resolveDgrTaskServerId === 'function'
+                    ? this.chatManager.resolveDgrTaskServerId(tool.tool_name)
+                    : tool.serverId,
                 serverName: tool.serverName,
                 toolName: tool.tool_name,
+                kind: taskDescriptor.kind,
+                geneSymbol: geneSymbol,
                 status: initialStatus,
                 createdAt: createdAt,
+                progress: taskDescriptor.progress ?? undefined,
+                currentStep: taskDescriptor.currentStep || undefined,
                 lastUpdated: new Date().toISOString(),
+                consecutiveErrors: 0,
                 messageElement: null, // Will store the message element for updates
-              };
+              });
 
-              // Start polling for task status
-              this.chatManager.startTaskPolling(taskInfo);
-
-              // Return initial task status message
+              // Return initial task status message. The task id must stay in
+              // the text: updateTaskMessage() locates this bubble by it.
               return (
-                `✅ **Deep Gene Research Task Started**\n\n` +
-                `📋 **Task ID**: ${taskId}\n` +
+                `🧬 **Deep Gene Research Task Started**\n\n` +
+                (geneSymbol !== 'Unknown' ? `🧫 **Gene**: ${geneSymbol}\n` : '') +
+                `📋 **Task ID**: \`${taskId}\`\n` +
                 `📊 **Status**: ${initialStatus}\n` +
-                `⏱️ **Created**: ${new Date(createdAt).toLocaleString()}\n\n` +
-                `🔄 The system will automatically update this message as the research progresses...`
+                `⏱️ **Started**: ${new Date(createdAt).toLocaleString()}\n\n` +
+                `🔄 Research runs asynchronously (typically several minutes). This message updates automatically with progress, and the final report, download links, and annotation proposal will appear here when the run completes.`
+              );
+            } else if (result.result.taskId && result.result.status) {
+              // Terminal task record with the final payload already inline
+              // (e.g. a completed get-task-status) — report it, never poll.
+              const terminalStatus = String(result.result.status);
+              const terminalLabel = terminalStatus.replace(/_/g, ' ').toUpperCase();
+              return (
+                `🧬 **Deep Gene Research Task — ${terminalLabel}**\n\n` +
+                `📋 **Task ID**: \`${result.result.taskId}\`\n\n` +
+                (terminalStatus === 'completed'
+                  ? `The task has completed and its result data is available in the tool result above.`
+                  : terminalStatus === 'failed'
+                    ? `❌ The task failed${result.result.error ? `: ${result.result.error}` : ''}`
+                    : `Task status: ${terminalStatus}`)
+              );
+            } else if (result.result.workflow && result.result.workflow.taskId && result.result.workflow.status) {
+              // Annotation-workflow terminal record carrying its payload
+              // (completed get_annotation_research_workflow) — summarize the
+              // run state instead of dumping the raw workflow JSON.
+              const workflowResult = result.result.workflow;
+              const workflowStatus = String(workflowResult.status);
+              const workflowLabel = workflowStatus.replace(/_/g, ' ').toUpperCase();
+              return (
+                `🧬 **Deep Gene Research Task — ${workflowLabel}**\n\n` +
+                (workflowResult.geneSymbol ? `🧫 **Gene**: ${workflowResult.geneSymbol}\n` : '') +
+                `📋 **Task ID**: \`${workflowResult.taskId}\`\n\n` +
+                (workflowStatus === 'completed'
+                  ? `The task has completed. The annotation proposal and report details are included in the tool result above.`
+                  : workflowStatus === 'failed'
+                    ? `❌ The task failed${workflowResult.error ? `: ${workflowResult.error}` : ''}`
+                    : `Task status: ${workflowStatus}`)
               );
             } else if (result.result.summary || result.result.message) {
               // If result has a summary or message, use it
@@ -2735,67 +2778,88 @@ ${this.chatManager.getPluginSystemInfo()}`;
       if (result.success) {
         // Custom handling for Deep Gene Research tool
         if (result.tool === 'deep-gene-research') {
-          try {
-            const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
-            const { report, geneSymbol, stepsCount, statistics } = extracted;
-            let reportSaved = false;
-            let reportFileName = '';
-
-            const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
-            if (reportStr && reportStr.trim().length > 0) {
-              const saveReport = window.electronAPI?.saveGeneResearchReport;
-              if (saveReport) {
-                saveReport(geneSymbol, reportStr)
-                  .then(saveResult => {
-                    if (saveResult?.success) {
-                      this.chatManager.updateThinkingMessage(
-                        `<div style="color: #00695c; margin: 8px 0;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${this.chatManager.escapeHtml(saveResult.fileName || '')}</code></div>`
-                      );
-                    } else {
-                      console.warn('Deep Gene Research report save failed:', saveResult?.error || 'Unknown error');
-                    }
-                  })
-                  .catch(saveError => {
-                    console.warn('Deep Gene Research report save failed:', saveError);
-                  });
-                reportSaved = true;
-                reportFileName = 'pending save';
-              } else {
-                console.warn('Deep Gene Research report save skipped: IPC bridge unavailable');
-              }
-            }
-
-            resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
-            resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
-            if (reportSaved) {
-              resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report save requested <code>${this.chatManager.escapeHtml(reportFileName)}</code></div>`;
-            }
+          const descriptor = this.chatManager.extractDgrTaskDescriptor
+            ? this.chatManager.extractDgrTaskDescriptor(resultData, result.parameters)
+            : null;
+          if (descriptor) {
+            // Task envelope — NOT a finished report. Render a status card;
+            // programmatic polling (started by ChatManager) delivers progress
+            // and the final report. The descriptor must never be saved as a
+            // report file.
+            const isTerminal = ['completed', 'failed', 'cancelled'].includes(descriptor.status);
+            const geneText = descriptor.geneSymbol !== 'Unknown' ? `: ${descriptor.geneSymbol}` : '';
+            resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #43a047;">`;
+            resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Started${this.chatManager.escapeHtml(geneText)}</h3>`;
             resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
-            if (stepsCount > 0) resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;
-            if (statistics.totalCitations > 0 || statistics.processedPapers > 0) {
-              resultDisplay += `Found ${statistics.totalCitations} citations${statistics.processedPapers > 0 ? ` and ${statistics.processedPapers} papers` : ''}.<br>`;
-            }
-            if (reportStr && reportStr.length > 0) {
-              const preview = reportStr.length > 500 ? reportStr.substring(0, 500) + '...' : reportStr;
-              resultDisplay += `<details style="margin-top: 8px;"><summary style="cursor: pointer; color: #1565C0;">📄 Report Preview</summary>`;
-              resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.chatManager.escapeHtml(preview)}</div></details>`;
-            }
-            resultDisplay += `</div>`;
+            resultDisplay += `Task ID: <code>${this.chatManager.escapeHtml(descriptor.taskId)}</code><br>`;
+            resultDisplay += `Status: <code>${this.chatManager.escapeHtml(descriptor.status)}</code><br>`;
+            resultDisplay += isTerminal
+              ? `This task has already finished on the server — retrieving the final report now.`
+              : `Research runs asynchronously (typically several minutes). The task message updates automatically with progress, and the final report, download links, and annotation proposal are delivered here on completion.`;
+            resultDisplay += `</div></div>`;
+          } else {
+            try {
+              const extracted = this.chatManager.extractDeepGeneResearchReport(resultData);
+              const { report, geneSymbol, stepsCount, statistics } = extracted;
+              let reportSaved = false;
+              let reportFileName = '';
 
-            if (this.chatManager.showDetailedToolData && resultData) {
-              resultDisplay += `<details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2196F3; font-size: 0.9em;">📊 View raw data</summary>`;
-              resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">`;
-              try {
-                resultDisplay += this.chatManager.formatToolResultData(resultData);
-              } catch (e) {
-                resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+              const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
+              if (reportStr && reportStr.trim().length > 0) {
+                const saveReport = window.electronAPI?.saveGeneResearchReport;
+                if (saveReport) {
+                  saveReport(geneSymbol, reportStr)
+                    .then(saveResult => {
+                      if (saveResult?.success) {
+                        this.chatManager.updateThinkingMessage(
+                          `<div style="color: #00695c; margin: 8px 0;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report saved to <code>reports/${this.chatManager.escapeHtml(saveResult.fileName || '')}</code></div>`
+                        );
+                      } else {
+                        console.warn('Deep Gene Research report save failed:', saveResult?.error || 'Unknown error');
+                      }
+                    })
+                    .catch(saveError => {
+                      console.warn('Deep Gene Research report save failed:', saveError);
+                    });
+                  reportSaved = true;
+                  reportFileName = 'pending save';
+                } else {
+                  console.warn('Deep Gene Research report save skipped: IPC bridge unavailable');
+                }
               }
-              resultDisplay += `</div></details>`;
+
+              resultDisplay += `<div style="margin-top: 8px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">`;
+              resultDisplay += `<h3 style="margin: 0 0 8px 0; color: #1565C0; font-size: 1.1em;"><i class="fas fa-dna"></i> Deep Gene Research Complete: ${geneSymbol}</h3>`;
+              if (reportSaved) {
+                resultDisplay += `<div style="color: #00695c; display: flex; align-items: center; margin-bottom: 8px;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i> Report save requested <code>${this.chatManager.escapeHtml(reportFileName)}</code></div>`;
+              }
+              resultDisplay += `<div style="font-size: 0.9em; color: #555;">`;
+              if (stepsCount > 0) resultDisplay += `Completed ${stepsCount} steps of analysis.<br>`;
+              if (statistics.totalCitations > 0 || statistics.processedPapers > 0) {
+                resultDisplay += `Found ${statistics.totalCitations} citations${statistics.processedPapers > 0 ? ` and ${statistics.processedPapers} papers` : ''}.<br>`;
+              }
+              if (reportStr && reportStr.length > 0) {
+                const preview = reportStr.length > 500 ? reportStr.substring(0, 500) + '...' : reportStr;
+                resultDisplay += `<details style="margin-top: 8px;"><summary style="cursor: pointer; color: #1565C0;">📄 Report Preview</summary>`;
+                resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; white-space: pre-wrap; font-size: 0.85em;">${this.chatManager.escapeHtml(preview)}</div></details>`;
+              }
+              resultDisplay += `</div>`;
+
+              if (this.chatManager.showDetailedToolData && resultData) {
+                resultDisplay += `<details style="margin-top: 8px;"><summary style="cursor: pointer; color: #2196F3; font-size: 0.9em;">📊 View raw data</summary>`;
+                resultDisplay += `<div style="background: #fff; padding: 8px; margin-top: 4px; border-radius: 4px; font-family: monospace; font-size: 0.85em; max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">`;
+                try {
+                  resultDisplay += this.chatManager.formatToolResultData(resultData);
+                } catch (e) {
+                  resultDisplay += `<pre>${JSON.stringify(resultData, null, 2)}</pre>`;
+                }
+                resultDisplay += `</div></details>`;
+              }
+              resultDisplay += `</div>`;
+            } catch (e) {
+              console.error('Error processing deep-gene-research result:', e);
+              resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
             }
-            resultDisplay += `</div>`;
-          } catch (e) {
-            console.error('Error processing deep-gene-research result:', e);
-            resultDisplay += `<span style="color: #4CAF50;">Status: Success</span>`;
           }
         } else if (
           result.tool === 'list_available_tools' &&

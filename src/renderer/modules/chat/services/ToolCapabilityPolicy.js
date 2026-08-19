@@ -89,7 +89,6 @@ class ToolCapabilityPolicy {
           'get_annotation_audit',
           'start_annotation_research',
           'archive_annotation_research',
-          'get_annotation_research_workflow',
           'list_annotation_research_history',
           'cancel_annotation_research',
         ],
@@ -282,6 +281,26 @@ class ToolCapabilityPolicy {
           'fetch_alphafold_structure',
         ],
         policy: 'rate_limited',
+      },
+
+      // Deep Gene Research MCP jobs run for minutes server-side. Submitting the
+      // same research twice must stay blocked (parameter_based), while status
+      // polling and cancellation are read-only/control operations that the model
+      // may repeat freely (the ChatBox also polls programmatically).
+      research_task_submission: {
+        tools: [
+          'deep-gene-research',
+          'write-research-plan',
+          'generate-SERP-query',
+          'search-task',
+          'write-final-report',
+        ],
+        policy: 'parameter_based',
+      },
+
+      research_task_polling: {
+        tools: ['get-task-status', 'cancel-research-run', 'get_annotation_research_workflow'],
+        policy: 'always_allowed',
       },
     };
   }
