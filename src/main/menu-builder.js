@@ -2352,12 +2352,6 @@ function createProjectManagerMenu(projectManagerWindow) {
                 projectManagerWindow.webContents.send('menu-export-json');
               },
             },
-            {
-              label: 'Export Project Archive',
-              click: () => {
-                projectManagerWindow.webContents.send('menu-export-archive');
-              },
-            },
           ],
         },
         { type: 'separator' },
@@ -2452,21 +2446,6 @@ function createProjectManagerMenu(projectManagerWindow) {
           accelerator: 'CmdOrCtrl+H',
           click: () => {
             projectManagerWindow.webContents.send('menu-find-replace');
-          },
-        },
-        { type: 'separator' },
-        {
-          label: 'Undo',
-          accelerator: 'CmdOrCtrl+Z',
-          click: () => {
-            projectManagerWindow.webContents.send('menu-undo');
-          },
-        },
-        {
-          label: 'Redo',
-          accelerator: process.platform === 'darwin' ? 'Cmd+Shift+Z' : 'Ctrl+Y',
-          click: () => {
-            projectManagerWindow.webContents.send('menu-redo');
           },
         },
         { type: 'separator' },
@@ -2746,29 +2725,6 @@ function createProjectManagerMenu(projectManagerWindow) {
           },
         },
         { type: 'separator' },
-        {
-          label: 'Convert Files',
-          submenu: [
-            {
-              label: 'FASTA to GenBank',
-              click: () => {
-                projectManagerWindow.webContents.send('menu-convert-fasta-genbank');
-              },
-            },
-            {
-              label: 'GFF to BED',
-              click: () => {
-                projectManagerWindow.webContents.send('menu-convert-gff-bed');
-              },
-            },
-            {
-              label: 'Custom Conversion...',
-              click: () => {
-                projectManagerWindow.webContents.send('menu-custom-conversion');
-              },
-            },
-          ],
-        },
         {
           label: 'Batch Operations',
           submenu: [

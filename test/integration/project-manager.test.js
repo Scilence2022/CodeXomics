@@ -20,6 +20,21 @@ describe('Project Manager', () => {
       expect(content).toContain('ProjectManagerWindow.js');
     });
 
+    it('should include the shared ProjectUtils.js module before the other modules', () => {
+      const content = fs.readFileSync(PM_HTML, 'utf-8');
+      expect(content).toContain('ProjectUtils.js');
+      expect(content.indexOf('ProjectUtils.js')).toBeLessThan(content.indexOf('ProjectManagerWindow.js'));
+    });
+
+    it('should no longer load the removed dual-instance ProjectManager.js', () => {
+      // The old architecture instantiated ProjectManager alongside
+      // ProjectManagerWindow in the same window, which caused double event
+      // handling, broken search and stale-state clobbering on save.
+      const content = fs.readFileSync(PM_HTML, 'utf-8');
+      expect(content).not.toContain('renderer/modules/ProjectManager.js');
+      expect(content).not.toContain('new ProjectManager()');
+    });
+
     it('should load preload.js in webPreferences', () => {
       const content = fs.readFileSync(path.join(process.cwd(), 'src/main/project-ipc.js'), 'utf-8');
       // Preload is set in main process when creating the window
