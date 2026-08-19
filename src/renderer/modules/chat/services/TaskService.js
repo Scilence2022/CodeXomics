@@ -10,6 +10,45 @@ class TaskService {
     this.tasks = [];
     this.isCollapsed = false;
     this.activeFilter = 'all'; // 'all', 'active', 'completed'
+    // Manual show/hide override for the Tasks dock.
+    // null = automatic (visible whenever there is at least one task),
+    // true/false = user forced the panel open/closed from the ChatBox header.
+    this.panelVisibilityOverride = null;
+    this._lastNotifiedVisibility = null;
+  }
+
+  // --- Panel visibility (driven by the ChatBox header toggle) ---
+
+  /**
+   * Whether the Tasks dock should currently be on screen.
+   * @returns {boolean}
+   */
+  isPanelVisible() {
+    if (this.panelVisibilityOverride !== null) return this.panelVisibilityOverride;
+    return this.tasks.length > 0;
+  }
+
+  /**
+   * Explicitly show or hide the Tasks dock.
+   * @param {boolean} visible
+   * @returns {boolean} the resulting visibility
+   */
+  setPanelVisible(visible) {
+    this.panelVisibilityOverride = !!visible;
+    if (this.panelVisibilityOverride) {
+      // Opening the panel should always reveal the list, not a collapsed header
+      this.isCollapsed = false;
+    }
+    this.updateUI();
+    return this.isPanelVisible();
+  }
+
+  /**
+   * Toggle the Tasks dock open/closed.
+   * @returns {boolean} the resulting visibility
+   */
+  togglePanelVisibility() {
+    return this.setPanelVisible(!this.isPanelVisible());
   }
 
   // --- Core CRUD operations ---
@@ -39,8 +78,10 @@ class TaskService {
 
       this.tasks.push(newTask);
 
-      // Auto-expand panel when a new task is added
+      // Auto-expand panel when a new task is added, and drop any manual
+      // hide so freshly created tasks are never silently invisible
       this.isCollapsed = false;
+      this.panelVisibilityOverride = null;
 
       this.updateUI();
 
@@ -221,14 +262,16 @@ class TaskService {
     const tasksPanel = document.getElementById('tasksPanel');
     if (!tasksPanel) return;
 
-    if (this.tasks.length === 0) {
+    if (!this.isPanelVisible()) {
       tasksPanel.style.display = 'none';
       this._setTasksDockVisible(tasksDock, false);
+      this._notifyVisibilityChange(false);
       return;
     }
 
     this._setTasksDockVisible(tasksDock, true);
     tasksPanel.style.display = 'flex';
+    this._notifyVisibilityChange(true);
 
     // Calculate overall stats
     const total = this.tasks.length;
@@ -270,6 +313,20 @@ class TaskService {
     const listEl = document.getElementById('tasksList');
     if (listEl) {
       listEl.innerHTML = '';
+
+      if (displayTasks.length === 0) {
+        const emptyEl = document.createElement('div');
+        emptyEl.className = 'tasks-empty-state';
+        emptyEl.innerHTML = `
+          <i class="fas fa-clipboard-list"></i>
+          <span>${
+            this.tasks.length === 0
+              ? 'No tasks yet. Add one below, or ask the assistant to plan a workflow.'
+              : 'No tasks match this filter.'
+          }</span>
+        `;
+        listEl.appendChild(emptyEl);
+      }
 
       const statusIcons = {
         pending: '<i class="far fa-circle task-status-icon"></i>',
@@ -552,6 +609,20 @@ class TaskService {
         window.dispatchEvent(new Event('resize'));
       }, 50);
     }
+  }
+
+  /**
+   * Broadcast panel visibility so the ChatBox header toggle can stay in sync
+   * when tasks appear or are cleared without user interaction.
+   */
+  _notifyVisibilityChange(visible) {
+    if (this._lastNotifiedVisibility === visible) return;
+    this._lastNotifiedVisibility = visible;
+
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+    if (typeof CustomEvent !== 'function') return;
+
+    window.dispatchEvent(new CustomEvent('tasks-panel-visibility-changed', { detail: { visible } }));
   }
 
   /**
