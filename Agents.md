@@ -123,6 +123,31 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
 - `sendToLLM()` rethrows `AbortError`. `sendMessage()`, `sendMessageProgrammatically()` and
   `processAgentPrompt()` each render their own cancellation message from it.
 
+## 5c. Context Budget Rules
+
+- `enforceConversationTokenBudget()` runs immediately before every provider call and is the only
+  thing bounding transcript growth across a turn; `sanitizeResultForLLM()` bounds a single result,
+  not their sum. Budget comes from `llm.maxContextTokens` (default 120000; `0` disables, a garbage
+  value falls back to the default, anything positive is floored at 4000).
+- Trimming happens in two phases: compact old tool result bodies first (structure preserved), then
+  drop whole exchanges. Never split an assistant `tool_calls` entry from its `tool` messages —
+  `buildTranscriptGroups()` defines the spans that must move together.
+- The system message, the user message that started the turn, and the most recent exchange are
+  never trimmed. When nothing else is trimmable the function returns `null` and logs, rather than
+  reporting a no-op trim.
+
+## 5d. Mid-Turn Tool Retrieval Rules
+
+- Tool selection runs once per turn, before round 1. `expandAdvertisedToolsForRejectedCalls()` is
+  the only sanctioned way to widen it afterwards, and it fires only when a call was rejected with
+  `UNADVERTISED_TOOL_REASON` — that constant is shared by the producer (`analyzeLLMResponse`) and
+  the consumer; do not restate the string.
+- Expansion appends to `currentNativeTools` and `lastSystemPromptMetadata.selectedTools`; it never
+  reorders or removes. The advertised list is part of the request prefix, so growing it costs
+  provider prompt caching — that is why it is on demand rather than per round.
+- A turn may expand at most `MAX_TOOL_EXPANSIONS_PER_TURN` (3) times. A rejected name that the
+  registry does not know is left alone, so the existing unavailable-tool handling still applies.
+
 ## 6. Multi-Agent Routing Rules
 
 - Sequential AI behavior belongs in an agent capability, not brittle UI callbacks.

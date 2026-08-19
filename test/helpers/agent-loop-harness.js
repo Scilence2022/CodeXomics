@@ -22,6 +22,7 @@
  */
 
 const ChatManager = require('../../src/renderer/modules/ChatManager.js');
+const DynamicToolsSnapshotAdapter = require('../../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
 const IntentParserService = require('../../src/renderer/modules/chat/services/IntentParserService.js');
 const ToolCapabilityPolicy = require('../../src/renderer/modules/chat/services/ToolCapabilityPolicy.js');
 // Loading ToolExecutionPolicy also publishes it on globalThis, which is how
@@ -89,15 +90,41 @@ function anthropicToolUse(name, parameters = {}, options = {}) {
   };
 }
 
+/** Real snapshot adapter over a handful of tools, for tests that need a registry. */
+function createRegistryAdapter(registryTools) {
+  const tools = registryTools.map(tool =>
+    typeof tool === 'string'
+      ? { name: tool, description: `Test tool ${tool}`, keywords: [tool], category: 'analysis', priority: 1 }
+      : { category: 'analysis', priority: 1, ...tool }
+  );
+  return new DynamicToolsSnapshotAdapter(
+    {
+      tools,
+      builtInTools: tools.map(tool => ({ name: tool.name, category: tool.category, priority: tool.priority })),
+      categories: { categories: {} },
+      counts: { tools: tools.length, builtInTools: tools.length },
+    },
+    { agentSystemEnabled: false }
+  );
+}
+
 /**
  * @param {object} spec
  * @param {Array<any|((ctx: object) => any)>} [spec.responses] scripted provider responses, one per round
  * @param {Record<string, Function>} [spec.tools] tool name -> implementation
  * @param {Record<string, any>} [spec.config] ConfigManager overrides
  * @param {string[]|null} [spec.advertisedTools] tool names the system prompt advertised
+ * @param {Array<string|object>|null} [spec.registryTools] tools the registry knows about, whether advertised or not
  */
 function createAgentLoopHarness(spec = {}) {
-  const { responses = [], tools = {}, config = {}, advertisedTools = null, systemPrompt = '[System] test' } = spec;
+  const {
+    responses = [],
+    tools = {},
+    config = {},
+    advertisedTools = null,
+    registryTools = null,
+    systemPrompt = '[System] test',
+  } = spec;
 
   const cm = Object.create(ChatManager.prototype);
   const requests = [];
@@ -122,7 +149,7 @@ function createAgentLoopHarness(spec = {}) {
   cm.benchmarkAutomationActive = false;
   cm.smartExecutor = null;
   cm.isSmartExecutionEnabled = false;
-  cm.dynamicTools = null;
+  cm.dynamicTools = registryTools ? createRegistryAdapter(registryTools) : null;
   cm.currentNativeTools = [];
   cm.lastSystemPromptMetadata = advertisedTools ? { selectedTools: advertisedTools.map(name => ({ name })) } : null;
   cm.chatBoxSettingsManager = { getSetting: (_key, fallback) => fallback };
@@ -243,6 +270,7 @@ function createAgentLoopHarness(spec = {}) {
 
 module.exports = {
   createAgentLoopHarness,
+  createRegistryAdapter,
   createConfigManager,
   openAiToolCall,
   openAiToolCalls,

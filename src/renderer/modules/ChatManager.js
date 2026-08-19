@@ -1,6 +1,24 @@
 /**
  * ChatManager - Handles LLM chat interface and MCP communication
  */
+/**
+ * Token ceiling for one request payload, before the transcript is trimmed.
+ * Comfortably under the context window of every cloud model the app targets, so
+ * it only engages on a genuinely runaway turn. Lower it via `llm.maxContextTokens`
+ * for a small local model.
+ */
+const DEFAULT_MAX_CONTEXT_TOKENS = 120000;
+/**
+ * Reason recorded when a model asks for a tool the prompt did not advertise.
+ * Produced by analyzeLLMResponse(), consumed by
+ * expandAdvertisedToolsForRejectedCalls(); they must not drift apart.
+ */
+const UNADVERTISED_TOOL_REASON = 'Tool was not advertised for the current request';
+/** Bound on how many times one turn may widen its advertised tool set. */
+const MAX_TOOL_EXPANSIONS_PER_TURN = 3;
+/** Floor for a configured budget; below this nothing useful survives trimming. */
+const MIN_MAX_CONTEXT_TOKENS = 4000;
+
 class ChatManager {
   constructor(app, configManager = null) {
     this.app = app;
@@ -5323,6 +5341,18 @@ class ChatManager {
           });
         }
 
+        // Keep the payload inside the context budget. Per-result sanitization
+        // bounds one tool result; only this bounds their sum across a long turn.
+        const budgetReport = this.enforceConversationTokenBudget(conversationHistory, {
+          originalMessage: message,
+        });
+        if (budgetReport && this.showThinkingProcess) {
+          this.updateThinkingMessage(
+            `✂️ Context budget: trimmed ~${budgetReport.before} → ~${budgetReport.after} tokens ` +
+              `(${budgetReport.compactedResults} result(s) compacted, ${budgetReport.droppedMessages} message(s) dropped)`
+          );
+        }
+
         // Send conversation history to configured LLM.
         // Tokens stream into a live bubble so the user sees the answer forming
         // instead of waiting for the whole round to resolve.
@@ -5398,6 +5428,23 @@ class ChatManager {
           // A round that produced a tool call is by definition not empty; reset
           // the guard so only consecutive empty prose rounds count toward it.
           consecutiveEmptyResponseRounds = 0;
+        }
+
+        // Tool selection ran once, before round 1, against the opening message
+        // alone. A capability it missed would otherwise stay unreachable for the
+        // whole turn, with the model burning rounds re-issuing a call that is
+        // rejected as unadvertised every time. Offer it and let the model retry.
+        const toolExpansion = this.expandAdvertisedToolsForRejectedCalls(responseAnalysis, toolExecutionState);
+        if (toolExpansion.expanded) {
+          consecutiveEmptyResponseRounds = 0;
+          if (this.showThinkingProcess) {
+            this.updateThinkingMessage(`🧰 Now advertising ${toolExpansion.addedTools.join(', ')} and retrying`);
+          }
+          if (responseText.trim()) conversationHistory.push({ role: 'assistant', content: responseText });
+          conversationHistory.push(
+            this.createToolExecutionFeedbackMessage(this.buildToolAvailabilityMessage(toolExpansion.addedTools))
+          );
+          continue;
         }
 
         if (detectedToolCount > 0 && this.shouldRecoverBeforeToolExecution(responseAnalysis)) {
@@ -6361,6 +6408,185 @@ class ChatManager {
     return this.services.context.formatToolResult(toolName, parameters, result);
   }
 
+  /**
+   * Rough token estimate for one transcript message, tool-call payloads
+   * included. The same 4-chars-per-token approximation the prompt metadata
+   * uses; exact accounting would need a provider tokenizer, and the budget only
+   * has to catch runaway growth, not price a request.
+   */
+  estimateMessageTokens(message) {
+    let text = typeof message?.content === 'string' ? message.content : '';
+    for (const call of message?.tool_calls || []) {
+      text += `${call?.function?.name || ''}${call?.function?.arguments || ''}`;
+    }
+    // Per-message protocol overhead: role, ids, and framing tokens.
+    return this.estimatePromptTokens(text) + 8;
+  }
+
+  estimateConversationTokens(conversationHistory = []) {
+    return conversationHistory.reduce((total, message) => total + this.estimateMessageTokens(message), 0);
+  }
+
+  /**
+   * Token ceiling for one request payload. Result sanitization bounds a single
+   * tool result to 50KB, but nothing bounded the sum: a long turn could append
+   * twenty of them and overflow the provider's context window, which surfaced
+   * as a generic "Unexpected Error" with the real reason buried in a provider
+   * response body.
+   * @returns {number} budget in tokens, or 0 to disable enforcement
+   */
+  getConversationTokenBudget() {
+    const configured = Number(this.configManager?.get('llm.maxContextTokens', DEFAULT_MAX_CONTEXT_TOKENS));
+    // A garbage value is a misconfiguration, not a request to disable the
+    // budget; only an explicit zero or negative turns enforcement off.
+    if (!Number.isFinite(configured)) return DEFAULT_MAX_CONTEXT_TOKENS;
+    if (configured <= 0) return 0;
+    return Math.max(MIN_MAX_CONTEXT_TOKENS, Math.trunc(configured));
+  }
+
+  /** A tool result whose body can be replaced with a stub without losing structure. */
+  isCompactableResultMessage(message) {
+    if (message?.__codexomicsCompacted) return false;
+    if (message?.role === 'tool') return true;
+    return message?.role === 'user' && message?.__codexomicsToolFeedback === true;
+  }
+
+  /**
+   * Replace a tool result body with a stub, keeping the message itself in place.
+   * Structure is what makes this safe to do to any age of message: an assistant
+   * `tool_calls` entry keeps its matching `tool` message, so the transcript
+   * stays a valid protocol exchange.
+   * @returns {boolean} whether anything was removed
+   */
+  compactResultMessageContent(message) {
+    const original = String(message?.content ?? '');
+    const executions = this.getMessageToolExecutions(message) || [];
+    const toolNames = executions.map(execution => execution.tool).filter(Boolean);
+    const stub =
+      `[Result omitted to stay within the context budget${toolNames.length ? `: ${toolNames.join(', ')}` : ''}. ` +
+      `The call already ran; do not repeat it. Re-run it only if you need the values again.]`;
+    if (stub.length >= original.length) return false;
+    message.content = stub;
+    Object.defineProperty(message, '__codexomicsCompacted', { value: true, enumerable: false });
+    return true;
+  }
+
+  /**
+   * Spans that have to be dropped together. An assistant turn carrying
+   * `tool_calls` and the `tool` messages answering them are one unit: dropping
+   * either half alone leaves an unanswered tool call, which providers reject.
+   * @returns {Array<{start: number, end: number}>}
+   */
+  buildTranscriptGroups(conversationHistory = []) {
+    const groups = [];
+    for (let index = 0; index < conversationHistory.length; index++) {
+      const message = conversationHistory[index];
+      if (message?.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+        let end = index;
+        while (end + 1 < conversationHistory.length && conversationHistory[end + 1]?.role === 'tool') end++;
+        groups.push({ start: index, end });
+        index = end;
+        continue;
+      }
+      groups.push({ start: index, end: index });
+    }
+    return groups;
+  }
+
+  /**
+   * Trim the transcript to the token budget before it is sent.
+   *
+   * Two phases, cheapest first: shrink old tool result bodies (structure
+   * preserved, always protocol-safe), then drop whole old exchanges. The system
+   * message, the user message that started the turn, and the most recent
+   * exchanges are never touched — losing those loses the task itself.
+   *
+   * @returns {{budget: number, before: number, after: number, compactedResults: number, droppedMessages: number}|null}
+   *   a report when the transcript was trimmed, otherwise null
+   */
+  enforceConversationTokenBudget(conversationHistory, options = {}) {
+    const budget = this.getConversationTokenBudget();
+    if (!budget || !Array.isArray(conversationHistory) || conversationHistory.length === 0) return null;
+
+    let used = this.estimateConversationTokens(conversationHistory);
+    if (used <= budget) return null;
+
+    const originalMessage = options.originalMessage;
+    const report = { budget, before: used, after: used, compactedResults: 0, droppedMessages: 0 };
+
+    // Protect the exchange that just happened rather than a fixed number of
+    // messages: the model is mid-task and needs the round it is reasoning about.
+    const groups = this.buildTranscriptGroups(conversationHistory);
+    const protectedFrom = groups.length > 0 ? groups[groups.length - 1].start : conversationHistory.length;
+
+    const isProtected = index => {
+      const message = conversationHistory[index];
+      if (message?.role === 'system') return true;
+      if (index >= protectedFrom) return true;
+      // The request being worked on. Tool feedback also rides in the user role,
+      // so match on content rather than role alone.
+      if (
+        originalMessage &&
+        message?.role === 'user' &&
+        message?.__codexomicsToolFeedback !== true &&
+        message?.content === originalMessage
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    for (let index = 0; index < conversationHistory.length && used > budget; index++) {
+      if (isProtected(index)) continue;
+      const message = conversationHistory[index];
+      if (!this.isCompactableResultMessage(message)) continue;
+      const before = this.estimateMessageTokens(message);
+      if (!this.compactResultMessageContent(message)) continue;
+      used -= before - this.estimateMessageTokens(message);
+      report.compactedResults++;
+    }
+
+    if (used > budget) {
+      for (const group of this.buildTranscriptGroups(conversationHistory)) {
+        if (used <= budget) break;
+        let groupProtected = false;
+        for (let index = group.start; index <= group.end; index++) {
+          if (isProtected(index)) groupProtected = true;
+        }
+        if (groupProtected) continue;
+        for (let index = group.start; index <= group.end; index++) {
+          const message = conversationHistory[index];
+          if (!message || message.__codexomicsDropped) continue;
+          used -= this.estimateMessageTokens(message);
+          Object.defineProperty(message, '__codexomicsDropped', { value: true, enumerable: false });
+          report.droppedMessages++;
+        }
+      }
+      if (report.droppedMessages > 0) {
+        for (let index = conversationHistory.length - 1; index >= 0; index--) {
+          if (conversationHistory[index]?.__codexomicsDropped) conversationHistory.splice(index, 1);
+        }
+      }
+    }
+
+    if (report.compactedResults === 0 && report.droppedMessages === 0) {
+      // Nothing was trimmable — every oversized message is still needed. Report
+      // nothing rather than a no-op trim the user would see as an action.
+      console.warn(
+        `[Context Budget] Transcript is ~${used} tokens, over the ${budget} budget, ` +
+          'but every message is protected. Consider raising llm.maxContextTokens.'
+      );
+      return null;
+    }
+
+    report.after = this.estimateConversationTokens(conversationHistory);
+    console.warn(
+      `[Context Budget] Trimmed transcript from ~${report.before} to ~${report.after} tokens ` +
+        `(budget ${budget}): compacted ${report.compactedResults} result(s), dropped ${report.droppedMessages} message(s).`
+    );
+    return report;
+  }
+
   async buildConversationHistory(newMessage) {
     const history = [];
 
@@ -7272,7 +7498,7 @@ class ChatManager {
           } else {
             invalidToolCalls.push({
               ...toolCall,
-              reason: `Tool was not advertised for the current request: ${toolCall.tool_name}`,
+              reason: `${UNADVERTISED_TOOL_REASON}: ${toolCall.tool_name}`,
             });
           }
         }
@@ -7341,6 +7567,106 @@ class ChatManager {
       hasToolCallIntent: false,
       isEmpty: text.trim() === '' && toolCalls.length === 0,
     };
+  }
+
+  /**
+   * Widen the advertised tool set when the model asked for a real capability
+   * the prompt did not offer.
+   *
+   * Tool selection runs once, before the first round, off keyword matching
+   * against the user's opening message. Anything that selection missed stays
+   * missing for the rest of the turn: analyzeLLMResponse() rejects the call as
+   * unadvertised, and the model spends the repair budget re-issuing a call that
+   * can never succeed. A composite request ("find the gene, then BLAST it")
+   * fails exactly this way when only the first clause matched.
+   *
+   * Expansion is on demand rather than every round on purpose: the advertised
+   * tool list is part of the request prefix, so growing it invalidates provider
+   * prompt caching. Paying that only when a round actually needed a missing
+   * tool keeps the common case cheap.
+   *
+   * @returns {{expanded: boolean, addedTools: string[], unknownTools: string[]}}
+   */
+  expandAdvertisedToolsForRejectedCalls(responseAnalysis, toolExecutionState = null) {
+    const unavailable = { expanded: false, addedTools: [], unknownTools: [] };
+
+    const rejectedNames = [
+      ...new Set(
+        (responseAnalysis?.invalidToolCalls || [])
+          .filter(call => String(call?.reason || '').startsWith(UNADVERTISED_TOOL_REASON))
+          .map(call => call?.tool_name)
+          .filter(Boolean)
+      ),
+    ];
+    if (rejectedNames.length === 0) return unavailable;
+
+    const state = toolExecutionState || {};
+    if ((state.toolExpansionAttempts || 0) >= MAX_TOOL_EXPANSIONS_PER_TURN) {
+      console.log('[Tool Expansion] Budget exhausted for this request; leaving the advertised set unchanged.');
+      return unavailable;
+    }
+
+    const advertised = this.lastSystemPromptMetadata?.selectedTools;
+    if (!this.dynamicTools || !Array.isArray(advertised)) return unavailable;
+
+    const advertisedNames = new Set(advertised.map(tool => tool.name).filter(Boolean));
+    const addedTools = [];
+    const unknownTools = [];
+    const addedSelections = [];
+    const addedNativeTools = [];
+
+    for (const name of rejectedNames) {
+      if (advertisedNames.has(name)) continue;
+      const tool = this.dynamicTools.toolsByName?.get?.(name);
+      if (!tool) {
+        // Genuinely not a capability this build has; the existing
+        // unavailable-tool handling gives the model a better answer than
+        // advertising something that does not exist.
+        unknownTools.push(name);
+        continue;
+      }
+      const nativeTool = this.dynamicTools.toNativeFunctionTool?.(tool);
+      if (!nativeTool) {
+        unknownTools.push(name);
+        continue;
+      }
+      addedNativeTools.push(nativeTool);
+      addedSelections.push({
+        name: tool.name,
+        category: tool.category || 'uncategorized',
+        executionType: tool.execution_type || tool.executionType || tool.type || 'unknown',
+        source: tool.source || null,
+      });
+      advertisedNames.add(name);
+      addedTools.push(name);
+    }
+
+    if (addedTools.length === 0) return { ...unavailable, unknownTools };
+
+    // Append rather than rebuild: the existing entries keep their order so only
+    // the tail of the request prefix changes.
+    this.currentNativeTools = [...(this.currentNativeTools || []), ...addedNativeTools];
+    this.lastSystemPromptMetadata.selectedTools = [...advertised, ...addedSelections];
+    if (Number.isFinite(this.lastSystemPromptMetadata.selectedToolCount)) {
+      this.lastSystemPromptMetadata.selectedToolCount += addedTools.length;
+    }
+    state.toolExpansionAttempts = (state.toolExpansionAttempts || 0) + 1;
+
+    console.log(
+      `[Tool Expansion] Advertised ${addedTools.length} additional tool(s) mid-request: ${addedTools.join(', ')} ` +
+        `(attempt ${state.toolExpansionAttempts}/${MAX_TOOL_EXPANSIONS_PER_TURN})`
+    );
+    return { expanded: true, addedTools, unknownTools };
+  }
+
+  /** Protocol message telling the model that a previously missing tool is now callable. */
+  buildToolAvailabilityMessage(addedTools) {
+    return (
+      `[Tool Availability]\n` +
+      `${addedTools.join(', ')} ${addedTools.length === 1 ? 'is' : 'are'} now available for this request. ` +
+      `The previous call was rejected only because the tool had not been offered yet, not because it is wrong. ` +
+      `Issue the call again.`
+    );
   }
 
   shouldRecoverBeforeToolExecution(responseAnalysis) {
