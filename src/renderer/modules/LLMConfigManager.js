@@ -10,6 +10,42 @@
  */
 const DEFAULT_LLM_REQUEST_TIMEOUT_MS = 180000;
 
+/**
+ * Default sampling temperature. Low, because the dominant workload is
+ * tool selection and schema-constrained argument extraction rather than open
+ * prose. Override per install with `chatboxSettings.chatboxLLMTemperature`.
+ */
+const DEFAULT_LLM_TEMPERATURE = 0.3;
+
+/**
+ * Providers that speak the OpenAI /chat/completions dialect, and the few ways
+ * they genuinely differ. Everything absent from an entry — bearer auth, the
+ * error envelope, retry on a retryable status, response normalization — is
+ * shared. Each of these used to be a separate copy of the request path, and the
+ * copies had drifted into behaviour nobody chose: one provider silently dropped
+ * the error body, two of seven retried a rate limit.
+ */
+const OPENAI_COMPATIBLE_PROVIDERS = {
+  openai: { label: 'OpenAI', historyMethod: 'sendOpenAIMessageWithHistory' },
+  deepseek: { label: 'DeepSeek', historyMethod: 'sendDeepSeekMessageWithHistory' },
+  siliconflow: { label: 'SiliconFlow', historyMethod: 'sendSiliconFlowMessageWithHistory' },
+  // OpenRouter rejects an unavailable model with 403/404 rather than a body we
+  // could act on, so an unavailable model is retried once against a fallback.
+  openrouter: {
+    label: 'OpenRouter',
+    historyMethod: 'sendOpenRouterMessageWithHistory',
+    fallbackModelStatuses: [403, 404],
+  },
+  minimax: { label: 'MiniMax (Global)', historyMethod: 'sendMinimaxMessageWithHistory' },
+  minimax_cn: { label: 'MiniMax CN', historyMethod: 'sendMinimax_cnMessageWithHistory' },
+  local: {
+    label: 'Local LLM',
+    historyMethod: 'sendLocalMessageWithHistory',
+    payloadExtra: { stream: false },
+    normalize: 'normalizeLocalResponse',
+  },
+};
+
 class LLMConfigManager {
   constructor(genomeBrowser, configManager = null) {
     this.genomeBrowser = genomeBrowser;
@@ -2522,58 +2558,22 @@ class LLMConfigManager {
     const provider =
       modelOverride && modelOverride !== 'auto' ? { ...configuredProvider, model: modelOverride } : configuredProvider;
 
-    switch (providerKey) {
-      case 'openai':
-        return await this.sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
-      case 'anthropic':
-        return await this.sendAnthropicMessageWithHistory(
-          provider,
-          conversationHistory,
-          context,
-          memoryContext,
-          options
-        );
-      case 'google':
-        return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
-      case 'deepseek':
-        return await this.sendDeepSeekMessageWithHistory(
-          provider,
-          conversationHistory,
-          context,
-          memoryContext,
-          options
-        );
-      case 'siliconflow':
-        return await this.sendSiliconFlowMessageWithHistory(
-          provider,
-          conversationHistory,
-          context,
-          memoryContext,
-          options
-        );
-      case 'openrouter':
-        return await this.sendOpenRouterMessageWithHistory(
-          provider,
-          conversationHistory,
-          context,
-          memoryContext,
-          options
-        );
-      case 'minimax':
-        return await this.sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
-      case 'minimax_cn':
-        return await this.sendMinimax_cnMessageWithHistory(
-          provider,
-          conversationHistory,
-          context,
-          memoryContext,
-          options
-        );
-      case 'local':
-        return await this.sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
-      default:
-        throw new Error('Unknown provider type');
+    // Anthropic and Gemini need their own transcript translation and request
+    // shape; every other provider speaks the OpenAI dialect and shares one path.
+    if (providerKey === 'anthropic') {
+      return await this.sendAnthropicMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
     }
+    if (providerKey === 'google') {
+      return await this.sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext, options);
+    }
+    // Dispatch through the named per-provider method rather than the shared one:
+    // it stays the override seam a provider quirk would hook, and the shared
+    // path is one delegation away.
+    const spec = OPENAI_COMPATIBLE_PROVIDERS[providerKey];
+    if (spec?.historyMethod) {
+      return await this[spec.historyMethod](provider, conversationHistory, context, memoryContext, options);
+    }
+    throw new Error('Unknown provider type');
   }
 
   /**
@@ -3088,6 +3088,13 @@ class LLMConfigManager {
     return null;
   }
 
+  /** Headers for the Gemini API. The key is a header so it never enters a URL. */
+  buildGoogleHeaders(provider) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (provider?.apiKey) headers['x-goog-api-key'] = provider.apiKey;
+    return headers;
+  }
+
   /** Headers for the OpenAI-compatible /chat/completions family. */
   buildChatCompletionsHeaders(providerKey, provider) {
     const headers = { 'Content-Type': 'application/json' };
@@ -3234,12 +3241,11 @@ class LLMConfigManager {
         payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
       }
 
-      const apiUrl =
-        `${provider.baseUrl}/v1beta/models/${provider.model}:streamGenerateContent` + `?alt=sse&key=${provider.apiKey}`;
+      const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:streamGenerateContent?alt=sse`;
 
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.buildGoogleHeaders(provider),
         body: JSON.stringify(payload),
         signal: options.signal || undefined,
       });
@@ -3261,6 +3267,96 @@ class LLMConfigManager {
     } catch (error) {
       return this.handleStreamFailure(error, providerLabel, options);
     }
+  }
+
+  /**
+   * Error carrying everything the caller needs to decide what to do: the status
+   * for retry classification, and the provider's own body, which is where the
+   * actionable reason lives ("context_length_exceeded", an invalid tool schema).
+   * Dropping the body left users with a bare "HTTP 400".
+   */
+  async createProviderHttpError(response) {
+    const errorText = await response.text().catch(() => '');
+    const error = new Error(`HTTP ${response.status}: ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
+    error.status = response.status;
+    error.isRetryable = this.isRetryableError(response.status);
+    return error;
+  }
+
+  /**
+   * One request path for every OpenAI-compatible provider.
+   * @param {string} providerKey key into OPENAI_COMPATIBLE_PROVIDERS
+   * @param {object} provider resolved provider config (baseUrl, apiKey, model)
+   * @param {Array<object>} conversationHistory canonical transcript
+   * @param {object} options request options (signal, tools, fallback flags, ...)
+   */
+  async sendOpenAICompatibleMessageWithHistory(providerKey, provider, conversationHistory, options = {}) {
+    const spec = OPENAI_COMPATIBLE_PROVIDERS[providerKey] || {};
+    const label = spec.label || providerKey;
+    const normalize = spec.normalize ? this[spec.normalize] : null;
+
+    const streamed = await this.tryStreamChatCompletions(
+      providerKey,
+      provider,
+      conversationHistory,
+      options,
+      normalize
+    );
+    if (streamed !== null) return streamed;
+
+    console.log(`Sending to ${label} - Request Payload:`, {
+      model: provider.model,
+      messages: conversationHistory,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getRequestTemperature(options),
+      nativeTools: this.getNativeFunctionTools(options).length,
+    });
+
+    const requestWithModel = model =>
+      this.fetchWithGuards(
+        `${provider.baseUrl}/chat/completions`,
+        {
+          method: 'POST',
+          headers: this.buildChatCompletionsHeaders(providerKey, provider),
+          body: JSON.stringify(
+            this.buildOpenAICompatiblePayload(
+              { ...provider, model },
+              conversationHistory,
+              options,
+              spec.payloadExtra || {}
+            )
+          ),
+        },
+        options
+      );
+
+    return await this.makeRequestWithRetry(
+      async () => {
+        let response = await requestWithModel(provider.model);
+
+        if (!response.ok && !options.disableFallback && (spec.fallbackModelStatuses || []).includes(response.status)) {
+          const fallbackModel = this.getOpenRouterFallbackModel(provider.model);
+          if (fallbackModel && fallbackModel !== provider.model) {
+            console.warn(`${label} model unavailable (${provider.model}). Falling back to ${fallbackModel}.`);
+            this.showNotification(
+              `${label} model not available (${provider.model}). Retrying with ${fallbackModel}...`,
+              'error'
+            );
+            response = await requestWithModel(fallbackModel);
+          }
+        }
+
+        if (!response.ok) throw await this.createProviderHttpError(response);
+        return response;
+      },
+      label,
+      async response => {
+        const data = await response.json();
+        return normalize ? normalize.call(this, data) : this.normalizeOpenAICompatibleResponse(data, providerKey);
+      },
+      3,
+      options
+    );
   }
 
   async sendOpenAIMessage(provider, message, context, memoryContext = null) {
@@ -3295,52 +3391,7 @@ class LLMConfigManager {
   }
 
   async sendOpenAIMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
-    const streamed = await this.tryStreamChatCompletions('openai', provider, conversationHistory, options);
-    if (streamed !== null) return streamed;
-
-    console.log('Sending to OpenAI - Request Payload:', {
-      model: provider.model,
-      messages: conversationHistory,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getRequestTemperature(options),
-      nativeTools: this.getNativeFunctionTools(options).length,
-    });
-
-    return await this.makeRequestWithRetry(
-      async () => {
-        const response = await this.fetchWithGuards(
-          `${provider.baseUrl}/chat/completions`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${provider.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-          },
-          options
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => '');
-          const error = new Error(
-            `HTTP ${response.status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`
-          );
-          error.status = response.status;
-          error.isRetryable = this.isRetryableError(response.status);
-          throw error;
-        }
-
-        return response;
-      },
-      'OpenAI',
-      async response => {
-        const data = await response.json();
-        return this.normalizeOpenAICompatibleResponse(data, 'openai');
-      },
-      3,
-      options
-    );
+    return await this.sendOpenAICompatibleMessageWithHistory('openai', provider, conversationHistory, options);
   }
 
   async sendAnthropicMessage(provider, message, context, memoryContext = null) {
@@ -3402,27 +3453,33 @@ class LLMConfigManager {
 
     console.log('Sending to Anthropic - Request Payload:', payload);
 
-    const response = await this.fetchWithGuards(
-      `${provider.baseUrl}/v1/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'x-api-key': provider.apiKey,
-          'Content-Type': 'application/json',
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify(payload),
+    // Same envelope and retry policy as the OpenAI-compatible family: a bare
+    // "HTTP 400" hid the provider's own reason, and a 429 failed the whole turn
+    // where every other provider would have backed off and retried.
+    return await this.makeRequestWithRetry(
+      async () => {
+        const response = await this.fetchWithGuards(
+          `${provider.baseUrl}/v1/messages`,
+          {
+            method: 'POST',
+            headers: {
+              'x-api-key': provider.apiKey,
+              'Content-Type': 'application/json',
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true',
+            },
+            body: JSON.stringify(payload),
+          },
+          options
+        );
+        if (!response.ok) throw await this.createProviderHttpError(response);
+        return response;
       },
+      'Anthropic',
+      async response => this.normalizeAnthropicResponse(await response.json()),
+      3,
       options
     );
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return this.normalizeAnthropicResponse(data);
   }
 
   async sendGoogleMessage(provider, message, context, memoryContext = null) {
@@ -3508,28 +3565,29 @@ class LLMConfigManager {
 
     console.log('Sending to Google - Request Payload:', payload);
 
-    const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
+    // The key rides in a header, not the query string: a URL with credentials in
+    // it ends up in logs, proxies, and error reports.
+    const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent`;
 
-    const response = await this.fetchWithGuards(
-      apiUrl,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+    return await this.makeRequestWithRetry(
+      async () => {
+        const response = await this.fetchWithGuards(
+          apiUrl,
+          {
+            method: 'POST',
+            headers: this.buildGoogleHeaders(provider),
+            body: JSON.stringify(payload),
+          },
+          options
+        );
+        if (!response.ok) throw await this.createProviderHttpError(response);
+        return response;
       },
+      'Google',
+      async response => this.normalizeGoogleResponse(await response.json()),
+      3,
       options
     );
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error('Google API Error:', response.status, errorBody);
-      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
-    }
-
-    const data = await response.json();
-    return this.normalizeGoogleResponse(data);
   }
 
   async sendDeepSeekMessage(provider, message, context, memoryContext = null) {
@@ -3564,36 +3622,7 @@ class LLMConfigManager {
   }
 
   async sendDeepSeekMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
-    const streamed = await this.tryStreamChatCompletions('deepseek', provider, conversationHistory, options);
-    if (streamed !== null) return streamed;
-
-    console.log('Sending to DeepSeek - Request Payload:', {
-      model: provider.model,
-      messages: conversationHistory,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getRequestTemperature(options),
-      nativeTools: this.getNativeFunctionTools(options).length,
-    });
-
-    const response = await this.fetchWithGuards(
-      `${provider.baseUrl}/chat/completions`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${provider.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-      },
-      options
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return this.normalizeOpenAICompatibleResponse(data, 'deepseek');
+    return await this.sendOpenAICompatibleMessageWithHistory('deepseek', provider, conversationHistory, options);
   }
 
   async sendSiliconFlowMessage(provider, message, context, memoryContext = null) {
@@ -3805,71 +3834,7 @@ class LLMConfigManager {
   }
 
   async sendSiliconFlowMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
-    const streamed = await this.tryStreamChatCompletions('siliconflow', provider, conversationHistory, options);
-    if (streamed !== null) return streamed;
-
-    console.log('Sending to SiliconFlow - Request Payload:', {
-      model: provider.model,
-      messages: conversationHistory,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getRequestTemperature(options),
-      nativeTools: this.getNativeFunctionTools(options).length,
-    });
-
-    return await this.makeRequestWithRetry(
-      async () => {
-        const response = await this.fetchWithGuards(
-          `${provider.baseUrl}/chat/completions`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${provider.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-          },
-          options
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => '');
-          const error = new Error(
-            `HTTP ${response.status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`
-          );
-          error.status = response.status;
-          error.isRetryable = this.isRetryableError(response.status);
-          throw error;
-        }
-
-        return response;
-      },
-      'SiliconFlow',
-      async response => {
-        const data = await response.json();
-        console.log('SiliconFlow Raw Response Data:', data);
-
-        // Check if choices array exists and has content
-        if (!data.choices || data.choices.length === 0) {
-          console.error('SiliconFlow: No choices in response');
-          throw new Error('No choices in LLM response');
-        }
-
-        const choice = data.choices[0];
-        console.log('SiliconFlow Choice Object:', choice);
-
-        if (!choice.message) {
-          console.error('SiliconFlow: No message in choice');
-          throw new Error('No message in LLM choice');
-        }
-
-        console.log('SiliconFlow Message Object:', choice.message);
-        const normalizedResponse = this.normalizeOpenAICompatibleResponse(data, 'siliconflow');
-        console.log('SiliconFlow Response Normalized:', normalizedResponse);
-        return normalizedResponse;
-      },
-      3,
-      options
-    );
+    return await this.sendOpenAICompatibleMessageWithHistory('siliconflow', provider, conversationHistory, options);
   }
 
   getMaxTokens(provider) {
@@ -3897,12 +3862,22 @@ class LLMConfigManager {
     return /localhost:11434|127\.0\.0\.1:11434/i.test(String(provider?.baseUrl || ''));
   }
 
+  /**
+   * Sampling temperature for a request.
+   *
+   * The default is tuned for the path that actually runs: nearly every request
+   * from this app carries native tool schemas, and the model's job is selecting
+   * a tool and extracting arguments that must match a JSON Schema exactly. 0.7
+   * is a prose-writing default and measurably costs accuracy there; the
+   * benchmark harness already pins temperature 0 for the same reason. Users who
+   * want more variety set `chatboxSettings.chatboxLLMTemperature`.
+   */
   getTemperature() {
     const chatboxSettings = this.configManager ? this.configManager.get('chatboxSettings') : null;
     if (chatboxSettings && chatboxSettings.chatboxLLMTemperature !== undefined) {
       return parseFloat(chatboxSettings.chatboxLLMTemperature);
     }
-    return 0.7;
+    return DEFAULT_LLM_TEMPERATURE;
   }
 
   async sendOpenRouterMessage(provider, message, context, memoryContext = null) {
@@ -3964,64 +3939,7 @@ class LLMConfigManager {
   }
 
   async sendOpenRouterMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
-    const streamed = await this.tryStreamChatCompletions('openrouter', provider, conversationHistory, options);
-    if (streamed !== null) return streamed;
-
-    console.log('Sending to OpenRouter - Request Payload:', {
-      model: provider.model,
-      messages: conversationHistory,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getRequestTemperature(options),
-      nativeTools: this.getNativeFunctionTools(options).length,
-    });
-
-    const doRequest = async modelToUse => {
-      const resp = await this.fetchWithGuards(
-        `${provider.baseUrl}/chat/completions`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': window.location.origin,
-            'X-Title': 'GenomeExplorer',
-          },
-          body: JSON.stringify(
-            this.buildOpenAICompatiblePayload({ ...provider, model: modelToUse }, conversationHistory, options)
-          ),
-        },
-        options
-      );
-      return resp;
-    };
-
-    let response = await doRequest(provider.model);
-
-    if (!response.ok) {
-      const status = response.status;
-      const errorText = await response.text().catch(() => '');
-      if (!options.disableFallback && (status === 403 || status === 404)) {
-        const fallbackModel = this.getOpenRouterFallbackModel(provider.model);
-        if (fallbackModel && fallbackModel !== provider.model) {
-          console.warn(`OpenRouter model unavailable (${provider.model}). Falling back to ${fallbackModel}.`);
-          this.showNotification(
-            `OpenRouter model not available (${provider.model}). Retrying with ${fallbackModel}...`,
-            'error'
-          );
-          response = await doRequest(fallbackModel);
-          if (!response.ok) {
-            const fbText = await response.text().catch(() => '');
-            throw new Error(`HTTP ${status}: ${response.statusText} - ${errorText || fbText}`);
-          }
-          const fbData = await response.json();
-          return this.normalizeOpenAICompatibleResponse(fbData, 'openrouter');
-        }
-      }
-      throw new Error(`HTTP ${status}: ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
-    }
-
-    const data = await response.json();
-    return this.normalizeOpenAICompatibleResponse(data, 'openrouter');
+    return await this.sendOpenAICompatibleMessageWithHistory('openrouter', provider, conversationHistory, options);
   }
 
   getOpenRouterFallbackModel(originalModel) {
@@ -4113,37 +4031,7 @@ class LLMConfigManager {
   }
 
   async sendMinimaxMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
-    const streamed = await this.tryStreamChatCompletions('minimax', provider, conversationHistory, options);
-    if (streamed !== null) return streamed;
-
-    console.log('Sending to MiniMax (Global) - Request Payload:', {
-      model: provider.model,
-      messages: conversationHistory,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getRequestTemperature(options),
-      nativeTools: this.getNativeFunctionTools(options).length,
-    });
-
-    const response = await this.fetchWithGuards(
-      `${provider.baseUrl}/chat/completions`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${provider.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-      },
-      options
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
-    }
-
-    const data = await response.json();
-    return this.normalizeOpenAICompatibleResponse(data, 'minimax');
+    return await this.sendOpenAICompatibleMessageWithHistory('minimax', provider, conversationHistory, options);
   }
 
   async sendMinimax_cnMessage(provider, message, context, memoryContext = null) {
@@ -4179,37 +4067,7 @@ class LLMConfigManager {
   }
 
   async sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
-    const streamed = await this.tryStreamChatCompletions('minimax_cn', provider, conversationHistory, options);
-    if (streamed !== null) return streamed;
-
-    console.log('Sending to MiniMax CN - Request Payload:', {
-      model: provider.model,
-      messages: conversationHistory,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getRequestTemperature(options),
-      nativeTools: this.getNativeFunctionTools(options).length,
-    });
-
-    const response = await this.fetchWithGuards(
-      `${provider.baseUrl}/chat/completions`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${provider.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-      },
-      options
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
-    }
-
-    const data = await response.json();
-    return this.normalizeOpenAICompatibleResponse(data, 'minimax_cn');
+    return await this.sendOpenAICompatibleMessageWithHistory('minimax_cn', provider, conversationHistory, options);
   }
 
   async sendLocalMessage(provider, message, context, memoryContext = null) {
@@ -4273,55 +4131,7 @@ class LLMConfigManager {
   }
 
   async sendLocalMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
-    const streamed = await this.tryStreamChatCompletions(
-      'local',
-      provider,
-      conversationHistory,
-      options,
-      this.normalizeLocalResponse
-    );
-    if (streamed !== null) return streamed;
-
-    const apiUrl = `${provider.baseUrl}/chat/completions`;
-
-    // Modify "system" role to "SystemInstruction" to support model providers that don't allow "system"
-    const messages = conversationHistory.map(msg => ({
-      ...msg,
-      role: msg.role === 'system' ? 'system' : msg.role,
-    }));
-
-    const payload = this.buildOpenAICompatiblePayload(provider, messages, options, { stream: false });
-
-    console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
-    console.log('Sending to Local LLM - Request Payload:', payload);
-
-    const response = await this.fetchWithGuards(
-      apiUrl,
-      {
-        method: 'POST',
-        headers: provider.apiKey
-          ? {
-              Authorization: `Bearer ${provider.apiKey}`,
-              'Content-Type': 'application/json',
-            }
-          : {
-              'Content-Type': 'application/json',
-            },
-        body: JSON.stringify(payload),
-      },
-      options
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`Local LLM API Error (${response.status}): ${errorBody}`);
-      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
-    }
-
-    const data = await response.json();
-    console.log('Full raw response from Local LLM:', data);
-
-    return this.normalizeLocalResponse(data);
+    return await this.sendOpenAICompatibleMessageWithHistory('local', provider, conversationHistory, options);
   }
 
   buildMessages(userMessage, context, providerType = 'openai', memoryContext = null) {

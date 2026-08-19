@@ -1901,11 +1901,14 @@ class ChatManager {
   setupMCPServerEventHandlers() {
     this.mcpServerManager.on('serverConnected', data => {
       // [ChatManager] MCP Server connected
+      // A reconnected server may serve different prompt content.
+      this.invalidateMcpPromptCache(data?.serverId);
       this.updateMCPStatus('connected');
     });
 
     this.mcpServerManager.on('serverDisconnected', data => {
       // [ChatManager] MCP Server disconnected
+      this.invalidateMcpPromptCache(data?.serverId);
       // Only update status to disconnected if no servers are connected
       if (this.mcpServerManager.getConnectedServersCount() === 0) {
         this.updateMCPStatus('disconnected');
@@ -6639,6 +6642,35 @@ class ChatManager {
     return history;
   }
 
+  /**
+   * MCP prompt fetch, memoized per server and prompt name.
+   *
+   * buildSystemMessage() runs once per user message, and it fetched this prompt
+   * every time — an MCP round-trip on the critical path before the first token,
+   * for content that only changes when the server restarts.
+   * `invalidateMcpPromptCache()` clears it on reconnect.
+   */
+  async getCachedMcpPrompt(serverId, promptName) {
+    if (!this.mcpPromptCache) this.mcpPromptCache = new Map();
+    const key = `${serverId}::${promptName}`;
+    if (this.mcpPromptCache.has(key)) return this.mcpPromptCache.get(key);
+    const promptResult = await this.mcpServerManager.getPrompt(serverId, promptName);
+    this.mcpPromptCache.set(key, promptResult);
+    return promptResult;
+  }
+
+  /** Drop memoized MCP prompts. Called when a server connects or disconnects. */
+  invalidateMcpPromptCache(serverId = null) {
+    if (!this.mcpPromptCache) return;
+    if (!serverId) {
+      this.mcpPromptCache.clear();
+      return;
+    }
+    for (const key of [...this.mcpPromptCache.keys()]) {
+      if (key.startsWith(`${serverId}::`)) this.mcpPromptCache.delete(key);
+    }
+  }
+
   async buildSystemMessage() {
     this.lastSystemPromptMetadata = null;
     this.currentNativeTools = [];
@@ -6658,8 +6690,10 @@ class ChatManager {
         if (deepGenePrompt) {
           console.log(`🤖 Found MCP system prompt from server ${serverId}: ${deepGenePrompt.name}`);
           try {
-            // Fetch the full prompt content
-            const promptResult = await this.mcpServerManager.getPrompt(serverId, deepGenePrompt.name);
+            // Fetch the full prompt content. Cached, because this ran an MCP
+            // round-trip on every single user message for a prompt that only
+            // changes when the server does.
+            const promptResult = await this.getCachedMcpPrompt(serverId, deepGenePrompt.name);
 
             if (promptResult && promptResult.messages && promptResult.messages.length > 0) {
               console.log(`✅ Using MCP system prompt:`, promptResult.description || deepGenePrompt.name);

@@ -148,6 +148,27 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
 - A turn may expand at most `MAX_TOOL_EXPANSIONS_PER_TURN` (3) times. A rejected name that the
   registry does not know is left alone, so the existing unavailable-tool handling still applies.
 
+## 5e. Provider Request Rules
+
+- Every OpenAI-compatible provider shares one request path,
+  `sendOpenAICompatibleMessageWithHistory()`. Register a new one in
+  `OPENAI_COMPATIBLE_PROVIDERS`; entries carry only genuine deviations
+  (`payloadExtra`, `normalize`, `fallbackModelStatuses`). Do not copy the request
+  path per provider — that is how the earlier copies drifted into dropping error
+  bodies and skipping retry.
+- `sendMessageWithProvider()` dispatches through the per-provider
+  `historyMethod`, which stays the override seam. The named methods themselves
+  should remain one-line delegations.
+- Every provider — Anthropic and Gemini included — throws through
+  `createProviderHttpError()` so the provider's own body survives, and retries
+  through `makeRequestWithRetry()`.
+- The Gemini key travels in the `x-goog-api-key` header, never the query string.
+- `chatboxLLMTemperature` defaults to 0.3 because nearly every request carries
+  native tool schemas and is judged on schema-exact arguments. Keep the two
+  defaults in `ChatBoxSettingsManager` and `DEFAULT_LLM_TEMPERATURE` in sync.
+- MCP system prompts are fetched through `getCachedMcpPrompt()`. Anything that
+  changes a server's prompt content must call `invalidateMcpPromptCache()`.
+
 ## 6. Multi-Agent Routing Rules
 
 - Sequential AI behavior belongs in an agent capability, not brittle UI callbacks.
