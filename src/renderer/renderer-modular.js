@@ -6704,7 +6704,7 @@ class GenomeBrowser {
 
   showAnnotationReviewCenter(changeSetId = null) {
     if (!this.annotationReviewManager) {
-      this.showNotification('Annotation Review Center is not available.', 'error');
+      this.showNotification('Annotation Review is not available.', 'error');
       return;
     }
     this.annotationReviewManager.showReviewCenter({ changeSetId });
