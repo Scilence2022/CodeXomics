@@ -181,6 +181,32 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
 - The service must stay in the `index.html` script list ahead of
   `modules/ChatManager.js`, and registered in `initializeServices()`.
 
+## 5g. Annotation Research Binding Rules
+
+A Deep Gene Research proposal is a structured, citation-verified artifact. It must never make
+the trip through a model's prose — a paraphrase loses the target binding, invents qualifier
+names, and drops the fields the verification chain keys on.
+
+- When `create_annotation_changeset` receives a `researchRun` that names a stored task, the
+  archived proposal is authoritative. A caller may still pass `annotationProposal`, but only
+  byte for byte; anything else is rejected, never silently downgraded. Operations are derived
+  from the resolved proposal, not from the request.
+- `_requireArchivedDgrReport()` keys on the research run, not on the proposal's shape. Naming a
+  real task demands the archived report, citation validation, current-annotation binding, and a
+  matching `proposalSha256`. Gating on `proposal.researchSummary.schema` alone meant dropping one
+  field turned the whole chain off in silence. Synthetic run ids that name no task
+  (`rollback:<id>`) stay exempt.
+- `getStoredResearchProposal()` reads the runs sidecar without taking the runs lock, on purpose:
+  the caller already holds the ledger lock, and the workflow materialization path takes them in
+  the opposite order. Do not "fix" it by adding the lock.
+- `EC_number` is the one writable qualifier that is not lower-case; it keeps the GenBank spelling.
+  The free-form `updates` map resolves field names case-insensitively via
+  `_normaliseUpdateField()`; an explicit `operations` list names its qualifier deliberately and
+  stays strict. Rejections name the writable vocabulary and the near-miss field.
+- `updates` always produces `addQualifier`, which merges rather than overwrites. A replacement
+  needs an explicit `replaceQualifier` operation, and replacing a non-placeholder product sets
+  `requiresHumanReview`.
+
 ## 6. Multi-Agent Routing Rules
 
 - Sequential AI behavior belongs in an agent capability, not brittle UI callbacks.
