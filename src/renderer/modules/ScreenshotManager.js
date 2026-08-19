@@ -757,7 +757,10 @@ class ScreenshotManager {
       save: options.save !== undefined ? options.save : true,
     });
 
-    return this.formatResult(result, options.target, options.mode, { notify: options.notify });
+    return this.formatResult(result, options.target, options.mode, {
+      notify: options.notify,
+      fallback: options.fallback,
+    });
   }
 
   async saveRenderedScreenshot(options) {
@@ -800,12 +803,22 @@ class ScreenshotManager {
     if (options.notify !== false) {
       this.showNotification(destination, 'success');
     }
+    // A native fallback can only reach the on-screen part of the element, so report the mode
+    // that was actually captured instead of the one that was requested.
+    const fallback = options.fallback || null;
+    const capturedMode = fallback === 'native_visible' ? 'visible' : mode;
     return {
       success: true,
       tool: 'capture_screenshot',
       message: destination,
       target,
-      mode,
+      mode: capturedMode,
+      requestedMode: mode,
+      fallback,
+      warning:
+        fallback === 'native_visible' && mode === 'full'
+          ? 'Full composition was blocked, so only the visible part of the target was captured.'
+          : undefined,
       filePath: result.filePath || null,
       fileName: result.fileName || null,
       fileSize: result.fileSize || 0,
@@ -864,7 +877,7 @@ class ScreenshotManager {
     if (canvasCopyResult.failed > 0) {
       throw new Error('Could not copy canvas into screenshot');
     }
-    this.inlineComputedStyles(element, clone);
+    await this.embedFontFaces(this.inlineComputedStyles(element, clone), clone);
     clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
     clone.style.width = `${width}px`;
     clone.style.height = `${height}px`;
@@ -882,24 +895,173 @@ class ScreenshotManager {
       '</svg>',
     ].join('');
 
-    const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
+    const image = await this.loadSvgImage(svgMarkup);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(width * scale);
+    canvas.height = Math.ceil(height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL(
+      `image/${options.format}`,
+      options.format === 'jpeg' ? this.normalizeQuality(options.quality) / 100 : undefined
+    );
+  }
+
+  /**
+   * An SVG rendered as an image cannot load external resources, so web fonts have to travel
+   * with the markup. Only the faces actually used by the captured subtree are embedded.
+   */
+  async embedFontFaces(families, clone) {
     try {
-      const image = await this.loadImage(url);
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.ceil(width * scale);
-      canvas.height = Math.ceil(height * scale);
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(scale, 0, 0, scale, 0, 0);
-      ctx.fillStyle = background;
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(image, 0, 0, width, height);
-      return canvas.toDataURL(
-        `image/${options.format}`,
-        options.format === 'jpeg' ? this.normalizeQuality(options.quality) / 100 : undefined
-      );
-    } finally {
-      URL.revokeObjectURL(url);
+      if (!families || families.size === 0) return;
+
+      const blocks = [];
+      for (const rule of this.findFontFaceRules(families)) {
+        const block = await this.buildEmbeddedFontFaceCss(rule);
+        if (block) blocks.push(block);
+      }
+      if (blocks.length === 0) return;
+
+      const style = document.createElement('style');
+      style.setAttribute('style', 'display:none;'); // Never let the rules take part in the layout.
+      style.textContent = blocks.join('\n');
+      clone.insertBefore(style, clone.firstChild);
+    } catch (error) {
+      console.warn('[ScreenshotManager] Could not embed fonts into screenshot:', error);
+    }
+  }
+
+  collectFontFamilies(computed, families) {
+    const value = computed?.getPropertyValue?.('font-family');
+    if (!value || !families) return;
+
+    for (const family of value.split(',')) {
+      const normalized = this.normalizeFontFamily(family);
+      if (normalized) families.add(normalized);
+    }
+  }
+
+  normalizeFontFamily(family) {
+    return String(family || '')
+      .trim()
+      .replace(/^["']|["']$/g, '')
+      .toLowerCase();
+  }
+
+  findFontFaceRules(families) {
+    const rules = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let sheetRules;
+      try {
+        sheetRules = sheet.cssRules;
+      } catch {
+        continue; // Cross-origin stylesheet; its faces are not readable.
+      }
+      for (const rule of Array.from(sheetRules || [])) {
+        if (typeof CSSFontFaceRule === 'undefined' || !(rule instanceof CSSFontFaceRule)) continue;
+        if (!families.has(this.normalizeFontFamily(rule.style.getPropertyValue('font-family')))) continue;
+        if (!this.isFontFaceLoaded(rule)) continue; // Skip faces the page never downloaded.
+        rules.push(rule);
+      }
+    }
+    return rules;
+  }
+
+  isFontFaceLoaded(rule) {
+    if (typeof document.fonts?.forEach !== 'function') return false;
+
+    const family = this.normalizeFontFamily(rule.style.getPropertyValue('font-family'));
+    const weight = String(rule.style.getPropertyValue('font-weight') || '').trim();
+    let loaded = false;
+    document.fonts.forEach(face => {
+      if (loaded || face.status !== 'loaded') return;
+      if (this.normalizeFontFamily(face.family) !== family) return;
+      if (weight && String(face.weight).trim() !== weight) return;
+      loaded = true;
+    });
+    return loaded;
+  }
+
+  async buildEmbeddedFontFaceCss(rule) {
+    const source = this.getFontFaceSourceUrl(rule);
+    if (!source) return '';
+
+    // @font-face sources are relative to the stylesheet, not to the document.
+    const baseUrl = rule.parentStyleSheet?.href || document.baseURI;
+    const dataUrl = await this.loadFontDataUrl(source.url, baseUrl);
+    if (!dataUrl) return '';
+
+    const declarations = ['font-family:' + rule.style.getPropertyValue('font-family')];
+    for (const property of ['font-style', 'font-weight', 'unicode-range']) {
+      const value = rule.style.getPropertyValue(property);
+      if (value) declarations.push(`${property}:${value}`);
+    }
+    declarations.push(`src:url(${dataUrl}) format("${source.format}")`);
+    return `@font-face{${declarations.join(';')};}`;
+  }
+
+  getFontFaceSourceUrl(rule) {
+    const src = rule.style.getPropertyValue('src') || '';
+    const entries = [];
+    const pattern = /url\(\s*(?:"([^"]+)"|'([^']+)'|([^)\s]+))\s*\)(?:\s*format\(\s*(?:"([^"]+)"|'([^']+)')\s*\))?/g;
+    let match;
+    while ((match = pattern.exec(src)) !== null) {
+      const url = match[1] || match[2] || match[3];
+      if (!url || url.startsWith('data:')) continue;
+      const format = match[4] || match[5] || (url.split('?')[0].split('.').pop() || '').toLowerCase();
+      entries.push({ url, format });
+    }
+
+    return entries.find(entry => entry.format === 'woff2') || entries[0] || null;
+  }
+
+  async loadFontDataUrl(url, baseUrl) {
+    const absoluteUrl = new URL(url, baseUrl || document.baseURI).href;
+    if (!this.embeddedFontCache) this.embeddedFontCache = new Map();
+    if (this.embeddedFontCache.has(absoluteUrl)) return this.embeddedFontCache.get(absoluteUrl);
+
+    let dataUrl = '';
+    try {
+      const response = await fetch(absoluteUrl);
+      if (response.ok) {
+        const buffer = await response.arrayBuffer();
+        const mimeType = response.headers.get('content-type') || 'font/woff2';
+        dataUrl = `data:${mimeType};base64,${this.arrayBufferToBase64(buffer)}`;
+      }
+    } catch (error) {
+      console.warn(`[ScreenshotManager] Could not read font ${absoluteUrl}:`, error);
+    }
+
+    this.embeddedFontCache.set(absoluteUrl, dataUrl);
+    return dataUrl;
+  }
+
+  arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(offset, offset + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  async loadSvgImage(svgMarkup) {
+    // Chromium taints the canvas when an SVG carrying <foreignObject> is drawn from a blob: URL,
+    // which made every composed capture fall back to a visible-only screenshot. Data URLs stay
+    // exportable, so only fall back to a blob when the markup is too large for a data URL.
+    try {
+      return await this.loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`);
+    } catch {
+      const blobUrl = URL.createObjectURL(new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' }));
+      try {
+        return await this.loadImage(blobUrl);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+      }
     }
   }
 
@@ -1204,11 +1366,13 @@ class ScreenshotManager {
     const sourceNodes = [sourceElement, ...sourceElement.querySelectorAll('*')];
     const cloneNodes = [cloneElement, ...cloneElement.querySelectorAll('*')];
     const count = Math.min(sourceNodes.length, cloneNodes.length);
+    const fontFamilies = new Set();
 
     for (let index = 0; index < count; index += 1) {
       const sourceNode = sourceNodes[index];
       const cloneNode = cloneNodes[index];
       const computed = window.getComputedStyle(sourceNode);
+      this.collectFontFamilies(computed, fontFamilies);
       let cssText = '';
       for (const property of computed) {
         cssText += `${property}:${computed.getPropertyValue(property)};`;
@@ -1221,7 +1385,54 @@ class ScreenshotManager {
       if (sourceNode instanceof HTMLSelectElement && cloneNode instanceof HTMLSelectElement) {
         cloneNode.value = sourceNode.value;
       }
+
+      // Stylesheets are not carried into the SVG, so ::before/::after glyphs (icon fonts,
+      // badges) would disappear from the capture unless they become real nodes.
+      this.inlinePseudoElement(sourceNode, cloneNode, '::before', fontFamilies);
+      this.inlinePseudoElement(sourceNode, cloneNode, '::after', fontFamilies);
     }
+
+    return fontFamilies;
+  }
+
+  inlinePseudoElement(sourceNode, cloneNode, pseudo, fontFamilies) {
+    if (!cloneNode || typeof cloneNode.insertBefore !== 'function') return;
+
+    const computed = window.getComputedStyle(sourceNode, pseudo);
+    if (!computed || computed.display === 'none' || computed.visibility === 'hidden') return;
+
+    const text = this.parsePseudoContent(computed.getPropertyValue('content'));
+    if (!text) return;
+
+    this.collectFontFamilies(computed, fontFamilies);
+
+    let cssText = '';
+    for (const property of computed) {
+      if (property === 'content') continue;
+      cssText += `${property}:${computed.getPropertyValue(property)};`;
+    }
+
+    const span = document.createElement('span');
+    span.setAttribute('style', cssText);
+    span.textContent = text;
+
+    if (pseudo === '::before') {
+      cloneNode.insertBefore(span, cloneNode.firstChild);
+    } else {
+      cloneNode.appendChild(span);
+    }
+  }
+
+  parsePseudoContent(content) {
+    const value = String(content || '').trim();
+    if (!value || value === 'none' || value === 'normal') return '';
+
+    const quoted = /^"((?:[^"\\]|\\.)*)"$/.exec(value) || /^'((?:[^'\\]|\\.)*)'$/.exec(value);
+    if (!quoted) return '';
+
+    return quoted[1]
+      .replace(/\\([0-9a-fA-F]{1,6})\s?/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+      .replace(/\\(.)/g, '$1');
   }
 
   getElementBackground(element, format) {
@@ -1242,7 +1453,14 @@ class ScreenshotManager {
 
   waitForPaint() {
     return new Promise(resolve => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
+      // Chromium stops firing animation frames while the window is occluded or minimized,
+      // so the wait for a repaint has to be bounded or the capture would never finish.
+      const timeout = setTimeout(resolve, 300);
+      const settle = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
+      requestAnimationFrame(() => requestAnimationFrame(settle));
     });
   }
 

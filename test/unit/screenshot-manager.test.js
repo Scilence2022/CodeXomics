@@ -334,4 +334,83 @@ describe('ScreenshotManager', () => {
       window.electronAPI = previousElectronAPI;
     }
   });
+
+  it('renders the composed SVG from a data URL so the export canvas stays untainted', async () => {
+    const manager = createManager();
+    manager.loadImage = vi.fn().mockResolvedValue({});
+
+    await manager.loadSvgImage('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+
+    expect(manager.loadImage).toHaveBeenCalledTimes(1);
+    expect(manager.loadImage.mock.calls[0][0]).toMatch(/^data:image\/svg\+xml;charset=utf-8,/);
+  });
+
+  it('falls back to a blob URL when the SVG data URL cannot be loaded', async () => {
+    const manager = createManager();
+    manager.loadImage = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Unable to render screenshot image'))
+      .mockResolvedValueOnce({});
+    const createObjectURL = vi.fn(() => 'blob:fallback');
+    const revokeObjectURL = vi.fn();
+    const previousURL = { createObjectURL: URL.createObjectURL, revokeObjectURL: URL.revokeObjectURL };
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
+
+    try {
+      await manager.loadSvgImage('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+      expect(manager.loadImage).toHaveBeenNthCalledWith(2, 'blob:fallback');
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:fallback');
+    } finally {
+      URL.createObjectURL = previousURL.createObjectURL;
+      URL.revokeObjectURL = previousURL.revokeObjectURL;
+    }
+  });
+
+  it('materializes ::before content so icon glyphs survive the composition', () => {
+    const manager = createManager();
+    const source = document.createElement('button');
+    const clone = document.createElement('button');
+    const pseudoStyle = {
+      display: 'inline-block',
+      visibility: 'visible',
+      getPropertyValue: property => (property === 'content' ? '"\uf013"' : ''),
+      [Symbol.iterator]: function* () {
+        yield 'content';
+        yield 'font-family';
+      },
+    };
+    const previousGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = (node, pseudo) => (pseudo ? pseudoStyle : previousGetComputedStyle(node));
+
+    try {
+      manager.inlinePseudoElement(source, clone, '::before');
+    } finally {
+      window.getComputedStyle = previousGetComputedStyle;
+    }
+
+    expect(clone.firstChild.textContent).toBe('\uf013');
+    expect(clone.firstChild.getAttribute('style')).not.toContain('content:');
+  });
+
+  it('decodes escaped pseudo element content', () => {
+    const manager = createManager();
+    expect(manager.parsePseudoContent('"\\f013"')).toBe('\uf013');
+    expect(manager.parsePseudoContent('none')).toBe('');
+    expect(manager.parsePseudoContent('attr(data-label)')).toBe('');
+  });
+
+  it('reports the visible mode when full composition fell back to a native capture', () => {
+    const manager = createManager();
+
+    const result = manager.formatResult({ filePath: '/screenshots/track.png' }, 'track', 'full', {
+      notify: false,
+      fallback: 'native_visible',
+    });
+
+    expect(result.mode).toBe('visible');
+    expect(result.requestedMode).toBe('full');
+    expect(result.fallback).toBe('native_visible');
+    expect(result.warning).toMatch(/visible part/i);
+  });
 });
