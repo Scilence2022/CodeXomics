@@ -160,6 +160,9 @@ function loadChatManagerClass() {
 
   const mockClassCode = `
     class MockChatManager {
+      // Abort checkpoint seam. The real method reads this.conversationState;
+      // these tests drive the queue without a conversation, so it is a no-op.
+      throwIfConversationAborted() {}
       ${cloneToolParametersCode}
       ${normalizeToolParamsCode}
       ${getToolExecutionKeyCode}

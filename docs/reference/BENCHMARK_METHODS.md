@@ -16,6 +16,17 @@ The production tool-calling evaluation covered here contains 172 cases: 143 Auto
 
 For each case, the system establishes a request-scoped execution context, applies the configured timeout, retrieves at most 24 high-recall candidate tools in benchmark mode, and sends their strict JSON Schemas through the provider's native function-calling protocol. Benchmark requests use temperature 0, disable provider fallback and streaming, and retain the configured multi-round execution limit. Logs remain available for diagnosis, but only the current request's structured calls and execution results are admissible scoring evidence.
 
+## In-App Versus Offline Harnesses
+
+Two harnesses produce numbers. The **in-app** harness (`LLMBenchmarkFramework`) drives the shipped `ChatManager` round loop, so its results reflect the loop's own recovery, policy, and termination behaviour. The **offline CLI** harnesses (`scripts/ollama-tool-benchmark.js`, `scripts/deepseek-tool-benchmark.js`) re-implement a minimal loop against synthetic contract tool results, which keeps a sweep independent of NCBI latency and local subprocesses.
+
+The offline harnesses run in one of two modes, recorded as `harness_mode` in every report and record:
+
+- **`oracle-assisted`** (default). When a turn ends without covering every expected call, the harness injects a nudge that states how many of the expected steps remain, and the round budget is derived from the expected call count (`expected_steps + 4`). Both facts come from the test oracle. The shipped application has neither: it does not know how many steps a request contains. These runs measure how well a model _can_ be steered, not what a user experiences.
+- **`production-parity`** (`--production-parity`). The step-count disclosure is removed, the round budget is fixed at the shipped default of 10 rounds, and tool results carry the same continuation guidance the application appends. These runs are the ones comparable to in-app behaviour.
+
+`harness_assistance` in each report states explicitly whether the expected step count was disclosed and which round budget applied. Accuracy figures from the two modes measure different things and must never be pooled or compared directly.
+
 ## Multi-Round Tool Detection
 
 A request may contain several function-calling rounds. `ChatManager` records each submitted call, its arguments, round, and execution result in request-local execution data. The evaluator consumes that structured record directly. Console logs and final-answer text may help debugging, but cannot create or upgrade a score.

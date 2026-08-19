@@ -2910,4 +2910,14 @@ ${this.chatManager.getPluginSystemInfo()}`;
   }
 }
 
-window.LLMContextService = LLMContextService;
+if (typeof window !== 'undefined') {
+  window.LLMContextService = LLMContextService;
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.LLMContextService = LLMContextService;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = LLMContextService;
+}

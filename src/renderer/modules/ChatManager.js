@@ -30,6 +30,10 @@ class ChatManager {
       isProcessing: false,
       currentRequestId: null,
       abortController: null,
+      // Sticky abort flag. endConversation() drops the AbortController as soon
+      // as the user presses stop so the UI unlocks, but the in-flight loop is
+      // still awaiting somewhere; it needs a signal that outlives the teardown.
+      aborted: false,
       startTime: null,
       processSteps: [],
       currentStep: 0,
@@ -5037,6 +5041,49 @@ class ChatManager {
     }
   }
 
+  /**
+   * A DOMException-compatible abort error. `name` is what every caller and
+   * every fetch consumer branches on, so a plain `new Error('AbortError')`
+   * (whose name is 'Error') reads as an ordinary failure and gets rendered to
+   * the user as "Unexpected Error".
+   * @returns {Error}
+   */
+  createAbortError(message = 'Request aborted by user') {
+    const error = new Error(message);
+    error.name = 'AbortError';
+    return error;
+  }
+
+  /**
+   * True for both our own abort errors and the DOMException a cancelled fetch
+   * rejects with.
+   * @param {any} error
+   * @returns {boolean}
+   */
+  isAbortError(error) {
+    return error?.name === 'AbortError' || error?.message === 'AbortError';
+  }
+
+  /**
+   * True once the user has stopped this request. The sticky flag is what makes
+   * this reliable: abortCurrentConversation() drops the AbortController right
+   * away so the UI unlocks, and the still-running loop would otherwise see a
+   * null controller and read it as "no abort in progress".
+   * @returns {boolean}
+   */
+  isConversationAborted() {
+    return (
+      this.conversationState?.aborted === true || this.conversationState?.abortController?.signal?.aborted === true
+    );
+  }
+
+  /** Abort checkpoint for the round loop and the tool queue. */
+  throwIfConversationAborted() {
+    if (this.isConversationAborted()) {
+      throw this.createAbortError();
+    }
+  }
+
   async sendMessage() {
     const chatInput = document.getElementById('chatInput');
     const message = chatInput.value.trim();
@@ -5256,16 +5303,10 @@ class ChatManager {
 
       // Iterative function calling loop
       while (currentRound < maxRounds && !taskCompleted) {
-        // Check whether it was aborted
-        if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
-          throw new Error('AbortError');
-        }
-
-        // Defensive check: if abortController is null, re-initialize it
-        if (!this.conversationState.abortController) {
-          console.warn('AbortController is null during processing, reinitializing...');
-          this.conversationState.abortController = new AbortController();
-        }
+        // A missing controller means the conversation was torn down under us —
+        // that is an abort, never a reason to mint a fresh controller and keep
+        // spending rounds the user already asked to stop.
+        this.throwIfConversationAborted();
 
         currentRound++;
         executionData.rounds = currentRound;
@@ -5315,9 +5356,7 @@ class ChatManager {
         const responseText = responseAnalysis.text;
 
         // Check whether the response was aborted
-        if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
-          throw new Error('AbortError');
-        }
+        this.throwIfConversationAborted();
 
         // Logged as a single object: the console call is a no-op unless debug
         // logging is on, and passing `response` directly avoids serializing the
@@ -5596,9 +5635,7 @@ class ChatManager {
             }
 
             // Check whether it was aborted
-            if (this.conversationState.abortController && this.conversationState.abortController.signal.aborted) {
-              throw new Error('AbortError');
-            }
+            this.throwIfConversationAborted();
 
             let toolResults;
             const hasToolParameterReferences = toolsToExecute.some(tool =>
@@ -5744,22 +5781,6 @@ class ChatManager {
             // Show the tool execution result
             this.showToolCalls && this.addToolResultMessage(toolResults);
 
-            // Add the tool calls and results to conversation history for next round
-            conversationHistory.push({
-              role: 'assistant',
-              content: JSON.stringify(
-                toolsToExecute.length === 1
-                  ? {
-                      tool_name: toolsToExecute[0].tool_name,
-                      parameters: this.normalizeToolParams(toolsToExecute[0].tool_name, toolsToExecute[0].parameters),
-                    }
-                  : toolsToExecute.map(t => ({
-                      tool_name: t.tool_name,
-                      parameters: this.normalizeToolParams(t.tool_name, t.parameters),
-                    }))
-              ),
-            });
-
             // Process results
             const successfulResults = toolResults.filter(r => r.success);
             const failedResults = toolResults.filter(r => !r.success);
@@ -5768,6 +5789,22 @@ class ChatManager {
             // Gene Research task descriptor arrives — the research runs for
             // minutes server-side and the LLM cannot poll it reliably itself.
             this.startDgrTaskPollingFromResults(successfulResults);
+
+            const queuedResearchTask = successfulResults.some(result =>
+              this.extractDgrTaskDescriptor(result.result, result.parameters)
+            );
+
+            // Replay this round into the transcript for the next round. When the
+            // model used the provider's native tool protocol this restores the
+            // real assistant turn and binds each result to its tool_call_id;
+            // otherwise it falls back to the portable prose envelope.
+            const replayProtocol = this.appendToolRoundToHistory(conversationHistory, {
+              assistantText: responseText,
+              toolsToExecute,
+              toolResults,
+              queuedResearchTask,
+            });
+            console.log(`Tool round replayed into history using the ${replayProtocol} protocol`);
 
             if (successfulResults.length > 0) {
               toolExecutionState.consecutiveFailureRounds = 0;
@@ -5784,41 +5821,6 @@ class ChatManager {
                 tool_name: result.tool,
                 parameters: this.normalizeToolParams(result.tool, result.parameters),
               }));
-
-              // Add successful tool results as protocol feedback. Anthropic and
-              // Gemini adapters keep only the leading system message, so later
-              // runtime results must use a user-visible role on every provider.
-              // IMPORTANT: Sanitize results before sending to LLM to prevent context overflow
-              const successMessages = successfulResults.map(result => {
-                const sanitizedResult = this.sanitizeResultForLLM(result.result, result.tool);
-                const sanitizedStr = JSON.stringify(sanitizedResult) || 'null';
-                // Log warning if sanitized result is still large (helps identify tools needing better sanitization)
-                if (sanitizedStr.length > 10000) {
-                  console.warn(
-                    `⚠️ [Context Overflow Risk] Sanitized result for "${result.tool}" is still large: ` +
-                      `${(sanitizedStr.length / 1024).toFixed(1)}KB. Consider adding tool-specific sanitization rules.`
-                  );
-                }
-                return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeToolParams(result.tool, result.parameters))}: ${sanitizedStr}`;
-              });
-              // The closing instruction is what keeps the model from re-issuing a call
-              // it just completed. Without it the next round re-reads a request that
-              // still reads as unfulfilled ("zoom out") and the obvious move is to run
-              // the same tool again; suppression then has to catch it after the fact.
-              const queuedResearchTask = successfulResults.some(result =>
-                this.extractDgrTaskDescriptor(result.result, result.parameters)
-              );
-              conversationHistory.push(
-                this.createToolExecutionFeedbackMessage(
-                  `[Tool Result]\n${successMessages.join('; ')}\n` +
-                    'These steps are done. Calling one of them again with the same parameters will be rejected. ' +
-                    'If the request has remaining steps, reply with ONLY the next JSON tool call(s); ' +
-                    'otherwise reply with the final answer.' +
-                    (queuedResearchTask
-                      ? ' The research call returned a queued background task (taskId), not the final report: the application polls the task status automatically and will present the final report, download URLs, and annotation proposal in the chat when it completes. Do NOT poll the task yourself (get-task-status, get_annotation_research_workflow) or resubmit the research (deep-gene-research, start_annotation_research); reply to the user confirming the research has started and that results will follow automatically.'
-                      : '')
-                )
-              );
 
               // ENHANCED: Check for simple task completion after successful tool execution
               const shouldTerminateEarly =
@@ -5841,13 +5843,6 @@ class ChatManager {
             }
 
             if (failedResults.length > 0) {
-              // Add failed results in a role preserved by every provider adapter.
-              const errorMessages = failedResults.map(
-                result => `${result.tool} failed: ${result.error || 'Unknown error'}`
-              );
-              conversationHistory.push(
-                this.createToolExecutionFeedbackMessage(`[Tool Execution Error]\n${errorMessages.join('; ')}`)
-              );
               console.log(`${failedResults.length} tool(s) failed:`, failedResults);
 
               // Give the model one bounded opportunity to correct parameters or
@@ -5911,7 +5906,7 @@ class ChatManager {
               });
             }
           } catch (error) {
-            if (error.message === 'AbortError') throw error;
+            if (this.isAbortError(error)) throw error;
             console.error('=== TOOL EXECUTION EXCEPTION ===');
             console.error('Error:', error);
             console.error('Stack:', error.stack);
@@ -5996,6 +5991,15 @@ class ChatManager {
       console.log('=== ChatManager.sendToLLM DEBUG END (SUCCESS) ===');
       return finalResponse || 'I completed the requested actions. Please let me know if you need anything else.';
     } catch (error) {
+      // A user-requested stop is not a failure to report as one. Every caller
+      // (sendMessage, sendMessageProgrammatically, processAgentPrompt) already
+      // branches on error.name === 'AbortError'; swallowing it here is what made
+      // pressing stop render "❌ Unexpected Error" and left those branches dead.
+      if (this.isAbortError(error)) {
+        console.log('=== ChatManager.sendToLLM DEBUG END (ABORTED) ===');
+        throw this.createAbortError();
+      }
+
       console.error('=== LLM COMMUNICATION ERROR ===');
       console.error('Error:', error);
       console.error('Stack:', error.stack);
@@ -8339,12 +8343,14 @@ class ChatManager {
   }
 
   createToolExecutionFeedbackMessage(content) {
-    // No provider adapter sends native tool schemas, so a result cannot be returned
-    // as a tool_result block bound to a tool_use id — it has to ride in a role the
-    // adapters preserve, and that role is 'user'. A bare result then reads as a
-    // fresh user turn: a repeating run showed the model reasoning "the user is
-    // requesting another genome-wide codon usage analysis" and re-issuing the call
-    // it had just completed. The envelope denies that provenance explicitly.
+    // Fallback envelope for rounds that arrived as plain-text JSON and therefore
+    // have no tool_call_id to bind a `tool` message to. It rides in the 'user'
+    // role because every adapter preserves that role. A bare result then reads
+    // as a fresh user turn: a repeating run showed the model reasoning "the user
+    // is requesting another genome-wide codon usage analysis" and re-issuing the
+    // call it had just completed. The envelope denies that provenance
+    // explicitly. Rounds that used the native protocol take the `tool`-role path
+    // in appendToolRoundToHistory() instead.
     const message = {
       role: 'user',
       content:
@@ -8359,6 +8365,181 @@ class ChatManager {
       enumerable: false,
     });
     return message;
+  }
+
+  /**
+   * Structured record of what a history message actually executed. Policy
+   * checks read this instead of grepping the message prose for
+   * "<tool> executed successfully", which both misreads external tool output
+   * that happens to contain that phrase and stops working the moment results
+   * travel in a `tool` message rather than a sentence.
+   * @param {object} message
+   * @param {Array<{tool: string, parameters: object, success: boolean}>} executions
+   */
+  attachToolExecutionRecords(message, executions) {
+    if (!message || !Array.isArray(executions) || executions.length === 0) return message;
+    Object.defineProperty(message, '__codexomicsToolExecutions', {
+      value: executions.map(execution => ({
+        tool: execution.tool,
+        parameters: this.normalizeToolParams(execution.tool, execution.parameters || {}),
+        success: execution.success !== false,
+      })),
+      enumerable: false,
+    });
+    return message;
+  }
+
+  /** @returns {Array<{tool: string, parameters: object, success: boolean}>|null} */
+  getMessageToolExecutions(message) {
+    const executions = message?.__codexomicsToolExecutions;
+    return Array.isArray(executions) && executions.length > 0 ? executions : null;
+  }
+
+  /**
+   * True when every call in the round carries a provider tool-call id and every
+   * id came back with a result. Anything less cannot be replayed natively:
+   * an assistant turn with a tool_call that has no matching `tool` message is a
+   * protocol violation, so a partial round falls back to prose as a whole.
+   */
+  canReplayToolRoundNatively(toolsToExecute = [], toolResults = []) {
+    if (toolsToExecute.length === 0 || toolResults.length !== toolsToExecute.length) return false;
+    const callIds = toolsToExecute.map(tool => tool.tool_call_id);
+    if (callIds.some(id => !id)) return false;
+    const resultIds = new Set(toolResults.map(result => result.tool_call_id).filter(Boolean));
+    return callIds.length === new Set(callIds).size && callIds.every(id => resultIds.has(id));
+  }
+
+  /** Assistant turn carrying the model's own native tool calls. */
+  buildAssistantToolCallMessage(assistantText, toolsToExecute) {
+    return {
+      role: 'assistant',
+      content: assistantText && assistantText.trim() ? assistantText : null,
+      tool_calls: toolsToExecute.map(tool => ({
+        id: tool.tool_call_id,
+        type: 'function',
+        function: {
+          name: tool.tool_name,
+          arguments: JSON.stringify(this.normalizeToolParams(tool.tool_name, tool.parameters || {})),
+        },
+      })),
+    };
+  }
+
+  /** One provider-native tool result, bound to the call it answers. */
+  buildToolResultMessage(result, trailingGuidance = '') {
+    const body = result.success
+      ? JSON.stringify(this.sanitizeResultForLLM(result.result, result.tool)) || 'null'
+      : JSON.stringify({ success: false, error: result.error || 'Unknown error' });
+    this.warnOnOversizedToolResult(result.tool, body);
+    const message = {
+      role: 'tool',
+      tool_call_id: result.tool_call_id,
+      name: result.tool,
+      content: trailingGuidance ? `${body}\n${trailingGuidance}` : body,
+    };
+    return this.attachToolExecutionRecords(message, [
+      { tool: result.tool, parameters: result.parameters, success: result.success },
+    ]);
+  }
+
+  warnOnOversizedToolResult(toolName, serialized) {
+    if (serialized && serialized.length > 10000) {
+      console.warn(
+        `⚠️ [Context Overflow Risk] Sanitized result for "${toolName}" is still large: ` +
+          `${(serialized.length / 1024).toFixed(1)}KB. Consider adding tool-specific sanitization rules.`
+      );
+    }
+  }
+
+  /**
+   * The closing instruction that keeps the model from re-issuing a call it just
+   * completed. Without it the next round re-reads a request that still reads as
+   * unfulfilled ("zoom out") and the obvious move is to run the same tool again;
+   * suppression then has to catch it after the fact.
+   */
+  buildToolRoundGuidance(queuedResearchTask = false) {
+    return (
+      'These steps are done. Calling one of them again with the same parameters will be rejected. ' +
+      'If the request has remaining steps, emit the next tool call(s); ' +
+      'otherwise reply with the final answer.' +
+      (queuedResearchTask
+        ? ' The research call returned a queued background task (taskId), not the final report: the application polls the task status automatically and will present the final report, download URLs, and annotation proposal in the chat when it completes. Do NOT poll the task yourself (get-task-status, get_annotation_research_workflow) or resubmit the research (deep-gene-research, start_annotation_research); reply to the user confirming the research has started and that results will follow automatically.'
+        : '')
+    );
+  }
+
+  /**
+   * Replay one executed tool round into the transcript the next round will see.
+   *
+   * Requests already carry native tool schemas on every adapter, so the model
+   * answers with real tool calls that have ids. Replaying that round as prose
+   * threw the ids away, left parallel calls correlated only by name, and handed
+   * the model a transcript in a shape it was never trained on. When ids are
+   * present the round is replayed in the provider's own protocol; text-protocol
+   * rounds keep the portable prose envelope.
+   *
+   * @returns {'native'|'text'} which protocol was used
+   */
+  appendToolRoundToHistory(conversationHistory, options = {}) {
+    const { assistantText = '', toolsToExecute = [], toolResults = [], queuedResearchTask = false } = options;
+
+    if (this.canReplayToolRoundNatively(toolsToExecute, toolResults)) {
+      conversationHistory.push(this.buildAssistantToolCallMessage(assistantText, toolsToExecute));
+      const guidance = this.buildToolRoundGuidance(queuedResearchTask);
+      const resultsByCallId = new Map(toolResults.map(result => [result.tool_call_id, result]));
+      toolsToExecute.forEach((tool, index) => {
+        const result = resultsByCallId.get(tool.tool_call_id);
+        const isLast = index === toolsToExecute.length - 1;
+        conversationHistory.push(this.buildToolResultMessage(result, isLast ? guidance : ''));
+      });
+      return 'native';
+    }
+
+    conversationHistory.push({
+      role: 'assistant',
+      content: JSON.stringify(
+        toolsToExecute.length === 1
+          ? {
+              tool_name: toolsToExecute[0].tool_name,
+              parameters: this.normalizeToolParams(toolsToExecute[0].tool_name, toolsToExecute[0].parameters),
+            }
+          : toolsToExecute.map(tool => ({
+              tool_name: tool.tool_name,
+              parameters: this.normalizeToolParams(tool.tool_name, tool.parameters),
+            }))
+      ),
+    });
+
+    const successfulResults = toolResults.filter(result => result.success);
+    const failedResults = toolResults.filter(result => !result.success);
+
+    if (successfulResults.length > 0) {
+      const successMessages = successfulResults.map(result => {
+        const sanitizedStr = JSON.stringify(this.sanitizeResultForLLM(result.result, result.tool)) || 'null';
+        this.warnOnOversizedToolResult(result.tool, sanitizedStr);
+        return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.normalizeToolParams(result.tool, result.parameters))}: ${sanitizedStr}`;
+      });
+      conversationHistory.push(
+        this.attachToolExecutionRecords(
+          this.createToolExecutionFeedbackMessage(
+            `[Tool Result]\n${successMessages.join('; ')}\n${this.buildToolRoundGuidance(queuedResearchTask)}`
+          ),
+          successfulResults.map(result => ({ tool: result.tool, parameters: result.parameters, success: true }))
+        )
+      );
+    }
+
+    if (failedResults.length > 0) {
+      const errorMessages = failedResults.map(result => `${result.tool} failed: ${result.error || 'Unknown error'}`);
+      conversationHistory.push(
+        this.attachToolExecutionRecords(
+          this.createToolExecutionFeedbackMessage(`[Tool Execution Error]\n${errorMessages.join('; ')}`),
+          failedResults.map(result => ({ tool: result.tool, parameters: result.parameters, success: false }))
+        )
+      );
+    }
+
+    return 'text';
   }
 
   createToolExecutionState(originalMessage) {
@@ -8728,9 +8909,7 @@ class ChatManager {
     const referenceContext = Array.isArray(referenceToolResults) ? referenceToolResults.slice() : [];
 
     while (pendingToolExecutionQueue.length > 0) {
-      if (this.conversationState?.abortController && this.conversationState.abortController.signal.aborted) {
-        throw new Error('AbortError');
-      }
+      this.throwIfConversationAborted();
 
       const tool = pendingToolExecutionQueue.shift();
       const recordedParameters = this.cloneToolParameters(tool.parameters);
@@ -9141,6 +9320,23 @@ class ChatManager {
     } catch (e) {}
 
     for (const msg of conversationHistory) {
+      // Structured records are authoritative: they survive the native `tool`
+      // role and cannot be forged by tool output that quotes the prose phrase.
+      const executions = this.getMessageToolExecutions(msg);
+      if (executions) {
+        const matched = executions.some(
+          execution =>
+            execution.success &&
+            execution.tool === toolName &&
+            this.areParametersEqual(execution.parameters, parsedKeyParams)
+        );
+        if (matched) {
+          console.log(`🔍 Found structured successful execution record for: ${toolName}`);
+          return true;
+        }
+        continue;
+      }
+
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
       if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed successfully`)) {
         continue;
@@ -9178,7 +9374,17 @@ class ChatManager {
     for (let i = conversationHistory.length - 1; i >= 0; i--) {
       const msg = conversationHistory[i];
 
-      // Check legacy system feedback and provider-portable tool result feedback.
+      // Check the structured ledger first, then legacy system feedback and the
+      // provider-portable prose envelope.
+      const executions = this.getMessageToolExecutions(msg);
+      if (executions?.some(execution => execution.success && execution.tool === toolName)) {
+        const estimatedTimestamp = now - (conversationHistory.length - 1 - i) * 1000;
+        if (now - estimatedTimestamp < timeWindowMs) {
+          console.log(`🔍 Found recent execution of ${toolName} within ${timeWindowMs}ms window`);
+          return { toolName, timestamp: estimatedTimestamp, messageIndex: i };
+        }
+      }
+
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
       if (isExecutionFeedback && msg.content) {
         if (msg.content.includes(`${toolName} executed successfully`)) {
@@ -9254,6 +9460,17 @@ class ChatManager {
     let count = 0;
 
     for (const msg of conversationHistory) {
+      const executions = this.getMessageToolExecutions(msg);
+      if (executions) {
+        count += executions.filter(
+          execution =>
+            execution.success &&
+            execution.tool === toolName &&
+            this.areParametersEqual(execution.parameters, parsedKeyParams)
+        ).length;
+        continue;
+      }
+
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
       if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed successfully`)) {
         continue;
@@ -9281,6 +9498,11 @@ class ChatManager {
   getToolExecutionCountByName(toolName, conversationHistory) {
     let count = 0;
     for (const msg of conversationHistory) {
+      const executions = this.getMessageToolExecutions(msg);
+      if (executions) {
+        count += executions.filter(execution => execution.success && execution.tool === toolName).length;
+        continue;
+      }
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
       if (isExecutionFeedback && msg.content && msg.content.includes(`${toolName} executed successfully`)) {
         count++;
@@ -9301,6 +9523,17 @@ class ChatManager {
     } catch (e) {}
 
     for (const msg of conversationHistory) {
+      const executions = this.getMessageToolExecutions(msg);
+      if (executions) {
+        const execution = executions.find(
+          candidate => candidate.tool === toolName && this.areParametersEqual(candidate.parameters, parsedKeyParams)
+        );
+        if (execution) {
+          return { success: execution.success, timestamp: new Date().toISOString() };
+        }
+        continue;
+      }
+
       const isExecutionFeedback = msg.role === 'system' || msg.__codexomicsToolFeedback === true;
       if (!isExecutionFeedback || !msg.content || !msg.content.includes(`${toolName} executed`)) {
         continue;
@@ -17147,6 +17380,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   startConversation() {
     this.conversationState.isProcessing = true;
+    this.conversationState.aborted = false;
     this.conversationState.currentRequestId = Date.now().toString();
     this.conversationState.startTime = Date.now();
     this.conversationState.processSteps = [];
@@ -17274,6 +17508,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    */
   abortCurrentConversation() {
     if (this.conversationState.isProcessing && this.conversationState.abortController) {
+      // Raise the sticky flag before tearing the state down. endConversation()
+      // below nulls the controller so the UI unlocks immediately, and the loop
+      // that is still awaiting a provider response reads this flag instead.
+      this.conversationState.aborted = true;
       this.conversationState.abortController.abort();
       this.showNotification('Conversation aborted', 'warning');
 

@@ -12,6 +12,18 @@ const { buildContractToolResult } = require('./lib/contract-tool-results.js');
 const REPO_ROOT = path.resolve(__dirname, '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'tools_registry', 'generated', 'tool-registry-manifest.json');
 const DEFAULT_OUTPUT_ROOT = path.join(REPO_ROOT, 'finetuning', 'qwen3.5-4b', 'metrics');
+
+// The shipped loop bounds a turn by `llm.functionCallRounds` (default 10) and
+// derives outstanding steps from the request text, never from an expected-call
+// count. Disclosing that count is grading assistance the app cannot give.
+const PRODUCTION_MAX_ROUNDS = 10;
+const PRODUCTION_RECOVERY_NUDGE =
+  '[Tool Protocol Repair]\nThe previous response did not complete the request. ' +
+  'If an available tool is needed for a remaining step, emit the tool call now instead of describing it. ' +
+  'If no tool is needed, provide the final answer directly.';
+const PRODUCTION_TOOL_GUIDANCE =
+  'These steps are done. Calling one of them again with the same parameters will be rejected. ' +
+  'If the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer.';
 const DEFAULT_BASE_URL = 'https://api.deepseek.com';
 const CANDIDATE_LIMIT = 24;
 
@@ -23,6 +35,9 @@ function parseArgs(argv) {
     concurrency: 4,
     limit: Infinity,
     suite: 'all',
+    // Run the harness the way the app runs: fixed round budget, no oracle
+    // step-count disclosure, production result guidance.
+    productionParity: false,
     thinking: 'disabled',
     reasoningEffort: 'high',
     requestTimeoutMs: 180000,
@@ -40,6 +55,7 @@ function parseArgs(argv) {
     else if (arg === '--reasoning-effort') options.reasoningEffort = argv[++index];
     else if (arg === '--request-timeout-ms') options.requestTimeoutMs = Number(argv[++index]);
     else if (arg === '--retries') options.retries = Number(argv[++index]);
+    else if (arg === '--production-parity') options.productionParity = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (!['all', 'simple', 'complex'].includes(options.suite)) throw new Error('Invalid --suite value');
@@ -168,8 +184,7 @@ function buildSummary(options, records, startedAt, completedAt) {
       failed: subset.length - passed,
       accuracy: subset.length ? passed / subset.length : 0,
       average_score_ratio: subset.length
-        ? subset.reduce((sum, record) => sum + record.evaluation.score / record.evaluation.maxScore, 0) /
-          subset.length
+        ? subset.reduce((sum, record) => sum + record.evaluation.score / record.evaluation.maxScore, 0) / subset.length
         : 0,
       average_duration_ms: subset.length ? totalDuration / subset.length : 0,
       prompt_tokens: subset.reduce((sum, record) => sum + record.prompt_tokens, 0),
@@ -195,7 +210,14 @@ function buildSummary(options, records, startedAt, completedAt) {
       max_tokens: options.thinking === 'enabled' ? 4096 : 512,
       candidate_limit: CANDIDATE_LIMIT,
     },
-      tool_result_mode: 'domain-shaped-contract',
+    tool_result_mode: 'domain-shaped-contract',
+    // Oracle-assisted runs give the model information the shipped app cannot:
+    // the expected step count and a round budget derived from it. Numbers from
+    // the two modes are not comparable and must not be merged.
+    harness_mode: options.productionParity ? 'production-parity' : 'oracle-assisted',
+    harness_assistance: options.productionParity
+      ? { expected_step_count_disclosed: false, oracle_round_budget: false, max_rounds: PRODUCTION_MAX_ROUNDS }
+      : { expected_step_count_disclosed: true, oracle_round_budget: true, max_rounds: 'expected_steps + 4' },
     benchmark_scope: { automatic_simple: 143, automatic_complex: 29, manual_tests_included: 0 },
     overall: summarize(records),
     automatic_simple: summarize(records.filter(record => record.suite_id === 'automatic_simple')),
@@ -204,6 +226,7 @@ function buildSummary(options, records, startedAt, completedAt) {
 }
 
 async function evaluateTest(test, options, adapter, evaluator) {
+  const productionParity = options.productionParity === true;
   const selected = adapter.selectRelevantTools(test.instruction, {}, CANDIDATE_LIMIT);
   const tools = selected
     .map(tool => adapter.toNativeFunctionTool(tool))
@@ -245,7 +268,8 @@ async function evaluateTest(test, options, adapter, evaluator) {
     // Extra headroom absorbs benign duplicate calls; the loop breaks on
     // expected-step coverage instead of raw call count so an extra call can
     // never consume the final step's turn (bookmark/delete after a duplicate).
-    const maxTurns = Math.max(1, expectedCount + 4);
+    // The oracle budget (expectedCount + 4) is not something the app can know.
+    const maxTurns = productionParity ? PRODUCTION_MAX_ROUNDS : Math.max(1, expectedCount + 4);
     for (let turn = 0; turn < maxTurns; turn += 1) {
       const response = await deepSeekChat(options, messages, tools);
       if (response.model) modelVersions.add(response.model);
@@ -295,11 +319,12 @@ async function evaluateTest(test, options, adapter, evaluator) {
           // one generic nudge to continue, not test-specific guidance.
           messages.push({
             role: 'user',
-            content:
-              `You have completed ${coveredExpected} of ${expectedCount} requested steps; ${expectedCount - coveredExpected} are still missing. ` +
-              'The missing steps are the final steps of the request (verification, confirmation, cleanup, search, or query). ' +
-              'Emit the next tool call NOW for the next missing step; do not reply with text only. ' +
-              'Give the final answer only after every requested step is done.',
+            content: productionParity
+              ? PRODUCTION_RECOVERY_NUDGE
+              : `You have completed ${coveredExpected} of ${expectedCount} requested steps; ${expectedCount - coveredExpected} are still missing. ` +
+                'The missing steps are the final steps of the request (verification, confirmation, cleanup, search, or query). ' +
+                'Emit the next tool call NOW for the next missing step; do not reply with text only. ' +
+                'Give the final answer only after every requested step is done.',
           });
           continue;
         }
@@ -321,8 +346,11 @@ async function evaluateTest(test, options, adapter, evaluator) {
           // instead of treating a single result as the end of the task.
           content:
             JSON.stringify(buildContractToolResult(toolName, parameters)) +
-            '\nIf the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer. ' +
-            'If the request asked to confirm or verify a change, that verification step is still pending.',
+            '\n' +
+            (productionParity
+              ? PRODUCTION_TOOL_GUIDANCE
+              : 'If the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer. ' +
+                'If the request asked to confirm or verify a change, that verification step is still pending.'),
         });
       }
       const usedCallIndexes = new Set();
@@ -336,18 +364,15 @@ async function evaluateTest(test, options, adapter, evaluator) {
       }).length;
       // A turn whose calls advanced no new requested step (diversion loop)
       // gets the same recovery nudge as a no-call turn.
-      if (
-        coveredExpected < expectedCount &&
-        coveredExpected <= coverageBeforeTurn &&
-        turn < maxTurns - 1
-      ) {
+      if (coveredExpected < expectedCount && coveredExpected <= coverageBeforeTurn && turn < maxTurns - 1) {
         messages.push({
           role: 'user',
-          content:
-            `You have completed ${coveredExpected} of ${expectedCount} requested steps; ${expectedCount - coveredExpected} are still missing. ` +
-            'The missing steps are the final steps of the request (verification, confirmation, cleanup, search, or query). ' +
-            'Emit the next tool call NOW for the next missing step; do not reply with text only. ' +
-            'Give the final answer only after every requested step is done.',
+          content: productionParity
+            ? PRODUCTION_RECOVERY_NUDGE
+            : `You have completed ${coveredExpected} of ${expectedCount} requested steps; ${expectedCount - coveredExpected} are still missing. ` +
+              'The missing steps are the final steps of the request (verification, confirmation, cleanup, search, or query). ' +
+              'Emit the next tool call NOW for the next missing step; do not reply with text only. ' +
+              'Give the final answer only after every requested step is done.',
         });
       }
       if (coveredExpected >= expectedCount) break;
@@ -381,6 +406,7 @@ async function evaluateTest(test, options, adapter, evaluator) {
     calls,
     api_error: apiError,
     truncated_turns: truncatedTurns,
+    harness_mode: productionParity ? 'production-parity' : 'oracle-assisted',
     evaluation,
   };
 }

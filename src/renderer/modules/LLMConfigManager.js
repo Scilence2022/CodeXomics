@@ -2,6 +2,14 @@
 /**
  * LLMConfigManager - Manages LLM provider configurations and API communication
  */
+
+/**
+ * Wall-clock budget for a single provider request. Generous enough for a slow
+ * reasoning model on a long prompt, short enough that a dead connection cannot
+ * pin the round loop open indefinitely. Override with `llm.requestTimeoutMs`.
+ */
+const DEFAULT_LLM_REQUEST_TIMEOUT_MS = 180000;
+
 class LLMConfigManager {
   constructor(genomeBrowser, configManager = null) {
     this.genomeBrowser = genomeBrowser;
@@ -2854,6 +2862,151 @@ class LLMConfigManager {
     return payload;
   }
 
+  /**
+   * Translate the canonical transcript into Anthropic content blocks.
+   *
+   * The loop keeps one transcript in the OpenAI shape — assistant turns carry
+   * `tool_calls`, results come back as `tool` messages bound to a
+   * `tool_call_id`. Anthropic expresses the same protocol as `tool_use` /
+   * `tool_result` blocks, and it requires every tool_result for a turn to sit in
+   * one user message, ahead of any other content.
+   * @param {Array<object>} conversationHistory
+   * @returns {Array<object>} Anthropic messages (system excluded)
+   */
+  toAnthropicMessages(conversationHistory = []) {
+    const messages = [];
+    let pendingToolResults = null;
+
+    const flushToolResults = () => {
+      if (pendingToolResults) {
+        messages.push({ role: 'user', content: pendingToolResults });
+        pendingToolResults = null;
+      }
+    };
+
+    for (const message of conversationHistory) {
+      if (message.role === 'system') continue;
+
+      if (message.role === 'tool') {
+        const block = {
+          type: 'tool_result',
+          tool_use_id: message.tool_call_id,
+          content: String(message.content ?? ''),
+        };
+        if (pendingToolResults) pendingToolResults.push(block);
+        else pendingToolResults = [block];
+        continue;
+      }
+
+      flushToolResults();
+
+      if (message.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+        const blocks = [];
+        if (typeof message.content === 'string' && message.content.trim()) {
+          blocks.push({ type: 'text', text: message.content });
+        }
+        for (const call of message.tool_calls) {
+          blocks.push({
+            type: 'tool_use',
+            id: call.id,
+            name: call.function?.name,
+            input: this.parseToolArguments(call.function?.arguments),
+          });
+        }
+        messages.push({ role: 'assistant', content: blocks });
+        continue;
+      }
+
+      messages.push(message);
+    }
+
+    flushToolResults();
+    return messages;
+  }
+
+  /**
+   * Translate the canonical transcript into Gemini `contents`.
+   * Native calls become functionCall parts and results become functionResponse
+   * parts; Gemini also wants the responses for one turn grouped together.
+   * @param {Array<object>} conversationHistory
+   * @returns {Array<object>} Gemini contents (system excluded)
+   */
+  toGoogleContents(conversationHistory = []) {
+    const contents = [];
+    let pendingResponses = null;
+
+    const flushResponses = () => {
+      if (pendingResponses) {
+        contents.push({ role: 'user', parts: pendingResponses });
+        pendingResponses = null;
+      }
+    };
+
+    for (const message of conversationHistory) {
+      if (message.role === 'system') continue;
+
+      if (message.role === 'tool') {
+        const part = {
+          functionResponse: {
+            name: message.name,
+            // Gemini requires an object here; tool content is a JSON string.
+            response: this.parseToolResponsePayload(message.content),
+          },
+        };
+        if (pendingResponses) pendingResponses.push(part);
+        else pendingResponses = [part];
+        continue;
+      }
+
+      flushResponses();
+
+      if (message.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+        const parts = [];
+        if (typeof message.content === 'string' && message.content.trim()) {
+          parts.push({ text: message.content });
+        }
+        for (const call of message.tool_calls) {
+          parts.push({
+            functionCall: { name: call.function?.name, args: this.parseToolArguments(call.function?.arguments) },
+          });
+        }
+        contents.push({ role: 'model', parts });
+        continue;
+      }
+
+      // A null-content assistant turn would produce an invalid empty part.
+      const text = typeof message.content === 'string' ? message.content : '';
+      if (!text) continue;
+      contents.push({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text }] });
+    }
+
+    flushResponses();
+    return contents;
+  }
+
+  /** @returns {object} tool-call arguments, tolerating a malformed JSON string */
+  parseToolArguments(argumentsValue) {
+    if (argumentsValue && typeof argumentsValue === 'object') return argumentsValue;
+    try {
+      const parsed = JSON.parse(argumentsValue || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  /** @returns {object} tool-result payload as the object Gemini requires */
+  parseToolResponsePayload(content) {
+    const text = String(content ?? '');
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+      return { result: parsed };
+    } catch (error) {
+      return { result: text };
+    }
+  }
+
   buildAnthropicTools(options = {}) {
     return this.getNativeFunctionTools(options).map(tool => ({
       name: tool.function.name,
@@ -3013,7 +3166,7 @@ class LLMConfigManager {
         model: provider.model,
         max_tokens: this.getMaxTokens(provider),
         temperature: this.getRequestTemperature(options),
-        messages: conversationHistory.filter(msg => msg.role !== 'system'),
+        messages: this.toAnthropicMessages(conversationHistory),
         stream: true,
       };
       if (systemMessage) payload.system = systemMessage.content;
@@ -3063,12 +3216,7 @@ class LLMConfigManager {
 
     try {
       const systemMessage = conversationHistory.find(msg => msg.role === 'system');
-      const contents = conversationHistory
-        .filter(msg => msg.role !== 'system')
-        .map(msg => ({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }],
-        }));
+      const contents = this.toGoogleContents(conversationHistory);
 
       const payload = {
         contents,
@@ -3160,14 +3308,18 @@ class LLMConfigManager {
 
     return await this.makeRequestWithRetry(
       async () => {
-        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
+        const response = await this.fetchWithGuards(
+          `${provider.baseUrl}/chat/completions`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${provider.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
           },
-          body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-        });
+          options
+        );
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => '');
@@ -3185,7 +3337,9 @@ class LLMConfigManager {
       async response => {
         const data = await response.json();
         return this.normalizeOpenAICompatibleResponse(data, 'openai');
-      }
+      },
+      3,
+      options
     );
   }
 
@@ -3228,7 +3382,7 @@ class LLMConfigManager {
 
     // Anthropic requires separate system message
     const systemMessage = conversationHistory.find(msg => msg.role === 'system');
-    const messages = conversationHistory.filter(msg => msg.role !== 'system');
+    const messages = this.toAnthropicMessages(conversationHistory);
 
     const payload = {
       model: provider.model,
@@ -3248,16 +3402,20 @@ class LLMConfigManager {
 
     console.log('Sending to Anthropic - Request Payload:', payload);
 
-    const response = await fetch(`${provider.baseUrl}/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'x-api-key': provider.apiKey,
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
+    const response = await this.fetchWithGuards(
+      `${provider.baseUrl}/v1/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'x-api-key': provider.apiKey,
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
+      options
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -3320,21 +3478,7 @@ class LLMConfigManager {
 
     // Google uses systemInstruction for system messages (not in contents array)
     const systemMessage = conversationHistory.find(msg => msg.role === 'system');
-    const contents = [];
-
-    for (const message of conversationHistory) {
-      if (message.role === 'system') continue; // System message handled separately via systemInstruction
-
-      let role = 'user';
-      if (message.role === 'assistant') {
-        role = 'model';
-      }
-
-      contents.push({
-        role: role,
-        parts: [{ text: message.content }],
-      });
-    }
+    const contents = this.toGoogleContents(conversationHistory);
 
     // Build the payload with systemInstruction if a system message exists
     const payload = {
@@ -3366,13 +3510,17 @@ class LLMConfigManager {
 
     const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithGuards(
+      apiUrl,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
+      options
+    );
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -3427,14 +3575,18 @@ class LLMConfigManager {
       nativeTools: this.getNativeFunctionTools(options).length,
     });
 
-    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithGuards(
+      `${provider.baseUrl}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
       },
-      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-    });
+      options
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -3478,6 +3630,90 @@ class LLMConfigManager {
   /**
    * Check if an HTTP status code indicates a retryable error
    */
+  /**
+   * Per-request wall-clock budget. A provider that accepts the connection and
+   * then never answers used to block the round loop forever: there was no
+   * timeout anywhere in the non-streaming paths.
+   * @returns {number} milliseconds, or 0 to disable
+   */
+  getRequestTimeoutMs() {
+    const configured = this.configManager?.get('llm.requestTimeoutMs', DEFAULT_LLM_REQUEST_TIMEOUT_MS);
+    const parsed = Number(configured);
+    if (!Number.isFinite(parsed) || parsed < 0) return DEFAULT_LLM_REQUEST_TIMEOUT_MS;
+    return parsed;
+  }
+
+  /**
+   * Build the signal a single provider request runs under: the caller's abort
+   * signal (the stop button) combined with the request timeout.
+   *
+   * AbortSignal.any() would cover the first half, but the result has to report
+   * *why* it aborted so a timeout is not misreported as a user cancellation.
+   * @param {{signal?: AbortSignal}} options
+   */
+  createRequestGuard(options = {}) {
+    const controller = new AbortController();
+    const cleanups = [];
+    let timedOut = false;
+
+    const external = options?.signal;
+    if (external) {
+      if (external.aborted) {
+        controller.abort(external.reason);
+      } else {
+        const onAbort = () => controller.abort(external.reason);
+        external.addEventListener('abort', onAbort, { once: true });
+        cleanups.push(() => external.removeEventListener('abort', onAbort));
+      }
+    }
+
+    const timeoutMs = this.getRequestTimeoutMs();
+    if (timeoutMs > 0 && !controller.signal.aborted) {
+      const timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort(new Error(`LLM request timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      cleanups.push(() => clearTimeout(timer));
+    }
+
+    return {
+      signal: controller.signal,
+      get timedOut() {
+        return timedOut;
+      },
+      timeoutMs,
+      dispose() {
+        for (const cleanup of cleanups) cleanup();
+      },
+    };
+  }
+
+  /**
+   * fetch() for provider requests. Every LLM call must be cancellable and
+   * bounded; only the streaming paths used to be.
+   * @param {string} url
+   * @param {RequestInit} init
+   * @param {{signal?: AbortSignal}} options request options from the caller
+   */
+  async fetchWithGuards(url, init = {}, options = {}) {
+    const guard = this.createRequestGuard(options);
+    try {
+      return await fetch(url, { ...init, signal: guard.signal });
+    } catch (error) {
+      // A timeout aborts the same way a user cancellation does. Re-label it so
+      // the caller does not report "aborted by user" for a dead connection.
+      if (guard.timedOut) {
+        const timeoutError = new Error(`LLM request timed out after ${guard.timeoutMs}ms`);
+        timeoutError.name = 'TimeoutError';
+        timeoutError.isTimeout = true;
+        throw timeoutError;
+      }
+      throw error;
+    } finally {
+      guard.dispose();
+    }
+  }
+
   isRetryableError(status) {
     const retryableStatuses = [
       429, // Too Many Requests
@@ -3519,7 +3755,7 @@ class LLMConfigManager {
   /**
    * Make HTTP request with automatic retry logic for service unavailable errors
    */
-  async makeRequestWithRetry(requestFunction, providerName, responseProcessor, maxAttempts = 3) {
+  async makeRequestWithRetry(requestFunction, providerName, responseProcessor, maxAttempts = 3, options = {}) {
     let lastError;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -3528,6 +3764,12 @@ class LLMConfigManager {
         return await responseProcessor(response);
       } catch (error) {
         lastError = error;
+
+        // A cancelled or timed-out request is never retried: the user already
+        // asked for it to stop, and backoff is not abortable.
+        if (error?.name === 'AbortError' || error?.isTimeout || options?.signal?.aborted) {
+          throw error;
+        }
 
         // Only retry if it's a retryable error and we have attempts left
         if (error.isRetryable && attempt < maxAttempts) {
@@ -3576,14 +3818,18 @@ class LLMConfigManager {
 
     return await this.makeRequestWithRetry(
       async () => {
-        const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
+        const response = await this.fetchWithGuards(
+          `${provider.baseUrl}/chat/completions`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${provider.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
           },
-          body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-        });
+          options
+        );
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => '');
@@ -3620,7 +3866,9 @@ class LLMConfigManager {
         const normalizedResponse = this.normalizeOpenAICompatibleResponse(data, 'siliconflow');
         console.log('SiliconFlow Response Normalized:', normalizedResponse);
         return normalizedResponse;
-      }
+      },
+      3,
+      options
     );
   }
 
@@ -3728,18 +3976,22 @@ class LLMConfigManager {
     });
 
     const doRequest = async modelToUse => {
-      const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${provider.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'GenomeExplorer',
+      const resp = await this.fetchWithGuards(
+        `${provider.baseUrl}/chat/completions`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${provider.apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'GenomeExplorer',
+          },
+          body: JSON.stringify(
+            this.buildOpenAICompatiblePayload({ ...provider, model: modelToUse }, conversationHistory, options)
+          ),
         },
-        body: JSON.stringify(
-          this.buildOpenAICompatiblePayload({ ...provider, model: modelToUse }, conversationHistory, options)
-        ),
-      });
+        options
+      );
       return resp;
     };
 
@@ -3872,14 +4124,18 @@ class LLMConfigManager {
       nativeTools: this.getNativeFunctionTools(options).length,
     });
 
-    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithGuards(
+      `${provider.baseUrl}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
       },
-      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-    });
+      options
+    );
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
@@ -3934,14 +4190,18 @@ class LLMConfigManager {
       nativeTools: this.getNativeFunctionTools(options).length,
     });
 
-    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithGuards(
+      `${provider.baseUrl}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
       },
-      body: JSON.stringify(this.buildOpenAICompatiblePayload(provider, conversationHistory, options)),
-    });
+      options
+    );
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
@@ -4035,18 +4295,22 @@ class LLMConfigManager {
     console.log(`Sending local LLM request to: ${apiUrl} with model: ${provider.model}`);
     console.log('Sending to Local LLM - Request Payload:', payload);
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: provider.apiKey
-        ? {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
-          }
-        : {
-            'Content-Type': 'application/json',
-          },
-      body: JSON.stringify(payload),
-    });
+    const response = await this.fetchWithGuards(
+      apiUrl,
+      {
+        method: 'POST',
+        headers: provider.apiKey
+          ? {
+              Authorization: `Bearer ${provider.apiKey}`,
+              'Content-Type': 'application/json',
+            }
+          : {
+              'Content-Type': 'application/json',
+            },
+        body: JSON.stringify(payload),
+      },
+      options
+    );
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -4753,4 +5017,17 @@ Current context summary:
       console.error('Error persisting local config to ConfigManager:', error);
     }
   }
+}
+
+if (typeof window !== 'undefined') {
+  window.LLMConfigManager = LLMConfigManager;
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.LLMConfigManager = LLMConfigManager;
+}
+
+// Export for Node/test environments; in the renderer this class is loaded as a script-tag global.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = LLMConfigManager;
 }
