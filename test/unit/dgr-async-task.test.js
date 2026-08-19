@@ -349,7 +349,12 @@ describe('ChatManager DGR async wiring (source contract)', () => {
   });
 
   it('tells the LLM not to poll research tasks itself after a queued submission', () => {
-    expect(chatManagerSource).toContain(
+    // The guidance now lives with the rest of the transcript construction.
+    const transcriptSource = fs.readFileSync(
+      path.join(process.cwd(), 'src/renderer/modules/chat/services/ConversationTranscriptService.js'),
+      'utf-8'
+    );
+    expect(transcriptSource).toContain(
       'Do NOT poll the task yourself (get-task-status, get_annotation_research_workflow)'
     );
   });

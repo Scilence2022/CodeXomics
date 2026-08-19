@@ -777,4 +777,14 @@ class IntentParserService {
   }
 }
 
-window.IntentParserService = IntentParserService;
+if (typeof window !== 'undefined') {
+  window.IntentParserService = IntentParserService;
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.IntentParserService = IntentParserService;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = IntentParserService;
+}

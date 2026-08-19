@@ -82,7 +82,34 @@ class ToolExecutionPolicy {
   isExecutionFeedbackMessage(message) {
     return Boolean(
       message?.content &&
-      (message.role === 'system' || (message.role === 'user' && message.__codexomicsToolFeedback === true))
+      (message.role === 'system' ||
+        message.role === 'tool' ||
+        (message.role === 'user' && message.__codexomicsToolFeedback === true))
+    );
+  }
+
+  /**
+   * Structured record of what a history message executed, when the loop
+   * attached one. Reading this beats grepping the message for
+   * "<tool> executed successfully": the phrase can appear inside external tool
+   * output, one tool name can be a substring of another, and the native
+   * `tool`-role transcript does not contain the phrase at all.
+   * @param {object} message
+   * @returns {Array<{tool: string, parameters: object, success: boolean}>|null}
+   */
+  getMessageToolExecutions(message) {
+    const executions = message?.__codexomicsToolExecutions;
+    return Array.isArray(executions) && executions.length > 0 ? executions : null;
+  }
+
+  /** True when this message records a successful execution of `toolName`. */
+  messageRecordsSuccessfulExecution(message, toolName) {
+    const executions = this.getMessageToolExecutions(message);
+    if (executions) {
+      return executions.some(execution => execution.success && execution.tool === toolName);
+    }
+    return Boolean(
+      this.isExecutionFeedbackMessage(message) && message.content.includes(`${toolName} executed successfully`)
     );
   }
 
@@ -94,7 +121,7 @@ class ToolExecutionPolicy {
     let lastExecIdx = -1;
     for (let i = conversationHistory.length - 1; i >= 0; i--) {
       const msg = conversationHistory[i];
-      if (this.isExecutionFeedbackMessage(msg) && msg.content.includes(`${toolName} executed successfully`)) {
+      if (this.messageRecordsSuccessfulExecution(msg, toolName)) {
         lastExecIdx = i;
         break;
       }
@@ -131,9 +158,9 @@ class ToolExecutionPolicy {
 
     for (let i = lastExecIdx + 1; i < conversationHistory.length; i++) {
       const msg = conversationHistory[i];
-      if (this.isExecutionFeedbackMessage(msg)) {
+      if (this.isExecutionFeedbackMessage(msg) || this.getMessageToolExecutions(msg)) {
         for (const viewTool of viewChangingTools) {
-          if (msg.content.includes(`${viewTool} executed successfully`)) {
+          if (this.messageRecordsSuccessfulExecution(msg, viewTool)) {
             console.log(
               `[Policy] View state changed since last execution of ${toolName} due to subsequent successful ${viewTool}`
             );
@@ -447,11 +474,11 @@ class ToolExecutionPolicy {
 
     for (let i = conversationHistory.length - 1; i >= 0; i--) {
       const msg = conversationHistory[i];
-      if (msg.role !== 'assistant' || !msg.content) {
+      if (msg.role !== 'assistant' || (!msg.content && !msg.tool_calls)) {
         continue;
       }
 
-      const matchingTool = this.extractRecentTrackTool(msg.content);
+      const matchingTool = this.extractRecentTrackTool(msg.content, msg);
       if (!matchingTool || !matchingTool.parameters) {
         continue;
       }
@@ -487,7 +514,19 @@ class ToolExecutionPolicy {
     return true;
   }
 
-  extractRecentTrackTool(content) {
+  extractRecentTrackTool(content, message = null) {
+    // Native rounds keep the calls in tool_calls and leave content null/prose.
+    const trackTools = ['toggle_track', 'toggle_annotation_track'];
+    for (const call of message?.tool_calls || []) {
+      const name = call?.function?.name;
+      if (!trackTools.includes(name)) continue;
+      try {
+        return { tool_name: name, parameters: JSON.parse(call.function.arguments || '{}') };
+      } catch (error) {
+        return { tool_name: name, parameters: {} };
+      }
+    }
+
     try {
       const parsed = JSON.parse(content);
       if (

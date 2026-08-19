@@ -13,6 +13,13 @@ const MANIFEST_PATH = path.join(REPO_ROOT, 'tools_registry', 'generated', 'tool-
 const DEFAULT_OUTPUT_ROOT = path.join(REPO_ROOT, 'finetuning', 'qwen3.5-4b', 'metrics');
 const OLLAMA_CHAT_URL = 'http://127.0.0.1:11434/api/chat';
 const CANDIDATE_LIMIT = 24;
+// The shipped loop bounds a turn by `llm.functionCallRounds` (default 10) and
+// has no idea how many steps a request needs. Oracle-derived budgets and
+// "you have N steps left" nudges are grading assistance the app cannot give.
+const PRODUCTION_MAX_ROUNDS = 10;
+const PRODUCTION_TOOL_GUIDANCE =
+  'These steps are done. Calling one of them again with the same parameters will be rejected. ' +
+  'If the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer.';
 
 function parseArgs(argv) {
   const options = {
@@ -22,6 +29,9 @@ function parseArgs(argv) {
     limit: Infinity,
     suite: 'all',
     tag: '',
+    // Run the harness the way the app runs: fixed round budget, no oracle
+    // step-count nudge, production result guidance.
+    productionParity: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -31,6 +41,7 @@ function parseArgs(argv) {
     else if (arg === '--limit') options.limit = Number(argv[++index]);
     else if (arg === '--suite') options.suite = argv[++index];
     else if (arg === '--tag') options.tag = argv[++index];
+    else if (arg === '--production-parity') options.productionParity = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
   if (!['all', 'simple', 'complex'].includes(options.suite)) throw new Error('Invalid --suite value');
@@ -108,7 +119,7 @@ async function ollamaChat(model, messages, tools) {
   return response.json();
 }
 
-function buildSummary(model, records, startedAt, completedAt) {
+function buildSummary(model, records, startedAt, completedAt, runOptions = {}) {
   const summarize = subset => {
     const passed = subset.filter(record => record.evaluation.success).length;
     const totalDuration = subset.reduce((sum, record) => sum + record.duration_ms, 0);
@@ -118,8 +129,7 @@ function buildSummary(model, records, startedAt, completedAt) {
       failed: subset.length - passed,
       accuracy: subset.length ? passed / subset.length : 0,
       average_score_ratio: subset.length
-        ? subset.reduce((sum, record) => sum + record.evaluation.score / record.evaluation.maxScore, 0) /
-          subset.length
+        ? subset.reduce((sum, record) => sum + record.evaluation.score / record.evaluation.maxScore, 0) / subset.length
         : 0,
       average_duration_ms: subset.length ? totalDuration / subset.length : 0,
       prompt_tokens: subset.reduce((sum, record) => sum + record.prompt_eval_count, 0),
@@ -134,6 +144,13 @@ function buildSummary(model, records, startedAt, completedAt) {
     started_at: startedAt,
     completed_at: completedAt,
     tool_result_mode: 'domain-shaped-contract',
+    // Oracle-assisted runs give the model information the shipped app cannot:
+    // the expected step count and a round budget derived from it. Numbers from
+    // the two modes are not comparable and must not be merged.
+    harness_mode: runOptions.productionParity ? 'production-parity' : 'oracle-assisted',
+    harness_assistance: runOptions.productionParity
+      ? { expected_step_count_disclosed: false, oracle_round_budget: false, max_rounds: PRODUCTION_MAX_ROUNDS }
+      : { expected_step_count_disclosed: true, oracle_round_budget: true, max_rounds: 'expected_steps + 4' },
     deterministic_options: {
       temperature: 0,
       seed: 42,
@@ -149,7 +166,7 @@ function buildSummary(model, records, startedAt, completedAt) {
   };
 }
 
-async function evaluateTest(test, model, adapter, evaluator) {
+async function evaluateTest(test, model, adapter, evaluator, runOptions = {}) {
   const selected = adapter.selectRelevantTools(test.instruction, {}, CANDIDATE_LIMIT);
   const tools = selected
     .map(tool => adapter.toNativeFunctionTool(tool))
@@ -183,8 +200,11 @@ async function evaluateTest(test, model, adapter, evaluator) {
   const started = Date.now();
   let apiError = null;
 
+  const productionParity = runOptions.productionParity === true;
+
   try {
-    const maxTurns = Math.max(1, expectedCount + 4);
+    // The oracle budget (expectedCount + 4) is not something the app can know.
+    const maxTurns = productionParity ? PRODUCTION_MAX_ROUNDS : Math.max(1, expectedCount + 4);
     for (let turn = 0; turn < maxTurns; turn += 1) {
       const response = await ollamaChat(model, messages, tools);
       promptEvalCount += Number(response.prompt_eval_count || 0);
@@ -212,7 +232,9 @@ async function evaluateTest(test, model, adapter, evaluator) {
           usedCallIndexes.add(matchIndex);
           return true;
         }).length;
-        if (coveredExpected < expectedCount && turn < maxTurns - 1) {
+        if (!productionParity && coveredExpected < expectedCount && turn < maxTurns - 1) {
+          // Oracle nudge: it hands the model the expected step count, which the
+          // shipped loop never has. Excluded under --production-parity.
           messages.push({
             role: 'user',
             content:
@@ -236,8 +258,11 @@ async function evaluateTest(test, model, adapter, evaluator) {
           tool_name: toolName,
           content:
             JSON.stringify(buildContractToolResult(toolName, parameters)) +
-            '\nIf the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer. ' +
-            'If the request asked to confirm or verify a change, that verification step is still pending.',
+            '\n' +
+            (productionParity
+              ? PRODUCTION_TOOL_GUIDANCE
+              : 'If the request has remaining steps, emit the next tool call(s); otherwise reply with the final answer. ' +
+                'If the request asked to confirm or verify a change, that verification step is still pending.'),
         });
       }
       const usedCallIndexes = new Set();
@@ -250,6 +275,7 @@ async function evaluateTest(test, model, adapter, evaluator) {
         return true;
       }).length;
       if (
+        !productionParity &&
         coveredExpected < expectedCount &&
         coveredExpected <= coverageBeforeTurn &&
         turn < maxTurns - 1
@@ -290,6 +316,7 @@ async function evaluateTest(test, model, adapter, evaluator) {
     calls,
     api_error: apiError,
     truncated_turns: truncatedTurns,
+    harness_mode: productionParity ? 'production-parity' : 'oracle-assisted',
     evaluation,
   };
 }
@@ -318,7 +345,7 @@ async function main() {
     while (cursor < tests.length) {
       const index = cursor;
       cursor += 1;
-      records[index] = await evaluateTest(tests[index], options.model, adapter, evaluator);
+      records[index] = await evaluateTest(tests[index], options.model, adapter, evaluator, options);
       completed += 1;
       const record = records[index];
       console.log(
@@ -328,13 +355,20 @@ async function main() {
       const partial = records.filter(Boolean);
       fs.writeFileSync(
         `${options.output}.partial`,
-        JSON.stringify({ summary: buildSummary(options.model, partial, startedAt, new Date().toISOString()), records: partial }, null, 2)
+        JSON.stringify(
+          {
+            summary: buildSummary(options.model, partial, startedAt, new Date().toISOString(), options),
+            records: partial,
+          },
+          null,
+          2
+        )
       );
     }
   };
   await Promise.all(Array.from({ length: options.concurrency }, () => worker()));
   const report = {
-    summary: buildSummary(options.model, records, startedAt, new Date().toISOString()),
+    summary: buildSummary(options.model, records, startedAt, new Date().toISOString(), options),
     records,
   };
   fs.writeFileSync(options.output, JSON.stringify(report, null, 2) + '\n');

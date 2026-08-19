@@ -8,8 +8,8 @@ should evolve, and a concrete plan for breaking up the largest modules.
 - **771+ unit tests** run under Vitest (`npm test`).
 - A large fraction of the legacy suite asserts against **source text** —
   `fs.readFileSync(module)` followed by `expect(source).toContain('...')`. These
-  "source-grep" tests verify that code *looks* a certain way, not that it
-  *behaves* correctly. They break on harmless refactors (see the
+  "source-grep" tests verify that code _looks_ a certain way, not that it
+  _behaves_ correctly. They break on harmless refactors (see the
   `config-ipc-hardening` regression) and contribute almost nothing to executed
   coverage (~4%).
 - There were **no end-to-end tests** exercising the actual Electron app.
@@ -59,14 +59,31 @@ risk. They should be split along the service boundaries that already exist
 (`renderer/modules/chat/services/`, `renderer/modules/tracks/`,
 `renderer/modules/Agents/`).
 
-| Module                                | Lines  | Suggested split                                                                 |
-| ------------------------------------- | ------ | ------------------------------------------------------------------------------- |
-| `renderer/modules/ChatManager.js`     | ~16k   | message orchestration vs. tool-call execution vs. rendering vs. sequence utils  |
-| `renderer/modules/TrackRenderer.js`   | ~16k   | per-track-type renderers (genes, reads, variants, GC, WIG) behind a registry    |
-| `renderer/renderer-modular.js`        | ~11k   | bootstrap/wiring only; move feature logic into modules                          |
-| `renderer/modules/ActionManager.js`   | ~7.7k  | group actions by domain (navigation, edit, file, analysis)                      |
-| `main/ipc-handlers.js`                | ~4.1k  | split per domain (config, files, blast, tools) like `project-ipc.js` already is |
-| `main/menu-builder.js`                | ~92 KB | one builder module per window/menu                                              |
+| Module                              | Lines  | Suggested split                                                                 |
+| ----------------------------------- | ------ | ------------------------------------------------------------------------------- |
+| `renderer/modules/ChatManager.js`   | ~20.7k | message orchestration vs. tool-call execution vs. rendering vs. sequence utils  |
+| `renderer/modules/TrackRenderer.js` | ~16k   | per-track-type renderers (genes, reads, variants, GC, WIG) behind a registry    |
+| `renderer/renderer-modular.js`      | ~11k   | bootstrap/wiring only; move feature logic into modules                          |
+| `renderer/modules/ActionManager.js` | ~7.7k  | group actions by domain (navigation, edit, file, analysis)                      |
+| `main/ipc-handlers.js`              | ~4.1k  | split per domain (config, files, blast, tools) like `project-ipc.js` already is |
+| `main/menu-builder.js`              | ~92 KB | one builder module per window/menu                                              |
+
+### Progress
+
+- **ChatManager → `ConversationTranscriptService`** (done). Everything about the
+  transcript the model sees — replaying an executed tool round in the provider's
+  native protocol, the structured execution ledger the policy layer reads, and
+  the context budget — moved to
+  `renderer/modules/chat/services/ConversationTranscriptService.js`. ChatManager
+  keeps thin delegating methods, so call sites and the policy layer are
+  unchanged. Behavioural tests landed before the move
+  (`tool-protocol-round-trip`, `conversation-token-budget`), and
+  `test/helpers/agent-loop-harness.js` drives the real `sendToLLM()` loop against
+  a scripted provider so further extractions have a net under them.
+
+  Note the file did not shrink much: the extraction removed ~215 lines while
+  the same change set added more. The value is the seam and the tests, not the
+  line count — and the next extraction is now cheaper.
 
 ### Approach (per module)
 

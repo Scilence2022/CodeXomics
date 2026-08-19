@@ -160,6 +160,9 @@ function loadChatManagerClass() {
 
   const mockClassCode = `
     class MockChatManager {
+      // Abort checkpoint seam. The real method reads this.conversationState;
+      // these tests drive the queue without a conversation, so it is a no-op.
+      throwIfConversationAborted() {}
       ${cloneToolParametersCode}
       ${normalizeToolParamsCode}
       ${getToolExecutionKeyCode}
@@ -180,6 +183,12 @@ function loadChatManagerClass() {
       ${getToolExecutionCountCode}
       ${getToolExecutionCountByNameCode}
       ${findExistingExecutionCode}
+      // Declared last so it wins over the extracted copy: ChatManager delegates
+      // this to ConversationTranscriptService, and the mock has no services.
+      getMessageToolExecutions(message) {
+        const executions = message?.__codexomicsToolExecutions;
+        return Array.isArray(executions) && executions.length > 0 ? executions : null;
+      }
     }
     return MockChatManager;
   `;

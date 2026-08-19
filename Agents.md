@@ -88,7 +88,98 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
 - Add new tools to an explicit policy category. Unknown tools fall through to the default same-parameters block.
 - Primer tools (`design_primers`, `calculate_primer_properties`, `find_primer_binding_sites`, `save_primer`, `list_primers`, `delete_primers`) belong in a `primer_design` policy category with parameter-sensitive behavior. The old `*_primer_annotation` names remain as back-compat aliases via `ToolExecutionService.legacyAliases`.
 - Benchmark tools belong in a system/utility policy path and should not be routed through agents.
+- Offline CLI benchmarks run `oracle-assisted` by default and `production-parity` with
+  `--production-parity`. Only production-parity numbers are comparable to in-app behaviour;
+  every report records which mode produced it in `harness_mode`. Never pool the two.
 - When debugging `Policy blocked: <tool_name>`, check whether the tool has an explicit policy, whether identical parameters already succeeded, and whether stale system messages are being matched by `wasToolExecutedSuccessfully()`.
+
+## 5a. Tool Result Protocol Rules
+
+- The round loop keeps one canonical transcript in the OpenAI shape: assistant turns carry
+  `tool_calls`, results come back as `role: 'tool'` messages bound to a `tool_call_id`.
+  Provider adapters translate at the boundary (`toAnthropicMessages()`, `toGoogleContents()`);
+  do not add provider-specific message shapes to `ChatManager`.
+- `appendToolRoundToHistory()` is the only place a completed tool round is written into the
+  transcript. It replays natively when every call in the round carries a `tool_call_id` and
+  every id came back with a result; otherwise the whole round falls back to the prose
+  `[Tool Result]` envelope. A partially native round is a protocol violation — never emit one.
+- Policy and duplicate-suppression checks must read the structured records attached by
+  `attachToolExecutionRecords()` (`getMessageToolExecutions()`), not the prose phrase
+  `"<tool> executed successfully"`. The native transcript does not contain that phrase, and
+  external tool output can contain it.
+- Anthropic requires every `tool_result` block for a turn in one user message; Gemini wants the
+  matching `functionResponse` parts grouped the same way. Both translators already do this.
+
+## 5b. Cancellation And Timeout Rules
+
+- Every provider request goes through `LLMConfigManager.fetchWithGuards()`, which applies both
+  the caller's abort signal and `llm.requestTimeoutMs` (default 180000). Never call `fetch()`
+  directly from a `send*MessageWithHistory()` path.
+- A timeout surfaces as `name: 'TimeoutError'` / `isTimeout: true`, never as an abort, and
+  `makeRequestWithRetry()` retries neither.
+- Abort state is sticky: `abortCurrentConversation()` sets `conversationState.aborted` before
+  tearing the state down, and the loop checks `throwIfConversationAborted()`. Do not
+  re-create an AbortController mid-request; a missing controller means the turn was cancelled.
+- `sendToLLM()` rethrows `AbortError`. `sendMessage()`, `sendMessageProgrammatically()` and
+  `processAgentPrompt()` each render their own cancellation message from it.
+
+## 5c. Context Budget Rules
+
+- `enforceConversationTokenBudget()` runs immediately before every provider call and is the only
+  thing bounding transcript growth across a turn; `sanitizeResultForLLM()` bounds a single result,
+  not their sum. Budget comes from `llm.maxContextTokens` (default 120000; `0` disables, a garbage
+  value falls back to the default, anything positive is floored at 4000).
+- Trimming happens in two phases: compact old tool result bodies first (structure preserved), then
+  drop whole exchanges. Never split an assistant `tool_calls` entry from its `tool` messages —
+  `buildTranscriptGroups()` defines the spans that must move together.
+- The system message, the user message that started the turn, and the most recent exchange are
+  never trimmed. When nothing else is trimmable the function returns `null` and logs, rather than
+  reporting a no-op trim.
+
+## 5d. Mid-Turn Tool Retrieval Rules
+
+- Tool selection runs once per turn, before round 1. `expandAdvertisedToolsForRejectedCalls()` is
+  the only sanctioned way to widen it afterwards, and it fires only when a call was rejected with
+  `UNADVERTISED_TOOL_REASON` — that constant is shared by the producer (`analyzeLLMResponse`) and
+  the consumer; do not restate the string.
+- Expansion appends to `currentNativeTools` and `lastSystemPromptMetadata.selectedTools`; it never
+  reorders or removes. The advertised list is part of the request prefix, so growing it costs
+  provider prompt caching — that is why it is on demand rather than per round.
+- A turn may expand at most `MAX_TOOL_EXPANSIONS_PER_TURN` (3) times. A rejected name that the
+  registry does not know is left alone, so the existing unavailable-tool handling still applies.
+
+## 5e. Provider Request Rules
+
+- Every OpenAI-compatible provider shares one request path,
+  `sendOpenAICompatibleMessageWithHistory()`. Register a new one in
+  `OPENAI_COMPATIBLE_PROVIDERS`; entries carry only genuine deviations
+  (`payloadExtra`, `normalize`, `fallbackModelStatuses`). Do not copy the request
+  path per provider — that is how the earlier copies drifted into dropping error
+  bodies and skipping retry.
+- `sendMessageWithProvider()` dispatches through the per-provider
+  `historyMethod`, which stays the override seam. The named methods themselves
+  should remain one-line delegations.
+- Every provider — Anthropic and Gemini included — throws through
+  `createProviderHttpError()` so the provider's own body survives, and retries
+  through `makeRequestWithRetry()`.
+- The Gemini key travels in the `x-goog-api-key` header, never the query string.
+- `chatboxLLMTemperature` defaults to 0.3 because nearly every request carries
+  native tool schemas and is judged on schema-exact arguments. Keep the two
+  defaults in `ChatBoxSettingsManager` and `DEFAULT_LLM_TEMPERATURE` in sync.
+- MCP system prompts are fetched through `getCachedMcpPrompt()`. Anything that
+  changes a server's prompt content must call `invalidateMcpPromptCache()`.
+
+## 5f. Transcript Service Rules
+
+- Everything about the transcript the model sees lives in
+  `ConversationTranscriptService`: tool-round replay, the structured execution
+  ledger, and the context budget. ChatManager keeps one-line delegations; add new
+  transcript logic to the service, not back into ChatManager.
+- Reach it through `ChatManager.getTranscriptService()`, which constructs the
+  service lazily so a ChatManager built without the full registry (tests,
+  benchmark harnesses) still works.
+- The service must stay in the `index.html` script list ahead of
+  `modules/ChatManager.js`, and registered in `initializeServices()`.
 
 ## 6. Multi-Agent Routing Rules
 

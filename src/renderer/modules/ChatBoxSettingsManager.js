@@ -92,7 +92,10 @@ class ChatBoxSettingsManager {
       chatboxModelType: 'auto',
       chatboxLLMProvider: 'auto', // Specific provider override
       chatboxLLMModel: 'auto', // Specific model override
-      chatboxLLMTemperature: 0.7,
+      // Low by default: nearly every ChatBox request carries native tool schemas,
+      // and the model's job is tool selection plus schema-exact argument
+      // extraction, not prose. Raise it here for a chattier assistant.
+      chatboxLLMTemperature: 0.3,
       chatboxLLMMaxTokens: 4000,
       chatboxLLMTimeout: 30,
       chatboxLLMUseSystemPrompt: true,
@@ -341,7 +344,10 @@ class ChatBoxSettingsManager {
       chatboxModelType: 'auto',
       chatboxLLMProvider: 'auto',
       chatboxLLMModel: 'auto',
-      chatboxLLMTemperature: 0.7,
+      // Low by default: nearly every ChatBox request carries native tool schemas,
+      // and the model's job is tool selection plus schema-exact argument
+      // extraction, not prose. Raise it here for a chattier assistant.
+      chatboxLLMTemperature: 0.3,
       chatboxLLMMaxTokens: 4000,
       chatboxLLMTimeout: 30,
       chatboxLLMUseSystemPrompt: true,

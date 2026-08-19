@@ -9,8 +9,11 @@ function loadLoopSupportClass() {
   );
   if (!match) throw new Error('Unable to extract ChatManager loop support methods');
   const methods = match[0].replace(/^\n/, '').replace(/\n\n\s{2}recordToolExecutionState$/, '');
+  // The extracted methods reference module-level constants. Lift them from the
+  // same source rather than restating them, so the sandbox cannot drift.
+  const constants = (source.match(/^const [A-Z_]+ = .*;$/gm) || []).join('\n');
   // eslint-disable-next-line no-new-func -- loads the real source methods into an isolated class
-  return new Function(`return class LoopSupport {\n${methods}\n}`)();
+  return new Function(`${constants}\nreturn class LoopSupport {\n${methods}\n}`)();
 }
 
 describe('ChatManager bounded model-turn recovery', () => {

@@ -46,6 +46,95 @@ const RETRIEVAL_ACTION_ALIASES = {
   blast: ['alignment', 'similarity'],
 };
 
+/** Contiguous runs of CJK ideographs, hiragana, katakana and Hangul. */
+const CJK_RUN_PATTERN = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]+/g;
+
+/**
+ * Bridge from Chinese query vocabulary to the English terms the tool registry
+ * is written in. Retrieval scores tool name/keyword/description/category
+ * tokens, all of which are English, so a Chinese query needs its verbs and
+ * nouns mapped across before scoring — tokenizing it correctly is necessary but
+ * not sufficient.
+ */
+const CJK_RETRIEVAL_LEXICON = {
+  // actions
+  打开: ['open', 'load'],
+  加载: ['load', 'open', 'import'],
+  载入: ['load', 'open'],
+  导入: ['import', 'load'],
+  读取: ['read', 'load'],
+  查找: ['find', 'search', 'locate'],
+  搜索: ['search', 'find', 'locate'],
+  寻找: ['find', 'search'],
+  定位: ['locate', 'navigate', 'position'],
+  跳转: ['jump', 'navigate', 'goto'],
+  导航: ['navigate', 'jump'],
+  移动: ['pan', 'move', 'scroll'],
+  放大: ['zoom', 'in'],
+  缩小: ['zoom', 'out'],
+  显示: ['show', 'display'],
+  展示: ['show', 'display'],
+  隐藏: ['hide', 'toggle'],
+  切换: ['toggle', 'switch'],
+  选择: ['select', 'choose'],
+  选中: ['select'],
+  高亮: ['highlight'],
+  删除: ['delete', 'remove', 'clear'],
+  移除: ['remove', 'delete'],
+  清除: ['clear', 'remove'],
+  保存: ['save', 'export', 'write'],
+  导出: ['export', 'save', 'download'],
+  下载: ['download', 'save'],
+  创建: ['create', 'add'],
+  新建: ['create', 'new'],
+  添加: ['add', 'create'],
+  设计: ['design', 'create'],
+  计算: ['calculate', 'compute'],
+  分析: ['analyze', 'analysis'],
+  统计: ['statistics', 'count', 'analysis'],
+  翻译: ['translate', 'translation', 'protein'],
+  比对: ['blast', 'alignment', 'align'],
+  注释: ['annotation', 'annotate'],
+  编辑: ['edit', 'modify'],
+  修改: ['modify', 'edit', 'update'],
+  截图: ['screenshot', 'capture'],
+  列出: ['list', 'show'],
+  查询: ['query', 'search', 'get'],
+  获取: ['get', 'fetch', 'retrieve'],
+  // objects
+  基因: ['gene'],
+  基因组: ['genome'],
+  序列: ['sequence'],
+  染色体: ['chromosome'],
+  位置: ['position', 'location'],
+  坐标: ['coordinate', 'position'],
+  区域: ['region', 'range'],
+  特征: ['feature'],
+  轨道: ['track'],
+  标签: ['tab', 'label'],
+  窗口: ['window'],
+  文件: ['file'],
+  引物: ['primer'],
+  蛋白: ['protein'],
+  结构: ['structure'],
+  密码子: ['codon'],
+  变异: ['variant', 'mutation'],
+  突变: ['mutation', 'variant'],
+  读段: ['reads', 'alignment'],
+  操纵子: ['operon'],
+  酶切: ['restriction', 'digest'],
+  内切酶: ['restriction', 'enzyme'],
+  通路: ['pathway'],
+  书签: ['bookmark'],
+  主题: ['theme'],
+  任务: ['task'],
+  插件: ['plugin'],
+  数据库: ['database'],
+  文献: ['literature', 'reference'],
+  报告: ['report'],
+  图谱: ['plot', 'map'],
+};
+
 /**
  * Renderer-side adapter for main-process tool registry snapshots.
  *
@@ -278,19 +367,60 @@ class DynamicToolsSnapshotAdapter {
     );
   }
 
+  /**
+   * Split text into retrieval tokens.
+   *
+   * Two things beyond the plain ASCII split:
+   *
+   * - The camelCase split is what lets `jumpToGene` match "jump gene", but it
+   *   also chops a trailing-capital gene symbol (`lysC` -> `lys`). The unsplit
+   *   form is kept alongside so both spellings match.
+   * - CJK text survives. Splitting on `[^a-z0-9]+` dropped it entirely, so a
+   *   Chinese query produced zero tokens, scored no tool above threshold, and
+   *   fell back to the ten generic tools — out of 216 — for every request. The
+   *   app ships a zh-CN locale, so that was a silent capability cliff for half
+   *   its users.
+   */
   tokenizeSearchText(value) {
-    return String(value || '')
+    const raw = String(value || '');
+    const tokens = [];
+
+    const latin = raw
       .replace(/([a-z])([A-Z])/g, '$1 $2')
       .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .map(token => token.trim())
-      .filter(token => token.length > 2 && !DYNAMIC_TOOL_STOP_WORDS.has(token));
+      .split(/[^a-z0-9]+/);
+    for (const token of latin) {
+      const trimmed = token.trim();
+      if (trimmed.length > 2 && !DYNAMIC_TOOL_STOP_WORDS.has(trimmed)) tokens.push(trimmed);
+    }
+
+    // Unsplit words, so `lysC` also contributes `lysc`.
+    for (const token of raw.toLowerCase().split(/[^a-z0-9]+/)) {
+      const trimmed = token.trim();
+      if (trimmed.length > 2 && !DYNAMIC_TOOL_STOP_WORDS.has(trimmed)) tokens.push(trimmed);
+    }
+
+    // CJK has no word delimiters: index each run plus its 2- and 3-character
+    // n-grams, so terms like "基因" and "基因组" inside a longer run match.
+    for (const run of raw.match(CJK_RUN_PATTERN) || []) {
+      if (run.length >= 2) tokens.push(run);
+      for (const width of [2, 3]) {
+        for (let index = 0; index + width <= run.length; index += 1) {
+          tokens.push(run.slice(index, index + width));
+        }
+      }
+    }
+
+    return [...new Set(tokens)];
   }
 
   expandSearchTerms(tokens) {
     const expanded = new Set(tokens);
     for (const token of tokens) {
       for (const alias of RETRIEVAL_ACTION_ALIASES[token] || []) expanded.add(alias);
+      // The tool registry is written in English. Without this bridge a Chinese
+      // query can be tokenized correctly and still match nothing.
+      for (const alias of CJK_RETRIEVAL_LEXICON[token] || []) expanded.add(alias);
       if (token.endsWith('s') && token.length > 3) expanded.add(token.slice(0, -1));
       if (token.endsWith('ing') && token.length > 5) expanded.add(token.slice(0, -3));
     }
@@ -496,11 +626,14 @@ class DynamicToolsSnapshotAdapter {
     const normalizedToolName = toolName.replace(/[^a-z0-9]+/g, ' ').trim();
     if (normalizedToolName && text.includes(normalizedToolName)) score += 6;
 
+    // Match name parts against the *expanded* terms. This is the strongest
+    // relevance signal in the function, and comparing it against raw tokens
+    // meant a translated term ("基因组" -> "genome") could never earn it.
     const nameParts = toolName.split(/[^a-z0-9]+/).filter(part => part.length > 2);
-    const matchedNameParts = nameParts.filter(part => this.tokenizeSearchText(text).includes(part));
+    const matchedNameParts = nameParts.filter(part => terms.includes(part));
     score += matchedNameParts.length * 4;
     if (nameParts[0] && matchedNameParts.includes(nameParts[0])) score += 6;
-    if (nameParts.length > 0 && nameParts.every(part => text.includes(part))) {
+    if (nameParts.length > 0 && nameParts.every(part => matchedNameParts.includes(part))) {
       score += 12;
     }
 
