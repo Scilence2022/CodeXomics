@@ -68,8 +68,13 @@ describe('IPC Handlers Module', () => {
 
   it('should capture screenshots from the requesting renderer webContents', () => {
     expect(content).toContain('getWorkspaceHandleForSender');
-    expect(content).toContain('event.sender.capturePage(rect)');
+    expect(content).toContain('event.sender.capturePage(resolveCaptureRect(options.rect, event.sender))');
     expect(content).toContain('resolveIpcFileAccess(savePath, {');
+  });
+
+  it('should convert renderer CSS rects into zoom aware capture rects', () => {
+    expect(content).toContain("require('./screenshot-rect')");
+    expect(content).toContain('resolveCaptureRect(options.rect, targetWindow.webContents)');
   });
 
   it('should save AI auto-screenshots under a writable default directory', () => {

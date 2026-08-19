@@ -36,6 +36,7 @@ const { ToolRegistryService } = require('./tool-registry-service');
 const { SkillRegistryService } = require('./skill-registry-service');
 const { proxyDgrMcpRequest, uploadDgrResearchDocument, MAX_DOCUMENT_BYTES } = require('./dgr-mcp-proxy');
 const { archiveDgrTaskResult, readDgrArtifact } = require('./dgr-artifact-storage');
+const { resolveCaptureRect } = require('./screenshot-rect');
 const {
   assertSidecarContentSize,
   assertSidecarValueSize,
@@ -878,21 +879,6 @@ function registerIpcHandlers(deps) {
     return Math.min(Math.trunc(numeric), ABSOLUTE_SCREENSHOT_MAX_IMAGE_BYTES);
   };
 
-  const sanitizeScreenshotRect = rect => {
-    if (!rect || typeof rect !== 'object') return undefined;
-
-    const x = Math.max(0, Math.floor(Number(rect.x) || 0));
-    const y = Math.max(0, Math.floor(Number(rect.y) || 0));
-    const width = Math.max(1, Math.ceil(Number(rect.width) || 0));
-    const height = Math.max(1, Math.ceil(Number(rect.height) || 0));
-
-    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
-      return undefined;
-    }
-
-    return { x, y, width, height };
-  };
-
   const getScreenshotBuffer = (image, format, quality) => {
     if (!image || image.isEmpty()) {
       throw new Error('Captured screenshot image is empty');
@@ -1002,14 +988,14 @@ function registerIpcHandlers(deps) {
       return image;
     }
 
-    const rect = sanitizeScreenshotRect(options.rect);
     if (
       event.sender &&
       typeof event.sender.isDestroyed === 'function' &&
       !event.sender.isDestroyed() &&
       typeof event.sender.capturePage === 'function'
     ) {
-      const image = await event.sender.capturePage(rect);
+      // Renderers report rects in CSS pixels; capturePage() works in the view's own pixels.
+      const image = await event.sender.capturePage(resolveCaptureRect(options.rect, event.sender));
       if (!image || image.isEmpty()) {
         throw new Error('Captured screenshot image is empty');
       }
@@ -1021,7 +1007,7 @@ function registerIpcHandlers(deps) {
       throw new Error('No active application window is available for screenshot capture');
     }
 
-    return targetWindow.webContents.capturePage(rect);
+    return targetWindow.webContents.capturePage(resolveCaptureRect(options.rect, targetWindow.webContents));
   };
 
   const toolRegistryService = deps.toolRegistryService || new ToolRegistryService({ app });
