@@ -220,6 +220,7 @@ class ChatManager {
       ['restriction', 'RestrictionDigestService'],
       ['gel', 'GelElectrophoresisService'],
       ['task', 'TaskService'],
+      ['researchProgress', 'ResearchProgressService'],
       ['skill', 'SkillService'],
       ['transcript', 'ConversationTranscriptService'],
     ];
@@ -4236,6 +4237,8 @@ class ChatManager {
       existingChatPanel.style.display = 'flex';
       this.ensureChatPanelInViewport(existingChatPanel);
       this.configManager.set('chat.visible', true);
+      // Reopening the panel must re-show any research run that is still going.
+      this.services?.researchProgress?.render();
       return;
     }
 
@@ -4401,6 +4404,10 @@ class ChatManager {
       this.configManager.set('chat.visible', true);
       console.log('ChatBox created with visibility: visible');
     }
+
+    // Research runs survive panel teardown; rebuild their dock rows now that
+    // the panel DOM exists again.
+    this.services?.researchProgress?.render();
 
     // Setup dragging and resizing
     this.setupChatDragging();
@@ -10127,6 +10134,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
       if (taskInfo.geneSymbol && (!existing.geneSymbol || existing.geneSymbol === 'Unknown')) {
         existing.geneSymbol = taskInfo.geneSymbol;
       }
+      this.services?.researchProgress?.upsert(existing);
       return;
     }
 
@@ -10138,6 +10146,11 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
     // text) is brittle — if the model phrases its reply differently, progress
     // updates have nowhere to go.
     this.createTaskStatusBubble(taskInfo);
+
+    // The bubble is pinned where the run was submitted and scrolls away as the
+    // conversation continues, so mirror the run into the always-visible
+    // progress dock above the composer.
+    this.services?.researchProgress?.upsert(taskInfo);
 
     // Start the polling interval (Deep Gene Research documents 5 seconds)
     const pollInterval = setInterval(async () => {
@@ -10187,6 +10200,10 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
       taskInfo.totalSteps = statusResult.totalSteps || taskInfo.totalSteps;
       taskInfo.error = statusResult.error || null;
 
+      // Always refresh the always-visible dock, even when nothing changed —
+      // it is what carries the ticking elapsed time.
+      this.services?.researchProgress?.upsert(taskInfo);
+
       // If status has changed or we have new progress info, update the message
       // (always render after the first successful check).
       if (
@@ -10231,6 +10248,7 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         status: 'error',
         error: error.message,
       });
+      this.services?.researchProgress?.upsert(taskInfo);
 
       // Stop polling on persistent error
       this.stopTaskPolling(taskInfo.taskId);
