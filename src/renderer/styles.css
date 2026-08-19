@@ -18,7 +18,8 @@
 }
 
 .sidebar-splitter,
-.chat-dock-splitter {
+.chat-dock-splitter,
+.tasks-dock-splitter {
   width: var(--splitter-hit-size) !important;
   margin: 0 !important;
   background: transparent !important;
@@ -29,7 +30,8 @@
 }
 
 .sidebar-splitter::before,
-.chat-dock-splitter::before {
+.chat-dock-splitter::before,
+.tasks-dock-splitter::before {
   content: '';
   width: 1px;
   height: 100%;
@@ -45,7 +47,10 @@
 .sidebar-splitter:focus::before,
 .chat-dock-splitter:hover::before,
 .chat-dock-splitter.resizing::before,
-.chat-dock-splitter:focus::before {
+.chat-dock-splitter:focus::before,
+.tasks-dock-splitter:hover::before,
+.tasks-dock-splitter.resizing::before,
+.tasks-dock-splitter:focus::before {
   width: 2px;
   background: var(--splitter-line-active-color);
 }
@@ -80,7 +85,8 @@
 }
 
 .sidebar-splitter-handle,
-.chat-dock-splitter-handle {
+.chat-dock-splitter-handle,
+.tasks-dock-splitter-handle {
   display: none !important;
 }
 
@@ -90,7 +96,8 @@
 
 .sidebar-splitter.auto-resetting,
 .splitter.active,
-.chat-dock-splitter.resizing {
+.chat-dock-splitter.resizing,
+.tasks-dock-splitter.resizing {
   background: transparent !important;
   box-shadow: none !important;
 }

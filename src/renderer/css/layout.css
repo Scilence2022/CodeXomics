@@ -192,7 +192,7 @@
 .tasks-dock-container {
   width: var(--tasks-dock-width, 320px);
   min-width: 260px;
-  max-width: 34vw;
+  max-width: 50vw;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -241,6 +241,52 @@
   margin: 0 -1px;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
   transition: none !important;
+}
+
+/* Tasks Dock Splitter - Vertical resize handle for the Tasks panel */
+.tasks-dock-splitter {
+  width: 8px;
+  background: linear-gradient(to right, #e9ecef, var(--border-color), #e9ecef);
+  cursor: col-resize;
+  position: relative;
+  border-left: 1px solid #ced4da;
+  border-right: 1px solid #ced4da;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tasks-dock-splitter:hover {
+  background: linear-gradient(to right, var(--border-color), #ced4da, var(--border-color));
+  width: 10px;
+  margin: 0 -1px;
+}
+
+.tasks-dock-splitter.resizing {
+  background: linear-gradient(to right, #ced4da, #adb5bd, #ced4da);
+  width: 10px;
+  margin: 0 -1px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+  transition: none !important;
+}
+
+.tasks-dock-splitter-handle {
+  color: #6c757d;
+  font-size: 12px;
+  font-weight: bold;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.tasks-dock-splitter:hover .tasks-dock-splitter-handle {
+  opacity: 1;
+  color: #495057;
+  font-size: 14px;
 }
 
 .chat-dock-splitter-handle {
