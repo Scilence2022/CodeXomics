@@ -23,7 +23,7 @@ class AnnotationChangeSetService {
     this.ledgerLocks = new Map();
     // Derived-value caches, keyed by workspace and revalidated against the live
     // objects they were derived from. Recomputing them per call made every
-    // Review Center interaction re-hash the whole assembly and every feature.
+    // Annotation Review interaction re-hash the whole assembly and every feature.
     this.featureIndexes = new Map();
     this.assemblyDigests = new Map();
     this.integrityVersion = 2;
@@ -1506,7 +1506,7 @@ class AnnotationChangeSetService {
   /**
    * Announce the review queue state to the renderer UI. Without this the
    * header Review badge only learns about a new proposal when the curator
-   * opens the Review Center, so an agent-created ChangeSet stayed invisible.
+   * opens the Annotation Review modal, so an agent-created ChangeSet stayed invisible.
    */
   _broadcastLedgerState(ledger, genomePath, reason) {
     if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;

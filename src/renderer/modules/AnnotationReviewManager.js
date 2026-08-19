@@ -120,7 +120,7 @@ class AnnotationReviewManager {
   showReviewCenter(options = {}) {
     const modal = document.getElementById('annotationReviewModal');
     if (!modal) {
-      this._notify('Annotation Review Center is not available.', 'error');
+      this._notify('Annotation Review is not available.', 'error');
       return;
     }
     this._bindStaticEvents();
@@ -1093,7 +1093,7 @@ class AnnotationReviewManager {
           )
           .join('')}
         <button class="btn btn-primary btn-sm gene-review-open" onclick="window.genomeBrowser.showAnnotationReviewCenter()">
-          <i class="fas fa-clipboard-check"></i> Open Review Center
+          <i class="fas fa-clipboard-check"></i> Open Annotation Review
         </button>`;
     } catch (error) {
       container.innerHTML = `<div class="gene-tab-empty">Unable to load review status: ${this._escape(error.message)}</div>`;
@@ -1149,7 +1149,7 @@ class AnnotationReviewManager {
 
   /**
    * Keep the header Review badge current without the curator opening the
-   * Review Center. Ledger writes broadcast their own status counts, so a
+   * Annotation Review modal. Ledger writes broadcast their own status counts, so a
    * proposal made by an agent shows up immediately; the slow poll is the
    * fallback for ledger state this renderer never observed being written.
    */
