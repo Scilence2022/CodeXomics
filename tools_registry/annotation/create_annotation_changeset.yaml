@@ -20,7 +20,11 @@ parameters:
       description: Revision returned by resolve_annotation_target.
     annotationProposal:
       type: object
-      description: Versioned proposal with target, operations or constrained updates, and evidence.
+      description: >-
+        Versioned proposal with target, operations or constrained updates, and evidence.
+        Omit this when researchRun names a Deep Gene Research task: CodeXomics uses the
+        archived, citation-verified proposal for that run. Never retype or summarise a
+        research proposal into this field - a paraphrase is rejected.
     operations:
       type: array
       items:
@@ -31,6 +35,10 @@ parameters:
         type: string
     researchRun:
       type: string
+      description: >-
+        Deep Gene Research task ID. Supplying it binds the ChangeSet to that run's archived,
+        citation-verified proposal, which is then used verbatim - pass this alone rather than
+        rebuilding the proposal by hand.
     manifestHash:
       type: string
     idempotencyKey:

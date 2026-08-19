@@ -2006,14 +2006,21 @@ class AnnotationChangeSetService {
       const proposed = proposalTarget[field] === null ? null : String(proposalTarget[field]);
       const current = target[field] === null || target[field] === undefined ? null : String(target[field]);
       if (proposed !== current) {
-        throw new Error(`Proposal target ${field} does not match the selected CodeXomics feature`);
+        // Both values, or the caller cannot tell which side is wrong.
+        throw new Error(
+          `Proposal target ${field} does not match the selected CodeXomics feature ` +
+            `(proposal: ${proposed ?? 'null'}, resolved ${target.featureType || 'feature'}: ${current ?? 'null'})`
+        );
       }
     }
     if (proposalTarget.coordinates) {
       for (const field of ['start', 'end', 'strand']) {
         if (proposalTarget.coordinates[field] === undefined) continue;
         if (String(proposalTarget.coordinates[field]) !== String(target.coordinates?.[field])) {
-          throw new Error(`Proposal target coordinate ${field} does not match the selected CodeXomics feature`);
+          throw new Error(
+            `Proposal target coordinate ${field} does not match the selected CodeXomics feature ` +
+              `(proposal: ${proposalTarget.coordinates[field]}, resolved: ${target.coordinates?.[field] ?? 'null'})`
+          );
         }
       }
     }
@@ -2875,8 +2882,43 @@ class AnnotationChangeSetService {
     };
   }
 
-  async _requireArchivedDgrReport(proposal, target, researchRun) {
-    if (proposal?.researchSummary?.schema !== 'dgr.curation-summary.v1') return null;
+  /** @returns {object|null} the annotation research workflow service, when registered */
+  _researchWorkflowService() {
+    return this.chatManager?.services?.annotationWorkflow || null;
+  }
+
+  /**
+   * What a `researchRun` id refers to in this workspace.
+   *
+   * A DGR proposal is a structured, citation-verified artifact. Letting a model
+   * retype it into a tool call meant the artifact arrived paraphrased: a
+   * transcribed featureId that bound to nothing, invented qualifier names, and
+   * — because the verification below keys off the proposal's own shape — the
+   * whole archived-report and citation chain silently skipped. The stored
+   * snapshot is the authority; the caller does not have to carry it.
+   *
+   * @param {string|null} taskId
+   * @returns {Promise<{exists: boolean, proposal: object|null}>}
+   */
+  async _researchRunContext(taskId) {
+    const id = String(taskId || '').trim();
+    if (!id) return { exists: false, proposal: null };
+    const workflowService = this._researchWorkflowService();
+    if (typeof workflowService?.getStoredResearchProposal !== 'function') {
+      return { exists: false, proposal: null };
+    }
+    return await workflowService.getStoredResearchProposal(id);
+  }
+
+  async _requireArchivedDgrReport(proposal, target, researchRun, options = {}) {
+    const isDgrCurationProposal = proposal?.researchSummary?.schema === 'dgr.curation-summary.v1';
+    // Naming a real research task is itself a claim that this ChangeSet came out
+    // of an archived, citation-verified run, so it demands the same proof as a
+    // proposal that looks like one. Keying this off the proposal's shape alone
+    // meant dropping a single field turned the entire chain off silently.
+    // Synthetic run ids that name no task (rollback:<id>, for example) are not
+    // research runs and stay exempt.
+    if (!isDgrCurationProposal && options.isResearchTask !== true) return null;
     const taskId = String(researchRun || '').trim();
     if (!taskId || taskId.length > 256 || !/^[A-Za-z0-9._:-]+$/.test(taskId)) {
       throw new Error('A DGR curation proposal requires its archived researchRun task ID');
@@ -3042,7 +3084,14 @@ class AnnotationChangeSetService {
           ? 'codexomics_research_evidence'
           : operation.field;
     if (!field || !this.allowedQualifierFields.has(field)) {
-      throw new Error(`Field "${field || 'unknown'}" is not writable by the autonomous annotation profile`);
+      // Name the vocabulary. A bare rejection sends the caller back to guessing,
+      // and the most common miss is a case difference away from a valid field.
+      const suggestion = this._matchAllowedFieldIgnoringCase(field);
+      throw new Error(
+        `Field "${field || 'unknown'}" is not writable by the autonomous annotation profile` +
+          (suggestion ? ` (did you mean "${suggestion}"?)` : '') +
+          `. Writable fields: ${[...this.allowedQualifierFields].join(', ')}`
+      );
     }
     if (['start', 'end', 'strand', 'type', 'sequence', 'translation'].includes(field)) {
       throw new Error(`Structural field "${field}" cannot be changed by an annotation research ChangeSet`);
@@ -3082,11 +3131,35 @@ class AnnotationChangeSetService {
    */
   _normaliseUpdateField(field) {
     const aliases = { description: 'note' };
-    return aliases[field] || field;
+    if (aliases[field]) return aliases[field];
+    if (this.allowedQualifierFields.has(field)) return field;
+    // `EC_number` is the one writable field that is not lower-case — it keeps
+    // the GenBank qualifier spelling while its neighbours are `go_terms`, `ko`,
+    // `pathway`. `ec_number` is therefore the natural thing for a caller to
+    // write and, with a case-sensitive Set, the natural thing to reject. Only
+    // the free-form updates map is forgiving here; an explicit operation list
+    // names its target qualifier deliberately and stays strict.
+    return this._matchAllowedFieldIgnoringCase(field) || field;
   }
 
-  _proposalToOperations(params) {
-    const proposal = params.annotationProposal || params.proposal || {};
+  /** @returns {string|null} the writable field that differs from `field` only in case */
+  _matchAllowedFieldIgnoringCase(field) {
+    const normalized = String(field || '').toLowerCase();
+    if (!normalized) return null;
+    for (const allowed of this.allowedQualifierFields) {
+      if (allowed.toLowerCase() === normalized) return allowed;
+    }
+    return null;
+  }
+
+  /**
+   * @param {object} params the create request
+   * @param {object|null} [resolvedProposal] the proposal the request actually
+   *   binds to — the archived snapshot when `researchRun` names a stored task,
+   *   which is not necessarily the object the caller passed.
+   */
+  _proposalToOperations(params, resolvedProposal = null) {
+    const proposal = resolvedProposal || params.annotationProposal || params.proposal || {};
     if (proposal.schema === 'codexomics.annotation-change-set.v2') {
       return proposal.operations.map(operation => ({ ...operation }));
     }
@@ -3339,12 +3412,36 @@ class AnnotationChangeSetService {
     const found = await this._findFeatureByRef(target, workspace);
     if (!found) throw new Error(`Target feature ${target.featureId} is no longer available`);
 
-    const proposal = params.annotationProposal || params.proposal || {};
+    const researchRunId = params.researchRun || params.researchRunId || null;
+    const researchRun = await this._researchRunContext(researchRunId);
+    const suppliedProposal = params.annotationProposal || params.proposal || null;
+
+    // The stored snapshot wins. A caller may still pass the proposal, but only
+    // byte for byte — a paraphrase is rejected loudly rather than accepted as a
+    // weaker, unverified ChangeSet.
+    let proposal = suppliedProposal || {};
+    if (researchRun.proposal) {
+      if (suppliedProposal && Object.keys(suppliedProposal).length > 0) {
+        const suppliedHash = await this._hash(suppliedProposal);
+        const storedHash = await this._hash(researchRun.proposal);
+        if (suppliedHash !== storedHash) {
+          throw new Error(
+            `Research task ${researchRunId} already holds a verified annotation proposal and the supplied ` +
+              `annotationProposal does not match it. Pass only researchRun and let CodeXomics use the archived ` +
+              `proposal, or forward result.annotationProposal from get_annotation_research_workflow unchanged.`
+          );
+        }
+      }
+      proposal = researchRun.proposal;
+    }
+
     const proposalContract = await this._validateV2Proposal(proposal, target);
-    const archivedDgrReport = proposalContract
-      ? await this._requireArchivedDgrReport(proposal, target, params.researchRun || params.researchRunId)
-      : null;
-    if (archivedDgrReport) proposalContract.proposalMetadata.archivedDgrReport = archivedDgrReport;
+    const archivedDgrReport = await this._requireArchivedDgrReport(proposal, target, researchRunId, {
+      isResearchTask: researchRun.exists,
+    });
+    if (archivedDgrReport && proposalContract) {
+      proposalContract.proposalMetadata.archivedDgrReport = archivedDgrReport;
+    }
     if (proposal.target && !proposalContract) this._assertProposalTarget(proposal.target, target);
     if (params.baseRevision !== undefined && Number(params.baseRevision) !== ledger.revision) {
       const requestedRevision = Number(params.baseRevision);
@@ -3360,7 +3457,7 @@ class AnnotationChangeSetService {
       }
     }
 
-    const rawOperations = this._proposalToOperations(params);
+    const rawOperations = this._proposalToOperations(params, proposal);
     if (rawOperations.length === 0) throw new Error('ChangeSet contains no supported annotation operations');
     this._validateOperationPayloads(rawOperations, 'resolved operations');
     const operations = rawOperations

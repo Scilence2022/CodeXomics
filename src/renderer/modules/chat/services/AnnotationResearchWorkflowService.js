@@ -229,6 +229,34 @@ class AnnotationResearchWorkflowService {
     return normalized;
   }
 
+  /**
+   * The verified annotation proposal an archived research task produced.
+   *
+   * Read without taking the runs lock on purpose: the caller is
+   * AnnotationChangeSetService, which already holds the ledger lock, while the
+   * workflow materialization path takes the runs lock and then the ledger lock.
+   * Acquiring them in the opposite order here would deadlock the two paths
+   * against each other. The snapshot is already persisted, and the integrity
+   * check below is what makes the read trustworthy, not the lock.
+   *
+   * @param {string} taskId
+   * @returns {Promise<{exists: boolean, proposal: object|null}>}
+   */
+  async getStoredResearchProposal(taskId) {
+    const id = String(taskId || '').trim();
+    if (!id) return { exists: false, proposal: null };
+    const workspace = this._captureWorkspace();
+    const runs = await this._loadRuns(workspace);
+    const workflow = this._runMapGet(runs, id);
+    if (!workflow) return { exists: false, proposal: null };
+    if (!workflow.proposalSnapshot) return { exists: true, proposal: null };
+    const snapshotHash = await this._hash(workflow.proposalSnapshot);
+    if (!workflow.proposalHash || snapshotHash !== workflow.proposalHash) {
+      throw new Error(`Stored annotation proposal for research task ${id} failed integrity verification`);
+    }
+    return { exists: true, proposal: this._clone(workflow.proposalSnapshot) };
+  }
+
   async _saveRuns(runs, workspace) {
     this._assertWorkspace(workspace);
     const path = workspace.genomePath;
