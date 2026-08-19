@@ -8,12 +8,31 @@ import path from 'path';
 
 const SERVICE_PATH = path.join(process.cwd(), 'src/renderer/modules/chat/services/TaskService.js');
 
-function createTaskService() {
+function createTaskService(chatManager = {}) {
   const code = fs.readFileSync(SERVICE_PATH, 'utf-8').replace('window.TaskService = TaskService;', '');
   // Execute code to get TaskService class (safe mock environment since document is undefined)
   const fn = new Function(code + '; return TaskService;');
   const TaskService = fn();
-  return new TaskService({}, {});
+  return new TaskService({}, chatManager);
+}
+
+/** Minimal ConfigManager stub so width persistence can be asserted */
+function createConfigManagerStub(initial = {}) {
+  const store = { ...initial };
+  return {
+    store,
+    get: (key, defaultValue = null) => (key in store ? store[key] : defaultValue),
+    set: (key, value) => {
+      store[key] = value;
+    },
+  };
+}
+
+/** Drive a full mousedown -> mousemove -> mouseup drag on the splitter */
+function dragSplitter(splitter, fromX, toX) {
+  splitter.dispatchEvent(new window.MouseEvent('mousedown', { button: 0, clientX: fromX, bubbles: true }));
+  document.dispatchEvent(new window.MouseEvent('mousemove', { clientX: toX, bubbles: true }));
+  document.dispatchEvent(new window.MouseEvent('mouseup', { bubbles: true }));
 }
 
 describe('TaskService - Core State and CRUD', () => {
@@ -268,5 +287,130 @@ describe('TaskService - Panel visibility toggle', () => {
 
     window.removeEventListener('tasks-panel-visibility-changed', handler);
     expect(seen).toEqual([true, false, true]);
+  });
+});
+
+describe('TaskService - Panel width resizing', () => {
+  let taskService;
+  let configManager;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<main class="main-content"></main>';
+    configManager = createConfigManagerStub();
+    taskService = createTaskService({ configManager });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+  });
+
+  it('should create a splitter next to the dock and show it with the panel', () => {
+    taskService.setPanelVisible(true);
+
+    const splitter = document.getElementById('tasksDockSplitter');
+    const dock = document.getElementById('tasksDockContainer');
+
+    expect(splitter).not.toBeNull();
+    // Dragging left must widen the right-hand dock, so the splitter sits before it
+    expect(splitter.nextElementSibling).toBe(dock);
+    expect(splitter.style.display).toBe('flex');
+  });
+
+  it('should hide the splitter along with the panel', () => {
+    taskService.setPanelVisible(true);
+    taskService.setPanelVisible(false);
+
+    expect(document.getElementById('tasksDockSplitter').style.display).toBe('none');
+  });
+
+  it('should widen the dock when the splitter is dragged left', () => {
+    taskService.setPanelVisible(true);
+    const dock = document.getElementById('tasksDockContainer');
+    dock.style.width = '320px';
+
+    dragSplitter(document.getElementById('tasksDockSplitter'), 1000, 900);
+
+    expect(dock.style.width).toBe('420px');
+  });
+
+  it('should narrow the dock when the splitter is dragged right', () => {
+    taskService.setPanelVisible(true);
+    const dock = document.getElementById('tasksDockContainer');
+    dock.style.width = '400px';
+
+    dragSplitter(document.getElementById('tasksDockSplitter'), 1000, 1050);
+
+    expect(dock.style.width).toBe('350px');
+  });
+
+  it('should clamp the dock to its minimum width', () => {
+    taskService.setPanelVisible(true);
+    const dock = document.getElementById('tasksDockContainer');
+    dock.style.width = '320px';
+
+    dragSplitter(document.getElementById('tasksDockSplitter'), 1000, 1400);
+
+    expect(dock.style.width).toBe('260px');
+  });
+
+  it('should clamp the dock to half of the available width', () => {
+    taskService.setPanelVisible(true);
+    const dock = document.getElementById('tasksDockContainer');
+    dock.style.width = '320px';
+
+    // jsdom reports 0 for offsetWidth, so give the layout a real size to clamp against
+    Object.defineProperty(document.querySelector('.main-content'), 'offsetWidth', {
+      configurable: true,
+      value: 1000,
+    });
+
+    dragSplitter(document.getElementById('tasksDockSplitter'), 1000, 200);
+
+    expect(dock.style.width).toBe('500px');
+  });
+
+  it('should persist the dragged width and restore it on the next session', () => {
+    taskService.setPanelVisible(true);
+    const dock = document.getElementById('tasksDockContainer');
+    dock.style.width = '320px';
+
+    dragSplitter(document.getElementById('tasksDockSplitter'), 1000, 940);
+    expect(configManager.store['tasks.dockWidth']).toBe(380);
+
+    // Simulate a fresh app start against the same saved settings
+    document.body.innerHTML = '<main class="main-content"></main>';
+    const restored = createTaskService({ configManager });
+    restored.setPanelVisible(true);
+
+    expect(document.getElementById('tasksDockContainer').style.width).toBe('380px');
+  });
+
+  it('should work without a ConfigManager instead of throwing', () => {
+    document.body.innerHTML = '<main class="main-content"></main>';
+    const bare = createTaskService({});
+
+    expect(() => bare.setPanelVisible(true)).not.toThrow();
+
+    const dock = document.getElementById('tasksDockContainer');
+    dock.style.width = '320px';
+    expect(() => dragSplitter(document.getElementById('tasksDockSplitter'), 1000, 900)).not.toThrow();
+    expect(dock.style.width).toBe('420px');
+  });
+
+  it('should bind the splitter drag handlers only once', () => {
+    taskService.setPanelVisible(true);
+    const splitter = document.getElementById('tasksDockSplitter');
+
+    // Re-running the setup (e.g. another updateUI pass) must not double-apply drags
+    taskService.setPanelVisible(false);
+    taskService.setPanelVisible(true);
+
+    const dock = document.getElementById('tasksDockContainer');
+    dock.style.width = '320px';
+    dragSplitter(splitter, 1000, 950);
+
+    expect(dock.style.width).toBe('370px');
   });
 });

@@ -15,6 +15,7 @@ class TaskService {
     // true/false = user forced the panel open/closed from the ChatBox header.
     this.panelVisibilityOverride = null;
     this._lastNotifiedVisibility = null;
+    this._dockWidthApplied = false;
   }
 
   // --- Panel visibility (driven by the ChatBox header toggle) ---
@@ -577,20 +578,149 @@ class TaskService {
    */
   _ensureTasksDockContainer() {
     let tasksDock = document.getElementById('tasksDockContainer');
-    if (tasksDock) return tasksDock;
+    if (!tasksDock) {
+      const mainContent = document.querySelector('.main-content');
+      if (!mainContent) return null;
 
-    const mainContent = document.querySelector('.main-content');
-    if (!mainContent) return null;
+      tasksDock = document.createElement('div');
+      tasksDock.id = 'tasksDockContainer';
+      tasksDock.className = 'tasks-dock-container';
+      tasksDock.style.display = 'none';
 
-    tasksDock = document.createElement('div');
-    tasksDock.id = 'tasksDockContainer';
-    tasksDock.className = 'tasks-dock-container';
-    tasksDock.style.display = 'none';
+      const chatDockSplitter = document.getElementById('chatDockSplitter');
+      mainContent.insertBefore(tasksDock, chatDockSplitter || null);
+    }
 
-    const chatDockSplitter = document.getElementById('chatDockSplitter');
-    mainContent.insertBefore(tasksDock, chatDockSplitter || null);
+    this._ensureTasksDockSplitter(tasksDock);
+    this._applySavedDockWidth(tasksDock);
 
     return tasksDock;
+  }
+
+  /**
+   * Ensure the drag handle that resizes the Tasks dock exists and is wired up.
+   * Lives immediately before the dock so dragging left widens the panel.
+   */
+  _ensureTasksDockSplitter(tasksDock) {
+    if (!tasksDock || !tasksDock.parentNode) return null;
+
+    let splitter = document.getElementById('tasksDockSplitter');
+    if (!splitter) {
+      splitter = document.createElement('div');
+      splitter.id = 'tasksDockSplitter';
+      splitter.className = 'tasks-dock-splitter';
+      splitter.style.display = 'none';
+      splitter.innerHTML = '<div class="tasks-dock-splitter-handle">\u22ee</div>';
+      tasksDock.parentNode.insertBefore(splitter, tasksDock);
+    }
+
+    this._setupSplitterDragging(splitter, tasksDock);
+
+    return splitter;
+  }
+
+  /**
+   * Restore the width the user last dragged the Tasks dock to.
+   */
+  _applySavedDockWidth(tasksDock) {
+    if (!tasksDock || this._dockWidthApplied) return;
+    this._dockWidthApplied = true;
+
+    const savedWidth = this._getConfig('tasks.dockWidth', null);
+    if (typeof savedWidth === 'number' && savedWidth > 0) {
+      tasksDock.style.width = `${this._clampDockWidth(savedWidth)}px`;
+    }
+  }
+
+  /**
+   * Keep the dock within the same bounds the CSS declares, so a stale saved
+   * width or a smaller window can never squeeze out the genome viewer.
+   */
+  _clampDockWidth(width) {
+    const mainContent = typeof document !== 'undefined' ? document.querySelector('.main-content') : null;
+    const available = mainContent?.offsetWidth || 0;
+    const maxWidth = available > 0 ? Math.max(TaskService.MIN_DOCK_WIDTH, available * 0.5) : Infinity;
+
+    return Math.round(Math.max(TaskService.MIN_DOCK_WIDTH, Math.min(maxWidth, width)));
+  }
+
+  /**
+   * Drag-to-resize behaviour for the Tasks dock, mirroring the ChatBox dock splitter.
+   */
+  _setupSplitterDragging(splitter, tasksDock) {
+    if (!splitter || !tasksDock || splitter.dataset.resizeBound === 'true') return;
+    splitter.dataset.resizeBound = 'true';
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    const onMouseDown = e => {
+      if (e.button !== 0) return;
+
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(tasksDock.style.width, 10) || tasksDock.offsetWidth;
+
+      splitter.classList.add('resizing');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      e.preventDefault();
+    };
+
+    const onMouseMove = e => {
+      if (!isResizing) return;
+      // Dragging left (smaller clientX) widens the right-hand dock
+      tasksDock.style.width = `${this._clampDockWidth(startWidth + (startX - e.clientX))}px`;
+    };
+
+    const onMouseUp = () => {
+      if (!isResizing) return;
+      isResizing = false;
+
+      splitter.classList.remove('resizing');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      const finalWidth = parseInt(tasksDock.style.width, 10);
+      if (finalWidth > 0) this._setConfig('tasks.dockWidth', finalWidth);
+
+      this._notifyLayoutChanged();
+    };
+
+    splitter.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
+  /**
+   * Read a persisted setting, tolerating a ChatManager without a ConfigManager
+   */
+  _getConfig(key, defaultValue) {
+    const configManager = this.chatManager?.configManager;
+    if (!configManager || typeof configManager.get !== 'function') return defaultValue;
+
+    try {
+      return configManager.get(key, defaultValue);
+    } catch (error) {
+      console.warn('[TaskService] Failed to read config:', key, error);
+      return defaultValue;
+    }
+  }
+
+  /**
+   * Persist a setting, tolerating a ChatManager without a ConfigManager
+   */
+  _setConfig(key, value) {
+    const configManager = this.chatManager?.configManager;
+    if (!configManager || typeof configManager.set !== 'function') return;
+
+    try {
+      configManager.set(key, value);
+    } catch (error) {
+      console.warn('[TaskService] Failed to persist config:', key, error);
+    }
   }
 
   /**
@@ -604,11 +734,22 @@ class TaskService {
 
     tasksDock.style.display = nextDisplay;
 
-    if (typeof window !== 'undefined') {
-      window.setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-      }, 50);
-    }
+    // The splitter is only meaningful while the dock it resizes is on screen
+    const splitter = document.getElementById('tasksDockSplitter');
+    if (splitter) splitter.style.display = nextDisplay;
+
+    this._notifyLayoutChanged();
+  }
+
+  /**
+   * Let canvas-based viewers re-measure after the dock changes the layout width.
+   */
+  _notifyLayoutChanged() {
+    if (typeof window === 'undefined') return;
+
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 50);
   }
 
   /**
@@ -638,5 +779,8 @@ class TaskService {
       .replace(/'/g, '&#039;');
   }
 }
+
+// Matches the min-width the stylesheet declares for .tasks-dock-container
+TaskService.MIN_DOCK_WIDTH = 260;
 
 window.TaskService = TaskService;
