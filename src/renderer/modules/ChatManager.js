@@ -10513,9 +10513,10 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         if (operationCount) content += `- **Operations**: ${operationCount}\n`;
         if (!isWorkflow) {
           content +=
-            `\nThe full proposal JSON is in the detailed research data` +
-            (detailsUrl ? ' download above' : '') +
-            `. Use the annotation change-set workflow (\`create_annotation_changeset\`) to review and merge these conservative updates into the selected gene.\n`;
+            `\nThe full proposal JSON is in the detailed research data` + (detailsUrl ? ' download above' : '') + `.\n`;
+          // Materialize the proposal now instead of leaving the curator to run
+          // create_annotation_changeset by hand.
+          content += await this.autoCreateResearchChangeSet(taskInfo, { geneSymbol, payload, proposal });
         }
       }
 
@@ -10565,6 +10566,131 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         }
       }
     }
+  }
+
+  /**
+   * Materialize a completed direct Deep Gene Research proposal as a reviewable
+   * annotation ChangeSet.
+   *
+   * Workflow-kind runs (start_annotation_research) are finalized by
+   * AnnotationResearchWorkflowService, which archives the report and creates
+   * the ChangeSet itself. A direct `deep-gene-research` call has no durable
+   * workflow record, so its proposal used to stop at a chat message asking the
+   * curator to run `create_annotation_changeset` by hand — the research
+   * finished and then nothing happened. This runs that step automatically.
+   *
+   * The ChangeSet is created `awaiting_approval` and is never applied: curator
+   * approval still gates every genome mutation, and a proposal DGR could not
+   * ground (or one whose provenance chain is incomplete) is reported rather
+   * than forced through.
+   *
+   * @param {object} taskInfo - the tracked task record
+   * @param {{geneSymbol: string, payload: object, proposal: object}} context
+   * @returns {Promise<string>} markdown describing the outcome
+   */
+  async autoCreateResearchChangeSet(taskInfo, { geneSymbol, payload, proposal }) {
+    const label = '\n📋 **Annotation ChangeSet**: ';
+    const annotationService = this.services?.annotation;
+    if (typeof annotationService?.mergeGeneResearchReport !== 'function') {
+      return `${label}not created — the annotation service is unavailable.\n`;
+    }
+
+    // DGR marks a run it could not ground in evidence, or could not bind to an
+    // exact genome feature. Turning either into a ChangeSet would propose
+    // unevidenced or mistargeted edits.
+    const draftStatus = String(proposal?.status || '');
+    if (['draft_requires_evidence', 'draft_requires_target'].includes(draftStatus)) {
+      const reason =
+        draftStatus === 'draft_requires_evidence'
+          ? 'the research found no evidence-backed claims that are safe to propose'
+          : 'the research could not bind its proposal to an exact genome target';
+      return `${label}not created — ${reason} (\`${draftStatus}\`).\n`;
+    }
+
+    if (!this.app?.currentAnnotations) {
+      return `${label}not created — no genome annotations are loaded. Load the genome and merge the report with \`merge_gene_research_report\`.\n`;
+    }
+
+    // A completed task can reach this path more than once (a resubmitted
+    // descriptor, a restarted session). A fixed idempotency key cannot dedupe
+    // it: the merge stamps the proposal with the current time, so the second
+    // request hashes differently and is rejected as a conflicting reuse of the
+    // key. Look the run up in the ledger instead.
+    const existing = await this.findResearchChangeSet(taskInfo.taskId);
+    if (existing) return this.describeResearchChangeSet(label, existing, true);
+
+    try {
+      const result = await annotationService.mergeGeneResearchReport({
+        // 'Unknown' is the placeholder for a run whose gene could not be read
+        // back; omitting it lets the merge fall back to the selected gene
+        // rather than searching the annotations for the literal word.
+        identifier: geneSymbol && geneSymbol !== 'Unknown' ? geneSymbol : undefined,
+        report: payload,
+        annotationProposal: proposal,
+        researchRun: taskInfo.taskId,
+        principal: 'deep-gene-research',
+      });
+
+      const changeSet = result?.changeSet;
+      if (!changeSet?.id) {
+        return `${label}not created — the annotation service returned no ChangeSet.\n`;
+      }
+      return this.describeResearchChangeSet(label, changeSet, result.duplicate === true);
+    } catch (error) {
+      const noEffectiveChanges = window.AnnotationChangeSetService?.NO_EFFECTIVE_CHANGES;
+      if (noEffectiveChanges && error?.code === noEffectiveChanges) {
+        return `${label}not needed — ${geneSymbol} already carries everything this research proposed.\n`;
+      }
+      console.warn(`Automatic ChangeSet creation failed for task ${taskInfo.taskId}:`, error);
+      return (
+        `${label}not created — ${error.message}\n` +
+        `\nA target-bound run (\`start_annotation_research\`) archives its report and creates the ChangeSet with full provenance.\n`
+      );
+    }
+  }
+
+  /**
+   * Find the ChangeSet an earlier pass already created for a research task.
+   * @param {string} taskId
+   * @returns {Promise<object|null>}
+   */
+  async findResearchChangeSet(taskId) {
+    const annotationService = this.services?.annotation;
+    if (!taskId || typeof annotationService?.listAnnotationChangesets !== 'function') return null;
+    try {
+      const listed = await annotationService.listAnnotationChangesets({ limit: 1000 });
+      return (listed?.changeSets || []).find(changeSet => changeSet?.researchRun === taskId) || null;
+    } catch (error) {
+      // A ledger that cannot be read is not a reason to skip the proposal;
+      // creation below reports its own failure if the ledger is truly broken.
+      console.warn(`Could not check for an existing ChangeSet for research task ${taskId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Render the chat summary for an auto-created research ChangeSet.
+   * @param {string} label
+   * @param {object} changeSet
+   * @param {boolean} existed - true when an earlier pass created it
+   * @returns {string}
+   */
+  describeResearchChangeSet(label, changeSet, existed) {
+    const status = changeSet.status ? ` (${changeSet.status})` : '';
+    const duplicate = existed ? ' — already created for this research run' : '';
+    // A freshly created ChangeSet carries full operations; the ledger listing
+    // projects them down to the qualifier names in `fields`.
+    const fields = Array.isArray(changeSet.operations)
+      ? [...new Set(changeSet.operations.map(operation => operation.field).filter(Boolean))]
+      : (changeSet.fields || []).filter(Boolean);
+    return (
+      `${label}\`${changeSet.id}\`${status}${duplicate}\n` +
+      (fields.length ? `- **Qualifiers**: ${fields.join(', ')}\n` : '') +
+      (changeSet.riskLevel ? `- **Risk**: ${changeSet.riskLevel}\n` : '') +
+      `\nIt has **not** been applied. Review it with \`get_annotation_changeset\`, approve it in the Review panel or with ` +
+      `\`request_annotation_approval\`, then commit it with \`apply_annotation_changeset\`. ` +
+      `Do NOT call \`create_annotation_changeset\` or \`merge_gene_research_report\` for this run — the ChangeSet already exists.\n`
+    );
   }
 
   /**
