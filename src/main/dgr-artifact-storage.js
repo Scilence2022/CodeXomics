@@ -719,6 +719,14 @@ async function archiveDgrTaskResult({
       literatureCoverage: task.result?.metadata?.searchDiagnostics?.literatureCoverage ?? null,
       llmSynthesis: task.result?.metadata?.llmSynthesis ?? null,
       annotationNote: task.result?.annotationNote ?? null,
+      // The archived artifact is the durable audit record for this gene. It
+      // should be able to answer what the research consumed without the live
+      // services, so a batch can be re-costed from its attachments alone.
+      llmUsage: task.result?.metadata?.llmUsage ?? null,
+      researchTimeMs: Number.isFinite(Number(task.result?.metadata?.researchTime))
+        ? Number(task.result.metadata.researchTime)
+        : null,
+      cacheReplay: task.result?.metadata?.cacheReplay === true,
     },
   };
 }

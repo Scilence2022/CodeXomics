@@ -1395,6 +1395,32 @@ it('projects literatureCoverage, llmSynthesis, and annotationNote onto the durab
     linkedBibliographyComplete: true,
   };
   const llmSynthesis = { supplementalQueryCount: 3, literatureLearningBatches: 12, synthesizedReport: true };
+  const llmUsage = {
+    calls: 14,
+    promptTokens: 412_000,
+    cachedPromptTokens: 120_000,
+    completionTokens: 21_000,
+    totalTokens: 433_000,
+    phases: {
+      'gene-llm-learnings': {
+        calls: 12,
+        promptTokens: 390_000,
+        cachedPromptTokens: 120_000,
+        completionTokens: 16_000,
+        totalTokens: 406_000,
+      },
+    },
+    models: {
+      'deepseek-v4-pro': {
+        calls: 14,
+        promptTokens: 412_000,
+        cachedPromptTokens: 120_000,
+        completionTokens: 21_000,
+        totalTokens: 433_000,
+        phases: {},
+      },
+    },
+  };
   const annotationNote = {
     schema: 'dgr.curation-note.v1',
     text: 'dapA encodes dihydrodipicolinate synthase (PMID:38253429).',
@@ -1413,7 +1439,12 @@ it('projects literatureCoverage, llmSynthesis, and annotationNote onto the durab
         result: {
           annotationProposal: { schema: 'codexomics.annotation-change-set.v2', status: 'draft_requires_evidence' },
           annotationNote,
-          metadata: { searchDiagnostics: { literatureCoverage }, llmSynthesis },
+          metadata: {
+            searchDiagnostics: { literatureCoverage },
+            llmSynthesis,
+            llmUsage,
+            researchTime: 640_200,
+          },
         },
       };
     }
@@ -1441,10 +1472,15 @@ it('projects literatureCoverage, llmSynthesis, and annotationNote onto the durab
   expect(first.workflow.literatureCoverage).toEqual(literatureCoverage);
   expect(first.workflow.llmSynthesis).toEqual(llmSynthesis);
   expect(first.workflow.annotationNote).toEqual(annotationNote);
+  expect(first.workflow.llmUsage).toEqual(llmUsage);
+  expect(first.workflow.researchTimeMs).toBe(640_200);
+  expect(first.workflow.cacheReplay).toBe(false);
 
   // A later poll whose status carries no result must not wipe the projected
   // artifacts from the durable workflow.
   const second = await service.getAnnotationResearchWorkflow({ taskId: 'task-note' });
   expect(second.workflow.literatureCoverage).toEqual(literatureCoverage);
   expect(second.workflow.annotationNote).toEqual(annotationNote);
+  expect(second.workflow.llmUsage).toEqual(llmUsage);
+  expect(second.workflow.researchTimeMs).toBe(640_200);
 });
