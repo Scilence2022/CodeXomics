@@ -460,7 +460,7 @@ The conversation also keeps a detailed status message for each run, updated in p
 
 **Default Model:**
 
-- Set in **Options → Configure LLM Providers**, above the provider tabs
+- Set in the **Default Model** tab under **Options → Configure LLM Providers**
 - Used whenever the ChatBox model selector is set to Auto
 - The selector beside the ChatBox input box overrides it per conversation
 

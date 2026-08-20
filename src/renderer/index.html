@@ -1771,40 +1771,6 @@
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="llm-default-model">
-                    <div class="model-selection-header">
-                        <h4><i class="fas fa-brain"></i> Default Model</h4>
-                        <p class="help-text">Used when the ChatBox model selector is set to Auto.</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="mainProvider">Provider:</label>
-                        <select id="mainProvider" class="select">
-                            <option value="auto">Auto (Use enabled provider)</option>
-                            <option value="openai">OpenAI</option>
-                            <option value="anthropic">Anthropic (Claude)</option>
-                            <option value="google">Google (Gemini)</option>
-                            <option value="deepseek">DeepSeek</option>
-                            <option value="siliconflow">SiliconFlow</option>
-                            <option value="openrouter">OpenRouter</option>
-                            <option value="minimax">MiniMax (Global)</option>
-                            <option value="minimax_cn">MiniMax CN</option>
-                            <option value="local">Custom Endpoint</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="mainModel">Model:</label>
-                        <select id="mainModel" class="select">
-                            <option value="auto">Auto (Use provider default)</option>
-                            <option value="custom">Custom Model Name</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="mainCustomModelGroup" style="display: none;">
-                        <label for="mainCustomModel">Custom Model Name:</label>
-                        <input type="text" id="mainCustomModel" placeholder="Enter custom model name"
-                            class="input-full">
-                    </div>
-                </div>
-
                 <div class="llm-provider-tabs">
                     <button class="tab-button active" data-provider="openai">OpenAI</button>
                     <button class="tab-button" data-provider="anthropic">Anthropic</button>
@@ -1815,6 +1781,7 @@
                     <button class="tab-button" data-provider="minimax">MiniMax (Global)</button>
                     <button class="tab-button" data-provider="minimax_cn">MiniMax CN</button>
                     <button class="tab-button" data-provider="local">Custom Endpoint</button>
+                    <button class="tab-button" data-provider="models">Default Model</button>
                 </div>
 
                 <div class="llm-provider-config">
@@ -2465,7 +2432,40 @@
                         </div>
                     </div>
 
-
+                    <!-- Default Model Configuration -->
+                    <div id="models-config" class="provider-config">
+                        <div class="model-selection-header">
+                            <h4><i class="fas fa-brain"></i> Default Model</h4>
+                            <p class="help-text">Used when the ChatBox model selector is set to Auto.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="mainProvider">Provider:</label>
+                            <select id="mainProvider" class="select">
+                                <option value="auto">Auto (Use enabled provider)</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                                <option value="google">Google (Gemini)</option>
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="siliconflow">SiliconFlow</option>
+                                <option value="openrouter">OpenRouter</option>
+                                <option value="minimax">MiniMax (Global)</option>
+                                <option value="minimax_cn">MiniMax CN</option>
+                                <option value="local">Custom Endpoint</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="mainModel">Model:</label>
+                            <select id="mainModel" class="select">
+                                <option value="auto">Auto (Use provider default)</option>
+                                <option value="custom">Custom Model Name</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="mainCustomModelGroup" style="display: none;">
+                            <label for="mainCustomModel">Custom Model Name:</label>
+                            <input type="text" id="mainCustomModel" placeholder="Enter custom model name"
+                                class="input-full">
+                        </div>
+                    </div>
                 </div>
 
 
