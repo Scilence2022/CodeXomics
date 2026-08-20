@@ -229,14 +229,14 @@ names, and drops the fields the verification chain keys on.
 
 ## 8. LLM Configuration Rules
 
-- The modal is titled "Configure LLM Providers". It has no Model Selection tab: the
-  global default lives in the "Default Model" block above the provider tabs and
-  writes `modelTypes.main` via the `mainProvider` / `mainModel` / `mainCustomModel`
-  element ids. Specialized model types (voice/image/multimodal) have no UI and no
-  readers — do not reintroduce them without a consuming feature.
+- The modal is titled "Configure LLM Providers". The "Default Model" tab
+  (`data-provider="models"`) holds the global default and writes `modelTypes.main`
+  via the `mainProvider` / `mainModel` / `mainCustomModel` element ids. Specialized
+  model types (voice/image/multimodal) have no UI and no readers — do not
+  reintroduce them without a consuming feature.
 - New provider tabs must include the "Other (specify below)" option and matching `ModelOtherGroup` / `ModelOther` fields.
 - The Local LLM tab uses `id="localEndpoint"` for base URL; cloud providers use `id="{provider}BaseUrl"`.
-- Every tab is a provider tab, so `testConnection()` reads the active tab directly; it no longer guards against a `'models'` tab.
+- `testConnection()` must guard against the Default Model tab (`activeTab === 'models'`).
 - Each provider-specific test method needs a base URL fallback.
 - Anthropic browser requests require the `anthropic-dangerous-direct-browser-access: 'true'` header.
 - Google tests use the `v1beta` API path to match `sendGoogleMessage`.

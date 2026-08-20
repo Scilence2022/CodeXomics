@@ -762,10 +762,12 @@ class LLMConfigManager {
 
   /**
    * Auto-refresh whatever model lists the given config tab shows.
-   * Every tab is a provider tab now; it only needs its own list.
+   * The Default Model tab draws on every provider; a provider tab only
+   * needs its own list.
    */
   autoRefreshModelsForTab(tab) {
     if (!tab) return Promise.resolve([]);
+    if (tab === 'models') return this.autoRefreshAllProviderModels();
     return this.maybeAutoRefreshProviderModels(tab);
   }
 
@@ -789,6 +791,11 @@ class LLMConfigManager {
         panel.focus();
       }
     });
+
+    // The Default Model tab mirrors the current main selection on reveal.
+    if (provider === 'models') {
+      this.loadModelTypeSelectionToUI();
+    }
 
     // Refresh the newly revealed tab's model list when it has gone stale
     this.autoRefreshModelsForTab(provider);
@@ -1259,6 +1266,12 @@ class LLMConfigManager {
   async testConnection() {
     const activeTab = document.querySelector('#llmConfigModal .tab-button.active').dataset.provider;
     const testBtn = document.getElementById('testConnectionBtn');
+
+    // The Default Model tab is not a provider — cannot test connection there
+    if (activeTab === 'models') {
+      this.showNotification('Please switch to a provider tab to test the connection.', 'warning');
+      return;
+    }
 
     // Update button state
     testBtn.classList.add('testing');
@@ -1953,9 +1966,21 @@ class LLMConfigManager {
   }
 
   /**
-   * Refresh every provider that has credentials. Used by provider tabs and
-   * the Default Model dropdown, which is built from all providers at once.
+   * Refresh every provider that has credentials. Used by the Default Model
+   * tab, whose dropdown is built from all providers at once.
    */
+  async autoRefreshAllProviderModels() {
+    const results = await Promise.all(
+      Object.keys(this.providers).map(providerKey => this.maybeAutoRefreshProviderModels(providerKey))
+    );
+
+    // Rebuild the Default Model dropdown if any list actually changed
+    if (results.some(result => result && result.success)) {
+      this.loadModelTypeSelectionToUI();
+    }
+    return results;
+  }
+
   /**
    * Persist refreshed model lists. Only touches provider state already in
    * memory — form values are not swept in here.

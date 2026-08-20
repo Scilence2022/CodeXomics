@@ -543,7 +543,7 @@ describe('LLMConfigManager model list auto-refresh', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it('refreshes only the provider tab being opened, never the whole modal', async () => {
+    it('refreshes every configured provider when the Default Model tab is opened', async () => {
       mountConfigModal();
       const manager = createManager();
       await manager.waitForInitialization();
@@ -553,14 +553,16 @@ describe('LLMConfigManager model list auto-refresh', () => {
       const fetchMock = vi.fn(async () => mockJsonResponse({ data: [{ id: 'model-a' }] }));
       vi.stubGlobal('fetch', fetchMock);
 
-      await manager.autoRefreshModelsForTab('openai');
+      await manager.autoRefreshModelsForTab('models');
 
       const requestedUrls = fetchMock.mock.calls.map(call => call[0]);
       expect(requestedUrls).toContain('https://api.openai.com/v1/models');
-      // There is no Model Selection tab anymore: opening a provider tab must
-      // refresh that provider only, never sweep the whole modal.
-      expect(requestedUrls.some(url => url.includes('anthropic'))).toBe(false);
-      expect(requestedUrls.some(url => url.includes('localhost:11434'))).toBe(false);
+      expect(requestedUrls).toContain('https://api.anthropic.com/v1/models?limit=1000');
+      // The custom endpoint needs no key, so its list is refreshed as well
+      expect(requestedUrls).toContain('http://localhost:11434/v1/models');
+      // Providers still missing an API key are left alone
+      expect(requestedUrls.some(url => url.includes('generativelanguage'))).toBe(false);
+      expect(requestedUrls.some(url => url.includes('openrouter'))).toBe(false);
     });
   });
 
