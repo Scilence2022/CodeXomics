@@ -180,7 +180,7 @@ Rules:
 - Local base URL field is `localEndpoint`.
 - Cloud provider base URLs are `{provider}BaseUrl`.
 - Provider model dropdowns use an "Other (specify below)" option plus a hidden custom model input group.
-- `testConnection()` must not run against the Model Selection tab.
+- Every tab is a provider tab; the global Default Model block above the tabs writes `modelTypes.main` (`mainProvider` / `mainModel` / `mainCustomModel` element ids).
 - Anthropic browser tests require `anthropic-dangerous-direct-browser-access: 'true'`.
 - Google tests use `v1beta`.
 

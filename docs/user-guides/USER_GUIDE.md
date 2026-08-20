@@ -94,7 +94,7 @@ When you first launch CodeXomics, you'll see the main interface with:
 Before using AI features, configure your LLM providers:
 
 ```
-Options → Configure LLMs
+Options → Configure LLM Providers
 ```
 
 **Add API Keys:**
@@ -115,7 +115,7 @@ Options → Configure LLMs
 **Configure Agent Settings:**
 
 - **Mode** — leave multi-agent mode off for a single assistant that plans and calls tools directly, or turn it on to route requests to the specialised agents; enable or disable individual agents here
-- **Generation** — temperature, token limits, and timeouts applied in both modes. The model itself is chosen from the picker beside the ChatBox input box; its _Auto_ entry follows the default in **Options → Configure LLMs → Model Selection**
+- **Generation** — temperature, token limits, and timeouts applied in both modes. The model itself is chosen from the picker beside the ChatBox input box; its _Auto_ entry follows the default in **Options → Configure LLM Providers**
 - **Execution** — function-call rounds, early completion, tool-repetition limits, and timeouts
 - **Context** — system prompt composition and dynamic tool selection
 - **Memory** and **Skills** — memory system and installed agent skills
@@ -458,11 +458,11 @@ The conversation also keeps a detailed status message for each run, updated in p
 
 ### AI Configuration
 
-**Model Selection:**
+**Default Model:**
 
-- Choose different models for different tasks
-- Coordinator vs Worker model configuration
-- Balance cost vs performance
+- Set in **Options → Configure LLM Providers**, above the provider tabs
+- Used whenever the ChatBox model selector is set to Auto
+- The selector beside the ChatBox input box overrides it per conversation
 
 **Temperature Settings:**
 
@@ -790,7 +790,7 @@ Create your own genomic features.
 
 **Solutions:**
 
-1. Check API key configuration (Options → Configure LLMs)
+1. Check API key configuration (Options → Configure LLM Providers)
 2. Verify internet connection
 3. Test connection using "Test Connection" button
 4. Check API quota/billing

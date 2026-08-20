@@ -55,7 +55,7 @@ On launch, CodeXomics opens the main genome workspace. The primary areas are:
 
 AI features are optional, but they enable natural-language analysis and multi-agent tool execution.
 
-1. Open `Options -> Configure LLMs`.
+1. Open `Options -> Configure LLM Providers`.
 2. Select a provider tab.
 3. Enter an API key or local endpoint.
 4. Pick a model, or choose "Other (specify below)" for a custom model name.
@@ -152,7 +152,7 @@ Common workflows:
 
 ## Troubleshooting
 
-- If AI calls fail, re-open `Options -> Configure LLMs`, test the provider, and verify the base URL.
+- If AI calls fail, re-open `Options -> Configure LLM Providers`, test the provider, and verify the base URL.
 - If file loading fails, confirm the file format and path are accessible to the Electron app.
 - If MCP clients cannot connect, confirm the server is running and no other process is using ports `3002` or `3003`.
 - If local BLAST is unavailable, use the built-in BLAST status/setup workflows.

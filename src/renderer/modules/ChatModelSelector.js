@@ -56,7 +56,7 @@ class ChatModelSelector {
 
     this.select.addEventListener('change', () => this.applySelection());
     // Rebuild on open. LLM configuration loads asynchronously and can change from
-    // Configure LLMs at any time, so the list is built when it is about to be read
+    // Configure LLM Providers at any time, so the list is built when it is about to be read
     // rather than relying on startup ordering.
     this.select.addEventListener('mousedown', () => this.refresh());
     this.select.addEventListener('focus', () => this.refresh());
@@ -115,7 +115,7 @@ class ChatModelSelector {
 
     // Auto on its own is indistinguishable from a broken picker. Say why the list is empty.
     if (listed === 0) {
-      const hint = this.createOption('auto::auto', 'No models — configure a provider in Options → Configure LLMs');
+      const hint = this.createOption('auto::auto', 'No models — configure a provider in Options → Configure LLM Providers');
       hint.disabled = true;
       this.select.appendChild(hint);
     }

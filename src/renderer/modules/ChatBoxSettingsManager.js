@@ -88,7 +88,7 @@ class ChatBoxSettingsManager {
       enableRepeatedOpenNewTab: true,
       maxRepeatedOpenNewTabCalls: 20,
 
-      // Model Selection Settings
+      // ChatBox model selection overrides
       chatboxModelType: 'auto',
       chatboxLLMProvider: 'auto', // Specific provider override
       chatboxLLMModel: 'auto', // Specific model override
@@ -340,7 +340,7 @@ class ChatBoxSettingsManager {
       enableRepeatedOpenNewTab: true,
       maxRepeatedOpenNewTabCalls: 20,
 
-      // Model Selection Settings
+      // ChatBox model selection overrides
       chatboxModelType: 'auto',
       chatboxLLMProvider: 'auto',
       chatboxLLMModel: 'auto',

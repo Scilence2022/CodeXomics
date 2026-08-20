@@ -118,7 +118,7 @@
   },
   "options": {
     "label": "Options",
-    "configureLLM": "Configure LLMs",
+    "configureLLM": "Configure LLM Providers",
     "multiAgentSettings": "Agent Settings",
     "configureSearch": "Configure Search",
     "mcpSettings": "External MCP Servers",
