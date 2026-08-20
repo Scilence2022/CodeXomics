@@ -778,6 +778,78 @@ describe('DGR artifact storage', () => {
       text: expect.stringContaining('PMID:123456'),
     });
   });
+
+  it('records what the research consumed so the artifact can be re-costed on its own', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    task.result.metadata.researchTime = 640_200;
+    task.result.metadata.llmUsage = {
+      calls: 14,
+      promptTokens: 412_000,
+      cachedPromptTokens: 120_000,
+      completionTokens: 21_000,
+      totalTokens: 433_000,
+      phases: {},
+      models: {
+        'deepseek-v4-pro': {
+          calls: 14,
+          promptTokens: 412_000,
+          cachedPromptTokens: 120_000,
+          completionTokens: 21_000,
+          totalTokens: 433_000,
+          phases: {},
+        },
+      },
+    };
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    expect(descriptor.summary.llmUsage).toMatchObject({
+      totalTokens: 433_000,
+      cachedPromptTokens: 120_000,
+    });
+    expect(descriptor.summary.llmUsage.models['deepseek-v4-pro'].totalTokens).toBe(433_000);
+    expect(descriptor.summary.researchTimeMs).toBe(640_200);
+    expect(descriptor.summary.cacheReplay).toBe(false);
+  });
+
+  it('marks a cache-replayed report so its tokens are not billed a second time', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    task.result.metadata.cacheReplay = true;
+    task.result.metadata.researchTime = 12_000;
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    expect(descriptor.summary.cacheReplay).toBe(true);
+  });
+
+  it('reports missing usage and timing as null rather than zero', async () => {
+    const target = createTarget();
+    const task = createCompletedTask(target);
+    delete task.result.metadata.llmUsage;
+    delete task.result.metadata.researchTime;
+
+    const descriptor = await archiveDgrTaskResult({
+      userDataPath,
+      taskId: task.id,
+      target,
+      proxyRequest: vi.fn().mockResolvedValue(createMcpResponse(task)),
+    });
+
+    expect(descriptor.summary.llmUsage).toBeNull();
+    expect(descriptor.summary.researchTimeMs).toBeNull();
+  });
   it('prefers the canonical literatureMetrics count over directness-derived legacy counting', async () => {
     const target = createTarget();
     const task = createCompletedTask(target);

@@ -1031,6 +1031,17 @@ class AnnotationResearchWorkflowService {
         );
         workflow.llmSynthesis = this._clone(remoteResult?.metadata?.llmSynthesis ?? null);
         workflow.annotationNote = this._clone(remoteResult?.annotationNote ?? null);
+        // What this task consumed. Without it on the durable record, every
+        // consumer that has to report tokens, cost, or elapsed research time
+        // must re-read the full DGR result to find a handful of integers.
+        workflow.llmUsage = this._clone(remoteResult?.metadata?.llmUsage ?? null);
+        workflow.researchTimeMs = Number.isFinite(Number(remoteResult?.metadata?.researchTime))
+          ? Number(remoteResult.metadata.researchTime)
+          : null;
+        // A DGR semantic-cache replay returns the original run's usage and
+        // researchTime verbatim; those tokens were reported but not charged
+        // again.
+        workflow.cacheReplay = remoteResult?.metadata?.cacheReplay === true;
       }
 
       // Persist the authoritative remote status before local archival or
