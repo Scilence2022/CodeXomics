@@ -127,3 +127,64 @@ describe('LLM model selection request routing', () => {
     expect(manager.getModelForModelType('task')).toBe('anthropic-default');
   });
 });
+
+describe('ChatManager.getChatboxModelSelection', () => {
+  const CHAT_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/ChatManager.js');
+
+  function loadMethod() {
+    const source = fs.readFileSync(CHAT_MANAGER_PATH, 'utf8');
+    const start = source.indexOf('\n  getChatboxModelSelection() {');
+    if (start === -1) throw new Error('getChatboxModelSelection not found');
+    const end = source.indexOf('\n  }\n', start);
+    if (end === -1) throw new Error('getChatboxModelSelection not bounded');
+    // eslint-disable-next-line no-new-func -- loads the real source method into an isolated class
+    return new Function(`return class Extracted {\n${source.slice(start + 1, end + 4)}\n}`)();
+  }
+
+  function makeChatManager(resolvedSelection, throwOnResolve = false) {
+    const Extracted = loadMethod();
+    const chatManager = new Extracted();
+    chatManager.chatBoxSettingsManager = {
+      getSetting: vi.fn((key, fallback) => {
+        const settings = { chatboxModelType: 'auto', chatboxLLMProvider: 'deepseek', chatboxLLMModel: 'auto' };
+        return settings[key] ?? fallback;
+      }),
+    };
+    chatManager.llmConfigManager = {
+      getRequestModelSelection: throwOnResolve
+        ? vi.fn().mockImplementation(() => {
+            throw new Error('Provider disabled');
+          })
+        : vi.fn().mockReturnValue(resolvedSelection),
+    };
+    return chatManager;
+  }
+
+  it('resolves through the request-scoped ChatBox overrides', () => {
+    const chatManager = makeChatManager({ providerKey: 'deepseek', model: 'deepseek-v4-flash' });
+
+    expect(chatManager.getChatboxModelSelection()).toEqual({
+      providerKey: 'deepseek',
+      model: 'deepseek-v4-flash',
+    });
+    expect(chatManager.llmConfigManager.getRequestModelSelection).toHaveBeenCalledWith('task', {
+      modelType: 'auto',
+      providerOverride: 'deepseek',
+      modelOverride: 'auto',
+    });
+  });
+
+  it('returns null when an explicit provider override is invalid', () => {
+    const chatManager = makeChatManager(null, true);
+
+    expect(chatManager.getChatboxModelSelection()).toBeNull();
+  });
+
+  it('returns null when the LLM config manager is unavailable', () => {
+    const Extracted = loadMethod();
+    const chatManager = new Extracted();
+    chatManager.chatBoxSettingsManager = { getSetting: vi.fn() };
+
+    expect(chatManager.getChatboxModelSelection()).toBeNull();
+  });
+});

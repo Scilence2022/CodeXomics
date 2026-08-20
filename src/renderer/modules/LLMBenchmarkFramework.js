@@ -1599,19 +1599,24 @@ class LLMBenchmarkFramework {
       // Capture request timing
       const requestStartTime = Date.now();
 
-      // Get LLM configuration details
+      // Get LLM configuration details. Recorded through the same override
+      // chain the request itself resolves with (ChatBox selection first, then
+      // the default model), so the record names the model that was actually
+      // used instead of the Model Types mapping.
       try {
-        const llmConfig = this.chatManager.llmConfigManager.getConfiguration();
-        if (llmConfig && llmConfig.providers) {
-          // Find the currently enabled provider
-          const currentProvider = this.chatManager.llmConfigManager.getProviderForModelType('task');
-          if (currentProvider && llmConfig.providers[currentProvider]) {
-            const providerConfig = llmConfig.providers[currentProvider];
-            interactionData.request.provider = currentProvider;
-            interactionData.request.model = providerConfig.model;
-            interactionData.request.temperature = providerConfig.temperature;
-            interactionData.request.maxTokens = providerConfig.maxTokens;
-          }
+        const selection =
+          typeof this.chatManager.getChatboxModelSelection === 'function'
+            ? this.chatManager.getChatboxModelSelection()
+            : null;
+        if (selection) {
+          const providerConfig = this.chatManager.llmConfigManager.providers[selection.providerKey] || {};
+          interactionData.request.provider = selection.providerKey;
+          interactionData.request.model = selection.model || providerConfig.model;
+          interactionData.request.temperature = providerConfig.temperature;
+          interactionData.request.maxTokens = providerConfig.maxTokens;
+        } else {
+          interactionData.request.provider = 'unknown';
+          interactionData.request.model = 'unknown';
         }
       } catch (configError) {
         console.warn('Failed to capture LLM config:', configError);
@@ -2226,19 +2231,17 @@ class LLMBenchmarkFramework {
   displayLLMProcessingDetails(instruction, options = {}) {
     options.testInfo || {};
 
-    // Get LLM configuration details
+    // Get LLM configuration details through the request's own resolution, so
+    // the displayed model matches what the request actually uses.
     let modelName = 'Unknown';
     let provider = 'Unknown';
 
     try {
-      if (this.chatManager && this.chatManager.llmConfigManager) {
-        const config = this.chatManager.llmConfigManager.getConfiguration();
-        if (config && config.providers) {
-          const currentProvider = this.chatManager.llmConfigManager.getProviderForModelType('task');
-          if (currentProvider && config.providers[currentProvider]) {
-            provider = currentProvider;
-            modelName = config.providers[currentProvider].model;
-          }
+      if (this.chatManager && typeof this.chatManager.getChatboxModelSelection === 'function') {
+        const selection = this.chatManager.getChatboxModelSelection();
+        if (selection) {
+          provider = selection.providerKey;
+          modelName = selection.model || 'Unknown';
         }
       }
     } catch (error) {
@@ -2630,13 +2633,15 @@ class LLMBenchmarkFramework {
   }
 
   /**
-   * Get LLM provider name
+   * Get LLM provider name, resolved the way the request resolves it.
    */
   getLLMProvider() {
     try {
-      if (this.chatManager && this.chatManager.llmConfigManager) {
-        return this.chatManager.llmConfigManager.getProviderForModelType('task') || 'Unknown';
-      }
+      const selection =
+        this.chatManager && typeof this.chatManager.getChatboxModelSelection === 'function'
+          ? this.chatManager.getChatboxModelSelection()
+          : null;
+      return (selection && selection.providerKey) || 'Unknown';
     } catch (error) {
       console.warn('Failed to get LLM provider:', error);
     }
@@ -2644,17 +2649,15 @@ class LLMBenchmarkFramework {
   }
 
   /**
-   * Get LLM model name
+   * Get LLM model name, resolved the way the request resolves it.
    */
   getLLMModel() {
     try {
-      if (this.chatManager && this.chatManager.llmConfigManager) {
-        const config = this.chatManager.llmConfigManager.getConfiguration();
-        const provider = this.getLLMProvider();
-        if (config && config.providers && config.providers[provider]) {
-          return config.providers[provider].model || 'Unknown';
-        }
-      }
+      const selection =
+        this.chatManager && typeof this.chatManager.getChatboxModelSelection === 'function'
+          ? this.chatManager.getChatboxModelSelection()
+          : null;
+      return (selection && selection.model) || 'Unknown';
     } catch (error) {
       console.warn('Failed to get LLM model:', error);
     }

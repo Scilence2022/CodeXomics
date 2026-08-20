@@ -5214,6 +5214,38 @@ class ChatManager {
     }
   }
 
+  /**
+   * The provider and model the next ChatBox request will actually use.
+   *
+   * ChatBox passes its model-selection settings as request-scoped overrides
+   * (see the options built in sendToLLM below), so anything that reports the
+   * model from the Model Types mapping alone — the Benchmark panel, the
+   * interaction records — can disagree with the request that is really sent.
+   * This resolves through the exact override chain the request uses.
+   *
+   * @returns {{providerKey: string, model: string}|null} null when no provider
+   *   resolves or the configured override is invalid.
+   */
+  getChatboxModelSelection() {
+    if (!this.llmConfigManager || typeof this.llmConfigManager.getRequestModelSelection !== 'function') {
+      return null;
+    }
+    const options = {
+      modelType: this.chatBoxSettingsManager?.getSetting('chatboxModelType', 'auto'),
+      providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
+      modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
+    };
+    try {
+      const selection = this.llmConfigManager.getRequestModelSelection('task', options);
+      return selection && selection.providerKey ? selection : null;
+    } catch (error) {
+      // An explicit provider that is not enabled throws; reporting the Model
+      // Types mapping instead would name a model the request never uses.
+      console.warn('[ChatManager] ChatBox model selection unavailable:', error.message);
+      return null;
+    }
+  }
+
   async sendToLLM(message, options = {}) {
     // Set current message for Dynamic Tools Registry
     this.currentMessage = message;
