@@ -5479,7 +5479,8 @@ class ChatManager {
               role: 'user',
               content: this.buildToolProtocolRecoveryMessage(
                 recoveryDecision.reason,
-                recoveryDecision.outstandingSteps
+                recoveryDecision.outstandingSteps,
+                { nativeToolsAvailable: (this.currentNativeTools || []).length > 0 }
               ),
             });
             continue;
@@ -5620,7 +5621,8 @@ class ChatManager {
               role: 'user',
               content: this.buildToolProtocolRecoveryMessage(
                 recoveryDecision.reason,
-                recoveryDecision.outstandingSteps
+                recoveryDecision.outstandingSteps,
+                { nativeToolsAvailable: (this.currentNativeTools || []).length > 0 }
               ),
             });
             if (this.showThinkingProcess) {
@@ -6542,6 +6544,10 @@ class ChatManager {
       if (msg.sender === 'user') {
         history.push({ role: 'user', content: msg.message });
       } else if (msg.sender === 'assistant') {
+        // App-generated failure notices are displayed in the chat but are not
+        // model speech. Replayed as assistant turns they read as the model
+        // describing its own failure, and the next request imitates it.
+        if (this.isAppGeneratedNotice(msg.message)) continue;
         history.push({ role: 'assistant', content: msg.message });
       }
       // Skip system messages and separators
@@ -8478,6 +8484,29 @@ class ChatManager {
     );
   }
 
+  /**
+   * True for the completion notices this app writes when a turn fails or is cut
+   * short. They are displayed as assistant bubbles but they are not model
+   * speech, and replaying them into a later request as an assistant turn hands
+   * the model a transcript in which "it" already announced a failure — which it
+   * then tends to imitate. buildConversationHistory() filters on this.
+   *
+   * The prefixes are pinned by unit tests against the builders that produce
+   * them; reword a builder and the matching prefix must move with it.
+   */
+  isAppGeneratedNotice(message) {
+    const text = String(message || '').trim();
+    return (
+      text.startsWith('I could not complete the requested action because the model repeatedly returned') ||
+      text.startsWith('The model returned an empty response for two consecutive rounds') ||
+      text.startsWith('⚠️ Processing stopped after the configured limit') ||
+      text.startsWith('The requested tool call was blocked by the tool execution policy') ||
+      text.startsWith('The model repeated a tool call beyond the request limit') ||
+      text.startsWith('The model declined this request before the requested action could be completed') ||
+      text.startsWith('Sorry, I encountered an error. Please try again.')
+    );
+  }
+
   getModelTurnRecoveryDecision(responseAnalysis, toolExecutionState, currentRound, maxRounds) {
     const stopReason = String(responseAnalysis?.stopReason || '').toLowerCase();
     const responseText = String(responseAnalysis?.text || '');
@@ -8575,7 +8604,7 @@ class ChatManager {
     return { action: 'retry', reason, outstandingSteps };
   }
 
-  buildToolProtocolRecoveryMessage(reason, outstandingSteps = []) {
+  buildToolProtocolRecoveryMessage(reason, outstandingSteps = [], options = {}) {
     // Naming the step that is still missing is what makes this prompt
     // recoverable. Told only that the request was incomplete, a model that had
     // folded two steps into one call had no way to work out which one to redo,
@@ -8590,13 +8619,22 @@ class ChatManager {
           `\nIssue a tool call for each one, even when an earlier call already set a similar value; ` +
           `every step was requested separately and has to be performed separately.\n`
         : '';
+    // When native tool schemas ride on the request, teaching the text-JSON
+    // protocol actively fights the channel the model should use: a model that
+    // follows the JSON instructions stops emitting the native calls it was
+    // making and starts hand-writing JSON it often gets wrong.
+    const protocolLine = options.nativeToolsAvailable
+      ? `If an available tool is needed, invoke it through native function calling: the tools for this request ` +
+        `are attached to the API call. Emit the function call itself; never write tool JSON in your reply text.\n` +
+        `For dependent steps, return only the next call and wait for its result.\n`
+      : `If an available tool is needed, respond with ONLY canonical JSON in this form:\n` +
+        `{"tool_name":"exact_tool_name","parameters":{"exact_parameter_name":"value"}}\n` +
+        `For independent calls, use a JSON array. For dependent steps, return only the next call and wait for its result.\n`;
     return (
       `[Tool Protocol Repair]\n` +
       `The previous response did not complete the request: ${reason}.\n` +
       outstandingLine +
-      `If an available tool is needed, respond with ONLY canonical JSON in this form:\n` +
-      `{"tool_name":"exact_tool_name","parameters":{"exact_parameter_name":"value"}}\n` +
-      `For independent calls, use a JSON array. For dependent steps, return only the next call and wait for its result.\n` +
+      protocolLine +
       `Do not announce or describe a tool call without emitting it. If no tool is needed, provide the final answer directly.`
     );
   }

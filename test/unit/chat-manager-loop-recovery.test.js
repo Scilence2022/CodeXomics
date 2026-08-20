@@ -628,6 +628,45 @@ describe('ChatManager bounded model-turn recovery', () => {
     expect(state.protocolRecoveryAttempts).toBe(2);
   });
 
+  it('classifies app-generated failure notices so history replay can skip them', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = manager.createToolExecutionState('select lysC gene');
+
+    // Every notice the loop can render into the chat as an "assistant" bubble.
+    const malformedRound = {
+      text: '{"name":"select_gene","arguments":"{bad"}',
+      toolCalls: [],
+      invalidToolCalls: [{ reason: 'invalid JSON arguments' }],
+      hasToolCallIntent: true,
+      isEmpty: false,
+    };
+    // Exhaust the two repair attempts so the third decision fails.
+    manager.getModelTurnRecoveryDecision(malformedRound, state, 1, 10);
+    manager.getModelTurnRecoveryDecision(malformedRound, state, 2, 10);
+    const recoveryFail = manager.getModelTurnRecoveryDecision(malformedRound, state, 3, 10).finalResponse;
+    const fromFailingSession =
+      'I could not complete the requested action because the model repeatedly returned malformed or unsupported ' +
+      'tool call instead of a valid tool call. The following requested step(s) were never carried out: search.';
+
+    expect(manager.isAppGeneratedNotice(recoveryFail)).toBe(true);
+    expect(manager.isAppGeneratedNotice(fromFailingSession)).toBe(true);
+    expect(manager.isAppGeneratedNotice(manager.buildEmptyResponseMessage(4, 10))).toBe(true);
+    expect(manager.isAppGeneratedNotice(manager.buildRoundLimitResponse(20))).toBe(true);
+    expect(manager.isAppGeneratedNotice('The requested tool call was blocked by the tool execution policy')).toBe(true);
+    expect(manager.isAppGeneratedNotice('The model repeated a tool call beyond the request limit')).toBe(true);
+    expect(manager.isAppGeneratedNotice('The model declined this request before the requested action could be completed.')).toBe(
+      true
+    );
+    expect(manager.isAppGeneratedNotice('Sorry, I encountered an error. Please try again.')).toBe(true);
+
+    // Genuine model speech and user text must keep replaying.
+    expect(manager.isAppGeneratedNotice('lysC encodes aspartokinase III.')).toBe(false);
+    expect(manager.isAppGeneratedNotice('I could not find that gene in the loaded genome.')).toBe(false);
+    expect(manager.isAppGeneratedNotice('')).toBe(false);
+    expect(manager.isAppGeneratedNotice(null)).toBe(false);
+  });
+
   it('does not retry provider refusal and does retry truncation', () => {
     const LoopSupport = loadLoopSupportClass();
     const manager = new LoopSupport();
@@ -773,6 +812,30 @@ describe('ChatManager bounded model-turn recovery', () => {
     expect(repair).toContain('has to be performed separately');
     expect(repair).not.toContain('e.g. edit_annotation');
   });
+
+  it('teaches native function calling in the repair prompt when tools are attached', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = manager.createToolExecutionState('select lysC gene');
+    const decision = manager.getModelTurnRecoveryDecision(
+      { text: "I'll select the lysC gene now.", toolCalls: [], invalidToolCalls: [], isEmpty: false },
+      state,
+      1,
+      10
+    );
+
+    const native = manager.buildToolProtocolRecoveryMessage(decision.reason, decision.outstandingSteps, {
+      nativeToolsAvailable: true,
+    });
+    const textProtocol = manager.buildToolProtocolRecoveryMessage(decision.reason, decision.outstandingSteps);
+
+    expect(native).toContain('native function calling');
+    expect(native).toContain('never write tool JSON in your reply text');
+    expect(native).not.toContain('{"tool_name"');
+    // Without native tools the text-JSON protocol remains the only channel.
+    expect(textProtocol).toContain('{"tool_name":"exact_tool_name"');
+  });
+
 
   it('recognizes namespaced tools across the whole effect table', () => {
     const LoopSupport = loadLoopSupportClass();
