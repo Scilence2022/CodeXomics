@@ -4073,8 +4073,11 @@ class BenchmarkUI {
         return;
       }
 
-      const providerKey = llmConfigManager.getProviderForModelType('task');
-      const modelName = llmConfigManager.getModelForModelType('task');
+      // Resolve the same way the request does (ChatBox selection first, then
+      // the default model) so the panel shows the model that will really run.
+      const selection = chatManager?.getChatboxModelSelection?.() || null;
+      const providerKey = selection?.providerKey || null;
+      const modelName = selection?.model || null;
 
       if (providerKey && llmConfigManager.providers[providerKey]) {
         const providerName = llmConfigManager.providers[providerKey].name || providerKey;
@@ -5415,8 +5418,12 @@ class BenchmarkUI {
                         return;
                     }
 
-                    const providerKey = llmConfigManager.getProviderForModelType('task');
-                    const modelName = llmConfigManager.getModelForModelType('task');
+                    // Resolve the same way the request does (ChatBox selection
+                    // first, then the default model) so the panel shows the
+                    // model that will really run.
+                    const selection = chatManager?.getChatboxModelSelection?.() || null;
+                    const providerKey = selection?.providerKey || null;
+                    const modelName = selection?.model || null;
 
                     if (providerKey && llmConfigManager.providers[providerKey]) {
                         const providerName = llmConfigManager.providers[providerKey].name || providerKey;
