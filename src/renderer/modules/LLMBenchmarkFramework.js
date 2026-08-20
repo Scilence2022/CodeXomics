@@ -189,7 +189,7 @@ class LLMBenchmarkFramework {
         this.chatManager.addThinkingMessage(
           '❌ **Benchmark Configuration Error**\n\n' +
             'LLM provider is not configured. To run benchmarks, please:\n\n' +
-            '• Go to Options → Configure LLMs\n' +
+            '• Go to Options → Configure LLM Providers\n' +
             '• Set up your preferred AI provider (OpenAI, Anthropic, Google, etc.)\n' +
             '• Enable at least one provider\n' +
             '• Test the connection to ensure it works\n\n' +

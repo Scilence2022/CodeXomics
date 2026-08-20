@@ -1786,7 +1786,7 @@ function createMenu() {
       label: 'Options',
       submenu: [
         {
-          label: 'Configure LLMs',
+          label: 'Configure LLM Providers',
           click: () => {
             sendToCurrentMainWindow('configure-llms');
           },

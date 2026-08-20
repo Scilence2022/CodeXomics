@@ -112,7 +112,7 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 **Solutions**:
 
 1. **Check API key configuration**:
-   - Go to Options → Configure LLMs
+   - Go to Options → Configure LLM Providers
    - Verify API key is correct and active
    - Test connection using "Test Connection" button
 

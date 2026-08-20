@@ -63,7 +63,7 @@ Internet connection is required for:
 
 ### How do I set up the AI assistant?
 
-1. Go to **Options → Configure LLMs**
+1. Go to **Options → Configure LLM Providers**
 2. Choose your AI provider (OpenAI, Anthropic, Google, or Local)
 3. Enter your API key
 4. Test the connection

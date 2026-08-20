@@ -353,7 +353,8 @@ class LLMConfigManager {
   }
 
   setupModelSelectionEventListeners() {
-    // Main model selection
+    // The only global model selection left is the Default Model row shown
+    // above the provider tabs.
     const mainProviderSelect = document.getElementById('mainProvider');
     const mainModelSelect = document.getElementById('mainModel');
 
@@ -366,50 +367,6 @@ class LLMConfigManager {
     if (mainModelSelect) {
       mainModelSelect.addEventListener('change', () => {
         this.toggleCustomModelInput('main');
-      });
-    }
-
-    // Specialized model types
-    const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
-
-    modelTypes.forEach(type => {
-      const providerSelect = document.getElementById(`${type}Provider`);
-      const modelSelect = document.getElementById(`${type}Model`);
-
-      if (providerSelect) {
-        providerSelect.addEventListener('change', () => {
-          this.updateModelTypeOptions(type);
-        });
-      }
-
-      if (modelSelect) {
-        modelSelect.addEventListener('change', () => {
-          this.toggleCustomModelInput(type);
-        });
-      }
-    });
-
-    // Reset model selection button
-    const resetBtn = document.getElementById('resetModelSelection');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        this.resetModelTypeSelection();
-      });
-    }
-
-    // Test all models button
-    const testBtn = document.getElementById('testModelSelection');
-    if (testBtn) {
-      testBtn.addEventListener('click', () => {
-        this.testAllModelTypes();
-      });
-    }
-
-    // Smart model selection button
-    const smartSelectBtn = document.getElementById('smartModelSelection');
-    if (smartSelectBtn) {
-      smartSelectBtn.addEventListener('click', () => {
-        this.applySmartModelSelection();
       });
     }
   }
@@ -477,18 +434,6 @@ class LLMConfigManager {
     }
   }
 
-  resetModelTypeSelection() {
-    if (confirm('Are you sure you want to reset all model type selections to defaults?')) {
-      Object.keys(this.modelTypes).forEach(type => {
-        this.modelTypes[type].provider = 'auto';
-        this.modelTypes[type].model = 'auto';
-      });
-
-      this.loadModelTypeSelectionToUI();
-      this.showNotification('Model type selections reset to defaults', 'success');
-    }
-  }
-
   /**
    * Show warning for unconfigured provider
    */
@@ -536,134 +481,6 @@ class LLMConfigManager {
     return null;
   }
 
-  /**
-   * Apply smart model selection based on enabled providers
-   */
-  async applySmartModelSelection() {
-    const smartBtn = document.getElementById('smartModelSelection');
-    if (!smartBtn) return;
-
-    smartBtn.classList.add('loading');
-    smartBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
-
-    try {
-      let selectionsMade = 0;
-
-      // Get enabled providers
-      const enabledProviders = Object.keys(this.providers).filter(key => this.providers[key].enabled);
-
-      if (enabledProviders.length === 0) {
-        this.showNotification(
-          'No LLM providers are enabled. Please configure and enable at least one provider first.',
-          'warning'
-        );
-        return;
-      }
-
-      // Apply intelligent selection for each model type
-      Object.keys(this.modelTypes).forEach(type => {
-        const recommendedProvider = this.getRecommendedProvider(type);
-        if (recommendedProvider) {
-          const providerSelect = document.getElementById(`${type}Provider`);
-          const modelSelect = document.getElementById(`${type}Model`);
-
-          if (providerSelect && providerSelect.value === 'auto') {
-            providerSelect.value = recommendedProvider;
-            this.updateModelTypeOptions(type);
-
-            // Set recommended model if available
-            const modelTypeConfig = this.modelTypes[type];
-            const preferredModel =
-              modelTypeConfig.preferredModels && modelTypeConfig.preferredModels[recommendedProvider];
-            if (preferredModel && modelSelect) {
-              const modelOption = modelSelect.querySelector(`option[value="${preferredModel}"]`);
-              if (modelOption) {
-                modelSelect.value = preferredModel;
-              }
-            }
-
-            selectionsMade++;
-          }
-        }
-      });
-
-      if (selectionsMade > 0) {
-        this.showNotification(
-          `Smart selection applied! Updated ${selectionsMade} model type configurations based on your enabled providers and task requirements.`,
-          'success'
-        );
-      } else {
-        this.showNotification('All model types are already configured. No changes were made.', 'info');
-      }
-    } catch (error) {
-      this.showNotification(`Smart selection failed: ${error.message}`, 'error');
-    } finally {
-      smartBtn.classList.remove('loading');
-      smartBtn.innerHTML = '<i class="fas fa-magic"></i> Smart Selection';
-    }
-  }
-
-  async testAllModelTypes() {
-    const testBtn = document.getElementById('testModelSelection');
-    if (!testBtn) return;
-
-    // Update button state
-    testBtn.classList.add('testing');
-    testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-
-    try {
-      const results = {};
-      const modelTypes = ['reasoning', 'task', 'code', 'voiceTTS', 'voiceSTT', 'image', 'multimodal'];
-
-      for (const type of modelTypes) {
-        const providerSelect = document.getElementById(`${type}Provider`);
-        const modelSelect = document.getElementById(`${type}Model`);
-
-        if (providerSelect && modelSelect) {
-          const provider = providerSelect.value;
-          const model = modelSelect.value;
-
-          if (provider !== 'auto' && model !== 'auto') {
-            try {
-              const providerConfig = this.providers[provider];
-              if (providerConfig && providerConfig.enabled) {
-                // Test the specific model
-                await this.makeTestRequest(provider, providerConfig);
-                results[type] = { success: true, provider, model };
-              } else {
-                results[type] = { success: false, error: 'Provider not enabled', provider, model };
-              }
-            } catch (error) {
-              results[type] = { success: false, error: error.message, provider, model };
-            }
-          } else {
-            results[type] = { success: true, provider: 'auto', model: 'auto', note: 'Using auto selection' };
-          }
-        }
-      }
-
-      // Show results
-      const successCount = Object.values(results).filter(r => r.success).length;
-      const totalCount = Object.keys(results).length;
-
-      testBtn.classList.remove('testing');
-      testBtn.classList.add('success');
-      testBtn.innerHTML = `<i class="fas fa-check"></i> ${successCount}/${totalCount} Models OK`;
-
-      this.showNotification(`Model testing completed: ${successCount}/${totalCount} models working`, 'success');
-    } catch (error) {
-      testBtn.classList.remove('testing');
-      testBtn.classList.add('error');
-      testBtn.innerHTML = '<i class="fas fa-times"></i> Test Failed';
-      this.showNotification(`Model testing failed: ${error.message}`, 'error');
-    }
-
-    // Reset button after 3 seconds
-    setTimeout(() => {
-      testBtn.classList.remove('testing', 'success', 'error');
-      testBtn.innerHTML = '<i class="fas fa-check"></i> Test All Models';
-    }, 3000);
-  }
 
   loadModelTypeSelectionToUI() {
     // Load main model configuration
@@ -693,38 +510,6 @@ class LLMConfigManager {
         mainModelSelect.value = 'auto';
       }
     }
-
-    // Load specialized model configurations
-    const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
-
-    modelTypes.forEach(type => {
-      const providerSelect = document.getElementById(`${type}Provider`);
-      const modelSelect = document.getElementById(`${type}Model`);
-      const customModelInput = document.getElementById(`${type}CustomModel`);
-
-      if (providerSelect && this.modelTypes[type]) {
-        providerSelect.value = this.modelTypes[type].provider || 'auto';
-        this.updateModelTypeOptions(type);
-      }
-
-      if (modelSelect && this.modelTypes[type]) {
-        if (this.modelTypes[type].model && this.modelTypes[type].model !== 'auto') {
-          // Check if it's a custom model name
-          const isCustomModel = !this.isKnownModel(this.modelTypes[type].model, this.modelTypes[type].provider);
-          if (isCustomModel) {
-            modelSelect.value = 'custom';
-            if (customModelInput) {
-              customModelInput.value = this.modelTypes[type].model;
-            }
-            this.toggleCustomModelInput(type);
-          } else {
-            modelSelect.value = this.modelTypes[type].model;
-          }
-        } else {
-          modelSelect.value = 'auto';
-        }
-      }
-    });
   }
 
   saveModelTypeSelection() {
@@ -746,29 +531,6 @@ class LLMConfigManager {
         this.modelTypes.main.model = mainModelSelect.value;
       }
     }
-
-    // Save specialized model configurations
-    const modelTypes = ['voiceTTS', 'voiceSTT', 'image', 'multimodal'];
-
-    modelTypes.forEach(type => {
-      const providerSelect = document.getElementById(`${type}Provider`);
-      const modelSelect = document.getElementById(`${type}Model`);
-      const customModelInput = document.getElementById(`${type}CustomModel`);
-
-      if (providerSelect) {
-        this.modelTypes[type] = this.modelTypes[type] || {};
-        this.modelTypes[type].provider = providerSelect.value;
-      }
-
-      if (modelSelect) {
-        this.modelTypes[type] = this.modelTypes[type] || {};
-        if (modelSelect.value === 'custom' && customModelInput) {
-          this.modelTypes[type].model = customModelInput.value;
-        } else {
-          this.modelTypes[type].model = modelSelect.value;
-        }
-      }
-    });
   }
 
   getModelTypeConfiguration(type) {
@@ -904,7 +666,7 @@ class LLMConfigManager {
       { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' },
     ];
 
-    // Model Selection tab event listeners
+    // Default Model select event listeners
     this.setupModelSelectionEventListeners();
 
     pasteButtonConfigs.forEach(config => {
@@ -1000,12 +762,10 @@ class LLMConfigManager {
 
   /**
    * Auto-refresh whatever model lists the given config tab shows.
-   * The Model Selection tab draws on every provider; a provider tab only
-   * needs its own list.
+   * Every tab is a provider tab now; it only needs its own list.
    */
   autoRefreshModelsForTab(tab) {
     if (!tab) return Promise.resolve([]);
-    if (tab === 'models') return this.autoRefreshAllProviderModels();
     return this.maybeAutoRefreshProviderModels(tab);
   }
 
@@ -1029,11 +789,6 @@ class LLMConfigManager {
         panel.focus();
       }
     });
-
-    // Special handling for models tab
-    if (provider === 'models') {
-      this.loadModelTypeSelectionToUI();
-    }
 
     // Refresh the newly revealed tab's model list when it has gone stale
     this.autoRefreshModelsForTab(provider);
@@ -1504,12 +1259,6 @@ class LLMConfigManager {
   async testConnection() {
     const activeTab = document.querySelector('#llmConfigModal .tab-button.active').dataset.provider;
     const testBtn = document.getElementById('testConnectionBtn');
-
-    // The "models" tab is not a provider — cannot test connection there
-    if (activeTab === 'models') {
-      this.showNotification('Please switch to a provider tab to test the connection.', 'warning');
-      return;
-    }
 
     // Update button state
     testBtn.classList.add('testing');
@@ -2204,21 +1953,9 @@ class LLMConfigManager {
   }
 
   /**
-   * Refresh every provider that has credentials. Used by the Model Selection
-   * tab, whose dropdowns are built from all providers at once.
+   * Refresh every provider that has credentials. Used by provider tabs and
+   * the Default Model dropdown, which is built from all providers at once.
    */
-  async autoRefreshAllProviderModels() {
-    const results = await Promise.all(
-      Object.keys(this.providers).map(providerKey => this.maybeAutoRefreshProviderModels(providerKey))
-    );
-
-    // Rebuild the model type dropdowns if any list actually changed
-    if (results.some(result => result && result.success)) {
-      this.loadModelTypeSelectionToUI();
-    }
-    return results;
-  }
-
   /**
    * Persist refreshed model lists. Only touches provider state already in
    * memory — form values are not swept in here.
@@ -2553,7 +2290,7 @@ class LLMConfigManager {
       throw new Error(`Provider ${providerKey} is not configured or enabled`);
     }
 
-    // Model Selection config is request-scoped. Do not mutate the provider's
+    // Model selection config is request-scoped. Do not mutate the provider.s
     // saved default, because a fallback provider must still use its own model.
     const provider =
       modelOverride && modelOverride !== 'auto' ? { ...configuredProvider, model: modelOverride } : configuredProvider;

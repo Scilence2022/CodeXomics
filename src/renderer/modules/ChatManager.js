@@ -5257,7 +5257,7 @@ class ChatManager {
 
     // Check if LLM is configured
     if (!this.llmConfigManager.isConfigured()) {
-      return 'I need to be configured first. Please go to Options → Configure LLMs to set up your preferred AI provider (OpenAI, Anthropic, Google, or Custom Endpoint).';
+      return 'I need to be configured first. Please go to Options → Configure LLM Providers to set up your preferred AI provider (OpenAI, Anthropic, Google, or Custom Endpoint).';
     }
 
     // Initialize execution tracking for benchmark integration
@@ -6115,7 +6115,7 @@ class ChatManager {
           `The system automatically retried your request, but the service remains unavailable.\n\n` +
           `**Suggestions:**\n` +
           `• Wait a few minutes and try again\n` +
-          `• Switch to a different LLM provider in Options → Configure LLMs\n` +
+          `• Switch to a different LLM provider in Options → Configure LLM Providers\n` +
           `• Check the service status page for your LLM provider`;
       } else if (error.message.includes('HTTP 429') || error.message.includes('Too Many Requests')) {
         errorMessage =
@@ -6131,7 +6131,7 @@ class ChatManager {
           `🔐 **Authentication Error**\n\n` +
           `Your API key appears to be invalid or expired.\n\n` +
           `**Please:**\n` +
-          `• Go to Options → Configure LLMs\n` +
+          `• Go to Options → Configure LLM Providers\n` +
           `• Check and update your API key\n` +
           `• Test the connection before saving`;
       } else if (error.message.includes('HTTP 404') || error.message.includes('Not Found')) {
@@ -6139,7 +6139,7 @@ class ChatManager {
           `🔍 **Model Not Found**\n\n` +
           `The requested model is not available or doesn't exist.\n\n` +
           `**Please:**\n` +
-          `• Go to Options → Configure LLMs\n` +
+          `• Go to Options → Configure LLM Providers\n` +
           `• Select a different model\n` +
           `• Check your provider's available models`;
       } else if (
@@ -6159,7 +6159,7 @@ class ChatManager {
           `❌ **Unexpected Error**\n\n` +
           `${error.message}\n\n` +
           `**Troubleshooting:**\n` +
-          `• Check your LLM configuration in Options → Configure LLMs\n` +
+          `• Check your LLM configuration in Options → Configure LLM Providers\n` +
           `• Try switching to a different LLM provider\n` +
           `• Check the browser console for more details`;
       }

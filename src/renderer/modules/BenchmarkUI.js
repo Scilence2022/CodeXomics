@@ -2431,7 +2431,7 @@ class BenchmarkUI {
       if (errorMessage.includes('LLM not configured') || errorMessage.includes('LLM provider')) {
         detailedGuidance =
           '\n\nTo fix this:\n' +
-          '1. Go to Options → Configure LLMs\n' +
+          '1. Go to Options → Configure LLM Providers\n' +
           '2. Set up your preferred AI provider\n' +
           '3. Enable at least one provider\n' +
           '4. Test the connection\n' +
@@ -2446,7 +2446,7 @@ class BenchmarkUI {
                             <p>Please configure an LLM provider before running benchmarks.</p>
                             <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; text-align: left;">
                                 <strong>Setup Steps:</strong><br>
-                                1. Go to Options → Configure LLMs<br>
+                                1. Go to Options → Configure LLM Providers<br>
                                 2. Choose a provider (OpenAI, Anthropic, Google, etc.)<br>
                                 3. Enter your API key<br>
                                 4. Enable the provider<br>
