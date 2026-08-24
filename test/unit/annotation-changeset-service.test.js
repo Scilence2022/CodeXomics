@@ -2868,6 +2868,102 @@ describe('AnnotationChangeSetService', () => {
       );
     });
   });
+
+  it('accepts a standard note whose text ends with the stable report reference', async () => {
+    const statement = 'TolC levels are positively regulated by MarA, Rob, or SoxS.';
+    const segmentText = `${statement} (PMID:9473050).`;
+    const provenanceClause = 'Annotation by Deep Gene Research on August 22, 2026.';
+    const text = `${segmentText} ${provenanceClause} Evidence report: DGR-task-1.`;
+    const textSha256 = await sha256Text(text);
+    const fact = {
+      id: 'fact_1',
+      category: 'regulation',
+      field: 'literature_finding',
+      statement,
+      value: statement,
+      directness: 'exact_target',
+      evidenceLevel: 'target_literature',
+      evidenceIds: ['evidence_1'],
+      confidence: null,
+      citation: {
+        type: 'pmid',
+        id: '9473050',
+        label: '9473050',
+        url: 'https://pubmed.ncbi.nlm.nih.gov/9473050/',
+      },
+    };
+    const researchSummary = {
+      schema: 'dgr.curation-summary.v1',
+      headline: 'tolC',
+      facts: [fact],
+      literature: [],
+      limitations: [],
+    };
+    const evidenceRecords = [
+      {
+        id: 'evidence_1',
+        label: 'PMID:9473050',
+        sourceId: '9473050',
+        url: 'https://pubmed.ncbi.nlm.nih.gov/9473050/',
+        database: 'pubmed',
+        sourceHash: 'a'.repeat(64),
+        identifiers: [{ scheme: 'pmid', value: '9473050' }],
+        supporting: true,
+      },
+    ];
+    const note = {
+      schema: 'dgr.curation-note.v1',
+      kind: 'standard',
+      text,
+      textSha256,
+      reportReference: 'DGR-task-1',
+      segments: [
+        {
+          category: 'regulation',
+          text: segmentText,
+          factIds: ['fact_1'],
+          evidenceIds: ['evidence_1'],
+          citations: [
+            {
+              type: 'pmid',
+              id: '9473050',
+              label: '9473050',
+              url: 'https://pubmed.ncbi.nlm.nih.gov/9473050/',
+            },
+          ],
+        },
+      ],
+      factIds: ['fact_1'],
+      evidenceIds: ['evidence_1'],
+      allSourceCitations: [],
+      provenance: {
+        agent: 'Deep Gene Research',
+        updatedAt: '2026-08-22T00:00:00.000Z',
+        clause: provenanceClause,
+      },
+      coverage: {
+        availableFactCount: 1,
+        includedFactCount: 1,
+        includedCategories: ['regulation'],
+        omittedFactIds: [],
+        citedSourceCount: 0,
+        totalSourceCount: 0,
+      },
+    };
+    const claims = [{ id: 'claim_note', field: 'note', value: text, evidenceIds: ['evidence_1'] }];
+    const operations = [{ op: 'addQualifier', field: 'note', value: text, claimIds: ['claim_note'] }];
+
+    const validated = await annotationService.changeSetService._validateCurationNote(
+      note,
+      researchSummary,
+      evidenceRecords,
+      claims,
+      operations
+    );
+
+    expect(validated.text).toBe(text);
+    expect(validated.reportReference).toBe('DGR-task-1');
+  });
 });
 
 describe('annotation ledger change broadcast', () => {

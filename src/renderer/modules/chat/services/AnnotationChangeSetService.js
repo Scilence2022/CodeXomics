@@ -2597,8 +2597,25 @@ class AnnotationChangeSetService {
       }
       provenanceSuffix = ` ${provenance.clause}`;
     }
+    // DGR may append a durable report reference after the provenance clause.
+    // Strip it together with the provenance before matching the segment/
+    // citation-clause contract.
+    let reportSuffix = '';
+    if (note.reportReference !== undefined && note.reportReference !== null) {
+      const reference = this._assertBoundedScalar(
+        note.reportReference,
+        'Curation note report reference',
+        this.inputLimits.identifierLength,
+        { required: true }
+      );
+      if (!/^[A-Za-z0-9._:-]+$/.test(String(reference))) {
+        throw new Error('Curation note report reference contains unsupported characters');
+      }
+      reportSuffix = ` Evidence report: ${reference}.`;
+    }
+    const combinedSuffix = `${provenanceSuffix}${reportSuffix}`;
     const baseText =
-      provenanceSuffix && text.endsWith(provenanceSuffix) ? text.slice(0, text.length - provenanceSuffix.length) : text;
+      combinedSuffix && text.endsWith(combinedSuffix) ? text.slice(0, text.length - combinedSuffix.length) : text;
     const segmentText = note.segments.map(segment => segment.text).join(' ');
     if (baseText !== segmentText && baseText !== `${segmentText} ${String(note.citationText || '')}`.trim()) {
       throw new Error('Curation note must include citation-bound literature and exactly match its segments');
