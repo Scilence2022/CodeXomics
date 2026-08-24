@@ -1385,6 +1385,43 @@ function registerIpcHandlers(deps) {
     }
   });
 
+  ipcMain.handle('read-dgr-report-attachment', async (event, genomePath, taskId) => {
+    try {
+      const task = String(taskId || '').trim();
+      if (!task) return { success: false, error: 'Missing DGR task id' };
+      const { sidecarPath, fallbackPath } = resolveSidecarPaths(genomePath);
+      const sidecarFile = fs.existsSync(sidecarPath) ? sidecarPath : fs.existsSync(fallbackPath) ? fallbackPath : null;
+      if (!sidecarFile) return { success: false, error: 'Genome sidecar not found' };
+      const sidecar = JSON.parse(fs.readFileSync(sidecarFile, 'utf8'));
+      const attachments = Object.values(sidecar.geneAttachments || {})
+        .flat()
+        .filter(item => item?.id === `dgr:${task}` && item?.kind === 'dgr-research-report');
+      if (attachments.length === 0) {
+        return { success: false, error: `No archived DGR report for task ${task}` };
+      }
+      const attachment = attachments[0];
+      const storedPath = String(attachment.storedPath || '');
+      if (!storedPath || !fs.existsSync(storedPath)) {
+        return { success: false, error: 'Archived report file is missing' };
+      }
+      const payload = JSON.parse(fs.readFileSync(storedPath, 'utf8'));
+      const result = payload?.result || {};
+      return {
+        success: true,
+        taskId: task,
+        attachmentId: attachment.id || null,
+        geneId: attachment.geneId || null,
+        filename: attachment.filename || null,
+        sha256: attachment.sha256 || null,
+        title: result.title || (result.metadata || {}).title || null,
+        reportMarkdown: result.finalReport || null,
+        summary: attachment.summary || null,
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('load-sidecar-file', async (event, genomePath) => {
     try {
       const {

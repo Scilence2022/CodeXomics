@@ -689,11 +689,14 @@ class AnnotationReviewManager {
       </div>
       ${
         attachment
-          ? `<div class="annotation-review-report-link"><i class="fas fa-paperclip"></i> Archived report: <code>${this._escape(attachment)}</code>${
-              fullTextSourceCount > 0
-                ? ` <span>Full text: ${verifiedFullTextSourceCount}/${fullTextSourceCount} evidence-linked sources, ${fullTextFindingCount} findings</span>`
-                : ''
-            }</div>`
+          ? `<div class="annotation-review-report-link"><i class="fas fa-paperclip"></i> Archived report: <code>${this._escape(attachment)}</code>
+              <button type="button" class="gene-review-report-open" data-action="open-report" data-task-id="${this._escape(
+                changeSet.researchRun || reportMetadata?.taskId || ''
+              )}" style="margin-left:8px;padding:4px 10px;border:1px solid #90CAF9;background:#e3f2fd;color:#1565C0;border-radius:6px;cursor:pointer;font-weight:600;" title="Open the archived research report">View research report</button>${
+                fullTextSourceCount > 0
+                  ? ` <span>Full text: ${verifiedFullTextSourceCount}/${fullTextSourceCount} evidence-linked sources, ${fullTextFindingCount} findings</span>`
+                  : ''
+              }</div>`
           : ''
       }
       <div class="annotation-review-operations">${operations}</div>
@@ -705,6 +708,21 @@ class AnnotationReviewManager {
 
   _handleQueueClick(event) {
     const button = event.target.closest('[data-action]');
+    if (button?.dataset.action === 'open-report') {
+      const taskId = String(button.dataset.taskId || '').trim();
+      const reader = window.electronAPI?.readDgrReportAttachment;
+      if (!reader || !taskId) {
+        this._notify('Research report is not available for this ChangeSet.', 'error');
+        return;
+      }
+      reader(this.app?.loadedGenomePath || '', taskId)
+        .then(result => {
+          if (result?.success && result.reportMarkdown) this._showResearchReportModal(result);
+          else this._notify(result?.error || 'Research report is not available for this ChangeSet.', 'error');
+        })
+        .catch(error => this._notify(`Failed to read research report: ${error?.message || error}`, 'error'));
+      return;
+    }
     if (button?.dataset.action === 'details') {
       void this.viewChangeSet(button.dataset.id);
       return;
@@ -723,6 +741,58 @@ class AnnotationReviewManager {
     const item = event.target.closest('.annotation-review-item[data-changeset-id]');
     const interactiveControl = event.target.closest('input, label, button, a, select, textarea, summary');
     if (item && !interactiveControl) void this.viewChangeSet(item.dataset.changesetId);
+  }
+
+  _showResearchReportModal(result) {
+    this._closeResearchReportModal();
+    const overlay = document.createElement('div');
+    overlay.id = 'dgrReportOverlay';
+    overlay.style.cssText =
+      'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px;';
+    const panel = document.createElement('div');
+    panel.style.cssText =
+      'background:#fff;color:#1c2733;border-radius:10px;max-width:1100px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.35);';
+    const header = document.createElement('div');
+    header.style.cssText =
+      'display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border-bottom:1px solid #dfe5ec;';
+    header.innerHTML =
+      `<div><strong>${this._escape(result.title || 'Deep Gene Research Report')}</strong>` +
+      `<div style="font-size:12px;color:#64748b">DGR-${this._escape(result.taskId)} · ${this._escape(
+        result.filename || ''
+      )} · sha256 ${this._escape(String(result.sha256 || '').slice(0, 12))}…</div></div>`;
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = 'Close';
+    close.style.cssText =
+      'border:1px solid #cbd5e1;background:#f1f5f9;border-radius:6px;padding:6px 12px;cursor:pointer;';
+    close.onclick = () => this._closeResearchReportModal();
+    header.appendChild(close);
+    const body = document.createElement('pre');
+    body.style.cssText =
+      'flex:1;overflow:auto;padding:18px;margin:0;white-space:pre-wrap;word-break:break-word;font:13px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;background:#f8fafc;';
+    body.textContent = result.reportMarkdown || '(No markdown body in the archived report.)';
+    panel.appendChild(header);
+    panel.appendChild(body);
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', event => {
+      if (event.target === overlay) this._closeResearchReportModal();
+    });
+    document.body.appendChild(overlay);
+    if (!this._boundReportEsc) {
+      this._boundReportEsc = event => {
+        if (event.key === 'Escape') this._closeResearchReportModal();
+      };
+      document.addEventListener('keydown', this._boundReportEsc);
+    }
+  }
+
+  _closeResearchReportModal() {
+    const overlay = document.getElementById('dgrReportOverlay');
+    if (overlay) overlay.remove();
+    if (this._boundReportEsc) {
+      document.removeEventListener('keydown', this._boundReportEsc);
+      this._boundReportEsc = null;
+    }
   }
 
   _handleQueueKeydown(event) {
