@@ -448,10 +448,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   loadConfigData: () => ipcRenderer.invoke('config:load'),
   saveConfigData: config => ipcRenderer.invoke('config:save', config),
-  checkGeneResearchReport: geneSymbol => ipcRenderer.invoke('check-gene-research-report', geneSymbol),
-  saveGeneResearchReport: (geneSymbol, report) => ipcRenderer.invoke('save-gene-research-report', geneSymbol, report),
-  readGeneResearchReport: geneSymbol => ipcRenderer.invoke('read-gene-research-report', geneSymbol),
-  openGeneResearchReport: geneSymbol => ipcRenderer.invoke('open-gene-research-report', geneSymbol),
+  checkGeneResearchReport: (geneSymbol, options) =>
+    ipcRenderer.invoke('check-gene-research-report', geneSymbol, options),
+  saveGeneResearchReport: (geneSymbol, report, options) =>
+    ipcRenderer.invoke('save-gene-research-report', geneSymbol, report, options),
+  readGeneResearchReport: (geneSymbol, options) => ipcRenderer.invoke('read-gene-research-report', geneSymbol, options),
+  openGeneResearchReport: (geneSymbol, options) => ipcRenderer.invoke('open-gene-research-report', geneSymbol, options),
   loadSidecarFile: genomePath => ipcRenderer.invoke('load-sidecar-file', genomePath),
   saveSidecarFile: (genomePath, data) => ipcRenderer.invoke('save-sidecar-file', genomePath, data),
   checkSidecarFile: genomePath => ipcRenderer.invoke('check-sidecar-file', genomePath),

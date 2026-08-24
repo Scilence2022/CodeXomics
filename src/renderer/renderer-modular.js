@@ -6722,7 +6722,9 @@ class GenomeBrowser {
         return;
       }
 
-      const report = await api.checkGeneResearchReport(geneName || 'Unknown');
+      const report = await api.checkGeneResearchReport(geneName || 'Unknown', {
+        genomePath: this.loadedGenomePath || undefined,
+      });
       if (!report || !report.success || !report.exists) {
         return;
       }
@@ -6745,7 +6747,9 @@ class GenomeBrowser {
 
       btn.onclick = async () => {
         try {
-          const result = await api.openGeneResearchReport(geneName || 'Unknown');
+          const result = await api.openGeneResearchReport(geneName || 'Unknown', {
+            genomePath: this.loadedGenomePath || undefined,
+          });
           if (!result || !result.success) {
             notify(result?.error || 'Failed to open report file.', 'error');
           }
@@ -6790,7 +6794,9 @@ class GenomeBrowser {
         return;
       }
 
-      const readResult = await api.readGeneResearchReport(geneName || 'Unknown');
+      const readResult = await api.readGeneResearchReport(geneName || 'Unknown', {
+        genomePath: this.loadedGenomePath || undefined,
+      });
       if (!readResult || !readResult.success) {
         notify(readResult?.error || 'Failed to read gene research report.', 'error');
         return;

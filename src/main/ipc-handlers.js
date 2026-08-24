@@ -643,10 +643,20 @@ function registerIpcHandlers(deps) {
     return entry.reader;
   };
 
-  const resolveGeneResearchReportPath = geneSymbol => {
+  const resolveGeneResearchReportPath = (geneSymbol, options = {}) => {
     const safeSymbol = String(geneSymbol || 'Unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `Gene_${safeSymbol}_Research_Report.md`;
-    const reportsDir = path.resolve(process.cwd(), 'reports');
+    const taskId = String(options.taskId || '')
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]/g, '')
+      .slice(0, 8);
+    const suffix = taskId ? `_${taskId}` : '';
+    const fileName = `Gene_${safeSymbol}${suffix}_Research_Report.md`;
+    // Prefer the genome's own directory so reports stay with the genome and
+    // survive working-directory changes; fall back to the legacy cwd/reports.
+    const genomePath = String(options.genomePath || '').trim();
+    const reportsDir = genomePath
+      ? path.resolve(path.dirname(genomePath), 'reports')
+      : path.resolve(process.cwd(), 'reports');
     const reportPath = path.resolve(reportsDir, fileName);
 
     if (path.dirname(reportPath) !== reportsDir) {
@@ -1301,12 +1311,13 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('check-gene-research-report', async (event, geneSymbol) => {
+  ipcMain.handle('check-gene-research-report', async (event, geneSymbol, options) => {
     try {
-      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol);
+      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol, options || {});
       return {
         success: true,
         exists: fs.existsSync(reportPath),
+        reportPath,
         fileName,
       };
     } catch (error) {
@@ -1314,9 +1325,9 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('save-gene-research-report', async (event, geneSymbol, report) => {
+  ipcMain.handle('save-gene-research-report', async (event, geneSymbol, report, options) => {
     try {
-      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol);
+      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol, options || {});
       const reportStr = typeof report === 'string' ? report : report ? JSON.stringify(report, null, 2) : '';
 
       if (!reportStr.trim()) {
@@ -1336,9 +1347,9 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('read-gene-research-report', async (event, geneSymbol) => {
+  ipcMain.handle('read-gene-research-report', async (event, geneSymbol, options) => {
     try {
-      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol);
+      const { reportPath, fileName } = resolveGeneResearchReportPath(geneSymbol, options || {});
 
       if (!fs.existsSync(reportPath)) {
         return { success: false, error: 'Gene research report does not exist' };
@@ -1354,9 +1365,9 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('open-gene-research-report', async (event, geneSymbol) => {
+  ipcMain.handle('open-gene-research-report', async (event, geneSymbol, options) => {
     try {
-      const { reportPath } = resolveGeneResearchReportPath(geneSymbol);
+      const { reportPath } = resolveGeneResearchReportPath(geneSymbol, options || {});
 
       if (!fs.existsSync(reportPath)) {
         return { success: false, error: 'Gene research report does not exist' };
