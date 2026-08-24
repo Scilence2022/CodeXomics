@@ -9,6 +9,7 @@ class AdvancedSearchManager {
     this.searchResults = [];
     this.searchHistory = [];
     this.maxHistoryItems = 20;
+    this.resizableInitialized = false;
 
     // IUPAC nucleotide codes for motif search
     this.iupacCodes = {
@@ -80,7 +81,7 @@ class AdvancedSearchManager {
   createModalHtml() {
     return `
         <div id="advancedSearchModal" class="modal">
-            <div class="modal-content large">
+            <div class="modal-content large resizable" data-min-width="560" data-min-height="500" data-max-width="1600">
                 <div class="modal-header">
                     <h3><i class="fas fa-search-plus"></i> Advanced Search</h3>
                     <div class="modal-controls">
@@ -388,6 +389,14 @@ class AdvancedSearchManager {
                         <span>Searching...</span>
                     </div>
                 </div>
+                <div class="resize-handle resize-handle-n"></div>
+                <div class="resize-handle resize-handle-s"></div>
+                <div class="resize-handle resize-handle-e"></div>
+                <div class="resize-handle resize-handle-w"></div>
+                <div class="resize-handle resize-handle-ne"></div>
+                <div class="resize-handle resize-handle-nw"></div>
+                <div class="resize-handle resize-handle-se"></div>
+                <div class="resize-handle resize-handle-sw"></div>
             </div>
         </div>
         `;
@@ -489,6 +498,7 @@ class AdvancedSearchManager {
   showModal() {
     this.modal.classList.add('show');
     this.updateHistoryDisplay();
+    this.initializeResizable();
 
     // Focus the current tab's input
     const inputId = `${this.activeTab}SearchInput`;
@@ -506,6 +516,27 @@ class AdvancedSearchManager {
    */
   hideModal() {
     this.modal.classList.remove('show');
+  }
+
+  /**
+   * Make the modal resizable via ResizableModalManager.
+   * Runs on first show, not at construction: the modal is display: none until
+   * shown, and its CSS width is a percentage, so an earlier call would measure
+   * the hidden element and pin a viewport-relative width as the initial size.
+   */
+  initializeResizable() {
+    if (this.resizableInitialized) return;
+    if (!window.resizableModalManager) {
+      // Manager not loaded yet; retry on the next showModal()
+      return;
+    }
+
+    try {
+      window.resizableModalManager.makeResizable('#advancedSearchModal');
+      this.resizableInitialized = true;
+    } catch (error) {
+      console.error('AdvancedSearchManager: Error initializing resizable modal:', error);
+    }
   }
 
   /**
