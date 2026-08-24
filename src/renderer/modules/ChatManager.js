@@ -10519,7 +10519,10 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
         try {
           const saver = window.electronAPI?.saveGeneResearchReport;
           if (saver) {
-            const saveResult = await saver(geneSymbol, finalReport);
+            const saveResult = await saver(geneSymbol, finalReport, {
+              taskId: taskInfo.taskId || null,
+              genomePath: this.app?.loadedGenomePath || this.genomeBrowser?.loadedGenomePath || null,
+            });
             if (saveResult?.success) savedFileName = saveResult.fileName || null;
           }
         } catch (saveError) {
