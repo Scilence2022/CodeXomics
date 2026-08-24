@@ -1706,7 +1706,20 @@ describe('AnnotationChangeSetService', () => {
     // human-readable references, not opaque record ids.
     expect(created.changeSet.evidence).toEqual(['PMID:123456']);
     expect(created.changeSet.manifestHash).toMatch(/^[a-f0-9]{64}$/);
-    expect(created.changeSet.operations.map(operation => operation.field)).toEqual(['go_terms']);
+    expect(created.changeSet.operations.map(operation => operation.field)).toEqual([
+      'go_terms',
+      'codexomics_research_report',
+      'codexomics_research_details',
+    ]);
+    const expectedReportUri =
+      `codexomics://genome/${resolved.target.genomeId}/gene/${resolved.target.locusTag}/` +
+      `dgr/dgr-task-123@${'d'.repeat(64)}`;
+    expect(
+      created.changeSet.operations.find(operation => operation.field === 'codexomics_research_report')?.value
+    ).toBe(expectedReportUri);
+    expect(
+      created.changeSet.operations.find(operation => operation.field === 'codexomics_research_details')?.value
+    ).toBe(expectedReportUri);
     expect(created.changeSet.proposalMetadata).toMatchObject({
       summary: 'Evidence-backed function',
       confidence: 0.8,

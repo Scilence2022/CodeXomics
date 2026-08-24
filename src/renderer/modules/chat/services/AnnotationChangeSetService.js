@@ -3153,15 +3153,70 @@ class AnnotationChangeSetService {
   }
 
   /**
+   * Stable, content-addressed reference to an archived DGR research report.
+   *
+   * The ephemeral MCP download URLs carry one-shot tokens and die with the
+   * DGR server, so persisting them in an annotation leaves a dead link.
+   * Everything the report needs can be resolved from the genome sidecar by
+   * task id and content hash, so annotations store this portable URI instead:
+   *   codexomics://genome/<genomeId>/gene/<locusTag>/dgr/<taskId>@<sha256>
+   *
+   * @param {object|null} archivedDgrReport verified attachment metadata
+   *   ({taskId, sha256}) from `_requireArchivedDgrReport`.
+   * @param {object} proposalOrTarget the v2 proposal (carries `target`) or a
+   *   target-shaped object with genomeId/locusTag.
+   * @returns {string|null} stable report URI, or null when no task id is known.
+   */
+  _stableDgrReportUri(archivedDgrReport, proposalOrTarget = {}) {
+    const taskId = String(archivedDgrReport?.taskId || '').trim();
+    if (!taskId) return null;
+    const target = proposalOrTarget?.target || proposalOrTarget || {};
+    const encode = value => encodeURIComponent(String(value || ''));
+    const sha256 = /^[a-f0-9]{64}$/i.test(String(archivedDgrReport.sha256 || ''))
+      ? String(archivedDgrReport.sha256).toLowerCase()
+      : '';
+    return (
+      'codexomics://genome/' +
+      encode(target.genomeId || 'unknown') +
+      '/gene/' +
+      encode(target.locusTag || target.geneSymbol || 'unknown') +
+      '/dgr/' +
+      encode(taskId) +
+      (sha256 ? `@${sha256}` : '')
+    );
+  }
+
+  /**
    * @param {object} params the create request
    * @param {object|null} [resolvedProposal] the proposal the request actually
    *   binds to — the archived snapshot when `researchRun` names a stored task,
    *   which is not necessarily the object the caller passed.
+   * @param {object|null} [archivedDgrReport] verified DGR report attachment
+   *   metadata ({taskId, sha256}) used to build the stable report reference.
    */
-  _proposalToOperations(params, resolvedProposal = null) {
+  _proposalToOperations(params, resolvedProposal = null, archivedDgrReport = null) {
     const proposal = resolvedProposal || params.annotationProposal || params.proposal || {};
     if (proposal.schema === 'codexomics.annotation-change-set.v2') {
-      return proposal.operations.map(operation => ({ ...operation }));
+      const operations = proposal.operations.map(operation => ({ ...operation }));
+      const hasField = field => operations.some(operation => operation.field === field);
+      const stableReportUri = this._stableDgrReportUri(archivedDgrReport, proposal);
+      if (stableReportUri && !hasField('codexomics_research_report')) {
+        operations.push({
+          op: 'addQualifier',
+          field: 'codexomics_research_report',
+          value: stableReportUri,
+          generatedFromProposalMetadata: true,
+        });
+      }
+      if (stableReportUri && !hasField('codexomics_research_details')) {
+        operations.push({
+          op: 'addQualifier',
+          field: 'codexomics_research_details',
+          value: stableReportUri,
+          generatedFromProposalMetadata: true,
+        });
+      }
+      return operations;
     }
     let operations = [];
     if (Array.isArray(params.operations)) {
@@ -3199,7 +3254,7 @@ class AnnotationChangeSetService {
       operations.push({
         op: 'addQualifier',
         field: 'codexomics_research_report',
-        value: proposal.reportUrl,
+        value: this._stableDgrReportUri(archivedDgrReport, proposal) || proposal.reportUrl,
         generatedFromProposalMetadata: true,
       });
     }
@@ -3207,7 +3262,7 @@ class AnnotationChangeSetService {
       operations.push({
         op: 'addQualifier',
         field: 'codexomics_research_details',
-        value: proposal.detailsUrl,
+        value: this._stableDgrReportUri(archivedDgrReport, proposal) || proposal.detailsUrl,
         generatedFromProposalMetadata: true,
       });
     }
@@ -3457,7 +3512,7 @@ class AnnotationChangeSetService {
       }
     }
 
-    const rawOperations = this._proposalToOperations(params, proposal);
+    const rawOperations = this._proposalToOperations(params, proposal, archivedDgrReport);
     if (rawOperations.length === 0) throw new Error('ChangeSet contains no supported annotation operations');
     this._validateOperationPayloads(rawOperations, 'resolved operations');
     const operations = rawOperations
