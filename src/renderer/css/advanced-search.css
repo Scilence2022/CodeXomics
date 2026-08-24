@@ -331,7 +331,7 @@
 .search-results-preview {
   flex: 1;
   min-height: 150px;
-  max-height: 250px;
+  /* No max-height: the preview fills the modal, which is resizable */
   overflow-y: auto;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
