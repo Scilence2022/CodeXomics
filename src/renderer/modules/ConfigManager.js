@@ -165,6 +165,15 @@ class ConfigManager {
             maxTokens: 4096,
             temperature: 0.7,
           },
+          zhongkeyu: {
+            name: 'Zhongkeyu',
+            apiKey: '',
+            model: 'gpt-5.6-sol',
+            baseUrl: 'https://zhongkeyu.com/v1',
+            enabled: false,
+            maxTokens: 4096,
+            temperature: 0.7,
+          },
           local: {
             name: 'Custom Endpoint',
             apiKey: '',

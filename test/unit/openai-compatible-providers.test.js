@@ -22,6 +22,7 @@ const PROVIDERS = [
   { key: 'openrouter', method: 'sendOpenRouterMessageWithHistory' },
   { key: 'minimax', method: 'sendMinimaxMessageWithHistory' },
   { key: 'minimax_cn', method: 'sendMinimax_cnMessageWithHistory' },
+  { key: 'zhongkeyu', method: 'sendZhongkeyuMessageWithHistory' },
   { key: 'local', method: 'sendLocalMessageWithHistory' },
 ];
 

@@ -38,6 +38,7 @@ const OPENAI_COMPATIBLE_PROVIDERS = {
   },
   minimax: { label: 'MiniMax (Global)', historyMethod: 'sendMinimaxMessageWithHistory' },
   minimax_cn: { label: 'MiniMax CN', historyMethod: 'sendMinimax_cnMessageWithHistory' },
+  zhongkeyu: { label: 'Zhongkeyu', historyMethod: 'sendZhongkeyuMessageWithHistory' },
   local: {
     label: 'Local LLM',
     historyMethod: 'sendLocalMessageWithHistory',
@@ -177,6 +178,14 @@ class LLMConfigManager {
         baseUrl: 'https://api.minimaxi.com/v1',
         enabled: false,
         availableModels: ['MiniMax-M2.7', 'MiniMax-M2.7-highspeed', 'MiniMax-M2.5', 'MiniMax-M2.5-highspeed', 'M2-her'],
+      },
+      zhongkeyu: {
+        name: 'Zhongkeyu',
+        apiKey: '',
+        model: 'gpt-5.6-sol',
+        baseUrl: 'https://zhongkeyu.com/v1',
+        enabled: false,
+        availableModels: ['gpt-5.6-sol', 'gpt-5.6-terra'],
       },
       local: {
         name: 'Custom Endpoint',
@@ -481,7 +490,6 @@ class LLMConfigManager {
     return null;
   }
 
-
   loadModelTypeSelectionToUI() {
     // Load main model configuration
     const mainProviderSelect = document.getElementById('mainProvider');
@@ -596,6 +604,7 @@ class LLMConfigManager {
       'openrouter',
       'minimax',
       'minimax_cn',
+      'zhongkeyu',
       'local',
     ];
     providerNames.forEach(provider => {
@@ -630,6 +639,7 @@ class LLMConfigManager {
       'openrouter',
       'minimax',
       'minimax_cn',
+      'zhongkeyu',
     ];
     cloudProviders.forEach(provider => {
       const modelSelect = document.getElementById(`${provider}Model`);
@@ -663,6 +673,7 @@ class LLMConfigManager {
       { btnId: 'pasteOpenrouterApiKeyBtn', inputId: 'openrouterApiKey' },
       { btnId: 'pasteMinimaxApiKeyBtn', inputId: 'minimaxApiKey' },
       { btnId: 'pasteMinimax_cnApiKeyBtn', inputId: 'minimax_cnApiKey' },
+      { btnId: 'pasteZhongkeyuApiKeyBtn', inputId: 'zhongkeyuApiKey' },
       { btnId: 'pasteLocalApiKeyBtn', inputId: 'localApiKey' },
     ];
 
@@ -1362,6 +1373,8 @@ class LLMConfigManager {
           return await this.testMinimax(config);
         case 'minimax_cn':
           return await this.testMinimax_cn(config);
+        case 'zhongkeyu':
+          return await this.testZhongkeyu(config);
         case 'local':
           return await this.testLocal(config);
         default:
@@ -1595,6 +1608,39 @@ class LLMConfigManager {
 
   async testMinimax_cn(config) {
     const baseUrl = config.baseUrl || 'https://api.minimaxi.com/v1';
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'user', content: 'test' }],
+        max_tokens: 1,
+      }),
+    });
+
+    if (!response.ok) {
+      let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) {
+          errorMsg += ` - ${errorData.error.message}`;
+        } else if (errorData.message) {
+          errorMsg += ` - ${errorData.message}`;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMsg);
+    }
+
+    return { success: true };
+  }
+
+  async testZhongkeyu(config) {
+    const baseUrl = config.baseUrl || 'https://zhongkeyu.com/v1';
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -2208,6 +2254,8 @@ class LLMConfigManager {
           return await this.sendMinimaxMessage(provider, message, context, memoryContext);
         case 'minimax_cn':
           return await this.sendMinimax_cnMessage(provider, message, context, memoryContext);
+        case 'zhongkeyu':
+          return await this.sendZhongkeyuMessage(provider, message, context, memoryContext);
         case 'local':
           return await this.sendLocalMessage(provider, message, context, memoryContext);
         default:
@@ -3830,6 +3878,42 @@ class LLMConfigManager {
 
   async sendMinimax_cnMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
     return await this.sendOpenAICompatibleMessageWithHistory('minimax_cn', provider, conversationHistory, options);
+  }
+
+  async sendZhongkeyuMessage(provider, message, context, memoryContext = null) {
+    const messages = this.buildMessages(message, context, 'openai', memoryContext);
+    console.log('Sending to Zhongkeyu - Request Payload:', {
+      model: provider.model,
+      messages: messages,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getTemperature(),
+    });
+
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${provider.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        messages: messages,
+        max_tokens: this.getMaxTokens(provider),
+        temperature: this.getTemperature(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
+    }
+
+    const data = await response.json();
+    return this.normalizeOpenAICompatibleResponse(data, 'zhongkeyu');
+  }
+
+  async sendZhongkeyuMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    return await this.sendOpenAICompatibleMessageWithHistory('zhongkeyu', provider, conversationHistory, options);
   }
 
   async sendLocalMessage(provider, message, context, memoryContext = null) {
