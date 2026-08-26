@@ -1780,6 +1780,7 @@
                     <button class="tab-button" data-provider="openrouter">OpenRouter</button>
                     <button class="tab-button" data-provider="minimax">MiniMax (Global)</button>
                     <button class="tab-button" data-provider="minimax_cn">MiniMax CN</button>
+                    <button class="tab-button" data-provider="zhongkeyu">Zhongkeyu</button>
                     <button class="tab-button" data-provider="local">Custom Endpoint</button>
                     <button class="tab-button" data-provider="models">Default Model</button>
                 </div>
@@ -2321,6 +2322,52 @@
                         </div>
                     </div>
 
+                    <!-- Zhongkeyu Configuration -->
+                    <div id="zhongkeyu-config" class="provider-config">
+                        <div class="form-group">
+                            <label for="zhongkeyuApiKey">API Key:</label>
+                            <div class="input-with-button">
+                                <input type="password" id="zhongkeyuApiKey" placeholder="sk-..." class="input-full">
+                                <button type="button" class="btn btn-sm btn-paste" id="pasteZhongkeyuApiKeyBtn"
+                                    title="Paste API Key">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
+                            <small class="help-text">Get your API key from <a href="https://zhongkeyu.com/"
+                                    target="_blank">Zhongkeyu Platform</a></small>
+                        </div>
+                        <div class="form-group">
+                            <div class="model-field-header">
+                                <label for="zhongkeyuModel">Default Model:</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
+                                    id="refreshZhongkeyuModelsBtn" title="Refresh the model list from Zhongkeyu">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                            <select id="zhongkeyuModel" class="select">
+                                <option value="gpt-5.6-sol" selected>GPT-5.6 Sol (Default)</option>
+                                <option value="gpt-5.6-terra">GPT-5.6 Terra</option>
+                                <option value="other">Other (specify below)</option>
+                            </select>
+                            <small class="help-text model-refresh-status" id="zhongkeyuModelsStatus"></small>
+                        </div>
+                        <div class="form-group" id="zhongkeyuModelOtherGroup" style="display: none;">
+                            <label for="zhongkeyuModelOther">Custom Model Name:</label>
+                            <input type="text" id="zhongkeyuModelOther" placeholder="Enter custom model name"
+                                class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <label for="zhongkeyuBaseUrl">Base URL (optional):</label>
+                            <input type="text" id="zhongkeyuBaseUrl" placeholder="https://zhongkeyu.com/v1"
+                                class="input-full">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="saveZhongkeyuProviderBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Provider Info
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Custom Endpoint Configuration -->
                     <div id="local-config" class="provider-config">
                         <div class="form-group">
@@ -2450,6 +2497,7 @@
                                 <option value="openrouter">OpenRouter</option>
                                 <option value="minimax">MiniMax (Global)</option>
                                 <option value="minimax_cn">MiniMax CN</option>
+                                <option value="zhongkeyu">Zhongkeyu</option>
                                 <option value="local">Custom Endpoint</option>
                             </select>
                         </div>
