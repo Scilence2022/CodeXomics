@@ -246,12 +246,13 @@ class AnnotationResearchWorkflowService {
       if (runs === undefined || runs === null) return this._createRunMap();
       if (!this._isPlainRecord(runs)) throw new Error('Annotation research runs must be a JSON object');
       const normalized = this._createRunMap(this._clone(runs));
-      if (this._serializedBytes(normalized) > this.runLimits.serializedBytes) {
-        const changed = this._compactRuns(normalized);
-        if (changed) {
-          this._assertWorkspace(workspace);
-          await this._saveRuns(normalized, workspace);
-        }
+      // Compact unconditionally: terminal archived runs carry full proposal
+      // snapshots, so a history can sit just under the ceiling and still push
+      // the projected size over it the moment a new run starts.
+      const changed = this._compactRuns(normalized);
+      if (changed) {
+        this._assertWorkspace(workspace);
+        await this._saveRuns(normalized, workspace);
       }
       this._validateRunCollection(normalized);
       return normalized;
@@ -259,9 +260,7 @@ class AnnotationResearchWorkflowService {
     const normalized = this.memoryRuns.has(workspace.key)
       ? this._createRunMap(this._clone(this.memoryRuns.get(workspace.key)))
       : this._createRunMap();
-    if (this._serializedBytes(normalized) > this.runLimits.serializedBytes) {
-      this._compactRuns(normalized);
-    }
+    this._compactRuns(normalized);
     this._validateRunCollection(normalized);
     return normalized;
   }

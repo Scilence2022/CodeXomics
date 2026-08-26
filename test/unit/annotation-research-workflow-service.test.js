@@ -1337,7 +1337,7 @@ describe('research history compaction', () => {
     expect(runs.active.proposalSnapshot).toBeDefined();
   });
 
-  it('compacts and persists the history when it exceeds the serialized ceiling', async () => {
+  it('compacts and persists terminal archived runs even when the history is still under the ceiling', async () => {
     const Service = loadWorkflowService();
     let persisted;
     const persistedRuns = {
@@ -1364,7 +1364,6 @@ describe('research history compaction', () => {
       },
       { services: {}, mcpServerManager: {} }
     );
-    service.runLimits = { ...service.runLimits, serializedBytes: 256 };
     const workspace = service._captureWorkspace();
     const loaded = await service._loadRuns(workspace);
     expect(loaded.completedArchived.proposalSnapshot).toBeUndefined();
@@ -1583,7 +1582,12 @@ it('projects literatureCoverage, llmSynthesis, and annotationNote onto the durab
   // artifacts from the durable workflow.
   const second = await service.getAnnotationResearchWorkflow({ taskId: 'task-note' });
   expect(second.workflow.literatureCoverage).toEqual(literatureCoverage);
-  expect(second.workflow.annotationNote).toEqual(annotationNote);
+  // The completed, archived run is compacted on load: the proposal snapshot
+  // and annotation note move to the attachment store, the coverage/usage
+  // metadata stays.
+  expect(second.workflow.proposalArchived).toBe(true);
+  expect(second.workflow.annotationNote).toBeUndefined();
+  expect(second.workflow.proposalSnapshot).toBeUndefined();
   expect(second.workflow.llmUsage).toEqual(llmUsage);
   expect(second.workflow.researchTimeMs).toBe(640_200);
 });
