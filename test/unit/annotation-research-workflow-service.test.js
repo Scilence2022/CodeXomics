@@ -1299,6 +1299,109 @@ describe('AnnotationResearchWorkflowService', () => {
   });
 });
 
+describe('research history compaction', () => {
+  it('strips archived completed-run payloads and keeps the coverage ledger intact', async () => {
+    const Service = loadWorkflowService();
+    const service = new Service(
+      { currentChromosome: 'chr1', currentAnnotations: { chr1: [{}] } },
+      { services: {}, mcpServerManager: {} }
+    );
+    const runs = {
+      completedArchived: {
+        taskId: 'completedArchived',
+        status: 'completed',
+        target: { chromosome: 'chr1', featureId: 'cds-1', locusTag: 'b0001' },
+        proposalSnapshot: { claims: [] },
+        annotationNote: { text: 'x' },
+        reportArchivedAt: '2026-08-01T00:00:00.000Z',
+        proposalHash: 'abc',
+      },
+      unarchived: {
+        taskId: 'unarchived',
+        status: 'completed',
+        target: { chromosome: 'chr1', featureId: 'cds-2', locusTag: 'b0002' },
+        proposalSnapshot: { claims: [] },
+      },
+      active: {
+        taskId: 'active',
+        status: 'in_progress',
+        target: { chromosome: 'chr1', featureId: 'cds-3', locusTag: 'b0003' },
+        proposalSnapshot: { claims: [] },
+      },
+    };
+    expect(service._compactRuns(runs)).toBe(true);
+    expect(runs.completedArchived.proposalSnapshot).toBeUndefined();
+    expect(runs.completedArchived.annotationNote).toBeUndefined();
+    expect(runs.completedArchived.proposalArchived).toBe(true);
+    expect(runs.unarchived.proposalSnapshot).toBeDefined();
+    expect(runs.active.proposalSnapshot).toBeDefined();
+  });
+
+  it('compacts and persists the history when it exceeds the serialized ceiling', async () => {
+    const Service = loadWorkflowService();
+    let persisted;
+    const persistedRuns = {
+      completedArchived: {
+        taskId: 'completedArchived',
+        status: 'completed',
+        target: { chromosome: 'chr1', featureId: 'cds-1', locusTag: 'b0001' },
+        proposalSnapshot: { claims: [], pad: 'x'.repeat(2000) },
+        reportArchivedAt: '2026-08-01T00:00:00.000Z',
+        proposalHash: 'abc',
+      },
+    };
+    const service = new Service(
+      {
+        loadedGenomePath: '/tmp/workflow.gbk',
+        currentChromosome: 'chr1',
+        currentAnnotations: { chr1: [{}] },
+        sidecarManager: {
+          get: vi.fn(async () => persistedRuns),
+          setAndForceSave: vi.fn(async (_path, _key, value) => {
+            persisted = value;
+          }),
+        },
+      },
+      { services: {}, mcpServerManager: {} }
+    );
+    service.runLimits = { ...service.runLimits, serializedBytes: 256 };
+    const workspace = service._captureWorkspace();
+    const loaded = await service._loadRuns(workspace);
+    expect(loaded.completedArchived.proposalSnapshot).toBeUndefined();
+    expect(loaded.completedArchived.proposalArchived).toBe(true);
+    expect(persisted.completedArchived.proposalSnapshot).toBeUndefined();
+    expect(persisted.completedArchived.proposalArchived).toBe(true);
+  });
+
+  it('recovers a compacted proposal from the archived DGR attachment', async () => {
+    const proposal = { schema: 'codexomics.annotation-change-set.v2', claims: [], operations: [] };
+    const electronAPI = {
+      readDgrReportAttachment: vi.fn(async (_genomePath, taskId) => ({
+        success: true,
+        taskId,
+        annotationProposal: proposal,
+      })),
+    };
+    const Service = loadWorkflowService(electronAPI);
+    const service = new Service(
+      { currentChromosome: 'chr1', currentAnnotations: { chr1: [{}] } },
+      { services: {}, mcpServerManager: {} }
+    );
+    service.memoryRuns.set('chr1', {
+      task: {
+        taskId: 'task',
+        status: 'completed',
+        target: { chromosome: 'chr1', featureId: 'cds-1', locusTag: 'b0001' },
+        proposalArchived: true,
+      },
+    });
+    const result = await service.getStoredResearchProposal('task');
+    expect(result.exists).toBe(true);
+    expect(result.proposal).toEqual(proposal);
+    expect(electronAPI.readDgrReportAttachment).toHaveBeenCalledWith('', 'task');
+  });
+});
+
 it('forwards literature/full-text budgets to DGR and binds them into the intent hash', async () => {
   const Service = loadWorkflowService();
   const target = {
