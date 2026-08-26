@@ -1415,6 +1415,7 @@ function registerIpcHandlers(deps) {
         sha256: attachment.sha256 || null,
         title: result.title || (result.metadata || {}).title || null,
         reportMarkdown: result.finalReport || null,
+        annotationProposal: result.annotationProposal || null,
         summary: attachment.summary || null,
       };
     } catch (error) {

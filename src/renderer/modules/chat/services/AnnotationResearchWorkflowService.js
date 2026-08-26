@@ -81,6 +81,33 @@ class AnnotationResearchWorkflowService {
     return serialized.length * 2;
   }
 
+  /**
+   * Compact the durable research history in place.
+   *
+   * Completed runs whose full report is already archived carry a full
+   * proposal snapshot and annotation note in the history, which is what makes
+   * the sidecar outgrow the retention ceiling. The proposal is recoverable
+   * from the archived DGR attachment, so those payloads can be dropped while
+   * keeping the coverage ledger intact.
+   *
+   * @returns {boolean} true when at least one run was compacted.
+   */
+  _compactRuns(runs) {
+    let changed = false;
+    for (const workflow of Object.values(runs || {})) {
+      if (!this._isPlainRecord(workflow) || !workflow.proposalSnapshot) continue;
+      const status = String(workflow.status || '').toLowerCase();
+      if (!['completed', 'skipped'].includes(status)) continue;
+      const archived = Boolean(workflow.reportArchivedAt || workflow.reportAttachment);
+      if (!archived) continue;
+      delete workflow.proposalSnapshot;
+      delete workflow.annotationNote;
+      workflow.proposalArchived = true;
+      changed = true;
+    }
+    return changed;
+  }
+
   _validateRunCollection(runs) {
     const entries = Object.entries(runs || {});
     if (entries.length > this.runLimits.total) {
@@ -219,12 +246,22 @@ class AnnotationResearchWorkflowService {
       if (runs === undefined || runs === null) return this._createRunMap();
       if (!this._isPlainRecord(runs)) throw new Error('Annotation research runs must be a JSON object');
       const normalized = this._createRunMap(this._clone(runs));
+      if (this._serializedBytes(normalized) > this.runLimits.serializedBytes) {
+        const changed = this._compactRuns(normalized);
+        if (changed) {
+          this._assertWorkspace(workspace);
+          await this._saveRuns(normalized, workspace);
+        }
+      }
       this._validateRunCollection(normalized);
       return normalized;
     }
     const normalized = this.memoryRuns.has(workspace.key)
       ? this._createRunMap(this._clone(this.memoryRuns.get(workspace.key)))
       : this._createRunMap();
+    if (this._serializedBytes(normalized) > this.runLimits.serializedBytes) {
+      this._compactRuns(normalized);
+    }
     this._validateRunCollection(normalized);
     return normalized;
   }
@@ -249,12 +286,36 @@ class AnnotationResearchWorkflowService {
     const runs = await this._loadRuns(workspace);
     const workflow = this._runMapGet(runs, id);
     if (!workflow) return { exists: false, proposal: null };
-    if (!workflow.proposalSnapshot) return { exists: true, proposal: null };
+    if (!workflow.proposalSnapshot) {
+      if (workflow.proposalArchived) {
+        const recovered = await this._recoverArchivedProposal(id, workflow, workspace);
+        if (recovered) return { exists: true, proposal: recovered };
+      }
+      return { exists: true, proposal: null };
+    }
     const snapshotHash = await this._hash(workflow.proposalSnapshot);
     if (!workflow.proposalHash || snapshotHash !== workflow.proposalHash) {
       throw new Error(`Stored annotation proposal for research task ${id} failed integrity verification`);
     }
     return { exists: true, proposal: this._clone(workflow.proposalSnapshot) };
+  }
+
+  /**
+   * Recover a compacted run's annotation proposal from its archived DGR
+   * report attachment, verifying the recorded proposal hash when present.
+   */
+  async _recoverArchivedProposal(taskId, workflow, workspace) {
+    const reader = typeof window !== 'undefined' ? window.electronAPI?.readDgrReportAttachment : undefined;
+    if (typeof reader !== 'function') return null;
+    const response = await reader(String(workspace.genomePath || ''), taskId);
+    if (!response?.success || !this._isPlainRecord(response.annotationProposal)) return null;
+    if (workflow.proposalHash) {
+      const recoveredHash = await this._hash(response.annotationProposal);
+      if (recoveredHash !== workflow.proposalHash) {
+        throw new Error(`Archived annotation proposal for research task ${taskId} failed integrity verification`);
+      }
+    }
+    return this._clone(response.annotationProposal);
   }
 
   async _saveRuns(runs, workspace) {
