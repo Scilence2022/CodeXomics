@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,16 @@
 <meta property="og:description" content="Talk to your genome — AI agents drive the view and run the analysis.">
 <meta property="og:type" content="website">
 <link rel="icon" href="../assets/logo.png">
+<script>
+  // Apply the stored theme before first paint to avoid a flash.
+  (function () {
+    var stored = null;
+    try { stored = localStorage.getItem('landing-theme'); } catch (e) { /* private mode */ }
+    if (stored === 'light' || stored === 'dark') {
+      document.documentElement.setAttribute('data-theme', stored);
+    }
+  })();
+</script>
 <style>
   :root {
     --bg: #070d14;
@@ -24,11 +34,64 @@
     --radius: 18px;
     --max: 1140px;
   }
+
+  /* ---------- light theme ---------- */
+  [data-theme="light"] {
+    --bg: #f4f7fb;
+    --bg-soft: #ffffff;
+    --bg-card: rgba(255, 255, 255, 0.82);
+    --border: rgba(13, 42, 67, 0.13);
+    --text: #12222f;
+    --text-dim: #546a7e;
+    --teal: #0d9488;
+    --violet: #6d5bd0;
+  }
+  [data-theme="light"] .aurora {
+    background:
+      radial-gradient(900px 600px at 12% -10%, rgba(13, 148, 136, 0.16), transparent 60%),
+      radial-gradient(800px 600px at 90% 10%, rgba(109, 91, 208, 0.12), transparent 60%),
+      radial-gradient(700px 500px at 50% 110%, rgba(255, 122, 69, 0.1), transparent 60%),
+      var(--bg);
+  }
+  [data-theme="light"] .grid-lines {
+    background-image:
+      linear-gradient(rgba(13, 42, 67, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(13, 42, 67, 0.05) 1px, transparent 1px);
+  }
+  [data-theme="light"] nav { background: rgba(244, 247, 251, 0.78); }
+  [data-theme="light"] h1 .grad {
+    background: linear-gradient(92deg, #0d9488 0%, #2563eb 45%, #6d5bd0 100%);
+    -webkit-background-clip: text; background-clip: text;
+  }
+  [data-theme="light"] .stat b {
+    background: linear-gradient(92deg, #0d9488, #155e75);
+    -webkit-background-clip: text; background-clip: text;
+  }
+  [data-theme="light"] .card:hover { background: #ffffff; box-shadow: 0 14px 40px rgba(13, 42, 67, 0.1); }
+  [data-theme="light"] .btn-ghost:hover { border-color: rgba(13, 42, 67, 0.4); }
+  [data-theme="light"] .shot:hover, [data-theme="light"] .agent:hover { box-shadow: 0 14px 40px rgba(13, 42, 67, 0.1); }
+  [data-theme="light"] .demo { box-shadow: 0 30px 80px rgba(13, 42, 67, 0.28); }
+  [data-theme="light"] .term { box-shadow: 0 24px 60px rgba(13, 42, 67, 0.22); }
+  [data-theme="light"] .banner { box-shadow: 0 20px 60px rgba(13, 42, 67, 0.08); }
+
+  /* ---------- theme toggle ---------- */
+  .theme-toggle {
+    width: 38px; height: 38px; border-radius: 50%; padding: 0;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim);
+    cursor: pointer; transition: border-color 0.2s, color 0.2s;
+  }
+  .theme-toggle:hover { border-color: var(--teal); color: var(--teal); }
+  .theme-toggle svg { width: 18px; height: 18px; }
+  [data-theme="dark"] .icon-sun { display: none; }
+  [data-theme="light"] .icon-moon { display: none; }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
     background: var(--bg);
     color: var(--text);
+    transition: background-color 0.35s ease, color 0.35s ease;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     line-height: 1.6;
     overflow-x: hidden;
@@ -129,7 +192,8 @@
   .demo-body { padding: 22px 24px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.9rem; }
   .demo-line { margin-bottom: 14px; }
   .demo-line:last-child { margin-bottom: 0; }
-  .demo-q { color: var(--text); }
+  /* the demo terminal stays dark in both themes */
+  .demo-q { color: #e8f1f8; }
   .demo-q::before { content: "› "; color: var(--orange); font-weight: 700; }
   .demo-a { color: var(--teal); }
   .demo-a::before { content: "✦ "; color: var(--teal); }
@@ -230,7 +294,7 @@
   }
   .term .c { color: #5b6b7c; }
   .term .p { color: var(--orange); }
-  .term .cmd { color: var(--text); }
+  .term .cmd { color: #e8f1f8; }
 
   /* cta banner */
   .banner {
@@ -270,6 +334,18 @@
       <a href="#quickstart">Get Started</a>
       <a href="../">Documentation</a>
     </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark theme" title="Toggle light / dark theme">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <line x1="12" y1="1" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="23"></line>
+        <line x1="4.2" y1="4.2" x2="6.3" y2="6.3"></line><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"></line>
+        <line x1="1" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="23" y2="12"></line>
+        <line x1="4.2" y1="19.8" x2="6.3" y2="17.7"></line><line x1="17.7" y1="6.3" x2="19.8" y2="4.2"></line>
+      </svg>
+    </button>
     <a class="nav-cta" href="https://github.com/Scilence2022/CodeXomics" target="_blank" rel="noopener">★ GitHub</a>
   </div>
 </nav>
@@ -460,6 +536,13 @@
 </footer>
 
 <script>
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const root = document.documentElement;
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('landing-theme', next); } catch (e) { /* private mode */ }
+  });
+
   const observer = new IntersectionObserver((entries) => {
     for (const entry of entries) {
       if (entry.isIntersecting) {
