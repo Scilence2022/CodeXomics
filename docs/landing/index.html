@@ -318,6 +318,41 @@
   /* reveal animation */
   .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s ease, transform 0.7s ease; }
   .reveal.visible { opacity: 1; transform: none; }
+
+  /* ---------- animated helix canvas ---------- */
+  .helix { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  .hero > *:not(.helix) { position: relative; z-index: 1; }
+
+  /* ---------- typing demo ---------- */
+  .demo-line.enter { animation: fadeUp 0.35s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } }
+  .caret {
+    display: inline-block; width: 8px; height: 1em; margin-left: 3px;
+    background: var(--orange); vertical-align: -2px;
+    animation: blink 0.9s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- cursor spotlight ---------- */
+  .agent { position: relative; overflow: hidden; }
+  .card::after, .agent::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(45, 212, 191, 0.13), transparent 65%);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  [data-theme="light"] .card::after, [data-theme="light"] .agent::after {
+    background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(13, 148, 136, 0.1), transparent 65%);
+  }
+  .card:hover::after, .agent:hover::after { opacity: 1; }
+
+  /* ---------- reduced motion ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .demo-line.enter { animation: none; }
+    .caret { animation: none; }
+    .card:hover, .agent:hover, .shot:hover, .btn:hover { transform: none; }
+  }
 </style>
 </head>
 <body>
@@ -351,6 +386,7 @@
 </nav>
 
 <header class="hero wrap" id="top">
+  <canvas class="helix" id="helixCanvas" aria-hidden="true"></canvas>
   <div class="pill"><span class="dot"></span>v0.722 &nbsp;·&nbsp; macOS · Windows · Linux &nbsp;·&nbsp; MIT License</div>
   <h1>The <span class="grad">AI-Native</span> Genome Browser</h1>
   <p class="hero-sub">Talk to your genome — conversational AI agents drive the visualization and run real biological analyses, from BLAST and primer design to AlphaFold structure lookup.</p>
@@ -361,7 +397,7 @@
 
   <div class="demo reveal">
     <div class="demo-bar"><span></span><span></span><span></span><em>CodeXomics ChatBox</em></div>
-    <div class="demo-body">
+    <div class="demo-body" id="demoBody">
       <div class="demo-line demo-q">Find all DNA polymerase genes in this genome.</div>
       <div class="demo-line demo-tool">search_features → navigate_to_position → get_track_data</div>
       <div class="demo-line demo-a">Found 12 DNA polymerase genes — jumped to dnaE at 3,842,101 bp.</div>
@@ -536,6 +572,9 @@
 </footer>
 
 <script>
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- theme toggle ---------- */
   document.getElementById('themeToggle').addEventListener('click', () => {
     const root = document.documentElement;
     const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -543,6 +582,7 @@
     try { localStorage.setItem('landing-theme', next); } catch (e) { /* private mode */ }
   });
 
+  /* ---------- reveal on scroll ---------- */
   const observer = new IntersectionObserver((entries) => {
     for (const entry of entries) {
       if (entry.isIntersecting) {
@@ -552,6 +592,155 @@
     }
   }, { threshold: 0.12 });
   document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+  /* ---------- animated DNA helix ---------- */
+  (function () {
+    const canvas = document.getElementById('helixCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let w = 0, h = 0, t = 0;
+    function resize() {
+      const r = canvas.parentElement.getBoundingClientRect();
+      w = r.width; h = r.height;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function palette() {
+      return document.documentElement.getAttribute('data-theme') === 'light'
+        ? ['rgba(13,148,136,0.32)', 'rgba(109,91,208,0.28)', 'rgba(13,42,67,0.10)']
+        : ['rgba(45,212,191,0.28)', 'rgba(139,124,246,0.24)', 'rgba(147,167,184,0.10)'];
+    }
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      const [c1, c2, rung] = palette();
+      const cy = h * 0.46;
+      const amp = Math.min(h * 0.15, 80);
+      const freq = (Math.PI * 2) / Math.max(w / 2.4, 320);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = rung;
+      for (let x = 8; x <= w - 8; x += 36) {
+        const y1 = cy + amp * Math.sin(freq * x + t);
+        const y2 = cy + amp * Math.sin(freq * x + t + Math.PI);
+        ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2); ctx.stroke();
+      }
+      for (const [phase, color] of [[0, c1], [Math.PI, c2]]) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += 4) {
+          const y = cy + amp * Math.sin(freq * x + t + phase);
+          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.fillStyle = color;
+        for (let x = 8; x <= w - 8; x += 36) {
+          const y = cy + amp * Math.sin(freq * x + t + phase);
+          ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+    function loop() { t += 0.012; draw(); requestAnimationFrame(loop); }
+    resize(); draw();
+    window.addEventListener('resize', () => { resize(); draw(); });
+    document.getElementById('themeToggle').addEventListener('click', draw);
+    if (!reduceMotion) requestAnimationFrame(loop);
+  })();
+
+  /* ---------- typing ChatBox demo ---------- */
+  (function () {
+    const demoBody = document.getElementById('demoBody');
+    if (!demoBody || reduceMotion) return;
+    const conversations = [
+      [
+        { q: 'Find all DNA polymerase genes in this genome.', tool: 'search_features → navigate_to_position → get_track_data', a: 'Found 12 DNA polymerase genes — jumped to dnaE at 3,842,101 bp.' },
+        { q: 'Design primers around lacZ and check them on the sequence track.', tool: 'design_primers → render on sequence view', a: 'Designed 3 primer pairs (Tm 58–62 °C), rendered on the track.' }
+      ],
+      [
+        { q: 'Calculate GC content for the selected region.', tool: 'calculate_gc_content → add_wig_track', a: 'GC content 50.8% over 12,400 bp — added as a new track.' },
+        { q: 'Search AlphaFold for the selected protein.', tool: 'fetch_alphafold_structure → open_protein_viewer', a: 'AlphaFold model loaded — opened the interactive 3D viewer.' }
+      ],
+      [
+        { q: 'Create a local BLAST database from the current genome.', tool: 'create_blast_database → blast_search', a: 'Database built (4.6 Mb, 4,498 sequences) — ready to search.' }
+      ]
+    ];
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    function addLine(cls, text) {
+      const d = document.createElement('div');
+      d.className = 'demo-line ' + cls + ' enter';
+      if (text) d.textContent = text;
+      demoBody.appendChild(d);
+      return d;
+    }
+    async function typeText(el, text) {
+      const caret = document.createElement('span');
+      caret.className = 'caret';
+      el.appendChild(caret);
+      for (const ch of text) {
+        caret.before(document.createTextNode(ch));
+        await sleep(20 + Math.random() * 28);
+      }
+      await sleep(150);
+      caret.remove();
+    }
+    (async function runDemo() {
+      let i = 0;
+      for (;;) {
+        demoBody.innerHTML = '';
+        for (const ex of conversations[i]) {
+          await typeText(addLine('demo-q'), ex.q);
+          await sleep(280);
+          addLine('demo-tool', ex.tool);
+          await sleep(420);
+          addLine('demo-a', ex.a);
+          await sleep(1100);
+        }
+        i = (i + 1) % conversations.length;
+        await sleep(3400);
+      }
+    })();
+  })();
+
+  /* ---------- count-up stats ---------- */
+  (function () {
+    const counters = document.querySelectorAll('.stat b');
+    if (!counters.length) return;
+    const counterObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        counterObserver.unobserve(entry.target);
+        const el = entry.target;
+        const target = parseInt(el.dataset.count, 10);
+        const suffix = el.dataset.suffix || '';
+        if (isNaN(target) || reduceMotion) { el.textContent = (isNaN(target) ? '' : target) + suffix || el.textContent; continue; }
+        const start = performance.now();
+        const dur = 1300;
+        (function tick(now) {
+          const p = Math.min((now - start) / dur, 1);
+          el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+        })(start);
+      }
+    }, { threshold: 0.5 });
+    counters.forEach((el) => {
+      const m = el.textContent.match(/^(\d+)(.*)$/);
+      if (!m) return;
+      el.dataset.count = m[1];
+      el.dataset.suffix = m[2];
+      if (!reduceMotion) el.textContent = '0' + m[2];
+      counterObserver.observe(el);
+    });
+  })();
+
+  /* ---------- cursor spotlight on cards ---------- */
+  document.querySelectorAll('.card, .agent').forEach((el) => {
+    el.addEventListener('mousemove', (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  });
 </script>
 </body>
 </html>
