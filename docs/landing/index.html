@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeXomics — The AI-Native Genome Browser</title>
+<meta name="description" content="CodeXomics is an AI-native genome browser: a cross-platform desktop app where conversational AI agents drive the visualization and run real biological analyses.">
+<meta property="og:title" content="CodeXomics — The AI-Native Genome Browser">
+<meta property="og:description" content="Talk to your genome — AI agents drive the view and run the analysis.">
+<meta property="og:type" content="website">
+<link rel="icon" href="../assets/logo.png">
+<style>
+  :root {
+    --bg: #070d14;
+    --bg-soft: #0c1622;
+    --bg-card: rgba(255, 255, 255, 0.04);
+    --border: rgba(255, 255, 255, 0.09);
+    --text: #e8f1f8;
+    --text-dim: #93a7b8;
+    --teal: #2dd4bf;
+    --teal-deep: #0d9488;
+    --orange: #ff7a45;
+    --violet: #8b7cf6;
+    --radius: 18px;
+    --max: 1140px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- background aurora ---------- */
+  .aurora {
+    position: fixed; inset: 0; z-index: -1; overflow: hidden;
+    background:
+      radial-gradient(900px 600px at 12% -10%, rgba(45, 212, 191, 0.14), transparent 60%),
+      radial-gradient(800px 600px at 90% 10%, rgba(139, 124, 246, 0.12), transparent 60%),
+      radial-gradient(700px 500px at 50% 110%, rgba(255, 122, 69, 0.08), transparent 60%),
+      var(--bg);
+  }
+  .grid-lines {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: rgba(7, 13, 20, 0.65);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: var(--max); margin: 0 auto; padding: 14px 24px;
+    display: flex; align-items: center; gap: 28px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.2px; }
+  .brand img { width: 30px; height: 30px; border-radius: 8px; }
+  .nav-links { display: flex; gap: 24px; margin-left: auto; font-size: 0.92rem; color: var(--text-dim); }
+  .nav-links a:hover { color: var(--teal); }
+  .nav-cta {
+    padding: 8px 18px; border-radius: 999px; font-size: 0.9rem; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg-card); transition: all 0.2s;
+  }
+  .nav-cta:hover { border-color: var(--teal); color: var(--teal); }
+  @media (max-width: 760px) { .nav-links { display: none; } }
+
+  /* ---------- hero ---------- */
+  header.hero { padding: 168px 0 90px; text-align: center; position: relative; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 999px; font-size: 0.82rem;
+    border: 1px solid rgba(45, 212, 191, 0.35); color: var(--teal);
+    background: rgba(45, 212, 191, 0.07); margin-bottom: 28px;
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
+  h1 {
+    font-size: clamp(2.6rem, 6vw, 4.4rem); line-height: 1.08; font-weight: 800;
+    letter-spacing: -1.5px; max-width: 900px; margin: 0 auto 22px;
+  }
+  h1 .grad {
+    background: linear-gradient(92deg, var(--teal) 0%, #67e8f9 45%, var(--violet) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero-sub { color: var(--text-dim); font-size: clamp(1.02rem, 2vw, 1.22rem); max-width: 640px; margin: 0 auto 40px; }
+  .hero-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 14px 30px; border-radius: 999px; font-weight: 700; font-size: 1rem;
+    transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary {
+    background: linear-gradient(92deg, var(--teal-deep), var(--teal));
+    color: #04231f; box-shadow: 0 8px 32px rgba(45, 212, 191, 0.35);
+  }
+  .btn-primary:hover { box-shadow: 0 12px 40px rgba(45, 212, 191, 0.5); }
+  .btn-ghost { border: 1px solid var(--border); background: var(--bg-card); color: var(--text); }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.3); }
+
+  /* chat demo */
+  .demo {
+    max-width: 720px; margin: 72px auto 0; text-align: left;
+    background: rgba(10, 20, 30, 0.85); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  }
+  .demo-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);
+  }
+  .demo-bar span { width: 11px; height: 11px; border-radius: 50%; }
+  .demo-bar span:nth-child(1) { background: #ff5f57; }
+  .demo-bar span:nth-child(2) { background: #febc2e; }
+  .demo-bar span:nth-child(3) { background: #28c840; }
+  .demo-bar em { margin-left: 10px; font-style: normal; font-size: 0.78rem; color: var(--text-dim); }
+  .demo-body { padding: 22px 24px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.9rem; }
+  .demo-line { margin-bottom: 14px; }
+  .demo-line:last-child { margin-bottom: 0; }
+  .demo-q { color: var(--text); }
+  .demo-q::before { content: "› "; color: var(--orange); font-weight: 700; }
+  .demo-a { color: var(--teal); }
+  .demo-a::before { content: "✦ "; color: var(--teal); }
+  .demo-tool { color: var(--text-dim); font-size: 0.82rem; }
+  .demo-tool::before { content: "⚙ "; color: var(--violet); }
+
+  /* ---------- stats ---------- */
+  .stats { padding: 40px 0 20px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 18px; }
+  .stat {
+    text-align: center; padding: 26px 12px;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card);
+  }
+  .stat b {
+    display: block; font-size: 2rem; font-weight: 800;
+    background: linear-gradient(92deg, var(--teal), #67e8f9);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .stat span { color: var(--text-dim); font-size: 0.85rem; }
+
+  /* ---------- sections ---------- */
+  section { padding: 88px 0; }
+  .sec-head { text-align: center; max-width: 640px; margin: 0 auto 56px; }
+  .sec-tag { color: var(--teal); font-size: 0.82rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; }
+  .sec-head h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; letter-spacing: -0.8px; margin: 12px 0 14px; }
+  .sec-head p { color: var(--text-dim); }
+
+  /* features */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .card {
+    padding: 30px 28px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--bg-card);
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--teal), transparent);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(45, 212, 191, 0.35); background: rgba(255,255,255,0.06); }
+  .card:hover::before { opacity: 1; }
+  .card .icon {
+    width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.35rem; margin-bottom: 18px;
+    background: rgba(45, 212, 191, 0.1); border: 1px solid rgba(45, 212, 191, 0.25);
+  }
+  .card h3 { font-size: 1.12rem; margin-bottom: 8px; }
+  .card p { color: var(--text-dim); font-size: 0.93rem; }
+
+  /* agents */
+  .agents-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .agent {
+    padding: 22px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--bg-card);
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .agent:hover { border-color: rgba(139, 124, 246, 0.45); transform: translateY(-3px); }
+  .agent code {
+    display: inline-block; font-size: 0.88rem; font-weight: 700; color: var(--violet);
+    font-family: "SF Mono", Menlo, Consolas, monospace; margin-bottom: 6px;
+  }
+  .agent p { color: var(--text-dim); font-size: 0.86rem; }
+
+  /* screenshots */
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px; }
+  .shot {
+    border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);
+    background: var(--bg-card); transition: transform 0.2s, border-color 0.2s;
+  }
+  .shot:hover { transform: translateY(-4px); border-color: rgba(45, 212, 191, 0.4); }
+  .shot img { width: 100%; display: block; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; }
+  .shot figcaption { padding: 14px 18px; font-size: 0.85rem; color: var(--text-dim); }
+  .shot.wide { grid-column: 1 / -1; }
+  .shot.wide img { aspect-ratio: 21 / 9; }
+
+  /* formats */
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 820px; margin: 0 auto; }
+  .chip {
+    padding: 9px 18px; border-radius: 999px; font-size: 0.88rem;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim);
+    transition: all 0.2s;
+  }
+  .chip:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* quickstart */
+  .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: center; }
+  @media (max-width: 880px) { .quick { grid-template-columns: 1fr; } }
+  .quick ol { padding-left: 22px; color: var(--text-dim); }
+  .quick ol li { margin-bottom: 14px; }
+  .quick ol b { color: var(--text); }
+  .term {
+    background: rgba(10, 20, 30, 0.9); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 26px;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.88rem;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .term .c { color: #5b6b7c; }
+  .term .p { color: var(--orange); }
+  .term .cmd { color: var(--text); }
+
+  /* cta banner */
+  .banner {
+    text-align: center; padding: 72px 40px; border-radius: 28px;
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    background:
+      radial-gradient(600px 300px at 50% -40%, rgba(45, 212, 191, 0.16), transparent 70%),
+      var(--bg-soft);
+  }
+  .banner h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; margin-bottom: 14px; letter-spacing: -0.6px; }
+  .banner p { color: var(--text-dim); max-width: 520px; margin: 0 auto 32px; }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 44px 0 56px; margin-top: 40px;
+    color: var(--text-dim); font-size: 0.88rem;
+  }
+  .foot-inner { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; }
+  .foot-links { display: flex; gap: 22px; flex-wrap: wrap; }
+  .foot-links a:hover { color: var(--teal); }
+
+  /* reveal animation */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div class="aurora"></div>
+<div class="grid-lines"></div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="brand" href="#top"><img src="../assets/logo.png" alt="CodeXomics logo">CodeXomics</a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#agents">Agents</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#quickstart">Get Started</a>
+      <a href="../">Documentation</a>
+    </div>
+    <a class="nav-cta" href="https://github.com/Scilence2022/CodeXomics" target="_blank" rel="noopener">★ GitHub</a>
+  </div>
+</nav>
+
+<header class="hero wrap" id="top">
+  <div class="pill"><span class="dot"></span>v0.722 &nbsp;·&nbsp; macOS · Windows · Linux &nbsp;·&nbsp; MIT License</div>
+  <h1>The <span class="grad">AI-Native</span> Genome Browser</h1>
+  <p class="hero-sub">Talk to your genome — conversational AI agents drive the visualization and run real biological analyses, from BLAST and primer design to AlphaFold structure lookup.</p>
+  <div class="hero-btns">
+    <a class="btn btn-primary" href="https://github.com/Scilence2022/CodeXomics/releases" target="_blank" rel="noopener">↓ Download Release</a>
+    <a class="btn btn-ghost" href="../">Read the Docs →</a>
+  </div>
+
+  <div class="demo reveal">
+    <div class="demo-bar"><span></span><span></span><span></span><em>CodeXomics ChatBox</em></div>
+    <div class="demo-body">
+      <div class="demo-line demo-q">Find all DNA polymerase genes in this genome.</div>
+      <div class="demo-line demo-tool">search_features → navigate_to_position → get_track_data</div>
+      <div class="demo-line demo-a">Found 12 DNA polymerase genes — jumped to dnaE at 3,842,101 bp.</div>
+      <div class="demo-line demo-q">Design primers around lacZ and check them on the sequence track.</div>
+      <div class="demo-line demo-tool">design_primers → render on sequence view</div>
+      <div class="demo-line demo-a">Designed 3 primer pairs (Tm 58–62 °C), rendered on the track.</div>
+    </div>
+  </div>
+</header>
+
+<div class="stats wrap">
+  <div class="stats-grid">
+    <div class="stat reveal"><b>216</b><span>YAML tool schemas</span></div>
+    <div class="stat reveal"><b>178</b><span>built-in ChatBox tools</span></div>
+    <div class="stat reveal"><b>7</b><span>specialized AI agents</span></div>
+    <div class="stat reveal"><b>96</b><span>MCP tools exposed</span></div>
+    <div class="stat reveal"><b>9+</b><span>genomics file formats</span></div>
+  </div>
+</div>
+
+<section id="features" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-tag">Capabilities</div>
+    <h2>A full genomics workbench,<br>driven by conversation</h2>
+    <p>One desktop workspace combining a genome browser, a multi-agent AI assistant, a dynamic tool registry, and a plugin marketplace.</p>
+  </div>
+  <div class="cards">
+    <div class="card reveal">
+      <div class="icon">🧬</div>
+      <h3>Interactive Genome Visualization</h3>
+      <p>High-performance SVG and Canvas rendering of genes, sequences, reads, variants, GC tracks, and custom annotations — zoom from chromosome to base pair.</p>
+    </div>
+    <div class="card reveal">
+      <div class="icon">💬</div>
+      <h3>AI ChatBox</h3>
+      <p>Multi-provider LLM configuration with dynamic tool injection. The assistant doesn't just answer — it executes tools against your live genome session.</p>
+    </div>
+    <div class="card reveal">
+      <div class="icon">🤖</div>
+      <h3>Multi-Agent Runtime</h3>
+      <p>Seven specialized agents coordinate analysis, data, navigation, external APIs, plugins, and deep research — routed automatically per task.</p>
+    </div>
+    <div class="card reveal">
+      <div class="icon">🧰</div>
+      <h3>Dynamic Tool Registry</h3>
+      <p>A YAML registry of 216 tool schemas across 18 categories retrieves only the relevant tools per query, keeping prompts lean and accurate.</p>
+    </div>
+    <div class="card reveal">
+      <div class="icon">🔌</div>
+      <h3>MCP Server</h3>
+      <p>Model Context Protocol server with tools mode and agent mode over HTTP/SSE (port 3002) and WebSocket (port 3003) — drive CodeXomics from any MCP client.</p>
+    </div>
+    <div class="card reveal">
+      <div class="icon">🧩</div>
+      <h3>Plugin Marketplace</h3>
+      <p>VS Code-inspired extension architecture with activation events, contribution and command registries, marketplace support, and security validation.</p>
+    </div>
+  </div>
+</section>
+
+<section id="agents" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-tag">Architecture</div>
+    <h2>Seven agents, one coordinator</h2>
+    <p>Each request is routed to the agent built for it — from quick navigation to autonomous deep research.</p>
+  </div>
+  <div class="agents-grid">
+    <div class="agent reveal"><code>CoordinatorAgent</code><p>Orchestrates multi-step workflows and routes tasks to the right specialist.</p></div>
+    <div class="agent reveal"><code>AnalysisAgent</code><p>Sequence analysis, BLAST, primer design, GC content, and statistics.</p></div>
+    <div class="agent reveal"><code>DataAgent</code><p>File loading, track management, and data transformation.</p></div>
+    <div class="agent reveal"><code>NavigationAgent</code><p>Genome navigation, zoom, search, and view state control.</p></div>
+    <div class="agent reveal"><code>ExternalAgent</code><p>PubMed, preprints, AlphaFold, and external database lookups.</p></div>
+    <div class="agent reveal"><code>PluginAgent</code><p>Plugin discovery, installation, and marketplace operations.</p></div>
+    <div class="agent reveal"><code>DeepResearchAgent</code><p>Citation-verified deep gene research with archived, auditable proposals.</p></div>
+  </div>
+</section>
+
+<section id="screenshots" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-tag">In Action</div>
+    <h2>See it working</h2>
+    <p>Real views from the app — every one of them reachable by asking the assistant.</p>
+  </div>
+  <div class="shots">
+    <figure class="shot wide reveal">
+      <img src="../figures/genome-browser-overview.png" alt="Genome browser overview" loading="lazy">
+      <figcaption>Genome browser: feature track, GC content and skew, multi-track WIG data, gene details sidebar, and the protein/sequence view.</figcaption>
+    </figure>
+    <figure class="shot reveal">
+      <img src="../figures/reads-and-references.png" alt="Aligned reads and references" loading="lazy">
+      <figcaption>Base-resolution and coverage read alignment tracks alongside gene references.</figcaption>
+    </figure>
+    <figure class="shot reveal">
+      <img src="../figures/protein-structure-alphafold.png" alt="AlphaFold protein structure viewer" loading="lazy">
+      <figcaption>AlphaFold lookup and interactive 3D protein viewer, driven from the ChatBox.</figcaption>
+    </figure>
+    <figure class="shot reveal">
+      <img src="../figures/read-alignment-pileup.png" alt="Read alignment pileup" loading="lazy">
+      <figcaption>Base-level sequencing-read pileup over a selected gene.</figcaption>
+    </figure>
+    <figure class="shot reveal">
+      <img src="../figures/primer-design.png" alt="Primer design on the sequence track" loading="lazy">
+      <figcaption>Designed primers rendered directly on the sequence view.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="formats" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-tag">Compatibility</div>
+    <h2>Speaks your file formats</h2>
+  </div>
+  <div class="chips reveal">
+    <span class="chip">FASTA</span>
+    <span class="chip">GenBank</span>
+    <span class="chip">GFF / GTF</span>
+    <span class="chip">BED</span>
+    <span class="chip">VCF</span>
+    <span class="chip">SAM / BAM</span>
+    <span class="chip">WIG</span>
+    <span class="chip">KGML</span>
+    <span class="chip">.prj.GAI projects</span>
+  </div>
+</section>
+
+<section id="quickstart" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-tag">Get Started</div>
+    <h2>Up and running in minutes</h2>
+  </div>
+  <div class="quick">
+    <ol class="reveal">
+      <li><b>Download</b> the latest build from GitHub Releases, or build from source with Node.js 20/22.</li>
+      <li><b>Configure an AI provider</b> in <code>Options → Configure LLMs</code> — OpenAI, Anthropic, Google, or a local model.</li>
+      <li><b>Load a genome</b> via <code>File → Load File</code> or open a <code>.prj.GAI</code> project.</li>
+      <li><b>Ask the assistant</b> to navigate, visualize, and analyze — it executes real tools against your session.</li>
+      <li><b>Extend it</b> with plugins from the marketplace, or drive it from any MCP client.</li>
+    </ol>
+    <div class="term reveal">
+      <div><span class="c"># build from source</span></div>
+      <div><span class="p">$</span> <span class="cmd">git clone https://github.com/Scilence2022/CodeXomics.git</span></div>
+      <div><span class="p">$</span> <span class="cmd">cd CodeXomics && npm install</span></div>
+      <div><span class="p">$</span> <span class="cmd">npm start</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c"># standalone MCP server</span></div>
+      <div><span class="p">$</span> <span class="cmd">npm run mcp-server</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="banner reveal">
+    <h2>Talk to your genome</h2>
+    <p>Open source, cross-platform, and built for the way genomics work actually happens — interactively.</p>
+    <div class="hero-btns">
+      <a class="btn btn-primary" href="https://github.com/Scilence2022/CodeXomics" target="_blank" rel="noopener">Star on GitHub</a>
+      <a class="btn btn-ghost" href="../user-guides/GETTING_STARTED/">Getting Started Guide →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div class="brand"><img src="../assets/logo.png" alt="" style="width:24px;height:24px;border-radius:6px;"> CodeXomics · MIT License</div>
+    <div class="foot-links">
+      <a href="../">Documentation</a>
+      <a href="https://github.com/Scilence2022/CodeXomics" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/Scilence2022/CodeXomics/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="../release-notes/RELEASE_NOTES_v0.722/">What's New</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    }
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+</script>
+</body>
+</html>
