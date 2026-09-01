@@ -1,0 +1,24 @@
+Category,Test #,Test ID,Test Name,Instruction
+analysis,8,anal_manual_01,lacZ Codon Usage Analysis,Analyze codon usage patterns for the lacZ gene
+annotation,10,annot_manual_01,Create Gene Annotation,"Create a gene annotation named ""my_custom_gene"" of type ""gene"" at position 600000 to 602000 on the current chromosome."
+annotation,11,annot_manual_02,Search Annotations by Type,"Search for all annotations of type ""CDS"" in the current genome."
+annotation,12,annot_manual_03,Merge Deep Gene Research Report,"Merge a Deep Gene Research annotation proposal for the lacZ gene with conservative product, note, GO, EC, KO, and source evidence updates."
+annotation,13,annot_manual_04,Reject Unauthorized Structural Annotation Edit,"Attempt to use edit_annotation on the deliberately nonexistent annotation ID ""benchmark_structural_edit_target"" with start 1, end 9, and strand -1. The standard manual benchmark has no annotation:structural credential, so the tool must reject the call without changing any annotation."
+annotation,14,annot_manual_05,Reject Unauthorized Structural Batch Creation,"Attempt to use batch_create_annotations to add one misc_feature from 1 to 9 on the isolated chromosome name ""__benchmark_disposable__"" with locus_tag ""benchmark_structural_batch_1"". The standard manual benchmark has no annotation:structural credential, so the tool must reject the call without creating the chromosome or annotation."
+blast,21,blast_manual_01,BLAST Search with Parameters,Perform a BLAST search online with the sequence ATGAAAGCGCTGAAAGCGCTG using blastn program against the nr database with e-value threshold 0.001.
+data_loading,1,load_manual_01,Load Genome File Dialog,Load a genome file using the file selection dialog.
+data_loading,2,load_manual_02,Load Annotation Data,Load annotation data for the current genome.
+data_loading,3,load_manual_03,Load Aligned Reads,Load aligned reads data for genome visualization.
+data_loading,4,load_manual_04,Load WIG Track Data,Load WIG track data for quantitative visualization.
+database,22,db_manual_01,Analyze InterPro Domains for lacZ,Analyze InterPro protein domains for the lacZ gene from Escherichia coli.
+gene_analysis,17,gene_manual_01,Get Gene Details for lacZ,"Get detailed information about the lacZ gene including its product, function, and genomic context."
+gene_analysis,18,gene_manual_02,Find Intergenic Regions,Find intergenic regions in the current genomic view.
+navigation,5,nav_manual_01,Jump to lacZ Gene,Jump to the lacZ gene location.
+navigation,6,nav_manual_02,Open New Browser Tab,Open a new tab.
+navigation,7,nav_manual_03,Switch to First Tab,Switch to the first tab (tab index 0).
+navigation,23,navi_manual_01,Open tabs and navigate to different positions,"Open three new tabs and navigate to different positions: 1) Open a new tab then navigate to position 1000000, 2) Open a new tab then jump to lacZ gene, 3) Open a new tab then navigate to position 2500000."
+primer_design,19,primer_manual_01,Design Primers for lacZ,Design PCR primers for the lacZ gene with melting temperature around 60°C.
+protein_structure,16,protein_manual_01,Open AlphaFold Viewer,Open the AlphaFold 3D structure viewer for gene lacZ.
+restriction,20,restrict_manual_01,Find Restriction Sites,Find restriction enzyme recognition sites in the region around the lacZ gene.
+search,9,search_manual_01,Search b1210 Locus Tags,Search for genes with locus tags starting with 'b1210'.
+track_control,15,track_manual_01,Toggle GC Track,Toggle the GC content track visibility.
