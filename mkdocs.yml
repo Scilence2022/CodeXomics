@@ -91,6 +91,7 @@ copyright: Copyright &copy; 2024-2026 CodeXomics Team
 
 nav:
   - Home: index.md
+  - 中文 / Chinese: zh/index.md
   - Getting Started:
       - Quick Start: user-guides/GETTING_STARTED.md
       - User Guide: user-guides/USER_GUIDE.md

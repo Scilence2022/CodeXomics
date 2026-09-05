@@ -16,6 +16,8 @@ CodeXomics is an AI-native genome browser — a cross-platform Electron desktop 
 Current source release: `0.722.0` (shown as `v0.722` in the app). Build from source to get changes not yet in the published installers.
 
 [Website](https://scilence2022.github.io/CodeXomics/landing/) •
+[中文 Landing Page](https://scilence2022.github.io/CodeXomics/landing/index-zh.html) •
+[中文文档](https://scilence2022.github.io/CodeXomics/zh/) •
 [Documentation](https://scilence2022.github.io/CodeXomics/) •
 [Getting Started](docs/user-guides/GETTING_STARTED.md) •
 [Developer Guide](docs/developer-guides/DEVELOPER_GUIDE.md) •
