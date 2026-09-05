@@ -28,20 +28,17 @@ Current source release: `0.722.0` (shown as `v0.722` in the app). Build from sou
 
 ## What CodeXomics Provides
 
-CodeXomics combines a genome browser, a multi-agent AI assistant, a dynamic tool registry, a plugin marketplace, and standalone bioinformatics utilities in one desktop workspace.
+CodeXomics combines an interactive genome browser with executable AI analysis. Load a genome, ask a question in the ChatBox, and let the app navigate the view, call bioinformatics tools, and return results in the same workspace.
 
 Core capabilities:
 
-- Interactive genome visualization for FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and `.prj.GAI` project files.
-- AI ChatBox with multi-provider LLM configuration and dynamic tool injection.
-- Seven specialized runtime agents: `CoordinatorAgent`, `AnalysisAgent`, `DataAgent`, `NavigationAgent`, `ExternalAgent`, `PluginAgent`, and `DeepResearchAgent`.
-- Dynamic YAML tool registry under `tools_registry/` with 179 current tool schemas across 18 active categories.
-- 143 mapped built-in ChatBox tools and 96 MCP tools in tools mode.
-- MCP server with tools mode and agent mode, HTTP/SSE transport on port `3002`, and WebSocket transport on port `3003`.
-- VS Code-inspired plugin and extension architecture with activation events, contribution registry, command registry, marketplace support, and security validation.
-- High-performance SVG and Canvas genome rendering for genes, sequences, reads, variants, GC tracks, and custom annotation tracks.
-- Local BLAST integration, primer design, protein structure lookup/viewing, pathway tools, benchmark suites, and PubMed/preprint literature lookup.
-- Runtime UI style presets backed by vanilla CSS: default, professional, minimal, pastel, amy, red, elegant, and midnight.
+- Browse FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and `.prj.GAI` project files.
+- Run BLAST, GC-content analysis, primer design, protein structure lookup, pathway workflows, and literature research.
+- Compare genes, sequences, reads, variants, custom annotations, and quantitative tracks with SVG and Canvas rendering.
+- Configure cloud or local LLM-compatible providers and use multi-agent routing for multi-step work.
+- Extend the app with plugins or connect external clients through the MCP server.
+
+The tool registry and agent runtime are implementation details that evolve with the release; see the [architecture guide](docs/architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) for current internals.
 
 ## Screenshots
 
@@ -110,10 +107,10 @@ npm run build:all
 
 ## Quick Start
 
-1. Configure an AI provider in `Options -> Configure LLMs`.
-2. Load a genome or project through `File -> Load File` or `File -> Open Project`.
-3. Add optional annotation, variant, reads, WIG, or operon files.
-4. Use the genome browser, side panels, and ChatBox together.
+1. Launch CodeXomics after [downloading a release](https://github.com/Scilence2022/CodeXomics/releases) or starting the source build.
+2. Configure an AI provider in `Options -> Configure LLMs`. OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, and local endpoints are supported.
+3. Load a genome or project through `File -> Load File` or `File -> Open Project`.
+4. Add optional annotation, variant, reads, WIG, or operon files.
 5. Ask the assistant to run concrete analyses, for example:
 
 ```text

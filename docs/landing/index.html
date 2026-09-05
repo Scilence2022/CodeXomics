@@ -140,6 +140,12 @@
   .nav-cta:hover { border-color: var(--teal); color: var(--teal); }
   @media (max-width: 760px) { .nav-links { display: none; } }
 
+  main { display: block; }
+  .workflow { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .workflow-step { padding: 22px; border-left: 2px solid var(--teal); background: var(--bg-card); border-radius: 0 var(--radius) var(--radius) 0; }
+  .workflow-step b { display: block; margin-bottom: 6px; color: var(--text); }
+  .workflow-step span { color: var(--text-dim); font-size: 0.9rem; }
+
   /* ---------- hero ---------- */
   header.hero { padding: 168px 0 90px; text-align: center; position: relative; }
   .pill {
@@ -364,12 +370,12 @@
     <a class="brand" href="#top"><img src="../assets/logo.png" alt="CodeXomics logo">CodeXomics</a>
     <div class="nav-links">
       <a href="#features">Features</a>
-      <a href="#agents">Agents</a>
+      <a href="#workflows">Use cases</a>
       <a href="#screenshots">Screenshots</a>
       <a href="#quickstart">Get Started</a>
       <a href="../">Documentation</a>
     </div>
-    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark theme" title="Toggle light / dark theme">
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark theme" aria-pressed="false" title="Toggle light / dark theme">
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
       </svg>
@@ -385,14 +391,16 @@
   </div>
 </nav>
 
+<main>
 <header class="hero wrap" id="top">
   <canvas class="helix" id="helixCanvas" aria-hidden="true"></canvas>
   <div class="pill"><span class="dot"></span>v0.722 &nbsp;·&nbsp; macOS · Windows · Linux &nbsp;·&nbsp; MIT License</div>
-  <h1>The <span class="grad">AI-Native</span> Genome Browser</h1>
-  <p class="hero-sub">Talk to your genome — conversational AI agents drive the visualization and run real biological analyses, from BLAST and primer design to AlphaFold structure lookup.</p>
-  <div class="hero-btns">
-    <a class="btn btn-primary" href="https://github.com/Scilence2022/CodeXomics/releases" target="_blank" rel="noopener">↓ Download Release</a>
+  <h1>A genome browser with <span class="grad">executable AI analysis</span></h1>
+  <p class="hero-sub">CodeXomics combines interactive genome visualization with conversational agents that execute real tools against your loaded data, from BLAST and primer design to protein structure lookup.</p>
+  <div class="hero-btns" aria-label="Primary links">
+    <a class="btn btn-primary" href="https://github.com/Scilence2022/CodeXomics/releases" target="_blank" rel="noopener">↓ Download</a>
     <a class="btn btn-ghost" href="../">Read the Docs →</a>
+    <a class="btn btn-ghost" href="https://github.com/Scilence2022/CodeXomics" target="_blank" rel="noopener">View Source</a>
   </div>
 
   <div class="demo reveal">
@@ -408,13 +416,13 @@
   </div>
 </header>
 
-<div class="stats wrap">
+<div class="stats wrap" aria-label="Product highlights">
   <div class="stats-grid">
-    <div class="stat reveal"><b>216</b><span>YAML tool schemas</span></div>
-    <div class="stat reveal"><b>178</b><span>built-in ChatBox tools</span></div>
-    <div class="stat reveal"><b>7</b><span>specialized AI agents</span></div>
-    <div class="stat reveal"><b>96</b><span>MCP tools exposed</span></div>
-    <div class="stat reveal"><b>9+</b><span>genomics file formats</span></div>
+    <div class="stat reveal"><b>1</b><span>desktop workspace</span></div>
+    <div class="stat reveal"><b>AI</b><span>that executes tools</span></div>
+    <div class="stat reveal"><b>3</b><span>platforms supported</span></div>
+    <div class="stat reveal"><b>MCP</b><span>client integration</span></div>
+    <div class="stat reveal"><b>MIT</b><span>open-source license</span></div>
   </div>
 </div>
 
@@ -443,7 +451,7 @@
     <div class="card reveal">
       <div class="icon">🧰</div>
       <h3>Dynamic Tool Registry</h3>
-      <p>A YAML registry of 216 tool schemas across 18 categories retrieves only the relevant tools per query, keeping prompts lean and accurate.</p>
+      <p>A structured registry retrieves relevant tools for each query, keeping prompts focused while the assistant works against the active genome session.</p>
     </div>
     <div class="card reveal">
       <div class="icon">🔌</div>
@@ -455,6 +463,20 @@
       <h3>Plugin Marketplace</h3>
       <p>VS Code-inspired extension architecture with activation events, contribution and command registries, marketplace support, and security validation.</p>
     </div>
+  </div>
+</section>
+
+<section id="workflows" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-tag">Use Cases</div>
+    <h2>From file to finding</h2>
+    <p>Start with the question you have. CodeXomics keeps the data, view, and analysis connected as you work.</p>
+  </div>
+  <div class="workflow">
+    <div class="workflow-step reveal"><b>Explore a genome</b><span>Load FASTA or GenBank, search features, and move from chromosome scale to base resolution.</span></div>
+    <div class="workflow-step reveal"><b>Inspect evidence</b><span>Add reads, variants, WIG tracks, or annotations and compare them in one synchronized view.</span></div>
+    <div class="workflow-step reveal"><b>Run an analysis</b><span>Ask for BLAST, GC content, primer design, protein structures, or literature-backed research.</span></div>
+    <div class="workflow-step reveal"><b>Review and share</b><span>Save a project, export results, extend with plugins, or connect an MCP client.</span></div>
   </div>
 </section>
 
@@ -579,6 +601,7 @@
     const root = document.documentElement;
     const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
+    document.getElementById('themeToggle').setAttribute('aria-pressed', String(next === 'light'));
     try { localStorage.setItem('landing-theme', next); } catch (e) { /* private mode */ }
   });
 

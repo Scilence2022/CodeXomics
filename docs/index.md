@@ -48,24 +48,26 @@ The current release is `v0.722`. Download installers from [GitHub Releases](http
 
 </div>
 
-## Current System Snapshot
+## Install And Start
 
-| Area                   | Current state                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------ |
-| Application version    | `0.722.0` (`v0.722` display)                                                                     |
-| Runtime baseline       | Node.js 20/22 for source builds; Electron `41.7.1`                                               |
-| Tool registry          | 179 YAML schemas across 18 active categories                                                     |
-| Built-in ChatBox tools | 143 mapped local tools                                                                           |
-| MCP tools mode         | 96 tools exposed                                                                                 |
-| MCP agent mode         | `codexomics_chat`, `list_genome_windows`, `switch_active_window`                                 |
-| Runtime agents         | Coordinator, Analysis, Data, Navigation, External, Plugin, DeepResearch                          |
-| UI styling             | Vanilla CSS with default, professional, minimal, pastel, amy, red, elegant, and midnight presets |
+For the fastest start, [download the latest release](https://github.com/Scilence2022/CodeXomics/releases). For a source checkout, use Node.js 20 or 22 and npm 10+:
 
-## Core Capabilities
+```bash
+git clone https://github.com/Scilence2022/CodeXomics.git
+cd CodeXomics
+npm install
+npm start
+```
 
-!!! info "Production-readiness release"
+Then open `Options -> Configure LLMs`, add an API key or local endpoint, load a genome with `File -> Load File`, and ask the ChatBox to navigate or analyze it. The [Getting Started guide](user-guides/GETTING_STARTED.md) covers the first session in detail.
 
-    Version `0.722.0` adds secure credential storage, hardened renderer boundaries, structured logging and crash capture, auto-update support, stronger CI gates, and an Electron smoke-test harness. See the [v0.722.0 release notes](release-notes/RELEASE_NOTES_v0.722.md).
+## What You Can Do
+
+- Browse FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and `.prj.GAI` project files.
+- Ask the ChatBox to search features, inspect tracks, calculate GC content, design primers, run BLAST, look up protein structures, or research a gene.
+- Connect external clients through the [MCP Server](user-guides/MCP_SERVER_GUIDE.md), or extend the app with plugins.
+
+The current release is `0.722.0` (`v0.722` display). See the [release notes](release-notes/RELEASE_NOTES_v0.722.md) for version-specific changes.
 
 ### Genome Visualization
 
