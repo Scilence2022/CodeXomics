@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -24,6 +24,15 @@
         --accent: #38d6bc;
         --warm: #ff9b62;
         --max: 1120px;
+      }
+      [data-theme='light'] {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --line: #d6e1e8;
+        --text: #12222f;
+        --muted: #546a7e;
+        --accent: #0d9488;
+        --warm: #d95f2b;
       }
       * {
         box-sizing: border-box;
@@ -54,7 +63,7 @@
         position: sticky;
         top: 0;
         z-index: 2;
-        background: rgba(7, 19, 26, 0.94);
+        background: color-mix(in srgb, var(--bg) 94%, transparent);
         border-bottom: 1px solid var(--line);
       }
       .nav {
@@ -251,8 +260,9 @@
         <a class="brand" href="#top"><img src="../assets/logo.png" alt="CodeXomics 标志" />CodeXomics</a>
         <div class="links">
           <a href="#features">核心能力</a><a href="#scenarios">使用场景</a><a href="#screenshots">截图</a
-          ><a href="#start">快速开始</a><a href="../zh/">中文文档</a><a href="../">English</a>
+          ><a href="#start">快速开始</a><a href="../zh/">中文文档</a><a href="index.html">English website</a>
         </div>
+        <button class="button theme-toggle" id="themeToggle" type="button" aria-label="切换深色模式" aria-pressed="false">深色模式</button>
         <a class="button" href="https://github.com/Scilence2022/CodeXomics" target="_blank" rel="noopener">GitHub</a>
       </div>
     </nav>
@@ -270,7 +280,7 @@
             target="_blank"
             rel="noopener"
             >下载应用</a
-          ><a class="button" href="../zh/">中文文档</a><a class="button" href="../">英文文档</a
+          ><a class="button" href="../zh/">中文文档</a><a class="button" href="index.html">英文版</a
           ><a class="button" href="https://github.com/Scilence2022/CodeXomics" target="_blank" rel="noopener"
             >查看源码</a
           >
@@ -383,7 +393,7 @@ npm run mcp-server -- --mode=agent</code></pre>
       <div class="wrap foot">
         <span>CodeXomics · MIT License · v0.722.0</span
         ><span
-          ><a href="../zh/">中文文档</a>　<a href="../">English docs</a>　<a
+          ><a href="../zh/">中文文档</a>　<a href="index.html">English website</a>　<a
             href="https://github.com/Scilence2022/CodeXomics"
             target="_blank"
             rel="noopener"
@@ -392,5 +402,15 @@ npm run mcp-server -- --mode=agent</code></pre>
         >
       </div>
     </footer>
+    <script>
+      const themeToggle = document.getElementById('themeToggle');
+      themeToggle.addEventListener('click', () => {
+        const root = document.documentElement;
+        const dark = root.getAttribute('data-theme') === 'dark';
+        root.setAttribute('data-theme', dark ? 'light' : 'dark');
+        themeToggle.textContent = dark ? '深色模式' : '浅色模式';
+        themeToggle.setAttribute('aria-pressed', String(!dark));
+      });
+    </script>
   </body>
 </html>
