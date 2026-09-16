@@ -135,6 +135,13 @@ class ToolExecutionService {
         }
       }
 
+      // Evo 2 jobs bypass agent routing and share the GUI's main-process service.
+      if (['evo2_generate', 'evo2_get_result', 'evo2_cancel'].includes(toolName)) {
+        const service = this.chatManager.services?.evo2;
+        if (!service) throw new Error('Evo 2 service is unavailable.');
+        return service[this._toCamelCase(toolName)](parameters);
+      }
+
       // --- PRIORITY 2: NEW EXTRACTED SERVICES ---
       // 1. File Operation Services
       const fileService =

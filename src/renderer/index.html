@@ -57,6 +57,7 @@
     <!-- Loaded first, before every other script, so that verbose console output
          from module construction onward is gated. See DebugLogger.js. -->
     <script src="modules/DebugLogger.js"></script>
+    <link rel="stylesheet" href="css/evo2.css">
 </head>
 
 <body class="no-genome-loaded">
@@ -383,6 +384,10 @@
                         <button class="dropdown-item" id="configureLLMBtn">
                             <i class="fas fa-robot"></i>
                             Configure LLM Providers
+                        </button>
+                        <button class="dropdown-item" id="evo2Btn">
+                            <i class="fas fa-dna"></i>
+                            Evo 2 DNA Generation
                         </button>
                         <button class="dropdown-item" id="multiAgentSettingsBtn">
                             <i class="fas fa-users-cog"></i>
@@ -5452,6 +5457,8 @@ Supported formats:
     <script src="modules/chat/services/AnnotationChangeSetService.js"></script>
     <script src="modules/chat/services/AnnotationService.js"></script>
     <script src="modules/chat/services/AnnotationResearchWorkflowService.js"></script>
+    <script src="modules/chat/services/Evo2Service.js"></script>
+    <script src="modules/Evo2UI.js"></script>
     <script src="modules/chat/services/BlastService.js"></script>
     <script src="modules/chat/services/FileOperationService.js"></script>
     <script src="modules/chat/services/GenomeAnalysisService.js"></script>

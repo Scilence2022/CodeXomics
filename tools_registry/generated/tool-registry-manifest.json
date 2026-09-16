@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-08-19T09:46:30.800Z",
-  "registryHash": "35a3cb5670200680b1f37fd158cc94426a9ddf983fb4ce67a3a10f4eea7cd2a4",
+  "generatedAt": "2026-09-16T02:39:33.219Z",
+  "registryHash": "7b40cf7eeb658c71af3a9ab10c654f857d51f4b98c2785233584009e0899a132",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 216,
-    "appTools": 216,
+    "tools": 219,
+    "appTools": 219,
     "userTools": 0,
-    "uniqueTools": 210,
+    "uniqueTools": 213,
     "categories": 18,
-    "builtInTools": 178,
+    "builtInTools": 181,
     "diagnostics": 12
   },
   "categories": {
@@ -178,8 +178,8 @@
         "icon": "🌐",
         "priority": 2,
         "color": "#8BC34A",
-        "subcategories": ["blast_apis", "uniprot_apis", "alphafold_apis"],
-        "tools_count": 14
+        "subcategories": ["blast_apis", "uniprot_apis", "alphafold_apis", "evo2_generation"],
+        "tools_count": 17
       },
       "utility": {
         "name": "Utility Tools",
@@ -8322,6 +8322,226 @@
       "builtin": {
         "name": "blast_sequence_from_region",
         "method": "blastSequenceFromRegion",
+        "category": "external_apis",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "evo2_cancel",
+      "version": "1.0.0",
+      "description": "Stop waiting for an Evo 2 job in this window. NVIDIA may continue processing a submitted request. Repeated cancellation is safe.",
+      "category": "external_apis",
+      "keywords": ["evo2", "evo 2", "nvidia", "dna", "generation", "evo2_cancel"],
+      "priority": 1,
+      "is_builtin": true,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "description": "Job ID returned by evo2_generate."
+          }
+        },
+        "required": ["job_id"]
+      },
+      "returns": {
+        "success": "boolean",
+        "job_id": "string",
+        "status": "running | completed | failed | cancelled",
+        "result": "Generated sequence and optional probability/timing reports when completed.",
+        "error": "Failure or cancellation explanation."
+      },
+      "source": "app_registry",
+      "sourceFile": "external_apis/evo2_cancel.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "evo2Cancel"
+      },
+      "sample_usages": [],
+      "builtin": {
+        "name": "evo2_cancel",
+        "method": "evo2Cancel",
+        "category": "external_apis",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "evo2_generate",
+      "version": "1.0.0",
+      "description": "Start DNA generation with NVIDIA arc/evo2-40b. Sends the supplied DNA to NVIDIA and returns a job_id immediately. Poll evo2_get_result until completed. Configure the API key in Options → Evo 2 DNA Generation; never put credentials in tool arguments. Does not edit the genome.",
+      "category": "external_apis",
+      "keywords": ["evo2", "evo 2", "nvidia", "dna", "generation", "evo2_generate"],
+      "priority": 1,
+      "is_builtin": true,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 0,
+        "requires_auth": true,
+        "requires_data": false,
+        "requires_network": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "string",
+            "description": "DNA containing A/C/G/T/N or one FASTA record; up to 100,000 bases (CodeXomics limit). Obtain a region with get_sequence first if needed."
+          },
+          "taxonomy": {
+            "type": "string",
+            "description": "Optional taxonomy prefix in NVIDIA format |k__kingdom;p__phylum;c__class;o__organism;g__genus;s__species|."
+          },
+          "num_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1200,
+            "default": 100,
+            "description": "Number of new tokens; CodeXomics limit is 1,200."
+          },
+          "temperature": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1.3,
+            "default": 0.7,
+            "description": "Sampling temperature; must be greater than zero."
+          },
+          "top_k": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6,
+            "default": 3,
+            "description": "Top K; 0 considers all tokens, 1 uses the highest probability token."
+          },
+          "top_p": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 1,
+            "description": "Nucleus sampling threshold; 0 disables top-p sampling."
+          },
+          "random_seed": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Optional deterministic seed for development."
+          },
+          "enable_logits": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return logits; use include_logits in evo2_get_result to retrieve the large matrix."
+          },
+          "enable_sampled_probs": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return generated token probabilities."
+          },
+          "enable_elapsed_ms_per_token": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return per-token generation timing."
+          }
+        },
+        "required": ["sequence"]
+      },
+      "returns": {
+        "success": "boolean",
+        "job_id": "string",
+        "status": "running | completed | failed | cancelled",
+        "result": "Generated sequence and optional probability/timing reports when completed.",
+        "error": "Failure or cancellation explanation."
+      },
+      "source": "app_registry",
+      "sourceFile": "external_apis/evo2_generate.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "evo2Generate"
+      },
+      "sample_usages": [],
+      "builtin": {
+        "name": "evo2_generate",
+        "method": "evo2Generate",
+        "category": "external_apis",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "evo2_get_result",
+      "version": "1.0.0",
+      "description": "Get status or completed DNA for an Evo 2 job in this window. May be called repeatedly; wait next_poll_ms between calls while running. Jobs are in-memory and retained for up to one hour, with at most 10 jobs across windows.",
+      "category": "external_apis",
+      "keywords": ["evo2", "evo 2", "nvidia", "dna", "generation", "evo2_get_result"],
+      "priority": 1,
+      "is_builtin": true,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "description": "Job ID returned by evo2_generate."
+          },
+          "include_logits": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include the full logits matrix when enabled at generation; omitted by default to keep tool results compact."
+          }
+        },
+        "required": ["job_id"]
+      },
+      "returns": {
+        "success": "boolean",
+        "job_id": "string",
+        "status": "running | completed | failed | cancelled",
+        "result": "Generated sequence and optional probability/timing reports when completed.",
+        "error": "Failure or cancellation explanation."
+      },
+      "source": "app_registry",
+      "sourceFile": "external_apis/evo2_get_result.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "evo2GetResult"
+      },
+      "sample_usages": [],
+      "builtin": {
+        "name": "evo2_get_result",
+        "method": "evo2GetResult",
         "category": "external_apis",
         "type": "built-in",
         "priority": 1,
@@ -31029,6 +31249,226 @@
         "source": "builtin_tools_map"
       }
     },
+    "evo2_cancel": {
+      "name": "evo2_cancel",
+      "version": "1.0.0",
+      "description": "Stop waiting for an Evo 2 job in this window. NVIDIA may continue processing a submitted request. Repeated cancellation is safe.",
+      "category": "external_apis",
+      "keywords": ["evo2", "evo 2", "nvidia", "dna", "generation", "evo2_cancel"],
+      "priority": 1,
+      "is_builtin": true,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "description": "Job ID returned by evo2_generate."
+          }
+        },
+        "required": ["job_id"]
+      },
+      "returns": {
+        "success": "boolean",
+        "job_id": "string",
+        "status": "running | completed | failed | cancelled",
+        "result": "Generated sequence and optional probability/timing reports when completed.",
+        "error": "Failure or cancellation explanation."
+      },
+      "source": "app_registry",
+      "sourceFile": "external_apis/evo2_cancel.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "evo2Cancel"
+      },
+      "sample_usages": [],
+      "builtin": {
+        "name": "evo2_cancel",
+        "method": "evo2Cancel",
+        "category": "external_apis",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "evo2_generate": {
+      "name": "evo2_generate",
+      "version": "1.0.0",
+      "description": "Start DNA generation with NVIDIA arc/evo2-40b. Sends the supplied DNA to NVIDIA and returns a job_id immediately. Poll evo2_get_result until completed. Configure the API key in Options → Evo 2 DNA Generation; never put credentials in tool arguments. Does not edit the genome.",
+      "category": "external_apis",
+      "keywords": ["evo2", "evo 2", "nvidia", "dna", "generation", "evo2_generate"],
+      "priority": 1,
+      "is_builtin": true,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 0,
+        "requires_auth": true,
+        "requires_data": false,
+        "requires_network": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "string",
+            "description": "DNA containing A/C/G/T/N or one FASTA record; up to 100,000 bases (CodeXomics limit). Obtain a region with get_sequence first if needed."
+          },
+          "taxonomy": {
+            "type": "string",
+            "description": "Optional taxonomy prefix in NVIDIA format |k__kingdom;p__phylum;c__class;o__organism;g__genus;s__species|."
+          },
+          "num_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1200,
+            "default": 100,
+            "description": "Number of new tokens; CodeXomics limit is 1,200."
+          },
+          "temperature": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1.3,
+            "default": 0.7,
+            "description": "Sampling temperature; must be greater than zero."
+          },
+          "top_k": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6,
+            "default": 3,
+            "description": "Top K; 0 considers all tokens, 1 uses the highest probability token."
+          },
+          "top_p": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 1,
+            "description": "Nucleus sampling threshold; 0 disables top-p sampling."
+          },
+          "random_seed": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Optional deterministic seed for development."
+          },
+          "enable_logits": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return logits; use include_logits in evo2_get_result to retrieve the large matrix."
+          },
+          "enable_sampled_probs": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return generated token probabilities."
+          },
+          "enable_elapsed_ms_per_token": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return per-token generation timing."
+          }
+        },
+        "required": ["sequence"]
+      },
+      "returns": {
+        "success": "boolean",
+        "job_id": "string",
+        "status": "running | completed | failed | cancelled",
+        "result": "Generated sequence and optional probability/timing reports when completed.",
+        "error": "Failure or cancellation explanation."
+      },
+      "source": "app_registry",
+      "sourceFile": "external_apis/evo2_generate.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "evo2Generate"
+      },
+      "sample_usages": [],
+      "builtin": {
+        "name": "evo2_generate",
+        "method": "evo2Generate",
+        "category": "external_apis",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "evo2_get_result": {
+      "name": "evo2_get_result",
+      "version": "1.0.0",
+      "description": "Get status or completed DNA for an Evo 2 job in this window. May be called repeatedly; wait next_poll_ms between calls while running. Jobs are in-memory and retained for up to one hour, with at most 10 jobs across windows.",
+      "category": "external_apis",
+      "keywords": ["evo2", "evo 2", "nvidia", "dna", "generation", "evo2_get_result"],
+      "priority": 1,
+      "is_builtin": true,
+      "execution": {
+        "type": "client",
+        "timeout": 10000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "description": "Job ID returned by evo2_generate."
+          },
+          "include_logits": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include the full logits matrix when enabled at generation; omitted by default to keep tool results compact."
+          }
+        },
+        "required": ["job_id"]
+      },
+      "returns": {
+        "success": "boolean",
+        "job_id": "string",
+        "status": "running | completed | failed | cancelled",
+        "result": "Generated sequence and optional probability/timing reports when completed.",
+        "error": "Failure or cancellation explanation."
+      },
+      "source": "app_registry",
+      "sourceFile": "external_apis/evo2_get_result.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "evo2GetResult"
+      },
+      "sample_usages": [],
+      "builtin": {
+        "name": "evo2_get_result",
+        "method": "evo2GetResult",
+        "category": "external_apis",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "interpro_search": {
       "name": "interpro_search",
       "version": "1.1.0-deprecated",
@@ -45475,6 +45915,36 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "evo2_generate",
+      "method": "evo2Generate",
+      "category": "external_apis",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "evo2_get_result",
+      "method": "evo2GetResult",
+      "category": "external_apis",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "evo2_cancel",
+      "method": "evo2Cancel",
+      "category": "external_apis",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "blast_search",
       "method": "blastSearch",
       "category": "external_apis",
@@ -47253,6 +47723,36 @@
       "category": "data_management",
       "type": "built-in",
       "priority": 2,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "evo2_generate": {
+      "name": "evo2_generate",
+      "method": "evo2Generate",
+      "category": "external_apis",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "evo2_get_result": {
+      "name": "evo2_get_result",
+      "method": "evo2GetResult",
+      "category": "external_apis",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "evo2_cancel": {
+      "name": "evo2_cancel",
+      "method": "evo2Cancel",
+      "category": "external_apis",
+      "type": "built-in",
+      "priority": 1,
       "isBuiltIn": true,
       "isExternal": false,
       "source": "builtin_tools_map"

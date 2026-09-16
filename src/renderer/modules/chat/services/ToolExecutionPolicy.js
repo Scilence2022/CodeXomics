@@ -232,6 +232,7 @@ class ToolExecutionPolicy {
       'repeatable_ui_operations',
       'screenshot_operations',
       'research_task_polling',
+      'evo2_job_control',
     ];
     if (exemptedPolicies.includes(applicablePolicyName)) {
       return true;
@@ -270,6 +271,7 @@ class ToolExecutionPolicy {
       'system_utility',
       'screenshot_operations',
       'research_task_polling',
+      'evo2_job_control',
     ];
 
     if (!exemptedFromTotalLimit.includes(applicablePolicyName)) {

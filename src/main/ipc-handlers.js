@@ -635,6 +635,8 @@ function registerIpcHandlers(deps) {
     return false;
   };
 
+  require('./evo2-service').registerEvo2Ipc({ ipcMain, app, isRegisteredGenomeSender });
+
   const getOwnedBamReader = (event, readerId) => {
     const entry = bamReaders.get(readerId);
     if (!entry || entry.ownerWebContentsId !== event.sender.id) {

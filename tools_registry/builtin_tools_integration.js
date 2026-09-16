@@ -254,6 +254,25 @@ class BuiltInToolsIntegration {
       priority: 2,
     });
 
+    this.builtInToolsMap.set('evo2_generate', {
+      method: 'evo2Generate',
+      category: 'external_apis',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('evo2_get_result', {
+      method: 'evo2GetResult',
+      category: 'external_apis',
+      type: 'built-in',
+      priority: 1,
+    });
+    this.builtInToolsMap.set('evo2_cancel', {
+      method: 'evo2Cancel',
+      category: 'external_apis',
+      type: 'built-in',
+      priority: 1,
+    });
+
     // BLAST Tools Integration
     // Legacy blast_search tool (maps to blastSearch)
     this.builtInToolsMap.set('blast_search', {
@@ -1327,6 +1346,11 @@ class BuiltInToolsIntegration {
     const queryLower = query.toLowerCase();
     const patterns = this.getFileLoadingIntentPatterns();
     const relevantTools = [];
+    if (/\bevo\s*2\b|\bnvidia\b|\b(generate|extend)\s+.*?\b(dna|sequences?)\b/i.test(query)) {
+      for (const name of ['evo2_generate', 'evo2_get_result', 'evo2_cancel']) {
+        relevantTools.push({ name, confidence: 0.95, reason: 'Evo 2 DNA generation workflow' });
+      }
+    }
 
     // Check for system management patterns (working directory, etc.)
     if (

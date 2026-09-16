@@ -98,6 +98,7 @@ nav:
       - Agents & Smart Execution: user-guides/AGENTS_COLLABORATION_GUIDE.md
       - Plugin Marketplace: user-guides/PLUGIN_MARKETPLACE_GUIDE.md
       - MCP Server Integration: user-guides/MCP_SERVER_GUIDE.md
+      - Evo 2 DNA Generation: user-guides/EVO2.md
       - FAQ: user-guides/FAQ.md
       - Troubleshooting: user-guides/TROUBLESHOOTING_GUIDE.md
   - Developer Guide:

@@ -268,6 +268,15 @@ class ToolCapabilityPolicy {
         policy: 'parameter_based',
       },
 
+      evo2_generation: {
+        tools: ['evo2_generate'],
+        policy: 'parameter_based',
+      },
+      evo2_job_control: {
+        tools: ['evo2_get_result', 'evo2_cancel'],
+        policy: 'always_allowed',
+      },
+
       external_api: {
         tools: [
           'blast_search',

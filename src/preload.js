@@ -1,6 +1,11 @@
 const { contextBridge, ipcRenderer, shell, webUtils } = require('electron');
 
 const allowedInvokeChannels = [
+  'evo2:settings',
+  'evo2:save-settings',
+  'evo2:generate',
+  'evo2:result',
+  'evo2:cancel',
   'mcp-server-start',
   'mcp-server-stop',
   'mcp-server-status',
