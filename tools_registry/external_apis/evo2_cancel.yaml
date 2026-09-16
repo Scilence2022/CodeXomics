@@ -1,0 +1,36 @@
+name: evo2_cancel
+version: 1.0.0
+description: >-
+  Stop waiting for an Evo 2 job in this window. NVIDIA may continue processing a submitted request. Repeated
+  cancellation is safe.
+category: external_apis
+keywords:
+  - evo2
+  - evo 2
+  - nvidia
+  - dna
+  - generation
+  - evo2_cancel
+priority: 1
+is_builtin: true
+execution:
+  type: client
+  timeout: 10000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    job_id:
+      type: string
+      description: Job ID returned by evo2_generate.
+  required:
+    - job_id
+returns:
+  success: boolean
+  job_id: string
+  status: running | completed | failed | cancelled
+  result: Generated sequence and optional probability/timing reports when completed.
+  error: Failure or cancellation explanation.

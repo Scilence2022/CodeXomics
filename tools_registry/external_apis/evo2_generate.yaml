@@ -1,0 +1,85 @@
+name: evo2_generate
+version: 1.0.0
+description: >-
+  Start DNA generation with NVIDIA arc/evo2-40b. Sends the supplied DNA to NVIDIA and returns a job_id
+  immediately. Poll evo2_get_result until completed. Configure the API key in Options → Evo 2 DNA Generation;
+  never put credentials in tool arguments. Does not edit the genome.
+category: external_apis
+keywords:
+  - evo2
+  - evo 2
+  - nvidia
+  - dna
+  - generation
+  - evo2_generate
+priority: 1
+is_builtin: true
+execution:
+  type: client
+  timeout: 10000
+  retries: 0
+  requires_auth: true
+  requires_data: false
+  requires_network: true
+parameters:
+  type: object
+  properties:
+    sequence:
+      type: string
+      description: >-
+        DNA containing A/C/G/T/N or one FASTA record; up to 100,000 bases (CodeXomics limit). Obtain a region
+        with get_sequence first if needed.
+    taxonomy:
+      type: string
+      description: >-
+        Optional taxonomy prefix in NVIDIA format
+        |k__kingdom;p__phylum;c__class;o__organism;g__genus;s__species|.
+    num_tokens:
+      type: integer
+      minimum: 1
+      maximum: 1200
+      default: 100
+      description: Number of new tokens; CodeXomics limit is 1,200.
+    temperature:
+      type: number
+      exclusiveMinimum: 0
+      maximum: 1.3
+      default: 0.7
+      description: Sampling temperature; must be greater than zero.
+    top_k:
+      type: integer
+      minimum: 0
+      maximum: 6
+      default: 3
+      description: Top K; 0 considers all tokens, 1 uses the highest probability token.
+    top_p:
+      type: number
+      minimum: 0
+      maximum: 1
+      default: 1
+      description: Nucleus sampling threshold; 0 disables top-p sampling.
+    random_seed:
+      type: integer
+      minimum: -9007199254740991
+      maximum: 9007199254740991
+      description: Optional deterministic seed for development.
+    enable_logits:
+      type: boolean
+      default: false
+      description: Return logits; use include_logits in evo2_get_result to retrieve the large matrix.
+    enable_sampled_probs:
+      type: boolean
+      default: false
+      description: Return generated token probabilities.
+    enable_elapsed_ms_per_token:
+      type: boolean
+      default: false
+      description: Return per-token generation timing.
+  required:
+    - sequence
+returns:
+  success: boolean
+  job_id: string
+  status: running | completed | failed | cancelled
+  result: Generated sequence and optional probability/timing reports when completed.
+  error: Failure or cancellation explanation.

@@ -175,6 +175,12 @@ const TOOL_NAMES = {
     RENDER_PROTEIN_STRUCTURE_RESULTS: 'render_protein_structure_results',
   },
 
+  EVO2: {
+    GENERATE: 'evo2_generate',
+    GET_RESULT: 'evo2_get_result',
+    CANCEL: 'evo2_cancel',
+  },
+
   // === BLAST Tools ===
   BLAST: {
     BLAST_SEARCH: 'blast_search',

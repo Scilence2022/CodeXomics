@@ -205,7 +205,8 @@ categories:
       - 'blast_apis'
       - 'uniprot_apis'
       - 'alphafold_apis'
-    tools_count: 14
+      - 'evo2_generation'
+    tools_count: 17
 
   utility:
     name: 'Utility Tools'

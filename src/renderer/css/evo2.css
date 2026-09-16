@@ -1,0 +1,62 @@
+.evo2-modal .modal-content {
+  width: min(860px, 94vw);
+  max-height: 90vh;
+}
+.evo2-modal .modal-body {
+  overflow-y: auto;
+}
+.evo2-modal [hidden] {
+  display: none !important;
+}
+.evo2-modal textarea,
+.evo2-modal input:not([type='checkbox']) {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+.evo2-modal textarea {
+  resize: vertical;
+  font-family: monospace;
+  margin-top: 6px;
+}
+.evo2-modal details {
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+.evo2-modal summary {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.evo2-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.evo2-actions #evo2Key {
+  flex: 1;
+  min-width: 140px;
+}
+.evo2-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.evo2-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.evo2-error {
+  color: var(--error-color, #c53030);
+}
+#evo2Status {
+  overflow-wrap: anywhere;
+}

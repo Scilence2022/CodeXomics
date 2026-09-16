@@ -211,6 +211,7 @@ class ChatManager {
       ['file', 'FileOperationService'],
       ['analysis', 'GenomeAnalysisService'],
       ['protein', 'ProteinService'],
+      ['evo2', 'Evo2Service'],
       ['blast', 'BlastService'],
       ['annotation', 'AnnotationService'],
       ['annotationWorkflow', 'AnnotationResearchWorkflowService'],
@@ -11159,11 +11160,27 @@ ${coreTools}
     return `TOOL SELECTION PRIORITY:\n${priorityList}`;
   }
 
+  // Evo 2 delegations also support BuiltInToolsIntegration's method dispatch.
+  evo2Generate(parameters) {
+    return this.services.evo2.evo2Generate(parameters);
+  }
+
+  evo2GetResult(parameters) {
+    return this.services.evo2.evo2GetResult(parameters);
+  }
+
+  evo2Cancel(parameters) {
+    return this.services.evo2.evo2Cancel(parameters);
+  }
+
   /**
    * Execute local tools (built-in browser functions)
    */
   async executeLocalTool(toolName, parameters) {
     const localTools = {
+      evo2_generate: () => this.services.evo2.evo2Generate(parameters),
+      evo2_get_result: () => this.services.evo2.evo2GetResult(parameters),
+      evo2_cancel: () => this.services.evo2.evo2Cancel(parameters),
       // File Loading tools
       load_genome_file: () => this.loadGenomeFile(parameters),
       load_annotation_file: () => this.loadAnnotationFile(parameters),

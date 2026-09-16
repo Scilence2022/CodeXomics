@@ -5,6 +5,7 @@
 
 const NavigationTools = require('./navigation/NavigationTools');
 const SequenceTools = require('./sequence/SequenceTools');
+const Evo2Tools = require('./evo2/Evo2Tools');
 const ProteinTools = require('./protein/ProteinTools');
 const DatabaseTools = require('./database/DatabaseTools');
 const DataTools = require('./data/DataTools');
@@ -24,6 +25,7 @@ class ToolsIntegrator {
     // Initialize all tool modules
     this.navigationTools = new NavigationTools(server);
     this.sequenceTools = new SequenceTools(server);
+    this.evo2Tools = new Evo2Tools(server);
     this.proteinTools = new ProteinTools(server);
     this.databaseTools = new DatabaseTools(server);
     this.dataTools = new DataTools(server);
@@ -47,6 +49,7 @@ class ToolsIntegrator {
     return {
       ...this.navigationTools.getTools(),
       ...this.sequenceTools.getTools(),
+      ...this.evo2Tools.getTools(),
       ...this.proteinTools.getTools(),
       ...this.databaseTools.getTools(),
       ...this.dataTools.getTools(),
@@ -241,6 +244,10 @@ class ToolsIntegrator {
       // Navigation tools
       if (this.navigationTools.getTools()[toolName]) {
         return await this.navigationTools.executeClientTool(toolName, parameters, clientId);
+      }
+
+      if (this.evo2Tools.getTools()[toolName]) {
+        return await this.evo2Tools.executeClientTool(toolName, parameters, clientId);
       }
 
       // Sequence tools

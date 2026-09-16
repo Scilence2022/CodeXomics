@@ -1,0 +1,43 @@
+name: evo2_get_result
+version: 1.0.0
+description: >-
+  Get status or completed DNA for an Evo 2 job in this window. May be called repeatedly; wait next_poll_ms
+  between calls while running. Jobs are in-memory and retained for up to one hour, with at most 10 jobs across
+  windows.
+category: external_apis
+keywords:
+  - evo2
+  - evo 2
+  - nvidia
+  - dna
+  - generation
+  - evo2_get_result
+priority: 1
+is_builtin: true
+execution:
+  type: client
+  timeout: 10000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: object
+  properties:
+    job_id:
+      type: string
+      description: Job ID returned by evo2_generate.
+    include_logits:
+      type: boolean
+      default: false
+      description: >-
+        Include the full logits matrix when enabled at generation; omitted by default to keep tool results
+        compact.
+  required:
+    - job_id
+returns:
+  success: boolean
+  job_id: string
+  status: running | completed | failed | cancelled
+  result: Generated sequence and optional probability/timing reports when completed.
+  error: Failure or cancellation explanation.

@@ -263,6 +263,12 @@ class FunctionCallsOrganizer {
         ],
       },
 
+      evo2Generation: {
+        priority: 4,
+        description: 'Evo 2 DNA generation and background job control',
+        functions: ['evo2_generate', 'evo2_get_result', 'evo2_cancel'],
+      },
+
       // Category 7: Protein structure - low priority, externally dependent
       proteinStructure: {
         priority: 5,

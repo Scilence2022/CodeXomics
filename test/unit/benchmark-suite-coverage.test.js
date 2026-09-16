@@ -16,6 +16,12 @@ const SUITE_FILES = [
 const SUITE_CLASSES = ['AutomaticSimpleSuite', 'AutomaticComplexSuite', 'ManualSuite', 'ManualComplexSuite'];
 
 const BUILTIN_TOOL_EXEMPTIONS = {
+  evo2_generate:
+    'Credentialed NVIDIA generation incurs remote inference; covered by evo2-service and evo2-integration tests.',
+  evo2_get_result:
+    'Requires an active Evo 2 job; polling, results and schema parity are covered by Evo 2 integration tests.',
+  evo2_cancel: 'Requires an active Evo 2 job; cancellation and window isolation are covered by Evo 2 service tests.',
+
   start_benchmark: 'Starts a nested benchmark run and can recursively mutate the active benchmark.',
   stop_benchmark: 'Stops the active benchmark run, so it cannot be part of a benchmark suite.',
   pause_benchmark: 'Pauses the active benchmark run, so it cannot be part of a benchmark suite.',

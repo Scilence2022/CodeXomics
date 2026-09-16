@@ -507,6 +507,7 @@ class ToolsRegistryManager {
         'orf',
         'frame',
       ],
+      external_apis: ['evo2', 'evo 2', 'nvidia', 'generate dna', 'dna generation'],
       structure: ['structure', '3d', 'pdb', 'alphafold', 'protein structure'],
       database: ['database', 'uniprot', 'interpro', 'lookup', 'entry'],
       editing: [
@@ -1045,6 +1046,7 @@ class ToolsRegistryManager {
         'marker',
         'ladder',
       ],
+      external_apis: ['evo2', 'evo 2', 'nvidia', 'generate dna', 'dna generation'],
       structure: ['structure', '3d', 'pdb', 'alphafold'],
       database: ['database', 'uniprot', 'interpro'],
       editing: [
