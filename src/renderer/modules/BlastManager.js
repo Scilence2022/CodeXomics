@@ -5008,7 +5008,9 @@ class BlastManager {
       if (!line.trim() || line.startsWith('#')) continue; // Skip empty lines and comments
 
       const parts = line.split('\t');
-      if (parts.length < 15) continue; // Skip lines with insufficient columns (now expecting 17 fields)
+      if (parts.length < 17) {
+        throw new Error('Incomplete BLAST output: expected 17 columns including aligned query and subject sequences');
+      }
 
       const [
         ,
@@ -5053,18 +5055,16 @@ class BlastManager {
       const mismatches = parseInt(mismatch) || 0;
       const gaps = parseInt(gapopen) || 0;
 
-      // Generate match string from real sequences if available
-      let matchString = '';
-      if (qseq && sseq && qseq.length === sseq.length) {
-        matchString = this.generateRealMatchString(qseq, sseq);
-      } else {
-        // Fallback to approximation
-        matchString = this.generateMatchString(alignmentLength, mismatches, gaps);
+      if (!qseq || !sseq || qseq.length !== sseq.length || qseq.length !== alignmentLength) {
+        throw new Error(`Incomplete BLAST alignment for ${sseqid}: aligned query and subject sequences are required`);
       }
-
-      // Use real sequences if available, otherwise fallback to extracted sequences
-      const querySequence = qseq || this.getAlignmentSequence(params.sequence, queryStart, queryEnd);
-      const subjectSequence = sseq || this.generateSubjectSequence(querySequence, identityPercent, mismatches, gaps);
+      const querySequence = qseq;
+      const subjectSequence = sseq;
+      const matchString = this.generateRealMatchString(
+        querySequence,
+        subjectSequence,
+        Boolean(params.blastType && params.blastType !== 'blastn')
+      );
 
       hits.push({
         id: sseqid,
@@ -5137,27 +5137,7 @@ class BlastManager {
     return sequence.substring(start - 1, end);
   }
 
-  generateMatchString(length, mismatch, gapopen) {
-    // For a simple approximation, generate a match string
-    // In real BLAST, this would be much more complex
-    const matches = length - mismatch - gapopen;
-    const totalLength = length;
-    let matchString = '';
-
-    for (let i = 0; i < totalLength; i++) {
-      if (i < matches) {
-        matchString += '|'; // match
-      } else if (i < matches + mismatch) {
-        matchString += ' '; // mismatch
-      } else {
-        matchString += '-'; // gap
-      }
-    }
-
-    return matchString;
-  }
-
-  generateRealMatchString(querySeq, subjectSeq) {
+  generateRealMatchString(querySeq, subjectSeq, allowProteinSimilarity = true) {
     // Generate accurate match string from real sequences
     let matchString = '';
     const minLength = Math.min(querySeq.length, subjectSeq.length);
@@ -5170,7 +5150,7 @@ class BlastManager {
         matchString += ' '; // gap
       } else if (qBase === sBase) {
         matchString += '|'; // exact match
-      } else if (this.isSimilarAminoAcid(qBase, sBase)) {
+      } else if (allowProteinSimilarity && this.isSimilarAminoAcid(qBase, sBase)) {
         matchString += '+'; // similar amino acids (for protein sequences)
       } else {
         matchString += ' '; // mismatch
@@ -5199,44 +5179,6 @@ class BlastManager {
       }
     }
     return false;
-  }
-
-  generateSubjectSequence(querySeq, identityPercent, mismatches, gaps) {
-    // Generate a realistic subject sequence based on identity percentage
-    let subjectSeq = '';
-    const targetIdentity = identityPercent / 100;
-    const seqLength = querySeq.length;
-    let identityCount = 0;
-
-    // Determine bases/amino acids for substitution
-    const isProtein = /[ARNDCQEGHILKMFPSTWYV]/i.test(querySeq);
-    const substitutionChars = isProtein
-      ? ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
-      : ['A', 'T', 'C', 'G'];
-
-    for (let i = 0; i < seqLength; i++) {
-      const shouldMatch = identityCount / (i + 1) < targetIdentity;
-
-      if (shouldMatch && Math.random() > 0.1) {
-        // Keep original base/amino acid for identity
-        subjectSeq += querySeq[i];
-        identityCount++;
-      } else {
-        // Introduce variation
-        if (gaps > 0 && Math.random() < 0.02) {
-          subjectSeq += '-'; // gap
-        } else {
-          // Substitution
-          let newChar;
-          do {
-            newChar = substitutionChars[Math.floor(Math.random() * substitutionChars.length)];
-          } while (newChar === querySeq[i].toUpperCase());
-          subjectSeq += newChar;
-        }
-      }
-    }
-
-    return subjectSeq;
   }
 
   async cleanupTempFile(file) {

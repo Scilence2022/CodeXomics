@@ -7,3 +7,4 @@ Each row is implemented, tested, and committed separately. Tests run using the i
 | Finding | Resolution | Validation |
 | --- | --- | --- |
 | A01 | Delegate MCP BLAST to the selected genome client; remove simulated server results. | 41 tests passed; targeted ESLint passed. |
+| A02 | Require actual aligned sequences; reject incomplete BLAST output and remove synthetic alignment fallbacks. | 64 tests passed; targeted ESLint passed. |
