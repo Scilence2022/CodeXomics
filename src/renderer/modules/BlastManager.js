@@ -3672,25 +3672,14 @@ class BlastManager {
   }
 
   async getSequenceFromRegion(chromosome, start, end) {
-    // This should interface with your genome browser's sequence data
-    // For now, we'll create a placeholder implementation
-    try {
-      if (this.app.chatManager) {
-        const result = await this.app.chatManager.getSequence({
-          chromosome: chromosome,
-          start: start,
-          end: end,
-        });
-        return result.sequence || '';
-      }
-
-      // Fallback: generate placeholder sequence
-      const length = end - start + 1;
-      const bases = ['A', 'T', 'G', 'C'];
-      return Array.from({ length }, () => bases[Math.floor(Math.random() * 4)]).join('');
-    } catch (error) {
-      throw new Error('Could not retrieve sequence data');
+    if (!this.app?.chatManager?.getSequence) {
+      throw new Error('Sequence provider unavailable; load a genome before retrieving a BLAST query');
     }
+    const result = await this.app.chatManager.getSequence({ chromosome, start, end });
+    if (result?.success === false || typeof result?.sequence !== 'string' || !result.sequence) {
+      throw new Error(result?.error || 'No sequence available for the requested region');
+    }
+    return result.sequence;
   }
 
   validateSequence() {

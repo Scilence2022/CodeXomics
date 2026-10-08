@@ -13,3 +13,4 @@ Each row is implemented, tested, and committed separately. Tests run using the i
 | A05 | Resolve only available packages; fail incompatible plans; share semver across plugin version paths. | Version integrity and marketplace regressions; docs validation. |
 | A06 | Load shared sequence modules and route MCP and renderer IUPAC complements and translation through them. | 26 IUPAC, translation, GC and coordinate regression tests passed. |
 | A07 | Export genomic download window factory, load shipped HTML and remove duplicate generated HTML. | 20 menu window, window management and project IPC tests passed. |
+| A08 | Read BLAST queries only from the genome provider; surface missing data and provider errors. | 13 query and alignment integrity tests passed. |
