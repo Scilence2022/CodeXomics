@@ -349,29 +349,11 @@ class UnifiedDNATranslation {
    * @returns {string} Reverse complement sequence
    */
   static reverseComplement(sequence) {
-    const complement = {
-      A: 'T',
-      T: 'A',
-      G: 'C',
-      C: 'G',
-      R: 'Y',
-      Y: 'R',
-      S: 'S',
-      W: 'W',
-      K: 'M',
-      M: 'K',
-      B: 'V',
-      V: 'B',
-      D: 'H',
-      H: 'D',
-      N: 'N',
-    };
-
-    return sequence
-      .split('')
-      .reverse()
-      .map(base => complement[base.toUpperCase()] || base)
-      .join('');
+    const processing =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedSequenceProcessing')
+        : window.UnifiedSequenceProcessing;
+    return processing.legacyReverseComplement(sequence);
   }
 
   /**
@@ -441,8 +423,8 @@ class UnifiedDNATranslation {
       frame,
       strand: 1,
       geneticCode: 'standard',
-      includeStops: false,
-      validateInput: true,
+      includeStops: true,
+      validateInput: false,
     });
 
     return result.success ? result.protein : '';

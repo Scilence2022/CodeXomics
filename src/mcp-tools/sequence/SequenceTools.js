@@ -392,24 +392,10 @@ class SequenceTools {
   }
 
   reverseComplement(dna) {
-    const complement = {
-      A: 'T',
-      T: 'A',
-      G: 'C',
-      C: 'G',
-      a: 't',
-      t: 'a',
-      g: 'c',
-      c: 'g',
-      N: 'N',
-      n: 'n',
-    };
-
-    return dna
-      .split('')
-      .reverse()
-      .map(base => complement[base] || base)
-      .join('');
+    const processing = require('../../renderer/modules/UnifiedSequenceProcessing');
+    const result = processing.reverseComplement(dna, { caseSensitive: true, validateInput: false });
+    if (!result.success) throw new Error(result.error);
+    return result.sequence;
   }
 
   calculateEntropy(sequence) {

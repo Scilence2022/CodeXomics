@@ -101,20 +101,11 @@ class MicrobeGenomicsFunctions {
    */
   static reverseComplement(dna) {
     if (!dna || typeof dna !== 'string') return '';
-    // Use unified sequence processing implementation
-    if (window.UnifiedSequenceProcessing) {
-      const result = window.UnifiedSequenceProcessing.legacyReverseComplement(dna);
-      return result;
-    }
-
-    // Fallback to original implementation if unified module not available
-    const complement = { A: 'T', T: 'A', G: 'C', C: 'G', N: 'N' };
-    return dna
-      .toUpperCase()
-      .split('')
-      .reverse()
-      .map(base => complement[base] || 'N')
-      .join('');
+    const processing =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedSequenceProcessing')
+        : window.UnifiedSequenceProcessing;
+    return processing.legacyReverseComplement(dna);
   }
 
   /**
@@ -125,87 +116,11 @@ class MicrobeGenomicsFunctions {
    */
   static translateDNA(dna, frame = 0) {
     if (!dna || typeof dna !== 'string') return '';
-    // Use unified translation implementation
-    if (window.UnifiedDNATranslation) {
-      const result = window.UnifiedDNATranslation.legacyTranslateDNA(dna, frame);
-      return result;
-    }
-
-    // Fallback to original implementation if unified module not available
-    const codonTable = {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: '*',
-      TGG: 'W',
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'I',
-      ATG: 'M',
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: 'R',
-      AGG: 'R',
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
-
-    const sequence = dna.toUpperCase().slice(frame);
-    let protein = '';
-    for (let i = 0; i < sequence.length - 2; i += 3) {
-      const codon = sequence.substr(i, 3);
-      protein += codonTable[codon] || 'X';
-    }
-    return protein;
+    const translation =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedDNATranslation')
+        : window.UnifiedDNATranslation;
+    return translation.legacyTranslateDNA(dna, frame);
   }
 
   /**
@@ -633,7 +548,6 @@ class MicrobeGenomicsFunctions {
       const seqStart = start != null ? start : 0;
       const seqEnd = end != null ? end : fullSeq.length;
       const seq = (caseSensitive ? fullSeq : fullSeq.toUpperCase()).substring(seqStart, seqEnd);
-
 
       if (maxMismatches === 0) {
         // ---- Fast regex path ----

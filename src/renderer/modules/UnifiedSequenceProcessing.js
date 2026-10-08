@@ -81,7 +81,7 @@ class UnifiedSequenceProcessing {
             return complement[base] || base;
           } else {
             // Only handle standard bases
-            return complement[base] || (base.match(/[ATGC]/i) ? 'N' : base);
+            return /[ATGC]/i.test(base) ? complement[base] : base;
           }
         })
         .join('');
@@ -136,12 +136,14 @@ class UnifiedSequenceProcessing {
       }
 
       const sequenceUpper = sequence.toUpperCase();
-      let gcContent; let gcCount; let totalBases; let statistics;
+      let gcContent;
+      let gcCount;
+      let totalBases;
+      let statistics;
 
       switch (method) {
-        case 'standard':
-          // Standard GC calculation
-          {
+        case 'standard': // Standard GC calculation
+        {
           const g = (sequenceUpper.match(/G/g) || []).length;
           const c = (sequenceUpper.match(/C/g) || []).length;
           const a = (sequenceUpper.match(/A/g) || []).length;
@@ -180,11 +182,10 @@ class UnifiedSequenceProcessing {
             method: 'standard',
           };
           break;
-          }
+        }
 
-        case 'weighted':
-          // Weighted GC calculation considering ambiguous bases
-          {
+        case 'weighted': // Weighted GC calculation considering ambiguous bases
+        {
           const baseCounts = this.countBases(sequenceUpper, includeAmbiguous);
           gcCount = baseCounts.g + baseCounts.c;
           totalBases = Object.values(baseCounts).reduce((a, b) => a + b, 0);
@@ -198,11 +199,10 @@ class UnifiedSequenceProcessing {
             method: 'weighted',
           };
           break;
-          }
+        }
 
-        case 'window':
-          // Sliding window GC calculation
-          {
+        case 'window': // Sliding window GC calculation
+        {
           const windows = [];
           for (let i = 0; i <= sequenceUpper.length - windowSize; i++) {
             const window = sequenceUpper.substring(i, i + windowSize);
@@ -228,7 +228,7 @@ class UnifiedSequenceProcessing {
             windowData: windows,
           };
           break;
-          }
+        }
 
         default:
           throw new Error(`Unknown GC calculation method: ${method}`);
@@ -514,8 +514,9 @@ class UnifiedSequenceProcessing {
    * @returns {number} GC content percentage
    */
   static legacyComputeGC(sequence) {
-    const result = this.computeGC(sequence, { validateInput: false });
-    return result.success ? result.gcContent : 0;
+    if (!sequence || typeof sequence !== 'string') return 0;
+    const valid = (sequence.match(/[ATGC]/gi) || []).length;
+    return valid ? ((sequence.match(/[GC]/gi) || []).length / valid) * 100 : 0;
   }
 
   /**
