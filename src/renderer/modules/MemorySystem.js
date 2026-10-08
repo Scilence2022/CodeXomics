@@ -240,27 +240,6 @@ class MemorySystem {
   async getContextBasedRecommendations(functionName, parameters, context) {
     const recommendations = [];
 
-    // Analyze current context for patterns
-    const contextSignature = this.generateContextSignature(context);
-    const similarContexts = this.findSimilarContexts(contextSignature);
-
-    if (similarContexts.length > 0) {
-      const successfulContext = similarContexts.find(c => c.success);
-      if (successfulContext) {
-        recommendations.push({
-          type: 'context_pattern',
-          function: functionName,
-          reason: 'Similar contexts have led to successful outcomes',
-          confidence: 0.75,
-          suggestedAction: 'follow_successful_pattern',
-          data: {
-            similarContext: successfulContext.context,
-            successRate: successfulContext.successRate,
-          },
-        });
-      }
-    }
-
     // Context-specific parameter recommendations
     if (context.userPreferences) {
       const contextOptimizedParams = this.applyContextPreferences(parameters, context.userPreferences);
@@ -416,26 +395,10 @@ class MemorySystem {
   /**
    * Generate context signature for comparison
    */
-  generateContextSignature(context) {
-    const signature = {
-      userId: context.userId,
-      sessionType: context.sessionType,
-      primaryGoal: context.primaryGoal,
-      tools: context.tools?.sort() || [],
-      agents: context.agents?.sort() || [],
-    };
-
-    return JSON.stringify(signature);
-  }
 
   /**
    * Find similar contexts from history
    */
-  findSimilarContexts(contextSignature) {
-    // This would typically search through historical context data
-    // For now, return empty array as placeholder
-    return [];
-  }
 
   /**
    * Apply context preferences to parameters
@@ -850,9 +813,6 @@ class MemorySystem {
    */
   async applyContextOptimizationsAsync(functionName, parameters, memoryContext) {
     try {
-      // Simulate async context analysis and optimization
-      await new Promise(resolve => setTimeout(resolve, 10)); // Minimal delay for simulation
-
       const optimized = { ...parameters };
 
       // Apply context-based optimizations
@@ -877,9 +837,6 @@ class MemorySystem {
    */
   async applyHistoricalPatterns(functionName, parameters, memoryContext) {
     try {
-      // Simulate async historical analysis
-      await new Promise(resolve => setTimeout(resolve, 5));
-
       const optimized = { ...parameters };
 
       // Apply historical success patterns
@@ -1920,12 +1877,7 @@ class MemorySystem {
   }
 
   isComplexAnalysis(functionName) {
-    const complexFunctions = [
-      'compare_regions',
-      'find_similar_sequences',
-      'build_phylogenetic_tree',
-      'ml_analysis',
-    ];
+    const complexFunctions = ['compare_regions', 'find_similar_sequences', 'build_phylogenetic_tree', 'ml_analysis'];
     return complexFunctions.includes(functionName);
   }
 
@@ -1939,12 +1891,7 @@ class MemorySystem {
   }
 
   isExternalAPI(functionName) {
-    const externalFunctions = [
-      'blast_search',
-      'uniprot_search',
-      'alphafold_search',
-      'interpro_search',
-    ];
+    const externalFunctions = ['blast_search', 'uniprot_search', 'alphafold_search', 'interpro_search'];
     return externalFunctions.includes(functionName);
   }
 
