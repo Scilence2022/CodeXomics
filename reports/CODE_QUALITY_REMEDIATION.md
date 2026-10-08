@@ -16,3 +16,4 @@ Each row is implemented, tested, and committed separately. Tests run using the i
 | A08 | Read BLAST queries only from the genome provider; surface missing data and provider errors. | 13 query and alignment integrity tests passed. |
 | A09 | Read real loaded-resource snapshots through request-bound IPC; disable unsupported mutations/exports/views and remove UI sample fallbacks. | Resource snapshot behavior and IPC/preload contract tests. |
 | A10 | Validate 195 live policy names from ToolCapabilityPolicy; explicitly inventory 28 existing external/compatibility exceptions instead of accepting an empty scan. | Registry consistency command and boundary regression tests passed. |
+| A11 | Remove six obsolete duplicate loading schemas, retain built-in file_loading definitions, regenerate manifest and enforce uniqueness. | Registry schemas, service, packaged manifest and consistency checks passed. |
