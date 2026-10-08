@@ -115,6 +115,11 @@ class BlastManager {
       return path.join(currentFileDir, 'blast_db');
     }
 
+    if (this.defaultLocalDbPath) return this.defaultLocalDbPath;
+    // Sandboxed renderers deliberately have no home directory. Do not invent
+    // an application-data path under /tmp; resolve it through main before use.
+    if (!homeDir) return null;
+
     // Fallback to platform-specific user data directory
     switch (platform) {
       case 'win32': {
@@ -218,6 +223,8 @@ class BlastManager {
         return;
       }
 
+      await this.initializeLocalDatabasePath();
+
       // Check if BLAST+ is installed
       const isInstalled = await this.checkBlastInstallation();
       console.log('BlastManager: BLAST+ installed status:', isInstalled);
@@ -239,6 +246,18 @@ class BlastManager {
       // Still enable the UI for database creation
       this.enableLocalBlast();
     }
+  }
+
+  async initializeLocalDatabasePath() {
+    if (typeof window !== 'undefined' && window.electronAPI?.getAppPaths) {
+      const result = await window.electronAPI.getAppPaths();
+      if (!result?.success || !result.paths?.userData) {
+        throw new Error(result?.error || 'Application data directory is unavailable for local BLAST');
+      }
+      this.defaultLocalDbPath = this.getPathModule().join(result.paths.userData, 'blast', 'db');
+    }
+    this.config.localDbPath = this.getPlatformDbPath();
+    if (!this.config.localDbPath) throw new Error('Local BLAST database directory is unavailable');
   }
 
   async checkBlastInstallation() {
@@ -4789,7 +4808,7 @@ class BlastManager {
       const homeDir = window.os.homedir();
       if (homeDir) return homeDir;
     }
-    return '/tmp';
+    return '';
   }
 
   sanitizeFileNamePart(value, fallback = 'blast') {
