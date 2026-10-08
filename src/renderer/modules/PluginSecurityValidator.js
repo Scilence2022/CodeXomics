@@ -157,11 +157,14 @@ class PluginSecurityValidator {
 
       // Determine overall approval
       const criticalIssues = securityIssues.filter(i => i.severity === 'critical');
-      const approved = criticalIssues.length === 0;
+      const rejectedPlugins = validationResults.filter(result => !result.approved);
+      const approved = criticalIssues.length === 0 && rejectedPlugins.length === 0;
 
       if (!approved) {
-        this.stats.blockedPlugins += criticalIssues.length;
-        throw new Error(`Security validation failed: ${criticalIssues.length} critical issues found`);
+        this.stats.blockedPlugins += new Set(securityIssues.map(issue => issue.pluginId)).size;
+        throw new Error(
+          `Security validation failed: ${rejectedPlugins.length} rejected plugins, ${criticalIssues.length} critical issues`
+        );
       }
 
       // Log security warnings for high/medium severity issues
@@ -484,7 +487,7 @@ class PluginRiskEngine {
     let totalScore = validationResult.riskScore;
 
     // Source risk
-    const sourceRisk = this.riskFactors.source[validationResult.source] || 30;
+    const sourceRisk = this.riskFactors.source[validationResult.source] ?? 30;
     totalScore += sourceRisk;
 
     // Issue severity multiplier
