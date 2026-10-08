@@ -794,31 +794,11 @@ class ExportManager {
 
   // Helper method to reverse complement DNA sequence
   reverseComplement(sequence) {
-    // Use unified sequence processing implementation
-    if (window.UnifiedSequenceProcessing) {
-      const result = window.UnifiedSequenceProcessing.legacyReverseComplement(sequence);
-      return result;
-    }
-
-    // Fallback to original implementation if unified module not available
-    const complement = {
-      A: 'T',
-      T: 'A',
-      G: 'C',
-      C: 'G',
-      a: 't',
-      t: 'a',
-      g: 'c',
-      c: 'g',
-      N: 'N',
-      n: 'n',
-    };
-
-    return sequence
-      .split('')
-      .reverse()
-      .map(base => complement[base] || base)
-      .join('');
+    const processing =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedSequenceProcessing')
+        : window.UnifiedSequenceProcessing;
+    return processing.reverseComplement(sequence, { caseSensitive: false, validateInput: false }).sequence;
   }
 
   // Helper method to translate DNA to protein

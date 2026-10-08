@@ -8623,24 +8623,8 @@ class GenomeBrowser {
    * Fallback reverse complement implementation
    */
   fallbackReverseComplement(sequence) {
-    const complement = {
-      A: 'T',
-      T: 'A',
-      G: 'C',
-      C: 'G',
-      a: 't',
-      t: 'a',
-      g: 'c',
-      c: 'g',
-      N: 'N',
-      n: 'n',
-    };
-
-    return sequence
-      .split('')
-      .reverse()
-      .map(base => complement[base] || base)
-      .join('');
+    return window.UnifiedSequenceProcessing.reverseComplement(sequence, { caseSensitive: true, validateInput: false })
+      .sequence;
   }
 
   // Search PDB experimental structures for the selected gene

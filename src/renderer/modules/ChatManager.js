@@ -9380,24 +9380,8 @@ class ChatManager {
   }
 
   normalizeParams(params) {
-    if (!params || typeof params !== 'object') return {};
-    if (Array.isArray(params)) {
-      return params.map(value => (value && typeof value === 'object' ? this.normalizeParams(value) : value));
-    }
-    const sorted = {};
-    Object.keys(params)
-      .sort()
-      .forEach(key => {
-        const val = params[key];
-        if (val !== undefined) {
-          sorted[key] = val && typeof val === 'object' ? this.normalizeParams(val) : val;
-        }
-      });
-    if (sorted.primerSequence && (!sorted.sequence || sorted.sequence === sorted.primerSequence)) {
-      sorted.sequence = sorted.primerSequence;
-      delete sorted.primerSequence;
-    }
-    return sorted;
+    const utils = typeof module !== 'undefined' && module.exports ? require('./ParameterUtils') : window.ParameterUtils;
+    return utils.normalizeParams(params);
   }
 
   areParametersEqual(params1, params2) {

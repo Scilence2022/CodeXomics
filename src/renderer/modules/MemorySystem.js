@@ -1753,20 +1753,8 @@ class MemorySystem {
    * Calculate parameter similarity
    */
   calculateParameterSimilarity(params1, params2) {
-    const keys1 = Object.keys(params1);
-    const keys2 = Object.keys(params2);
-    const commonKeys = keys1.filter(key => keys2.includes(key));
-
-    if (commonKeys.length === 0) return 0;
-
-    let similarity = 0;
-    for (const key of commonKeys) {
-      if (params1[key] === params2[key]) {
-        similarity += 1;
-      }
-    }
-
-    return similarity / commonKeys.length;
+    const utils = typeof module !== 'undefined' && module.exports ? require('./ParameterUtils') : window.ParameterUtils;
+    return utils.calculateParameterSimilarity(params1, params2);
   }
 
   /**
@@ -2914,20 +2902,8 @@ class MediumTermMemory {
    * Calculate parameter similarity
    */
   calculateParameterSimilarity(params1, params2) {
-    const keys1 = Object.keys(params1);
-    const keys2 = Object.keys(params2);
-    const commonKeys = keys1.filter(key => keys2.includes(key));
-
-    if (commonKeys.length === 0) return 0;
-
-    let similarity = 0;
-    for (const key of commonKeys) {
-      if (params1[key] === params2[key]) {
-        similarity += 1;
-      }
-    }
-
-    return similarity / commonKeys.length;
+    const utils = typeof module !== 'undefined' && module.exports ? require('./ParameterUtils') : window.ParameterUtils;
+    return utils.calculateParameterSimilarity(params1, params2);
   }
 
   /**
@@ -3147,20 +3123,8 @@ class LongTermMemory {
    * Calculate parameter similarity
    */
   calculateParameterSimilarity(params1, params2) {
-    const keys1 = Object.keys(params1);
-    const keys2 = Object.keys(params2);
-    const commonKeys = keys1.filter(key => keys2.includes(key));
-
-    if (commonKeys.length === 0) return 0;
-
-    let similarity = 0;
-    for (const key of commonKeys) {
-      if (params1[key] === params2[key]) {
-        similarity += 1;
-      }
-    }
-
-    return similarity / commonKeys.length;
+    const utils = typeof module !== 'undefined' && module.exports ? require('./ParameterUtils') : window.ParameterUtils;
+    return utils.calculateParameterSimilarity(params1, params2);
   }
 
   /**
