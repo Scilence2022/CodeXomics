@@ -110,8 +110,6 @@
     "electron-log": "^5.4.4",
     "electron-updater": "^6.8.9",
     "express": "^4.22.1",
-    "file-saver": "^2.0.5",
-    "generic-filehandle": "^3.4.0",
     "generic-filehandle2": "^2.0.16",
     "i18next": "^25.8.0",
     "i18next-fs-backend": "^2.6.1",
