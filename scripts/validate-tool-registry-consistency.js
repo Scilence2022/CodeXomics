@@ -90,7 +90,38 @@ const KNOWN_EXCEPTIONS = {
     'search_intergenic_regions',
     'search_motif',
   ],
-  llmPolicyMissingRegistry: [],
+  // Existing external research names and compatibility/UI aliases have policy entries
+  // but are not advertised YAML tools. Keep this explicit so new drift still fails.
+  llmPolicyMissingRegistry: [
+    'cancel-research-run',
+    'deep-gene-research',
+    'delete_feature',
+    'focus_on_gene',
+    'generate-SERP-query',
+    'get-task-status',
+    'get_current_region',
+    'get_file_info',
+    'get_visible_tracks',
+    'jump_to_feature',
+    'refresh_view',
+    'scroll_left',
+    'scroll_right',
+    'search-task',
+    'set_view_mode',
+    'show_hide_features',
+    'switch_tab',
+    'toggle_annotation_track',
+    'utility_download_internet_file',
+    'utility_set_chatbox_layout',
+    'utility_set_chatbox_minimized',
+    'utility_toggle_chatbox',
+    'utility_toggle_settings_modal',
+    'utility_toggle_sidebar',
+    'utility_toggle_sidebar_panel',
+    'utility_toggle_top_banner',
+    'write-final-report',
+    'write-research-plan',
+  ],
   mcpMissingRegistry: [
     'codexomics_chat',
     'find_gene',
@@ -148,17 +179,11 @@ function collectToolExecutionAliases(snapshot) {
 }
 
 function collectLlmPolicyNames() {
-  const source = read('src/renderer/modules/chat/services/LLMContextService.js');
-  const start = source.indexOf('const toolPolicies =');
-  const end = source.indexOf('// Find applicable policy', start);
-  const policyBlock = start >= 0 && end > start ? source.slice(start, end) : '';
-  const names = [];
-  for (const match of policyBlock.matchAll(/tools:\s*\[([\s\S]*?)\]\s*,\s*policy:/g)) {
-    for (const stringMatch of match[1].matchAll(/'([a-z][a-z0-9_]+)'/g)) {
-      names.push(stringMatch[1]);
-    }
-  }
-  return unique(names);
+  const ToolCapabilityPolicy = require('../src/renderer/modules/chat/services/ToolCapabilityPolicy');
+  const policies = new ToolCapabilityPolicy().policies;
+  const names = unique(Object.values(policies).flatMap(policy => policy.tools || []));
+  if (!names.length) throw new Error('No LLM capability policies found; refusing an empty validation');
+  return names;
 }
 
 function collectMcpToolNames() {
@@ -285,5 +310,6 @@ if (require.main === module) {
 
 module.exports = {
   KNOWN_EXCEPTIONS,
+  collectLlmPolicyNames,
   validateToolRegistryConsistency,
 };
