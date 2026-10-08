@@ -115,6 +115,11 @@ class BlastManager {
       return path.join(currentFileDir, 'blast_db');
     }
 
+    if (this.defaultLocalDbPath) return this.defaultLocalDbPath;
+    // Sandboxed renderers deliberately have no home directory. Do not invent
+    // an application-data path under /tmp; resolve it through main before use.
+    if (!homeDir) return null;
+
     // Fallback to platform-specific user data directory
     switch (platform) {
       case 'win32': {
@@ -218,6 +223,8 @@ class BlastManager {
         return;
       }
 
+      await this.initializeLocalDatabasePath();
+
       // Check if BLAST+ is installed
       const isInstalled = await this.checkBlastInstallation();
       console.log('BlastManager: BLAST+ installed status:', isInstalled);
@@ -239,6 +246,18 @@ class BlastManager {
       // Still enable the UI for database creation
       this.enableLocalBlast();
     }
+  }
+
+  async initializeLocalDatabasePath() {
+    if (typeof window !== 'undefined' && window.electronAPI?.getAppPaths) {
+      const result = await window.electronAPI.getAppPaths();
+      if (!result?.success || !result.paths?.userData) {
+        throw new Error(result?.error || 'Application data directory is unavailable for local BLAST');
+      }
+      this.defaultLocalDbPath = this.getPathModule().join(result.paths.userData, 'blast', 'db');
+    }
+    this.config.localDbPath = this.getPlatformDbPath();
+    if (!this.config.localDbPath) throw new Error('Local BLAST database directory is unavailable');
   }
 
   async checkBlastInstallation() {
@@ -3672,25 +3691,14 @@ class BlastManager {
   }
 
   async getSequenceFromRegion(chromosome, start, end) {
-    // This should interface with your genome browser's sequence data
-    // For now, we'll create a placeholder implementation
-    try {
-      if (this.app.chatManager) {
-        const result = await this.app.chatManager.getSequence({
-          chromosome: chromosome,
-          start: start,
-          end: end,
-        });
-        return result.sequence || '';
-      }
-
-      // Fallback: generate placeholder sequence
-      const length = end - start + 1;
-      const bases = ['A', 'T', 'G', 'C'];
-      return Array.from({ length }, () => bases[Math.floor(Math.random() * 4)]).join('');
-    } catch (error) {
-      throw new Error('Could not retrieve sequence data');
+    if (!this.app?.chatManager?.getSequence) {
+      throw new Error('Sequence provider unavailable; load a genome before retrieving a BLAST query');
     }
+    const result = await this.app.chatManager.getSequence({ chromosome, start, end });
+    if (result?.success === false || typeof result?.sequence !== 'string' || !result.sequence) {
+      throw new Error(result?.error || 'No sequence available for the requested region');
+    }
+    return result.sequence;
   }
 
   validateSequence() {
@@ -4651,65 +4659,6 @@ class BlastManager {
     };
   }
 
-  generateMockResults(params) {
-    // Generate realistic mock BLAST results for demonstration
-    const results = {
-      searchId: `BLAST_${Date.now()}`,
-      queryInfo: {
-        sequence: params.sequence.substring(0, 100) + (params.sequence.length > 100 ? '...' : ''),
-        length: params.sequence.length,
-        type: this.detectSequenceType(params.sequence),
-      },
-      parameters: params,
-      hits: [
-        {
-          id: 'hit_1',
-          accession: 'NP_414542.1',
-          description: 'DNA-directed RNA polymerase subunit alpha [Escherichia coli str. K-12]',
-          length: 329,
-          evalue: '2e-85',
-          score: '265 bits (677)',
-          identity: '98.5%',
-          coverage: '95%',
-          alignment: {
-            query:
-              'ATGAAAGAATTGAAAGAAGCTGGCTGGAAAGAACTGCAGCCGATTAAAGAATACGGCATTGAAGTTGCGCTGGCTTACACTTACCAGCAGAAAGAGCTGCTGATTGAAAAACTGCTGGAAGAAAACATTCCGGAAATTGTTGAAGAAAAACTGGTTTGGGAAGCTCTGAAACTGAAA',
-            subject:
-              'ATGAAAGAATTGAAAGAAGCTGGCTGGAAAGAACTGCAGCCGATTAAAGAATACGGCATTGAAGTTGCGCTGGCTTACACTTACCAGCAGAAAGAGCTGCTGATTGAAAAACTGCTGGAAGAAAACATTCCGGAAATTGTTGAAGAAAAACTGGTTTGGGAAGCTCTGAAACTGAAA',
-            match:
-              '||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||',
-          },
-        },
-        {
-          id: 'hit_2',
-          accession: 'WP_000219193.1',
-          description: 'DNA-directed RNA polymerase subunit alpha [Enterobacteriaceae]',
-          length: 329,
-          evalue: '5e-80',
-          score: '248 bits (633)',
-          identity: '96.2%',
-          coverage: '93%',
-          alignment: {
-            query:
-              'ATGAAAGAATTGAAAGAAGCTGGCTGGAAAGAACTGCAGCCGATTAAAGAATACGGCATTGAAGTTGCGCTGGCTTACACTTACCAGCAGAAAGAGCTGCTGATTGAAAAACTGCTGGAAGAAAACATTCCGGAAATTGTTGAAGAAAAACTGGTTTGGGAAGCTCTGAAACTGAAA',
-            subject:
-              'ATGAAAGAATTGAAAGAAGCTGGCTGGAAAGAACTGCAGCCGATTAAAGAATACGGCATTGAAGTTGCGCTGGCTTACACTTACCAGCAGAAAGAGCTGCTGATTGAAAAACTGCTGGAAGAAAACATTCCGGAAATTGTTGAAGAAAAACTGGTTTGGGAAGCTCTGAAACTGAAA',
-            match:
-              '||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||',
-          },
-        },
-      ],
-      statistics: {
-        database: params.database,
-        totalSequences: '1,234,567',
-        totalLetters: '987,654,321',
-        searchTime: '3.2 seconds',
-      },
-    };
-
-    return results;
-  }
-
   async executeLocalBlast(params) {
     try {
       // Validate database exists before attempting search
@@ -4859,7 +4808,7 @@ class BlastManager {
       const homeDir = window.os.homedir();
       if (homeDir) return homeDir;
     }
-    return '/tmp';
+    return '';
   }
 
   sanitizeFileNamePart(value, fallback = 'blast') {
@@ -5008,7 +4957,9 @@ class BlastManager {
       if (!line.trim() || line.startsWith('#')) continue; // Skip empty lines and comments
 
       const parts = line.split('\t');
-      if (parts.length < 15) continue; // Skip lines with insufficient columns (now expecting 17 fields)
+      if (parts.length < 17) {
+        throw new Error('Incomplete BLAST output: expected 17 columns including aligned query and subject sequences');
+      }
 
       const [
         ,
@@ -5053,18 +5004,16 @@ class BlastManager {
       const mismatches = parseInt(mismatch) || 0;
       const gaps = parseInt(gapopen) || 0;
 
-      // Generate match string from real sequences if available
-      let matchString = '';
-      if (qseq && sseq && qseq.length === sseq.length) {
-        matchString = this.generateRealMatchString(qseq, sseq);
-      } else {
-        // Fallback to approximation
-        matchString = this.generateMatchString(alignmentLength, mismatches, gaps);
+      if (!qseq || !sseq || qseq.length !== sseq.length || qseq.length !== alignmentLength) {
+        throw new Error(`Incomplete BLAST alignment for ${sseqid}: aligned query and subject sequences are required`);
       }
-
-      // Use real sequences if available, otherwise fallback to extracted sequences
-      const querySequence = qseq || this.getAlignmentSequence(params.sequence, queryStart, queryEnd);
-      const subjectSequence = sseq || this.generateSubjectSequence(querySequence, identityPercent, mismatches, gaps);
+      const querySequence = qseq;
+      const subjectSequence = sseq;
+      const matchString = this.generateRealMatchString(
+        querySequence,
+        subjectSequence,
+        Boolean(params.blastType && params.blastType !== 'blastn')
+      );
 
       hits.push({
         id: sseqid,
@@ -5137,27 +5086,7 @@ class BlastManager {
     return sequence.substring(start - 1, end);
   }
 
-  generateMatchString(length, mismatch, gapopen) {
-    // For a simple approximation, generate a match string
-    // In real BLAST, this would be much more complex
-    const matches = length - mismatch - gapopen;
-    const totalLength = length;
-    let matchString = '';
-
-    for (let i = 0; i < totalLength; i++) {
-      if (i < matches) {
-        matchString += '|'; // match
-      } else if (i < matches + mismatch) {
-        matchString += ' '; // mismatch
-      } else {
-        matchString += '-'; // gap
-      }
-    }
-
-    return matchString;
-  }
-
-  generateRealMatchString(querySeq, subjectSeq) {
+  generateRealMatchString(querySeq, subjectSeq, allowProteinSimilarity = true) {
     // Generate accurate match string from real sequences
     let matchString = '';
     const minLength = Math.min(querySeq.length, subjectSeq.length);
@@ -5170,7 +5099,7 @@ class BlastManager {
         matchString += ' '; // gap
       } else if (qBase === sBase) {
         matchString += '|'; // exact match
-      } else if (this.isSimilarAminoAcid(qBase, sBase)) {
+      } else if (allowProteinSimilarity && this.isSimilarAminoAcid(qBase, sBase)) {
         matchString += '+'; // similar amino acids (for protein sequences)
       } else {
         matchString += ' '; // mismatch
@@ -5199,44 +5128,6 @@ class BlastManager {
       }
     }
     return false;
-  }
-
-  generateSubjectSequence(querySeq, identityPercent, mismatches, gaps) {
-    // Generate a realistic subject sequence based on identity percentage
-    let subjectSeq = '';
-    const targetIdentity = identityPercent / 100;
-    const seqLength = querySeq.length;
-    let identityCount = 0;
-
-    // Determine bases/amino acids for substitution
-    const isProtein = /[ARNDCQEGHILKMFPSTWYV]/i.test(querySeq);
-    const substitutionChars = isProtein
-      ? ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
-      : ['A', 'T', 'C', 'G'];
-
-    for (let i = 0; i < seqLength; i++) {
-      const shouldMatch = identityCount / (i + 1) < targetIdentity;
-
-      if (shouldMatch && Math.random() > 0.1) {
-        // Keep original base/amino acid for identity
-        subjectSeq += querySeq[i];
-        identityCount++;
-      } else {
-        // Introduce variation
-        if (gaps > 0 && Math.random() < 0.02) {
-          subjectSeq += '-'; // gap
-        } else {
-          // Substitution
-          let newChar;
-          do {
-            newChar = substitutionChars[Math.floor(Math.random() * substitutionChars.length)];
-          } while (newChar === querySeq[i].toUpperCase());
-          subjectSeq += newChar;
-        }
-      }
-    }
-
-    return subjectSeq;
   }
 
   async cleanupTempFile(file) {
@@ -6666,117 +6557,6 @@ class BlastManager {
     return filePath;
   }
 
-  generateEnhancedMockResults(params) {
-    // Generate more realistic and detailed mock BLAST results
-    const sequenceType = this.detectSequenceType(params.sequence);
-    const database = params.database;
-
-    // Create realistic hits based on database type and sequence type
-    const hits = this.generateRealisticHits(params, sequenceType, database);
-
-    // Generate realistic statistics
-    const statistics = this.generateRealisticStatistics(database, params);
-
-    return {
-      searchId: `Enhanced_BLAST_${Date.now()}`,
-      queryInfo: {
-        sequence: params.sequence.substring(0, 100) + (params.sequence.length > 100 ? '...' : ''),
-        length: params.sequence.length,
-        type: sequenceType,
-        definition: 'Query sequence',
-      },
-      parameters: params,
-      hits: hits,
-      statistics: statistics,
-      source: 'Enhanced Mock',
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  generateRealisticHits(params, sequenceType, database) {
-    const hits = [];
-    const numHits = Math.min(parseInt(params.maxTargets), Math.floor(Math.random() * 15) + 5);
-
-    for (let i = 0; i < numHits; i++) {
-      const hit = this.createRealisticHit(i, params, sequenceType, database);
-      if (hit) hits.push(hit);
-    }
-
-    // Sort hits by bit score (descending)
-    hits.sort((a, b) => parseFloat(b.bitScore) - parseFloat(a.bitScore));
-
-    return hits;
-  }
-
-  createRealisticHit(index, params, sequenceType, database) {
-    this.getDatabaseInfo(database);
-    const organisms = this.getOrganismsForDatabase(database);
-    const organism = organisms[Math.floor(Math.random() * organisms.length)];
-
-    // Generate realistic accession and description
-    const accession = this.generateAccession(database, index);
-    const description = this.generateDescription(sequenceType, organism, database);
-
-    // Generate realistic scores (decreasing with index)
-    const maxBitScore = 500;
-    const bitScore = Math.max(50, maxBitScore - index * 30 + (Math.random() * 20 - 10));
-    const rawScore = Math.floor(bitScore * 2.2);
-    const evalue = this.generateEvalue(bitScore, params.sequence.length);
-
-    // Generate realistic alignment parameters
-    const queryLen = params.sequence.length;
-    const subjectLen = Math.floor(queryLen * (0.8 + Math.random() * 0.4));
-    const alignLen = Math.floor(queryLen * (0.6 + Math.random() * 0.3));
-    const identity = Math.floor(alignLen * (0.7 + Math.random() * 0.25));
-    const gaps = Math.floor(alignLen * (0.02 + Math.random() * 0.05));
-
-    // Generate alignment ranges
-    const queryStart = Math.floor(Math.random() * (queryLen - alignLen));
-    const queryEnd = queryStart + alignLen;
-    const subjectStart = Math.floor(Math.random() * (subjectLen - alignLen));
-    const subjectEnd = subjectStart + alignLen;
-
-    // Generate alignment sequences
-    const alignment = this.generateAlignment(params.sequence, queryStart, queryEnd, identity, gaps);
-
-    return {
-      id: `hit_${index + 1}`,
-      accession: accession,
-      description: description,
-      organism: organism,
-      length: subjectLen,
-      evalue: evalue,
-      score: `${bitScore.toFixed(1)} bits (${rawScore})`,
-      bitScore: bitScore,
-      identity: `${((identity / alignLen) * 100).toFixed(1)}%`,
-      identityCount: identity,
-      coverage: this.calculateCoverage(alignLen, queryLen),
-      alignmentLength: alignLen,
-      gaps: gaps,
-      queryRange: { from: queryStart + 1, to: queryEnd },
-      hitRange: { from: subjectStart + 1, to: subjectEnd },
-      alignment: alignment,
-      database: database,
-      taxonomyId: Math.floor(Math.random() * 100000) + 1000,
-      hsps: [
-        {
-          score: rawScore,
-          bitScore: bitScore,
-          evalue: evalue,
-          identity: identity,
-          alignLen: alignLen,
-          queryFrom: queryStart + 1,
-          queryTo: queryEnd,
-          hitFrom: subjectStart + 1,
-          hitTo: subjectEnd,
-          querySeq: alignment.query,
-          hitSeq: alignment.subject,
-          midline: alignment.match,
-        },
-      ],
-    };
-  }
-
   getDatabaseInfo(database) {
     const dbInfo = {
       nt: { type: 'nucleotide', name: 'Nucleotide collection' },
@@ -6790,166 +6570,6 @@ class BlastManager {
     };
 
     return dbInfo[database] || { type: 'unknown', name: database };
-  }
-
-  getOrganismsForDatabase(database) {
-    const organisms = {
-      nt: ['Escherichia coli', 'Homo sapiens', 'Mus musculus', 'Saccharomyces cerevisiae', 'Arabidopsis thaliana'],
-      nr: [
-        'Escherichia coli str. K-12',
-        'Homo sapiens',
-        'Mus musculus',
-        'Rattus norvegicus',
-        'Drosophila melanogaster',
-      ],
-      refseq_rna: ['Homo sapiens', 'Mus musculus', 'Rattus norvegicus', 'Danio rerio', 'Caenorhabditis elegans'],
-      refseq_genomic: ['Escherichia coli', 'Bacillus subtilis', 'Pseudomonas aeruginosa', 'Staphylococcus aureus'],
-      swissprot: ['Homo sapiens', 'Mus musculus', 'Escherichia coli', 'Saccharomyces cerevisiae'],
-      pdb: ['Homo sapiens', 'Escherichia coli', 'Thermus thermophilus', 'Bacillus stearothermophilus'],
-    };
-
-    return organisms[database] || ['Unknown organism'];
-  }
-
-  generateAccession(database, index) {
-    const patterns = {
-      nt: () =>
-        `${['NC', 'NT', 'NW'][Math.floor(Math.random() * 3)]}_${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}.${Math.floor(Math.random() * 9) + 1}`,
-      nr: () =>
-        `${['NP', 'YP', 'WP', 'XP'][Math.floor(Math.random() * 4)]}_${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}.${Math.floor(Math.random() * 9) + 1}`,
-      refseq_rna: () =>
-        `${['NM', 'NR', 'XM', 'XR'][Math.floor(Math.random() * 4)]}_${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}.${Math.floor(Math.random() * 9) + 1}`,
-      swissprot: () =>
-        `${['P', 'Q', 'O'][Math.floor(Math.random() * 3)]}${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
-      pdb: () =>
-        `${Math.floor(Math.random() * 9999)
-          .toString(36)
-          .toUpperCase()
-          .padStart(4, '0')}_${['A', 'B', 'C'][Math.floor(Math.random() * 3)]}`,
-    };
-
-    const generator = patterns[database] || (() => `ACC_${String(index).padStart(6, '0')}`);
-    return generator();
-  }
-
-  generateDescription(sequenceType, organism, database) {
-    const proteinFunctions = [
-      'DNA-directed RNA polymerase subunit alpha',
-      'ATP synthase subunit beta',
-      'Ribosomal protein L1',
-      'Heat shock protein 70',
-      'Elongation factor Tu',
-      'DNA gyrase subunit A',
-      'Catalase',
-      'Superoxide dismutase',
-      'Cytochrome c oxidase subunit I',
-      'NADH dehydrogenase subunit 1',
-    ];
-
-    const nucleotideFunctions = [
-      '16S ribosomal RNA gene',
-      'cytochrome oxidase subunit I gene',
-      'internal transcribed spacer',
-      'NADH dehydrogenase subunit 1 gene',
-      'ATP synthase F0 subunit 6 gene',
-      'small subunit ribosomal RNA gene',
-      'large subunit ribosomal RNA gene',
-      'elongation factor 1-alpha gene',
-      'RNA polymerase II largest subunit gene',
-      'actin gene',
-    ];
-
-    let functions;
-    if (sequenceType === 'Protein' || database === 'nr' || database === 'swissprot' || database === 'pdb') {
-      functions = proteinFunctions;
-    } else {
-      functions = nucleotideFunctions;
-    }
-
-    const func = functions[Math.floor(Math.random() * functions.length)];
-    return `${func} [${organism}]`;
-  }
-
-  generateEvalue(bitScore, queryLength) {
-    // E-value calculation approximation
-    const K = 0.041;
-    const lambda = 0.267;
-    const m = queryLength;
-    const n = 1000000; // Approximate database size
-
-    const evalue = K * m * n * Math.exp(-lambda * bitScore);
-
-    if (evalue < 1e-100) return '0.0';
-    if (evalue < 1e-10) return evalue.toExponential(1);
-    if (evalue < 0.01) return evalue.toExponential(1);
-    return evalue.toFixed(2);
-  }
-
-  generateAlignment(querySeq, start, end, identity, gaps) {
-    const alignLen = end - start;
-    const queryPart = querySeq.substring(start, end);
-
-    // Generate subject sequence with specified identity
-    let subjectSeq = '';
-    let matchString = '';
-    let identityCount = 0;
-    let gapCount = 0;
-
-    for (let i = 0; i < alignLen; i++) {
-      if (gapCount < gaps && Math.random() < 0.02) {
-        // Insert gap
-        subjectSeq += '-';
-        matchString += ' ';
-        gapCount++;
-      } else if (identityCount < identity && Math.random() < 0.8) {
-        // Match
-        subjectSeq += queryPart[i];
-        matchString += queryPart[i] === 'N' || queryPart[i] === 'X' ? '+' : '|';
-        identityCount++;
-      } else {
-        // Mismatch
-        const bases = queryPart[i].match(/[ATCG]/)
-          ? ['A', 'T', 'C', 'G']
-          : ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'];
-        let newBase;
-        do {
-          newBase = bases[Math.floor(Math.random() * bases.length)];
-        } while (newBase === queryPart[i]);
-
-        subjectSeq += newBase;
-        matchString += ' ';
-      }
-    }
-
-    return {
-      query: queryPart,
-      subject: subjectSeq,
-      match: matchString,
-    };
-  }
-
-  generateRealisticStatistics(database, params) {
-    const dbSizes = {
-      nt: { sequences: '67,823,451', letters: '542,696,987,123' },
-      nr: { sequences: '434,544,773', letters: '159,064,915,452' },
-      refseq_rna: { sequences: '18,567,234', letters: '23,445,678,901' },
-      refseq_genomic: { sequences: '234,567', letters: '876,543,210,987' },
-      swissprot: { sequences: '568,002', letters: '204,840,472' },
-      pdb: { sequences: '789,456', letters: '234,567,890' },
-    };
-
-    const dbInfo = dbSizes[database] || { sequences: '1,000,000', letters: '1,000,000,000' };
-
-    return {
-      database: database,
-      totalSequences: dbInfo.sequences,
-      totalLetters: dbInfo.letters,
-      searchTime: `${(Math.random() * 30 + 5).toFixed(1)} seconds`,
-      effectiveSearchSpace: (BigInt(params.sequence.length) * BigInt(dbInfo.letters.replace(/,/g, ''))).toString(),
-      kappa: '0.041',
-      lambda: '0.267',
-      entropy: '0.14',
-    };
   }
 
   // Helper functions for the enhanced results display

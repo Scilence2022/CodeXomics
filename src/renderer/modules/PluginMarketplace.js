@@ -10,7 +10,7 @@ class PluginMarketplace {
     this.pluginManager = pluginManagerV2;
     this.configManager = configManager;
     this.options = {
-      enableSecurityValidation: false, // Temporarily disabled for testing
+      enableSecurityValidation: false, // Optional static package checks; downloaded code execution stays blocked
       enableDependencyResolution: true,
       enableAutoUpdates: true,
       cacheTimeout: 3600000, // 1 hour
@@ -854,7 +854,7 @@ class PluginMarketplace {
       console.log(`📦 Starting installation of plugin: ${pluginId}`);
 
       // 1. Find plugin in marketplace
-      const plugin = await this.findPlugin(pluginId);
+      const plugin = options.plugin || (await this.findPlugin(pluginId));
       if (!plugin) {
         throw new Error(`Plugin ${pluginId} not found in marketplace`);
       }
@@ -880,15 +880,34 @@ class PluginMarketplace {
       const installPlan = await this.dependencyResolver.createInstallPlan(plugin);
       console.log(`📋 Install plan created: ${installPlan.plugins.length} plugins to install`);
 
+      // Inspect the downloaded bytes before any package is installed.
+      const preparedDownloads = new Map();
       // 4. Validate security
       if (this.options.enableSecurityValidation) {
+        for (const entry of installPlan.plugins) {
+          const download = await this.downloadPlugin(entry);
+          if (!window.electronAPI?.inspectPluginPackage) throw new Error('Plugin package inspection is unavailable');
+          const inspected = await window.electronAPI.inspectPluginPackage({
+            pluginId: entry.id,
+            version: entry.version,
+            data: this.serializePackageData(download),
+            manifest: download.manifest,
+          });
+          if (!inspected.success) throw new Error(inspected.error || 'Plugin package inspection failed');
+          entry.packageEvidence = inspected.evidence;
+          download.manifest = inspected.evidence.manifest;
+          download.packageSha256 = inspected.evidence.sha256;
+          preparedDownloads.set(entry.id, download);
+        }
         await this.securityValidator.validateInstallPlan(installPlan);
         console.log('🔒 Security validation passed');
       }
 
       // 5. Download and install plugins in dependency order
-      const results = await this.executeInstallPlan(installPlan);
+      const results = await this.executeInstallPlan(installPlan, preparedDownloads, options.requireDisk);
 
+      const failed = results.find(result => !result.success);
+      if (failed) throw new Error(failed.error || 'Plugin installation failed');
       this.stats.totalInstalls++;
       this.emitEvent('plugin-installed', { pluginId, results });
 
@@ -915,7 +934,7 @@ class PluginMarketplace {
     }
 
     // Search across all sources
-    for (const [sourceId,] of this.marketplaceSources) {
+    for (const [sourceId] of this.marketplaceSources) {
       try {
         const plugin = await this.findPluginInSource(sourceId, pluginId);
         if (plugin) {
@@ -1040,7 +1059,7 @@ class PluginMarketplace {
   /**
    * Execute install plan
    */
-  async executeInstallPlan(installPlan) {
+  async executeInstallPlan(installPlan, preparedDownloads = new Map(), requireDisk = false) {
     const results = [];
 
     for (const plugin of installPlan.plugins) {
@@ -1048,10 +1067,12 @@ class PluginMarketplace {
         console.log(`📥 Installing ${plugin.id} v${plugin.version}...`);
 
         // Download plugin
-        const downloadResult = await this.downloadPlugin(plugin);
+        const downloadResult = preparedDownloads.get(plugin.id) || (await this.downloadPlugin(plugin));
 
+        downloadResult.requireDisk = requireDisk;
         // Install plugin
         const installResult = await this.installDownloadedPlugin(downloadResult);
+        if (!installResult?.success) throw new Error(installResult?.error || 'Plugin installation failed');
 
         // Register as installed (await to ensure persistence)
         await this.registerInstalledPlugin(plugin, installResult);
@@ -1082,6 +1103,13 @@ class PluginMarketplace {
   /**
    * Download plugin from marketplace
    */
+  serializePackageData(download) {
+    const data = download.data;
+    if (data instanceof ArrayBuffer) return Array.from(new Uint8Array(data));
+    if (ArrayBuffer.isView(data)) return Array.from(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+    return data;
+  }
+
   async downloadPlugin(plugin) {
     console.log(`⬇️ Downloading ${plugin.id} from ${plugin.downloadUrl}...`);
 
@@ -1111,6 +1139,10 @@ class PluginMarketplace {
         }
 
         console.log(`✅ Downloaded ${plugin.id} as JSON package`);
+
+        if (data.data?.manifest?.id !== plugin.id || data.data.manifest.version !== plugin.version) {
+          throw new Error(`Downloaded package identity mismatch for ${plugin.id}@${plugin.version}`);
+        }
 
         // Use manifest from server response
         downloadResult = {
@@ -1214,16 +1246,21 @@ class PluginMarketplace {
               installPath: installPath,
               data: serializableData,
               manifest: downloadResult.manifest,
+              packageSha256: downloadResult.packageSha256,
             });
             if (!writeResult?.success) {
               throw new Error(writeResult?.error || 'Plugin file write failed');
             }
             console.log(`✅ Plugin files written to disk at ${installPath}`);
           } else {
+            if (downloadResult.packageSha256 || downloadResult.requireDisk) {
+              throw new Error('Validated plugin package cannot be written');
+            }
             console.warn('⚠️  electronAPI.writePluginFiles not available, plugin files not written to disk');
             console.warn('⚠️  Plugin will only exist in memory and will be lost on restart');
           }
         } catch (writeError) {
+          if (downloadResult.packageSha256 || downloadResult.requireDisk) throw writeError;
           console.error(`❌ Failed to write plugin files to disk:`, writeError);
           console.warn('⚠️  Continuing with in-memory registration only');
         }
@@ -1236,11 +1273,15 @@ class PluginMarketplace {
         console.warn(
           `⚠️ Plugin code execution is disabled for ${downloadResult.pluginId}; registering manifest metadata only`
         );
-        pluginDefinition = this.preparePluginDefinitionForRegistration(downloadResult.pluginId, downloadResult.manifest, {
-          codeExecutionBlocked: true,
-          ...(downloadResult.plugin || {}),
-          ...(downloadResult.manifest || {}),
-        });
+        pluginDefinition = this.preparePluginDefinitionForRegistration(
+          downloadResult.pluginId,
+          downloadResult.manifest,
+          {
+            codeExecutionBlocked: true,
+            ...(downloadResult.plugin || {}),
+            ...(downloadResult.manifest || {}),
+          }
+        );
         pluginDefinition.codeExecutionBlocked = true;
       } else {
         // No code available, use manifest only
@@ -1253,6 +1294,9 @@ class PluginMarketplace {
 
       // 4. Register plugin with plugin manager (in-memory registration)
       if (this.pluginManager) {
+        if (downloadResult.requireDisk && this.pluginManager.getPlugin(downloadResult.pluginId)) {
+          await this.pluginManager.uninstallPlugin(downloadResult.pluginId, { keepFiles: true, notify: false });
+        }
         await this.pluginManager.registerPlugin(downloadResult.pluginId, pluginDefinition);
       } else {
         throw new Error('Plugin manager not available');
@@ -1384,7 +1428,7 @@ class PluginMarketplace {
         if (success) {
           console.log('✅ Plugin registry saved to localStorage immediately');
         } else {
-          console.error('❌ Failed to save plugin registry immediately');
+          throw new Error('Failed to persist installed plugin registry');
         }
       } else {
         // Fallback to regular set (for backward compatibility)
@@ -1425,18 +1469,9 @@ class PluginMarketplace {
    * Compare version strings
    */
   compareVersions(version1, version2) {
-    const v1Parts = version1.split('.').map(Number);
-    const v2Parts = version2.split('.').map(Number);
-
-    for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-      const v1 = v1Parts[i] || 0;
-      const v2 = v2Parts[i] || 0;
-
-      if (v1 > v2) return 1;
-      if (v1 < v2) return -1;
-    }
-
-    return 0;
+    const utils =
+      typeof module !== 'undefined' && module.exports ? require('./PluginVersionUtils') : window.PluginVersionUtils;
+    return utils.compare(version1, version2);
   }
 
   /**

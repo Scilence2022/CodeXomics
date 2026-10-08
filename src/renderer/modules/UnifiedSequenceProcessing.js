@@ -13,6 +13,72 @@
  */
 
 class UnifiedSequenceProcessing {
+  static calculateMolecularWeight(sequence, type = 'auto') {
+    if (!sequence || typeof sequence !== 'string') return 0;
+
+    // Clean sequence (remove whitespace, numbers, hyphens)
+    const cleanSeq = sequence
+      .trim()
+      .toUpperCase()
+      .replace(/[\s\d-]/g, '');
+    if (cleanSeq.length === 0) return 0;
+
+    let detectedType = type;
+    if (type === 'auto') {
+      // Heuristic: If it contains only standard DNA/RNA characters (A, T, G, C, N, U), treat as DNA.
+      // Else treat as protein.
+      if (/^[ATGCNU]+$/.test(cleanSeq)) {
+        detectedType = 'dna';
+      } else {
+        detectedType = 'protein';
+      }
+    }
+
+    if (detectedType === 'dna' || detectedType === 'rna') {
+      // DNA/RNA nucleotide weights (standard Average nucleotide weights in Da)
+      // A=331.2, T=322.2, G=347.2, C=307.2, U=308.2, N=327.0 (average)
+      const weights = { A: 331.2, T: 322.2, G: 347.2, C: 307.2, U: 308.2, N: 327.0 };
+      let weight = 0;
+      for (const base of cleanSeq) {
+        weight += weights[base] || weights.N;
+      }
+      return weight - (cleanSeq.length - 1) * 18.01; // Subtract water molecules for phosphodiester bonds
+    } else {
+      // Protein average amino acid residue weights (Da)
+      const weights = {
+        A: 71.08,
+        R: 156.19,
+        N: 114.1,
+        D: 115.09,
+        C: 103.14,
+        E: 129.12,
+        Q: 128.13,
+        G: 57.05,
+        H: 137.14,
+        I: 113.16,
+        L: 113.16,
+        K: 128.17,
+        M: 131.2,
+        F: 147.18,
+        P: 97.12,
+        S: 87.08,
+        T: 101.11,
+        W: 186.21,
+        Y: 163.18,
+        V: 99.13,
+        U: 150.03,
+        O: 237.3,
+        '*': 0,
+        X: 110.0,
+      };
+      let weight = 0;
+      for (const aa of cleanSeq) {
+        weight += weights[aa] ?? weights.X;
+      }
+      return weight + 18.02; // Add terminal water molecule (H2O)
+    }
+  }
+
   /**
    * Comprehensive reverse complement with ambiguous base support
    *
@@ -81,7 +147,7 @@ class UnifiedSequenceProcessing {
             return complement[base] || base;
           } else {
             // Only handle standard bases
-            return complement[base] || (base.match(/[ATGC]/i) ? 'N' : base);
+            return /[ATGC]/i.test(base) ? complement[base] : base;
           }
         })
         .join('');
@@ -136,12 +202,13 @@ class UnifiedSequenceProcessing {
       }
 
       const sequenceUpper = sequence.toUpperCase();
-      let gcContent; let gcCount; let totalBases; let statistics;
+      let gcContent;
+      let gcCount;
+      let totalBases;
+      let statistics;
 
       switch (method) {
-        case 'standard':
-          // Standard GC calculation
-          {
+        case 'standard': { // Standard GC calculation
           const g = (sequenceUpper.match(/G/g) || []).length;
           const c = (sequenceUpper.match(/C/g) || []).length;
           const a = (sequenceUpper.match(/A/g) || []).length;
@@ -180,11 +247,9 @@ class UnifiedSequenceProcessing {
             method: 'standard',
           };
           break;
-          }
+        }
 
-        case 'weighted':
-          // Weighted GC calculation considering ambiguous bases
-          {
+        case 'weighted': { // Weighted GC calculation considering ambiguous bases
           const baseCounts = this.countBases(sequenceUpper, includeAmbiguous);
           gcCount = baseCounts.g + baseCounts.c;
           totalBases = Object.values(baseCounts).reduce((a, b) => a + b, 0);
@@ -198,11 +263,9 @@ class UnifiedSequenceProcessing {
             method: 'weighted',
           };
           break;
-          }
+        }
 
-        case 'window':
-          // Sliding window GC calculation
-          {
+        case 'window': { // Sliding window GC calculation
           const windows = [];
           for (let i = 0; i <= sequenceUpper.length - windowSize; i++) {
             const window = sequenceUpper.substring(i, i + windowSize);
@@ -228,7 +291,7 @@ class UnifiedSequenceProcessing {
             windowData: windows,
           };
           break;
-          }
+        }
 
         default:
           throw new Error(`Unknown GC calculation method: ${method}`);
@@ -514,8 +577,9 @@ class UnifiedSequenceProcessing {
    * @returns {number} GC content percentage
    */
   static legacyComputeGC(sequence) {
-    const result = this.computeGC(sequence, { validateInput: false });
-    return result.success ? result.gcContent : 0;
+    if (!sequence || typeof sequence !== 'string') return 0;
+    const valid = (sequence.match(/[ATGC]/gi) || []).length;
+    return valid ? ((sequence.match(/[GC]/gi) || []).length / valid) * 100 : 0;
   }
 
   /**

@@ -10,7 +10,6 @@
     <title>CodeXomics</title>
     <!-- Modular CSS Architecture -->
     <link rel="stylesheet" href="css/base.css">
-    <!-- <link rel="stylesheet" href="css/main-legacy.css"> -->
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/tabs.css">
     <link rel="stylesheet" href="css/actions.css">
@@ -29,7 +28,6 @@
     <link rel="stylesheet" href="css/canvas-reads-optimization.css">
     <link rel="stylesheet" href="css/track-drag-drop.css">
     <link rel="stylesheet" href="css/wheel-zoom.css">
-    <!-- <link rel="stylesheet" href="css/main-legacy.css"> -->
     <link rel="stylesheet" href="css/chatbox-enhancements.css">
     <link rel="stylesheet" href="css/chatbox-markdown.css">
     <link rel="stylesheet" href="css/llm-config.css">
@@ -5392,6 +5390,7 @@ Supported formats:
     <script src="modules/ConfigManager.js"></script>
     <script src="modules/I18nManager.js"></script>
     <script src="modules/MultiFileManager.js"></script>
+    <script src="modules/LoadedResourceSnapshot.js"></script>
     <script src="modules/FileManager.js"></script>
     <!-- Canvas renderer base (eliminates duplicated boilerplate across 3 renderers) -->
     <script src="modules/tracks/CanvasRendererBase.js"></script>
@@ -5408,6 +5407,8 @@ Supported formats:
     <script src="modules/GenomeNavigationBar.js"></script>
     <script src="modules/UIManager.js"></script>
     <!-- VSCodeSequenceEditor.js and SequenceEditor.js removed - only using view mode -->
+    <script src="modules/ParameterUtils.js"></script>
+    <script src="modules/UnifiedSequenceProcessing.js"></script>
     <script src="modules/SequenceUtils.js"></script>
     <script src="modules/ExportManager.js"></script>
     <script src="modules/ScreenshotManager.js"></script>
@@ -5437,6 +5438,7 @@ Supported formats:
     <script src="modules/PluginPathResolver.js"></script>
     <script src="modules/PluginAPI.js"></script>
     <script src="modules/PluginResourceManager.js"></script>
+    <script src="modules/PluginVersionUtils.js"></script>
     <script src="modules/PluginDependencyResolver.js"></script>
     <script src="modules/PluginSecurityValidator.js"></script>
     <script src="modules/PluginUpdateManager.js"></script>
@@ -5505,6 +5507,7 @@ Supported formats:
     <script src="modules/BlastManager.js"></script>
     <script src="modules/BlastFunctionTools.js"></script>
     <script src="modules/BlastChatManagerIntegration.js"></script>
+    <script src="modules/UnifiedDNATranslation.js"></script>
     <script src="modules/MicrobeGenomicsFunctions.js"></script>
 
     <!-- Plugin System Support -->

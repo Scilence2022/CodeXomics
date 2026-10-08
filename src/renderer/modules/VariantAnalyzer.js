@@ -583,24 +583,11 @@ class VariantAnalyzer {
    * Get reverse complement of DNA sequence
    */
   reverseComplement(sequence) {
-    const complement = {
-      A: 'T',
-      T: 'A',
-      G: 'C',
-      C: 'G',
-      a: 't',
-      t: 'a',
-      g: 'c',
-      c: 'g',
-      N: 'N',
-      n: 'n',
-    };
-
-    return sequence
-      .split('')
-      .reverse()
-      .map(base => complement[base] || base)
-      .join('');
+    const processing =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedSequenceProcessing')
+        : window.UnifiedSequenceProcessing;
+    return processing.reverseComplement(sequence, { caseSensitive: true, validateInput: false }).sequence;
   }
 
   /**

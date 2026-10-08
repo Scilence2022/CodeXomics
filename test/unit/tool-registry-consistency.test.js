@@ -3,6 +3,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const {
+  collectLlmPolicyNames,
   KNOWN_EXCEPTIONS,
   validateToolRegistryConsistency,
 } = require('../../scripts/validate-tool-registry-consistency');
@@ -13,6 +14,12 @@ describe('tool registry consistency validation', () => {
 
     expect(report.success).toBe(true);
     expect(report.errors).toEqual([]);
+    expect(report.comparisons['LLMContextService.shouldAllowToolExecution'].checked).toBe(
+      collectLlmPolicyNames().length
+    );
+    expect(collectLlmPolicyNames()).toContain('load_genome_file');
+    expect(collectLlmPolicyNames().length).toBeGreaterThan(190);
+    expect(report.comparisons['LLMContextService.shouldAllowToolExecution'].staleExceptions).toEqual([]);
     expect(report.counts.registryTools).toBeGreaterThanOrEqual(178);
     expect(report.comparisons['ToolNames.js'].allowedExceptions).toEqual(KNOWN_EXCEPTIONS.toolNamesMissingRegistry);
     expect(report.comparisons['src/mcp-tools schemas'].allowedExceptions).toEqual(KNOWN_EXCEPTIONS.mcpMissingRegistry);

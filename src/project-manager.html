@@ -3252,6 +3252,22 @@
           }
         }, 100);
 
+        window.electronAPI?.onProjectManagerAction(async request => {
+          try {
+            const actions = {
+              loadProjectFromFile: () => projectManagerWindow.loadProjectFromFile(request.filePath),
+              saveCurrentProject: () => projectManagerWindow.saveCurrentProject(),
+              saveProjectAs: () => projectManagerWindow.saveProjectAs(),
+              exportProjectAsXML: () => projectManagerWindow.exportProjectAsXML(),
+              clearRecentProjects: () => projectManagerWindow.clearRecentProjects(),
+            };
+            if (!actions[request.action]) throw new Error('Unsupported project action');
+            await actions[request.action]();
+          } catch (error) {
+            projectManagerWindow.showNotification(error.message, 'error');
+          }
+        });
+
         // Set up IPC event listeners
         if (window.electronAPI && window.electronAPI.onCreateNewProject) {
           window.electronAPI.onCreateNewProject(() => {

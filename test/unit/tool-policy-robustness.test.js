@@ -14,6 +14,7 @@ function evaluateRendererGlobal(relativePath, globalName) {
 }
 
 function loadPolicySupport() {
+  evaluateRendererGlobal('src/renderer/modules/ParameterUtils.js', 'ParameterUtils');
   evaluateRendererGlobal('src/renderer/modules/chat/services/ToolCapabilityPolicy.js', 'ToolCapabilityPolicy');
   evaluateRendererGlobal('src/renderer/modules/chat/services/ToolExecutionPolicy.js', 'ToolExecutionPolicy');
 }

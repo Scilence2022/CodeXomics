@@ -1,6 +1,9 @@
 const { contextBridge, ipcRenderer, shell, webUtils } = require('electron');
 
 const allowedInvokeChannels = [
+  'project-manager-action',
+  'backup-plugin-package',
+  'restore-plugin-package',
   'evo2:settings',
   'evo2:save-settings',
   'evo2:generate',
@@ -95,6 +98,7 @@ const allowedInvokeChannels = [
 ];
 
 const allowedListenChannels = [
+  'collect-resource-info',
   'menu-new-project',
   'menu-open-project',
   'menu-save-project',
@@ -236,6 +240,7 @@ const allowedListenChannels = [
 ];
 
 const allowedSendChannels = [
+  'resource-info-response',
   'close-resource-manager',
   'project-manager-current-project-response',
   'analyze-in-chatbox',
@@ -364,7 +369,19 @@ const safeRequire = moduleName => {
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
+let projectManagerActionHandler;
+const pendingProjectManagerActions = [];
+ipcRenderer.on('project-manager-action', (event, request) => {
+  if (projectManagerActionHandler) projectManagerActionHandler(request);
+  else if (pendingProjectManagerActions.length < 20) pendingProjectManagerActions.push(request);
+});
+
 contextBridge.exposeInMainWorld('electronAPI', {
+  projectManagerAction: options => ipcRenderer.invoke('project-manager-action', options),
+  onProjectManagerAction: callback => {
+    projectManagerActionHandler = callback;
+    for (const request of pendingProjectManagerActions.splice(0)) callback(request);
+  },
   // Resource management APIs
   getLoadedResources: () => ipcRenderer.invoke('get-loaded-resources'),
   refreshResources: () => ipcRenderer.invoke('refresh-resources'),
@@ -522,7 +539,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   onLoadProjectFromMenu: callback => {
-    ipcRenderer.on('load-project-from-menu', callback);
+    ipcRenderer.on('load-project-from-menu', (event, filePath) => callback(filePath));
   },
 
   // Remove listeners
@@ -585,6 +602,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Plugin file loading APIs
   selectPluginFile: () => ipcRenderer.invoke('select-plugin-file'),
   getPluginFileInfo: filePath => ipcRenderer.invoke('get-plugin-file-info', filePath),
+  backupPluginPackage: options => ipcRenderer.invoke('backup-plugin-package', options),
+  restorePluginPackage: options => ipcRenderer.invoke('restore-plugin-package', options),
+  inspectPluginPackage: options => ipcRenderer.invoke('inspect-plugin-package', options),
   readPluginFile: filePath => ipcRenderer.invoke('read-plugin-file', filePath),
   checkPluginFileExists: filePath => ipcRenderer.invoke('check-file-exists', filePath),
   extractPluginZip: zipPath => ipcRenderer.invoke('extract-plugin-zip', zipPath),
@@ -712,7 +732,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
 });
 
 // Provide access to node process information (for development)
+// Sandboxed preloads cannot require npm packages. Keep the synchronous plugin
+// resolver contract while delegating these bounded, in-memory operations to main.
+const pluginVersionOperation = (operation, args) => {
+  const result = ipcRenderer.sendSync('plugin-version-operation', operation, args);
+  if (!result?.success) throw new Error(result?.error || 'Plugin version operation failed');
+  return result.value;
+};
+
 contextBridge.exposeInMainWorld('nodeAPI', {
+  pluginVersions: {
+    compare: (a, b) => pluginVersionOperation('compare', [a, b]),
+    validRange: range => pluginVersionOperation('validRange', [range]),
+    satisfies: (version, range) => pluginVersionOperation('satisfies', [version, range]),
+  },
   platform: process.platform,
   version: process.version,
   // Forwarded from the main process via webPreferences.additionalArguments.

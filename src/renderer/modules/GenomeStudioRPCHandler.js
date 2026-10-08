@@ -36,6 +36,7 @@ class GenomeStudioRPCHandler {
       console.log(`🔧 RPC Call: ${method}`, parameters);
 
       const result = await this.executeMethod(method, parameters);
+      if (result?.success === false) throw new Error(result.error || result.message || 'RPC operation failed');
 
       // Send success response
       genomeRPCIpc.send('genome-rpc-response', {
@@ -88,20 +89,6 @@ class GenomeStudioRPCHandler {
 
       case 'getSequenceRegion':
         return await this.getSequenceRegion(parameters);
-
-      // Annotation methods
-      case 'addAnnotation':
-        return await this.addAnnotation(parameters);
-
-      case 'exportData':
-        return await this.exportData(parameters);
-
-      // File management
-      case 'loadFile':
-        return await this.loadFile(parameters);
-
-      case 'saveProject':
-        return await this.saveProject(parameters);
 
       // Utility methods
       case 'getAvailableMethods':
@@ -305,10 +292,6 @@ class GenomeStudioRPCHandler {
       'toggleTrack',
       'getCodingSequence',
       'getSequenceRegion',
-      'addAnnotation',
-      'exportData',
-      'loadFile',
-      'saveProject',
       'getAvailableMethods',
       'ping',
     ];
@@ -321,23 +304,6 @@ class GenomeStudioRPCHandler {
       message: 'CodeXomics RPC is ready',
       modules: Object.keys(this.modules),
     };
-  }
-
-  // Placeholder implementations for other methods
-  async addAnnotation({ annotation }) {
-    return { success: false, message: 'addAnnotation not implemented yet' };
-  }
-
-  async exportData({ format, options }) {
-    return { success: false, message: 'exportData not implemented yet' };
-  }
-
-  async loadFile({ filePath, fileType }) {
-    return { success: false, message: 'loadFile not implemented yet' };
-  }
-
-  async saveProject({ projectPath }) {
-    return { success: false, message: 'saveProject not implemented yet' };
   }
 }
 

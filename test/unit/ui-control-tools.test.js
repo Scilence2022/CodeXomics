@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -10,8 +10,17 @@ const ToolCapabilityPolicy = require('../../src/renderer/modules/chat/services/T
 
 describe('UI control tools', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     localStorage.clear();
     document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    // UIManager schedules deferred DOM setup from its constructor. These tests
+    // exercise its synchronous control methods, so do not let that callback
+    // emit console output while Vitest is tearing down the worker.
+    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it('shows, hides, and toggles the ChatBox idempotently', async () => {

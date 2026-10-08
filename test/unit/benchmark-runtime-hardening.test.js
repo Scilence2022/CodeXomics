@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { loadScript } from '../helpers/load-script';
 
 const ROOT = process.cwd();
 
@@ -31,20 +32,21 @@ describe('benchmark runtime hardening', () => {
     expect(source).toContain('window.electronAPI.downloadInternetFile');
   });
 
-  it('writes BLAST temporary FASTA files through main-process file IPC', () => {
-    const source = readSource('src/renderer/modules/BlastManager.js');
-    const writeSequenceStart = source.indexOf('async writeSequenceToFile');
-    const writeSequenceEnd = source.indexOf('generateEnhancedMockResults', writeSequenceStart);
-    const writeSequenceSource = source.slice(writeSequenceStart, writeSequenceEnd);
-    const tempFastaStart = source.indexOf('async createTempFastaFile');
-    const tempFastaEnd = source.indexOf('buildBlastCommand', tempFastaStart);
-    const tempFastaSource = source.slice(tempFastaStart, tempFastaEnd);
-
-    expect(source).toContain('writeTextFileViaMain');
-    expect(writeSequenceSource).not.toContain("require('fs')");
-    expect(writeSequenceSource).not.toContain('require("fs")');
-    expect(tempFastaSource).not.toContain("require('fs')");
-    expect(tempFastaSource).not.toContain('require("fs")');
+  it('writes BLAST FASTA content through the main-process API', async () => {
+    const { exported: BlastManager, sandbox } = loadScript('src/renderer/modules/BlastManager.js');
+    const writeFile = vi.fn(async filePath => ({ success: true, filePath }));
+    sandbox.window.electronAPI = { writeFile };
+    const manager = Object.assign(Object.create(BlastManager.prototype), {
+      getPathModule: () => path,
+      getAppTempDirectory: async () => '/tmp',
+      getCurrentGenomeFilePath: () => null,
+    });
+    const queryPath = await manager.createTempFastaFile('ARYN');
+    expect(writeFile).toHaveBeenCalledWith(queryPath, '>Query_sequence\nARYN');
+    expect(await manager.writeSequenceToFile('>chr\nATGC', 'db', 'nucl', { fileName: 'db.fa' })).toBe('/tmp/db.fa');
+    expect(writeFile).toHaveBeenCalledWith('/tmp/db.fa', '>chr\nATGC');
+    writeFile.mockResolvedValue({ success: false, error: 'Disk full' });
+    await expect(manager.createTempFastaFile('ATGC')).rejects.toThrow('Disk full');
   });
 
   it('prevents benchmark automation from opening file chooser dialogs', () => {

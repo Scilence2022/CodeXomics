@@ -2074,6 +2074,98 @@ function openTestFile(filename) {
   }
 }
 
+function createGenomicDownloadWindow(downloadType) {
+  const { getCurrentProjectInfo, setActiveProject } = require('./project-ipc');
+  try {
+    console.log(`Creating Genomic Download window for: ${downloadType}`);
+
+    const downloadWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 900,
+      minHeight: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, '..', 'preload.js'),
+        sandbox: false,
+      },
+      icon: path.join(__dirname, '../assets/icon.png'),
+      title: `Download Genomic Data - ${downloadType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
+      show: false,
+    });
+
+    // Set menu for the download window - fix the menu creation
+    createToolWindowMenu(downloadWindow, 'Genomic Data Download');
+
+    // Create the genomic download HTML file path
+    const downloadHtmlPath = path.join(__dirname, '..', 'genomic-data-download.html');
+
+    downloadWindow.loadFile(downloadHtmlPath);
+
+    downloadWindow.once('ready-to-show', () => {
+      downloadWindow.show();
+      // Send download type
+      downloadWindow.webContents.send('set-download-type', downloadType);
+
+      // Try to get project info from Project Manager window first, then fallback to current active project
+      const projectManagerWindows = BrowserWindow.getAllWindows().filter(window =>
+        window.getTitle().includes('Project Manager')
+      );
+
+      if (projectManagerWindows.length > 0) {
+        console.log('🔍 Found Project Manager window, requesting current project info...');
+        // Request current project info from Project Manager
+        projectManagerWindows[0].webContents.send('request-current-project-for-download');
+
+        // Track if we received a response
+        let responseReceived = false;
+
+        // Listen for project info response
+        const handleProjectInfo = (event, projectInfo) => {
+          console.log('📥 Received project info from Project Manager:', projectInfo);
+          responseReceived = true;
+          // Update the global current active project
+          if (projectInfo) {
+            setActiveProject(projectInfo);
+          }
+          downloadWindow.webContents.send('set-active-project', projectInfo);
+          // Remove the listener after receiving the response
+          ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
+        };
+
+        ipcMain.on('project-manager-current-project-response', handleProjectInfo);
+
+        // Fallback timeout - if no response in 1 second, use current active project
+        setTimeout(() => {
+          if (!responseReceived) {
+            ipcMain.removeListener('project-manager-current-project-response', handleProjectInfo);
+            const fallbackProject = getCurrentProjectInfo();
+            console.log('⏰ Using fallback project info:', fallbackProject);
+            downloadWindow.webContents.send('set-active-project', fallbackProject);
+          } else {
+            console.log('✅ Project info already received from Project Manager, skipping fallback');
+          }
+        }, 1000);
+      } else {
+        // No Project Manager window found, use current active project
+        const currentProject = getCurrentProjectInfo();
+        console.log('📂 Using current active project:', currentProject);
+        downloadWindow.webContents.send('set-active-project', currentProject);
+      }
+    });
+
+    downloadWindow.on('closed', () => {
+      console.log('Genomic Download window closed');
+    });
+
+    console.log('Genomic Download window created successfully');
+    return downloadWindow;
+  } catch (error) {
+    console.error('Failed to create Genomic Download window:', error);
+  }
+}
+
 function getCurrentActiveWindow() {
   return currentActiveWindow;
 }
@@ -2102,6 +2194,7 @@ module.exports = {
   createGeneAnnotationRefineWindow,
   createBlastDownloaderWindow,
   createBlastConfigWindow,
+  createGenomicDownloadWindow,
   createProGenFixerWindow,
   createDeepGeneResearchWindow,
   createChopchopWindow,

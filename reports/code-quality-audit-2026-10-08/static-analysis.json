@@ -1,0 +1,708 @@
+{
+  "files": 281,
+  "lines": 298580,
+  "bytes": 10775777,
+  "methods": 7288,
+  "parseErrors": [],
+  "dupes": [],
+  "orphans": [
+    {
+      "file": "src/renderer/modules/ExternalToolsSystemTest.js",
+      "lines": 190,
+      "bytes": 5435,
+      "references": []
+    },
+    {
+      "file": "src/renderer/modules/chat/services/PluginIntegrationService.js",
+      "lines": 101,
+      "bytes": 2930,
+      "references": []
+    },
+    {
+      "file": "src/renderer/modules/genomic-downloader/api/NCBIClient.js",
+      "lines": 299,
+      "bytes": 9624,
+      "references": []
+    }
+  ],
+  "topFiles": [
+    {
+      "file": "src/renderer/modules/ChatManager.js",
+      "lines": 20907,
+      "bytes": 785514
+    },
+    {
+      "file": "src/renderer/modules/TrackRenderer.js",
+      "lines": 16087,
+      "bytes": 656204
+    },
+    {
+      "file": "src/renderer/renderer-modular.js",
+      "lines": 12056,
+      "bytes": 457714
+    },
+    {
+      "file": "src/renderer/modules/ActionManager.js",
+      "lines": 7716,
+      "bytes": 284760
+    },
+    {
+      "file": "src/renderer/modules/BlastManager.js",
+      "lines": 7305,
+      "bytes": 269863
+    },
+    {
+      "file": "src/renderer/modules/LLMBenchmarkFramework.js",
+      "lines": 6390,
+      "bytes": 263138
+    },
+    {
+      "file": "src/renderer/modules/BenchmarkUI.js",
+      "lines": 5946,
+      "bytes": 274205
+    },
+    {
+      "file": "src/renderer/modules/ProjectManagerWindow.js",
+      "lines": 5676,
+      "bytes": 187288
+    },
+    {
+      "file": "src/renderer/modules/PluginManagementUI.js",
+      "lines": 5187,
+      "bytes": 203572
+    },
+    {
+      "file": "src/main/ipc-handlers.js",
+      "lines": 4925,
+      "bytes": 174997
+    },
+    {
+      "file": "src/renderer/modules/SequenceUtils.js",
+      "lines": 4751,
+      "bytes": 177453
+    },
+    {
+      "file": "src/renderer/modules/LLMConfigManager.js",
+      "lines": 4689,
+      "bytes": 173959
+    },
+    {
+      "file": "src/renderer/modules/chat/services/AnnotationChangeSetService.js",
+      "lines": 4303,
+      "bytes": 190868
+    },
+    {
+      "file": "src/renderer/modules/MemorySystem.js",
+      "lines": 3776,
+      "bytes": 109501
+    },
+    {
+      "file": "src/renderer/modules/benchmark-suites/AutomaticSimpleSuite.js",
+      "lines": 3620,
+      "bytes": 119777
+    },
+    {
+      "file": "src/circos-plotter.js",
+      "lines": 3427,
+      "bytes": 113184
+    },
+    {
+      "file": "src/renderer/modules/benchmark-suites/AutomaticComplexSuite.js",
+      "lines": 3401,
+      "bytes": 134962
+    },
+    {
+      "file": "src/renderer/modules/TabManager.js",
+      "lines": 3275,
+      "bytes": 116706
+    },
+    {
+      "file": "src/main/menu-builder.js",
+      "lines": 3203,
+      "bytes": 95213
+    },
+    {
+      "file": "src/renderer/modules/NavigationManager.js",
+      "lines": 3090,
+      "bytes": 122690
+    }
+  ],
+  "largestMethods": [
+    {
+      "file": "src/renderer/modules/benchmark-suites/AutomaticSimpleSuite.js",
+      "className": "AutomaticSimpleSuite",
+      "name": "initializeTests",
+      "start": 87,
+      "end": 2949,
+      "lines": 2863,
+      "bodyStart": 2563,
+      "bodyEnd": 93419,
+      "hash": "1a2aeedeed7ff587b2fe25a99f756637b7dfc89788470e5d432d5b229fe0a165"
+    },
+    {
+      "file": "tools_registry/builtin_tools_integration.js",
+      "className": "BuiltInToolsIntegration",
+      "name": "analyzeBuiltInToolRelevance",
+      "start": 1345,
+      "end": 2963,
+      "lines": 1619,
+      "bodyStart": 35227,
+      "bodyEnd": 95448,
+      "hash": "e6faadee4a945c3382b7d706b3d3d1404a744f443277f986d3225e17e3cff6f5"
+    },
+    {
+      "file": "src/renderer/modules/BenchmarkUI.js",
+      "className": "BenchmarkUI",
+      "name": "generateBenchmarkHTML",
+      "start": 4399,
+      "end": 5802,
+      "lines": 1404,
+      "bodyStart": 193204,
+      "bodyEnd": 269448,
+      "hash": "f73127d489455c3fb30ed72fb306fcf962617069fbca51847c69977985057077"
+    },
+    {
+      "file": "tools_registry/builtin_tools_integration.js",
+      "className": "BuiltInToolsIntegration",
+      "name": "initializeBuiltInToolsMapping",
+      "start": 17,
+      "end": 1237,
+      "lines": 1221,
+      "bodyStart": 492,
+      "bodyEnd": 31740,
+      "hash": "e59f752d1dfe01aaa1c404239c7a6ef452cd5f30836bc1bdbc064559e72b1f28"
+    },
+    {
+      "file": "src/renderer/modules/benchmark-suites/AutomaticComplexSuite.js",
+      "className": "AutomaticComplexSuite",
+      "name": "initializeTests",
+      "start": 234,
+      "end": 1266,
+      "lines": 1033,
+      "bodyStart": 10025,
+      "bodyEnd": 49559,
+      "hash": "2d9f9017eaa0777774e0e8c9fd101e38da738c3e671f539e2f19da132966723f"
+    },
+    {
+      "file": "src/renderer/modules/ChatManager.js",
+      "className": "ChatManager",
+      "name": "sendToLLM",
+      "start": 5250,
+      "end": 6171,
+      "lines": 922,
+      "bodyStart": 189201,
+      "bodyEnd": 234477,
+      "hash": "3bcd3b0afbdb37b8bb35514d03059ce7f5659fc77e1e51004933c73f6992c15f"
+    },
+    {
+      "file": "src/renderer/modules/BenchmarkUI.js",
+      "className": "BenchmarkUI",
+      "name": "createBenchmarkInterface",
+      "start": 209,
+      "end": 1007,
+      "lines": 799,
+      "bodyStart": 8092,
+      "bodyEnd": 47282,
+      "hash": "57ad55e907a52bca6bad17d4603922d59e6d4fd3a9e05de727c4c58c9eaa77c7"
+    },
+    {
+      "file": "src/mcp-tools/annotation/AnnotationTools.js",
+      "className": "AnnotationTools",
+      "name": "getTools",
+      "start": 15,
+      "end": 799,
+      "lines": 785,
+      "bodyStart": 420,
+      "bodyEnd": 33563,
+      "hash": "51feb48bc60b59f97685126eff8385c343328fb65b8c7428df6083aa54746482"
+    },
+    {
+      "file": "src/renderer/modules/PluginManagementUI.js",
+      "className": "PluginManagementUI",
+      "name": "generateTestScript",
+      "start": 3449,
+      "end": 4214,
+      "lines": 766,
+      "bodyStart": 129292,
+      "bodyEnd": 169875,
+      "hash": "d450084180a6424facf197353ef35f0d10cef0c26770859d9ccd1ce74ad6624f"
+    },
+    {
+      "file": "src/renderer/modules/ThemeManager.js",
+      "className": "ThemeManager",
+      "name": "constructor",
+      "start": 7,
+      "end": 771,
+      "lines": 765,
+      "bodyStart": 270,
+      "bodyEnd": 27905,
+      "hash": "1e3e9137cd53e381d62c5e39c5c050926733dff393bebfed7260ad39835817be"
+    },
+    {
+      "file": "src/renderer/modules/BlastManager.js",
+      "className": "BlastManager",
+      "name": "injectStyles",
+      "start": 2796,
+      "end": 3524,
+      "lines": 729,
+      "bodyStart": 107393,
+      "bodyEnd": 127577,
+      "hash": "198afd06eddeeb8681667b54a0d3d1a54006d6d8909b58ac79aa5f9bd175c0d0"
+    },
+    {
+      "file": "src/renderer/modules/chat/services/LLMContextService.js",
+      "className": "LLMContextService",
+      "name": "generateSingleToolResponse",
+      "start": 1053,
+      "end": 1751,
+      "lines": 699,
+      "bodyStart": 41073,
+      "bodyEnd": 74110,
+      "hash": "45977503df9190b1424e88a9806f6acf38254ca3e4f3c3dda55bc63a27c1f280"
+    },
+    {
+      "file": "src/renderer/renderer-modular.js",
+      "className": "GenomeBrowser",
+      "name": "setupIPC",
+      "start": 3298,
+      "end": 3977,
+      "lines": 680,
+      "bodyStart": 122648,
+      "bodyEnd": 148114,
+      "hash": "7ab9beb265e0b49d7e0a70ecb6234ee67e74f538b84f6ad0b09d69d2ca3427f6"
+    },
+    {
+      "file": "src/circos-plotter.js",
+      "className": "CircosPlotter",
+      "name": "constructor",
+      "start": 7,
+      "end": 576,
+      "lines": 570,
+      "bodyStart": 173,
+      "bodyEnd": 15002,
+      "hash": "0290fe24205e2b3561442d086030e8b678e602d1412f2763be8199eab0992a44"
+    },
+    {
+      "file": "src/renderer/modules/PluginRealTestDemonstrator.js",
+      "className": "PluginRealTestDemonstrator",
+      "name": "generateTestScript",
+      "start": 701,
+      "end": 1260,
+      "lines": 560,
+      "bodyStart": 24928,
+      "bodyEnd": 56034,
+      "hash": "195d94e59a35cb4eb139ed92623fbc49062d89ae8e4721167412791d733eb2a3"
+    },
+    {
+      "file": "src/renderer/modules/benchmark-suites/ManualSuite.js",
+      "className": "ManualSuite",
+      "name": "initializeTests",
+      "start": 30,
+      "end": 587,
+      "lines": 558,
+      "bodyStart": 723,
+      "bodyEnd": 21033,
+      "hash": "19266f6463d56bb23831103ce03c2bb1d736133d07d8e2aa2113132a5b34c868"
+    },
+    {
+      "file": "src/renderer/modules/LLMBenchmarkFramework.js",
+      "className": "LLMBenchmarkFramework",
+      "name": "sendTestInstruction",
+      "start": 1532,
+      "end": 2057,
+      "lines": 526,
+      "bodyStart": 64592,
+      "bodyEnd": 92022,
+      "hash": "6c4529ba411b0526b3c7ddcf62ea78685f07809384b5860530a03748c81296fe"
+    },
+    {
+      "file": "tools_registry/create_all_tools.js",
+      "className": "ToolDefinitionCreator",
+      "name": "getAllToolDefinitions",
+      "start": 19,
+      "end": 536,
+      "lines": 518,
+      "bodyStart": 487,
+      "bodyEnd": 19548,
+      "hash": "264092027403a151aeabf719cd26e93c69b9a2a4a241dcfee8ee370cbf40162c"
+    },
+    {
+      "file": "src/renderer/modules/chat/services/RestrictionEnzymeDatabase.js",
+      "className": "RestrictionEnzymeDatabase",
+      "name": "_initializeDatabase",
+      "start": 115,
+      "end": 613,
+      "lines": 499,
+      "bodyStart": 3169,
+      "bodyEnd": 17301,
+      "hash": "d09c9f3785a5a585ca778a8979a3c2bafd7a9716cf3b49ae3315e4176387bac7"
+    },
+    {
+      "file": "src/mcp-tools/navigation/NavigationTools.js",
+      "className": "NavigationTools",
+      "name": "getTools",
+      "start": 11,
+      "end": 468,
+      "lines": 458,
+      "bodyStart": 194,
+      "bodyEnd": 18979,
+      "hash": "e967b68a7e31a180b52793b0183e9dcf6b26a7f6e22634be1a7c5859e3ef3206"
+    }
+  ],
+  "duplicateBodies": [
+    [
+      {
+        "file": "src/mcp-tools/sequence/SequenceTools.js",
+        "className": "SequenceTools",
+        "name": "calculateMolecularWeight",
+        "start": 430,
+        "end": 494,
+        "lines": 65
+      },
+      {
+        "file": "src/renderer/modules/MicrobeGenomicsFunctions.js",
+        "className": "MicrobeGenomicsFunctions",
+        "name": "calculateMolecularWeight",
+        "start": 306,
+        "end": 370,
+        "lines": 65
+      }
+    ],
+    [
+      {
+        "file": "packages/marketplace-server/marketplace-data/plugins/ecocyc-pathway-analyzer/1.0.0/demo.js",
+        "className": "EcoCycPathwayDemo",
+        "name": "executeDemo",
+        "start": 104,
+        "end": 132,
+        "lines": 29
+      },
+      {
+        "file": "packages/marketplace-server/marketplace-data/plugins/kegg-pathway-viewer/1.0.0/demo.js",
+        "className": "KEGGPathwayDemo",
+        "name": "executeDemo",
+        "start": 104,
+        "end": 132,
+        "lines": 29
+      },
+      {
+        "file": "packages/marketplace-server/marketplace-data/plugins/string-network-explorer/1.0.0/demo.js",
+        "className": "STRINGNetworkDemo",
+        "name": "executeDemo",
+        "start": 127,
+        "end": 157,
+        "lines": 31
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/AdvancedSearchManager.js",
+        "className": "AdvancedSearchManager",
+        "name": "getReverseComplement",
+        "start": 1071,
+        "end": 1090,
+        "lines": 20
+      },
+      {
+        "file": "src/renderer/modules/VariantAnalyzer.js",
+        "className": "VariantAnalyzer",
+        "name": "reverseComplement",
+        "start": 585,
+        "end": 604,
+        "lines": 20
+      },
+      {
+        "file": "src/renderer/renderer-modular.js",
+        "className": "GenomeBrowser",
+        "name": "fallbackReverseComplement",
+        "start": 8621,
+        "end": 8640,
+        "lines": 20
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/ExportManager.js",
+        "className": "ExportManager",
+        "name": "reverseComplement",
+        "start": 796,
+        "end": 822,
+        "lines": 27
+      },
+      {
+        "file": "src/renderer/modules/NavigationManager.js",
+        "className": "NavigationManager",
+        "name": "getReverseComplement",
+        "start": 1487,
+        "end": 1513,
+        "lines": 27
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/CanvasGenesRenderer.js",
+        "className": "CanvasGenesRenderer",
+        "name": "setupResizeObserver",
+        "start": 164,
+        "end": 179,
+        "lines": 16
+      },
+      {
+        "file": "src/renderer/modules/CanvasReadsRenderer.js",
+        "className": "CanvasReadsRenderer",
+        "name": "setupResizeObserver",
+        "start": 1110,
+        "end": 1126,
+        "lines": 17
+      },
+      {
+        "file": "src/renderer/modules/CanvasSequenceRenderer.js",
+        "className": "CanvasSequenceRenderer",
+        "name": "setupResizeObserver",
+        "start": 641,
+        "end": 657,
+        "lines": 17
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/tracks/GeneShapeCreators.js",
+        "className": "GeneShapeCreators",
+        "name": "createJaggedRepeatPath",
+        "start": 1529,
+        "end": 1553,
+        "lines": 25
+      },
+      {
+        "file": "src/renderer/modules/tracks/GeneShapeCreators.js",
+        "className": "GeneShapeCreators",
+        "name": "createJaggedRNAPath",
+        "start": 1563,
+        "end": 1587,
+        "lines": 25
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/BookmarkPanelUI.js",
+        "className": "BookmarkPanelUI",
+        "name": "_esc",
+        "start": 413,
+        "end": 428,
+        "lines": 16
+      },
+      {
+        "file": "src/renderer/modules/HighlightRegionsUI.js",
+        "className": "HighlightRegionsUI",
+        "name": "_esc",
+        "start": 323,
+        "end": 338,
+        "lines": 16
+      },
+      {
+        "file": "src/renderer/modules/PrimerLibraryUI.js",
+        "className": "PrimerLibraryUI",
+        "name": "_esc",
+        "start": 899,
+        "end": 914,
+        "lines": 16
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/MemorySystem.js",
+        "className": "MemorySystem",
+        "name": "calculateParameterSimilarity",
+        "start": 1798,
+        "end": 1813,
+        "lines": 16
+      },
+      {
+        "file": "src/renderer/modules/MemorySystem.js",
+        "className": "MediumTermMemory",
+        "name": "calculateParameterSimilarity",
+        "start": 2969,
+        "end": 2984,
+        "lines": 16
+      },
+      {
+        "file": "src/renderer/modules/MemorySystem.js",
+        "className": "LongTermMemory",
+        "name": "calculateParameterSimilarity",
+        "start": 3202,
+        "end": 3217,
+        "lines": 16
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/MicrobeGenomicsFunctions.js",
+        "className": "MicrobeGenomicsFunctions",
+        "name": "levenshteinDistance",
+        "start": 1166,
+        "end": 1188,
+        "lines": 23
+      },
+      {
+        "file": "src/renderer/modules/UnifiedSequenceProcessing.js",
+        "className": "UnifiedSequenceProcessing",
+        "name": "levenshteinDistance",
+        "start": 475,
+        "end": 497,
+        "lines": 23
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/PluginDependencyResolver.js",
+        "className": "PluginDependencyResolver",
+        "name": "compareVersions",
+        "start": 255,
+        "end": 268,
+        "lines": 14
+      },
+      {
+        "file": "src/renderer/modules/PluginMarketplace.js",
+        "className": "PluginMarketplace",
+        "name": "compareVersions",
+        "start": 1427,
+        "end": 1440,
+        "lines": 14
+      },
+      {
+        "file": "src/renderer/modules/PluginUpdateManager.js",
+        "className": "PluginUpdateManager",
+        "name": "compareVersions",
+        "start": 152,
+        "end": 165,
+        "lines": 14
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/ChatManager.js",
+        "className": "ChatManager",
+        "name": "normalizeParams",
+        "start": 9382,
+        "end": 9401,
+        "lines": 20
+      },
+      {
+        "file": "src/renderer/modules/chat/services/LLMContextService.js",
+        "className": "LLMContextService",
+        "name": "normalizeParams",
+        "start": 980,
+        "end": 999,
+        "lines": 20
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/benchmark-suites/AutomaticSimpleSuite.js",
+        "className": "AutomaticSimpleSuite",
+        "name": "evaluateNavigationCall",
+        "start": 2971,
+        "end": 2990,
+        "lines": 20
+      },
+      {
+        "file": "src/renderer/modules/benchmark-suites/ManualSuite.js",
+        "className": "ManualSuite",
+        "name": "evaluateNavigationCall",
+        "start": 772,
+        "end": 791,
+        "lines": 20
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/LLMBenchmarkFramework.js",
+        "className": "LLMBenchmarkFramework",
+        "name": "formatToolResults",
+        "start": 2470,
+        "end": 2486,
+        "lines": 17
+      },
+      {
+        "file": "src/renderer/modules/LLMBenchmarkFramework.js",
+        "className": "LLMBenchmarkFramework",
+        "name": "formatExecutionResults",
+        "start": 2698,
+        "end": 2714,
+        "lines": 17
+      }
+    ],
+    [
+      {
+        "file": "src/renderer/modules/CanvasGenesRenderer.js",
+        "className": "CanvasGenesRenderer",
+        "name": "shouldUseSpecializedShape",
+        "start": 682,
+        "end": 696,
+        "lines": 15
+      },
+      {
+        "file": "src/renderer/modules/tracks/GeneShapeCreators.js",
+        "className": "GeneShapeCreators",
+        "name": "shouldUseSpecializedShape",
+        "start": 247,
+        "end": 261,
+        "lines": 15
+      }
+    ],
+    [
+      {
+        "file": "src/mcp-tools/sequence/SequenceTools.js",
+        "className": "SequenceTools",
+        "name": "calculateEntropy",
+        "start": 415,
+        "end": 428,
+        "lines": 14
+      },
+      {
+        "file": "src/renderer/modules/MicrobeGenomicsFunctions.js",
+        "className": "MicrobeGenomicsFunctions",
+        "name": "calculateEntropy",
+        "start": 261,
+        "end": 275,
+        "lines": 15
+      }
+    ],
+    [
+      {
+        "file": "src/main/skill-registry-service.js",
+        "className": "SkillRegistryService",
+        "name": "getMetadata",
+        "start": 158,
+        "end": 169,
+        "lines": 12
+      },
+      {
+        "file": "src/main/tool-registry-service.js",
+        "className": "ToolRegistryService",
+        "name": "getMetadata",
+        "start": 110,
+        "end": 121,
+        "lines": 12
+      }
+    ],
+    [
+      {
+        "file": "tools_registry/chatmanager_integration_example.js",
+        "className": "ChatManagerWithDynamicTools",
+        "name": "addToConversationHistory",
+        "start": 227,
+        "end": 238,
+        "lines": 12
+      },
+      {
+        "file": "tools_registry/enhanced_chatmanager_integration.js",
+        "className": "EnhancedChatManagerWithDynamicTools",
+        "name": "addToConversationHistory",
+        "start": 454,
+        "end": 465,
+        "lines": 12
+      }
+    ]
+  ]
+}

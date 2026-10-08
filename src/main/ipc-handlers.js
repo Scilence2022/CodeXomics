@@ -13,6 +13,11 @@ const { ipcMain, app, dialog, BrowserWindow, nativeImage, clipboard, shell } = r
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { requestResourceSnapshot } = require('./resource-snapshot');
+const { inspectPluginPackage } = require('./plugin-package-inspector');
+const pluginPackageStore = require('./plugin-package-store');
+const { registerPluginVersionIpc } = require('./plugin-version-ipc');
+const { extractPluginArchive } = require('./plugin-archive');
 const VERSION_INFO = require('../version');
 const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
 const workspaceHostManager = require('./workspace-host-manager');
@@ -29,7 +34,6 @@ const {
   grantReadOnlyFileLoadPath,
   assertPluginPath,
   safePluginJoin,
-  safeExtractAdmZip,
   sanitizePluginId,
 } = require('./security-utils');
 const { ToolRegistryService } = require('./tool-registry-service');
@@ -577,6 +581,7 @@ function getBamReaderState(reader) {
  * @param {Object} deps.i18n - Internationalization
  */
 function registerIpcHandlers(deps) {
+  registerPluginVersionIpc(ipcMain);
   const {
     mainWindow,
     windowRegistry,
@@ -1783,18 +1788,13 @@ function registerIpcHandlers(deps) {
         operation: 'extract plugin zip',
         mustExist: true,
       });
-      // Create temp directory for extraction
-      const tempDir = assertAllowedFileAccess(app, path.join(app.getPath('temp'), `plugin-${Date.now()}`), {
-        operation: 'create plugin extraction directory',
+      const result = await extractPluginArchive(zipPath, app.getPath('temp'));
+      permissionBroker.grantPath(result.extractPath, {
+        source: 'plugin-archive-extraction',
+        capabilities: [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.LIST],
+        recursive: true,
       });
-      fs.mkdirSync(tempDir, { recursive: true });
-
-      // Note: This is a placeholder - you'll need to add a zip extraction library
-      // For now, return error indicating zip extraction not implemented
-      return {
-        success: false,
-        error: 'ZIP extraction not yet implemented. Please extract manually and select the plugin directory.',
-      };
+      return result;
     } catch (error) {
       return {
         success: false,
@@ -1883,95 +1883,51 @@ function registerIpcHandlers(deps) {
    * Write complete plugin package to disk
    * Handles both JSON (mock packages) and ZIP (real packages) data
    */
+  ipcMain.handle('inspect-plugin-package', async (event, options) => {
+    try {
+      return { success: true, evidence: inspectPluginPackage(options) };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  const checkedInstallPath = options => {
+    const pluginId = sanitizePluginId(options.pluginId);
+    const installPath = assertPluginPath(app, options.installPath, 'plugin install path');
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(pluginId) || path.basename(installPath) !== pluginId) {
+      throw new Error('Plugin install path must match its id');
+    }
+    return installPath;
+  };
   ipcMain.handle('write-plugin-files', async (event, options) => {
     try {
-      const { pluginId, installPath, data, manifest } = options || {};
-      const safePluginId = sanitizePluginId(pluginId);
-      const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
-
-      console.log(`[Main] Writing plugin files for ${safePluginId} to ${safeInstallPath}`);
-
-      // Create plugin directory if it doesn't exist
-      if (!fs.existsSync(safeInstallPath)) {
-        fs.mkdirSync(safeInstallPath, { recursive: true });
-        console.log(`[Main] Created plugin directory: ${safeInstallPath}`);
-      }
-
-      // Write manifest file (plugin.json)
-      const manifestPath = safePluginJoin(app, safeInstallPath, 'plugin.json', 'plugin manifest');
-      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
-      console.log(`[Main] Wrote manifest to: ${manifestPath}`);
-
-      // Handle the plugin data
-      if (data) {
-        if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'number') {
-          // Binary data sent as byte array - could be a ZIP file
-          const zipPath = safePluginJoin(app, safeInstallPath, `${safePluginId}.zip`, 'plugin zip');
-          const buffer = Buffer.from(data);
-          fs.writeFileSync(zipPath, buffer);
-          console.log(`[Main] Wrote ZIP file (${buffer.length} bytes): ${zipPath}`);
-
-          // Try to extract the ZIP file using native zlib if it's a valid zip
-          try {
-            const AdmZip = require('adm-zip');
-            const zip = new AdmZip(buffer);
-            safeExtractAdmZip(app, zip, safeInstallPath);
-            // Remove the zip file after extraction
-            fs.unlinkSync(zipPath);
-            console.log(`[Main] Extracted ZIP file to ${safeInstallPath}`);
-          } catch (extractError) {
-            // If adm-zip is not available or extraction fails, keep the ZIP for manual extraction
-            console.log(`[Main] ZIP extraction not available, keeping ZIP file: ${extractError.message}`);
-          }
-        } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-          // Binary data (ArrayBuffer/TypedArray) - should not normally reach here after IPC
-          const zipPath = safePluginJoin(app, safeInstallPath, `${safePluginId}.zip`, 'plugin zip');
-          const buffer = Buffer.from(data);
-          fs.writeFileSync(zipPath, buffer);
-          console.log(`[Main] Wrote binary data (${buffer.length} bytes): ${zipPath}`);
-        } else if (typeof data === 'object' && !Array.isArray(data)) {
-          // JSON package (mock package with files object)
-          for (const [filename, content] of Object.entries(data)) {
-            const filePath = safePluginJoin(app, safeInstallPath, filename, 'plugin package file');
-            const fileDir = path.dirname(filePath);
-
-            if (!fs.existsSync(fileDir)) {
-              fs.mkdirSync(fileDir, { recursive: true });
-            }
-
-            // Handle different content types
-            if (typeof content === 'string') {
-              fs.writeFileSync(filePath, content, 'utf8');
-            } else if (typeof content === 'object') {
-              fs.writeFileSync(filePath, JSON.stringify(content, null, 2), 'utf8');
-            }
-
-            console.log(`[Main] Wrote file: ${filePath}`);
-          }
-        }
-      }
-
-      // Create an index.js entry point if not provided
-      const indexPath = safePluginJoin(app, safeInstallPath, 'index.js', 'plugin index');
-      if (!fs.existsSync(indexPath)) {
-        const defaultIndex = `// Plugin: ${safePluginId}\n// Auto-generated entry point\nmodule.exports = ${JSON.stringify(manifest, null, 2)};\n`;
-        fs.writeFileSync(indexPath, defaultIndex, 'utf8');
-        console.log(`[Main] Created default index.js`);
-      }
-
-      console.log(`[Main] Plugin ${safePluginId} installed successfully to ${safeInstallPath}`);
-
-      return {
-        success: true,
-        installPath: safeInstallPath,
-        files: fs.readdirSync(safeInstallPath),
-      };
+      return await pluginPackageStore.installPackage({ ...options, installPath: checkedInstallPath(options) });
     } catch (error) {
-      console.error('[Main] Failed to write plugin files:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
+    }
+  });
+  ipcMain.handle('backup-plugin-package', async (event, options) => {
+    try {
+      return await pluginPackageStore.backupPackage(
+        checkedInstallPath(options),
+        path.join(app.getPath('userData'), 'plugin-rollbacks'),
+        options.pluginId,
+        options.version
+      );
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  ipcMain.handle('restore-plugin-package', async (event, options) => {
+    try {
+      return await pluginPackageStore.restorePackage(
+        checkedInstallPath(options),
+        path.join(app.getPath('userData'), 'plugin-rollbacks'),
+        options.pluginId,
+        options.snapshotId
+      );
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   });
 
@@ -3668,82 +3624,29 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  // Resource Manager IPC handlers
-  ipcMain.handle('get-loaded-resources', async () => {
+  // Resource Manager reads the selected genome view, not demonstration data.
+  const collectResources = async () => {
     try {
-      // In a real implementation, this would collect data from the main window
-      // For now, return mock data that matches the expected format
-      const mockResources = [
-        {
-          id: 'genome1',
-          type: 'fasta',
-          name: 'E.coli_K12.fasta',
-          path: '/Users/example/data/E.coli_K12.fasta',
-          size: 4641652,
-          loadedAt: new Date().toISOString(),
-          status: 'loaded',
-          chromosomes: ['NC_000913.3'],
-          sequences: 1,
-          metadata: {
-            organism: 'Escherichia coli K-12',
-            version: 'RefSeq',
-            source: 'NCBI',
-          },
-        },
-      ];
-
-      return { success: true, resources: mockResources };
+      return await requestResourceSnapshot(ipcMain, getMainGenomeTarget());
     } catch (error) {
       return { success: false, error: error.message };
     }
-  });
+  };
+  ipcMain.handle('get-loaded-resources', collectResources);
+  ipcMain.handle('refresh-resources', collectResources);
+  ipcMain.handle('remove-resource', async () => ({
+    success: false,
+    error: 'Resource removal is unavailable; use the genome track controls',
+  }));
+  ipcMain.handle('export-resource', async () => ({
+    success: false,
+    error: 'Resource export is unavailable here; use the genome export menu',
+  }));
 
-  ipcMain.handle('refresh-resources', async () => {
-    try {
-      // Send refresh request to main window and collect current state
-      const targetWindow = getMainGenomeTarget();
-      if (targetWindow) {
-        targetWindow.webContents.send('collect-resource-info');
-      }
-      return { success: true, message: 'Resources refreshed' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('remove-resource', async (event, resourceId) => {
-    try {
-      // In a real implementation, this would communicate with the main window
-      // to remove the resource
-      console.log('Removing resource:', resourceId);
-      return { success: true, message: 'Resource removed' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('export-resource', async (event, resourceId, options) => {
-    try {
-      // Implementation would show save dialog and export the resource
-      console.log('Exporting resource:', resourceId, options);
-      return { success: true, message: 'Resource exported' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('open-resource-in-browser', async (event, resourceId) => {
-    try {
-      // Send message to main window to display the resource
-      const targetWindow = getMainGenomeTarget();
-      if (targetWindow) {
-        targetWindow.webContents.send('open-resource', resourceId);
-      }
-      return { success: true, message: 'Resource opened in browser' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
+  ipcMain.handle('open-resource-in-browser', async () => ({
+    success: false,
+    error: 'Resource viewing is unavailable here; select the file in its genome window',
+  }));
 
   ipcMain.handle('select-and-load-file', async () => {
     try {

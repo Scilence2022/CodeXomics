@@ -157,11 +157,14 @@ class PluginSecurityValidator {
 
       // Determine overall approval
       const criticalIssues = securityIssues.filter(i => i.severity === 'critical');
-      const approved = criticalIssues.length === 0;
+      const rejectedPlugins = validationResults.filter(result => !result.approved);
+      const approved = criticalIssues.length === 0 && rejectedPlugins.length === 0;
 
       if (!approved) {
-        this.stats.blockedPlugins += criticalIssues.length;
-        throw new Error(`Security validation failed: ${criticalIssues.length} critical issues found`);
+        this.stats.blockedPlugins += new Set(securityIssues.map(issue => issue.pluginId)).size;
+        throw new Error(
+          `Security validation failed: ${rejectedPlugins.length} rejected plugins, ${criticalIssues.length} critical issues`
+        );
       }
 
       // Log security warnings for high/medium severity issues
@@ -203,7 +206,17 @@ class PluginSecurityValidator {
     const sourceTrust = this.evaluateSourceTrust(plugin);
 
     // Check if plugin is already verified
-    const cacheKey = `${plugin.id}@${plugin.version}`;
+    const evidence = plugin.packageEvidence;
+    if (
+      !evidence ||
+      !/^[a-f0-9]{64}$/.test(evidence.sha256 || '') ||
+      evidence.manifest?.id !== plugin.id ||
+      evidence.manifest?.version !== plugin.version ||
+      !Array.isArray(evidence.files)
+    ) {
+      throw new Error('Inspected plugin package contents are required for validation');
+    }
+    const cacheKey = `${plugin.id}@${plugin.version}:${evidence.sha256}`;
     if (this.verifiedPlugins.has(cacheKey)) {
       const cached = this.verifiedPlugins.get(cacheKey);
       console.log(`✅ Using cached validation for ${plugin.id}`);
@@ -220,6 +233,9 @@ class PluginSecurityValidator {
       issues: [],
       riskScore: 0,
       timestamp: new Date(),
+      packageSha256: evidence.sha256,
+      scope: 'static_source_and_declared_permissions',
+      dependencyVulnerabilityScan: 'not_performed',
     };
 
     try {
@@ -235,7 +251,7 @@ class PluginSecurityValidator {
         });
       }
 
-      // 2. Code analysis (simulated)
+      // 2. Static analysis of the actual downloaded package
       const codeAnalysis = await this.analyzePluginCode(plugin);
       validationResult.issues.push(...codeAnalysis.issues);
       validationResult.riskScore += codeAnalysis.riskScore;
@@ -244,13 +260,6 @@ class PluginSecurityValidator {
       const permissionAnalysis = this.validatePermissions(plugin);
       validationResult.issues.push(...permissionAnalysis.issues);
       validationResult.riskScore += permissionAnalysis.riskScore;
-
-      // 4. Dependency security check
-      if (plugin.dependencies && plugin.dependencies.length > 0) {
-        const depAnalysis = await this.analyzeDependencySecurity(plugin);
-        validationResult.issues.push(...depAnalysis.issues);
-        validationResult.riskScore += depAnalysis.riskScore;
-      }
 
       // 5. Risk assessment
       const riskAssessment = this.riskEngine.assessRisk(validationResult);
@@ -275,7 +284,7 @@ class PluginSecurityValidator {
         validationResult.severity = 'high';
       } else {
         validationResult.approved = true;
-        validationResult.reason = 'Security validation passed';
+        validationResult.reason = 'Static source and declared permission checks passed';
 
         if (validationResult.riskScore > 50) {
           this.stats.riskyPlugins++;
@@ -319,60 +328,27 @@ class PluginSecurityValidator {
    * Analyze plugin code for security issues
    */
   async analyzePluginCode(plugin) {
-    console.log(`🔍 Analyzing code for ${plugin.id}...`);
-
-    // Simulate code analysis
-    const mockCode = this.generateMockCode(plugin);
-
     const issues = [];
     let riskScore = 0;
-
-    // Check against security patterns
-    for (const [, patterns] of Object.entries(this.securityPatterns)) {
-      for (const pattern of patterns) {
-        const matches = mockCode.match(pattern.pattern);
-        if (matches) {
+    for (const file of plugin.packageEvidence.files) {
+      for (const patterns of Object.values(this.securityPatterns)) {
+        for (const rule of patterns) {
+          const matches = [...file.content.matchAll(new RegExp(rule.pattern.source, rule.pattern.flags))];
+          if (!matches.length) continue;
           issues.push({
             type: 'code_pattern',
-            pattern: pattern.pattern.source,
-            description: pattern.description,
-            severity: pattern.severity,
+            file: file.name,
+            pattern: rule.pattern.source,
+            description: rule.description,
+            severity: rule.severity,
             matches: matches.length,
-            line: Math.floor(Math.random() * 50) + 1,
+            line: file.content.slice(0, matches[0].index).split('\n').length,
           });
-
-          // Add to risk score based on severity
-          switch (pattern.severity) {
-            case 'critical':
-              riskScore += 40;
-              break;
-            case 'high':
-              riskScore += 20;
-              break;
-            case 'medium':
-              riskScore += 10;
-              break;
-          }
+          riskScore += rule.severity === 'critical' ? 40 : rule.severity === 'high' ? 20 : 10;
         }
       }
     }
-
     return { issues, riskScore };
-  }
-
-  /**
-   * Generate mock code for demonstration
-   */
-  generateMockCode(plugin) {
-    const riskLevel = Math.random();
-
-    if (riskLevel > 0.8) {
-      return `eval("some dynamic code"); fetch("http://suspicious-site.com/data");`;
-    } else if (riskLevel > 0.5) {
-      return `localStorage.setItem('data', 'value'); require('fs').readFile('/etc/passwd');`;
-    } else {
-      return `console.log('Plugin ${plugin.id} executing'); return Math.random();`;
-    }
   }
 
   /**
@@ -384,16 +360,17 @@ class PluginSecurityValidator {
     const issues = [];
     let riskScore = 0;
 
-    // Mock permission analysis
-    const requestedPermissions = this.getMockPermissions(plugin);
+    const permissions = plugin.packageEvidence.manifest.permissions || [];
+    const requestedPermissions = Array.isArray(permissions) ? permissions : Object.keys(permissions);
 
     for (const permission of requestedPermissions) {
-      const analysis = this.analyzePermission(permission);
+      const name = typeof permission === 'string' ? permission : permission.name;
+      const analysis = this.analyzePermission({ name });
 
       if (analysis.severity === 'critical') {
         issues.push({
           type: 'dangerous_permission',
-          permission: permission.name,
+          permission: name,
           description: analysis.description,
           severity: 'critical',
           reason: analysis.reason,
@@ -402,7 +379,7 @@ class PluginSecurityValidator {
       } else if (analysis.severity === 'high') {
         issues.push({
           type: 'risky_permission',
-          permission: permission.name,
+          permission: name,
           description: analysis.description,
           severity: 'high',
           reason: analysis.reason,
@@ -412,29 +389,6 @@ class PluginSecurityValidator {
     }
 
     return { issues, riskScore };
-  }
-
-  /**
-   * Get mock permissions for plugin
-   */
-  getMockPermissions(plugin) {
-    const basePermissions = [
-      { name: 'console', type: 'api' },
-      { name: 'Date', type: 'api' },
-      { name: 'Math', type: 'api' },
-    ];
-
-    // Add category-specific permissions
-    if (plugin.category === 'network-analysis') {
-      basePermissions.push({ name: 'fetch', type: 'network' });
-    }
-
-    // Randomly add risky permissions
-    if (Math.random() > 0.7) {
-      basePermissions.push({ name: 'eval', type: 'execution' });
-    }
-
-    return basePermissions;
   }
 
   /**
@@ -476,45 +430,6 @@ class PluginSecurityValidator {
         reason: 'Permission not in security database',
       }
     );
-  }
-
-  /**
-   * Analyze dependency security
-   */
-  async analyzeDependencySecurity(plugin) {
-    console.log(`🔗 Analyzing dependency security for ${plugin.id}...`);
-
-    const issues = [];
-    let riskScore = 0;
-
-    for (const dep of plugin.dependencies) {
-      // Check for known vulnerable dependencies
-      if (this.isKnownVulnerableDependency(dep)) {
-        issues.push({
-          type: 'vulnerable_dependency',
-          dependency: dep.id,
-          version: dep.version,
-          description: 'Known security vulnerability',
-          severity: 'high',
-        });
-        riskScore += 25;
-      }
-    }
-
-    return { issues, riskScore };
-  }
-
-  /**
-   * Check if dependency has known vulnerabilities
-   */
-  isKnownVulnerableDependency(dependency) {
-    // Mock vulnerability database
-    const vulnerableDeps = {
-      'old-crypto-lib': ['1.0.0', '1.1.0'],
-      'insecure-parser': ['2.0.0'],
-    };
-
-    return vulnerableDeps[dependency.id]?.includes(dependency.version) || false;
   }
 
   /**
@@ -572,7 +487,7 @@ class PluginRiskEngine {
     let totalScore = validationResult.riskScore;
 
     // Source risk
-    const sourceRisk = this.riskFactors.source[validationResult.source] || 30;
+    const sourceRisk = this.riskFactors.source[validationResult.source] ?? 30;
     totalScore += sourceRisk;
 
     // Issue severity multiplier

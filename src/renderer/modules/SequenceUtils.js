@@ -3067,36 +3067,11 @@ class SequenceUtils {
   }
 
   getReverseComplement(sequence) {
-    // Use unified sequence processing implementation
-    if (window.UnifiedSequenceProcessing) {
-      const result = window.UnifiedSequenceProcessing.legacyReverseComplement(sequence);
-      return result;
-    }
-
-    // Fallback to original implementation if unified module not available
-    const complement = {
-      A: 'T',
-      T: 'A',
-      G: 'C',
-      C: 'G',
-      N: 'N',
-      R: 'Y',
-      Y: 'R',
-      S: 'S',
-      W: 'W',
-      K: 'M',
-      M: 'K',
-      B: 'V',
-      D: 'H',
-      H: 'D',
-      V: 'B',
-    };
-
-    return sequence
-      .split('')
-      .reverse()
-      .map(base => complement[base] || base)
-      .join('');
+    const processing =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedSequenceProcessing')
+        : window.UnifiedSequenceProcessing;
+    return processing.reverseComplement(sequence, { caseSensitive: false, validateInput: false }).sequence;
   }
 
   getComplement(sequence) {

@@ -93,8 +93,7 @@ describe('Tool Registry YAML Definitions', () => {
       const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
       console.warn('Duplicate tool names found:', [...new Set(duplicates)]);
     }
-    // Document current state but allow some duplicates as known tech debt
-    expect(uniqueNames.size).toBeGreaterThanOrEqual(names.length - 10);
+    expect(uniqueNames.size).toBe(names.length);
   });
 
   it('most tool definitions should have a description', () => {

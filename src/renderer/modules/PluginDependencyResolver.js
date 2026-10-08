@@ -49,6 +49,7 @@ class PluginDependencyResolver {
 
       // Build install plan
       const installPlan = await this.buildInstallPlan(installOrder, resolvedVersions);
+      this.validateInstallPlan(installPlan);
 
       this.stats.totalResolutions++;
       if (dependencyTree.totalDependencies > 5) {
@@ -127,161 +128,60 @@ class PluginDependencyResolver {
   async findCompatiblePlugin(dependency) {
     console.log(`🔍 Finding compatible version for ${dependency.id} ${dependency.version}`);
 
-    // Parse version constraint
     const constraint = this.parseVersionConstraint(dependency.version);
-
-    // Search for plugin in marketplace
-    const searchResults = await this.marketplace.searchPlugins(dependency.id);
-
-    // Find exact match first
-    let compatiblePlugin = searchResults.find(plugin => plugin.id === dependency.id);
-
-    if (!compatiblePlugin) {
-      throw new Error(`Plugin ${dependency.id} not found`);
+    const results = await this.marketplace.searchPlugins(dependency.id);
+    const candidates = results.filter(
+      plugin => plugin.id === dependency.id && this.isVersionCompatible(plugin.version, constraint)
+    );
+    candidates.sort((a, b) => this.compareVersions(b.version, a.version));
+    if (!candidates.length) {
+      throw new Error(`No available compatible package for ${dependency.id} ${dependency.version}`);
     }
-
-    // Check version compatibility
-    if (!this.isVersionCompatible(compatiblePlugin.version, constraint)) {
-      // Try to find a compatible version
-      const allVersions = await this.getAllVersionsForPlugin(dependency.id);
-      const compatibleVersion = this.findBestCompatibleVersion(allVersions, constraint);
-
-      if (!compatibleVersion) {
-        throw new Error(`No compatible version found for ${dependency.id} ${dependency.version}`);
-      }
-
-      // Get the specific compatible version
-      compatiblePlugin = await this.marketplace.findPluginInSource('official', dependency.id);
-      compatiblePlugin.version = compatibleVersion;
-    }
-
-    console.log(`✅ Found compatible version: ${compatiblePlugin.id} v${compatiblePlugin.version}`);
-    return compatiblePlugin;
+    return candidates[0];
   }
 
-  /**
-   * Parse version constraint string
-   */
-  parseVersionConstraint(versionStr) {
-    // Support formats: ">=1.0.0", "^1.0.0", "~1.0.0", "1.0.0", "*"
-
-    if (versionStr === '*') {
-      return { operator: '*', version: null };
-    }
-
-    const operators = ['>=', '<=', '>', '<', '^', '~', '='];
-
-    for (const op of operators) {
-      if (versionStr.startsWith(op)) {
-        return {
-          operator: op,
-          version: versionStr.substring(op.length).trim(),
-        };
-      }
-    }
-
-    // Default to exact match
-    return {
-      operator: '=',
-      version: versionStr,
-    };
+  getVersionUtils() {
+    return typeof module !== 'undefined' && module.exports
+      ? require('./PluginVersionUtils')
+      : window.PluginVersionUtils;
   }
 
-  /**
-   * Check if version satisfies constraint
-   */
+  parseVersionConstraint(range) {
+    if (typeof range !== 'string' || !this.getVersionUtils().validRange(range)) {
+      throw new Error(`Invalid version constraint: ${range}`);
+    }
+    return { range };
+  }
+
   isVersionCompatible(version, constraint) {
-    if (constraint.operator === '*') {
-      return true;
-    }
-
-    const compareResult = this.compareVersions(version, constraint.version);
-
-    switch (constraint.operator) {
-      case '>=':
-        return compareResult >= 0;
-      case '<=':
-        return compareResult <= 0;
-      case '>':
-        return compareResult > 0;
-      case '<':
-        return compareResult < 0;
-      case '=':
-        return compareResult === 0;
-      case '^':
-        return this.isCaretCompatible(version, constraint.version);
-      case '~':
-        return this.isTildeCompatible(version, constraint.version);
-      default:
-        return compareResult === 0;
-    }
+    const range =
+      constraint.range || (constraint.operator === '*' ? '*' : `${constraint.operator}${constraint.version}`);
+    return this.getVersionUtils().satisfies(version, range);
   }
 
-  /**
-   * Check caret compatibility (^1.2.3 allows >=1.2.3 <2.0.0)
-   */
   isCaretCompatible(version, constraintVersion) {
-    const vParts = version.split('.').map(Number);
-    const cParts = constraintVersion.split('.').map(Number);
-
-    // Major version must match
-    if (vParts[0] !== cParts[0]) {
-      return false;
-    }
-
-    // Version must be >= constraint
-    return this.compareVersions(version, constraintVersion) >= 0;
+    return this.getVersionUtils().satisfies(version, `^${constraintVersion}`);
   }
 
-  /**
-   * Check tilde compatibility (~1.2.3 allows >=1.2.3 <1.3.0)
-   */
   isTildeCompatible(version, constraintVersion) {
-    const vParts = version.split('.').map(Number);
-    const cParts = constraintVersion.split('.').map(Number);
-
-    // Major and minor versions must match
-    if (vParts[0] !== cParts[0] || vParts[1] !== cParts[1]) {
-      return false;
-    }
-
-    // Patch version must be >= constraint
-    return vParts[2] >= cParts[2];
+    return this.getVersionUtils().satisfies(version, `~${constraintVersion}`);
   }
 
   /**
    * Compare two version strings
    */
   compareVersions(version1, version2) {
-    const v1Parts = version1.split('.').map(Number);
-    const v2Parts = version2.split('.').map(Number);
-
-    for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-      const v1 = v1Parts[i] || 0;
-      const v2 = v2Parts[i] || 0;
-
-      if (v1 > v2) return 1;
-      if (v1 < v2) return -1;
-    }
-
-    return 0;
+    const utils =
+      typeof module !== 'undefined' && module.exports ? require('./PluginVersionUtils') : window.PluginVersionUtils;
+    return utils.compare(version1, version2);
   }
 
   /**
    * Get all available versions for a plugin
    */
   async getAllVersionsForPlugin(pluginId) {
-    // Simulate getting all versions from marketplace
-    const mockVersions = {
-      'sequence-utils': ['1.0.0', '1.1.0', '1.2.0', '2.0.0'],
-      'math-libs': ['2.0.0', '2.1.0', '2.2.0'],
-      'ml-core': ['3.0.0', '3.1.0', '3.2.0'],
-      'protein-utils': ['1.2.0', '1.3.0', '1.4.0'],
-      'graph-libs': ['2.5.0', '2.6.0', '2.7.0'],
-      'visualization-engine': ['1.8.0', '1.9.0', '2.0.0'],
-    };
-
-    return mockVersions[pluginId] || [];
+    const packages = await this.marketplace.searchPlugins(pluginId);
+    return [...new Set(packages.filter(plugin => plugin.id === pluginId).map(plugin => plugin.version))];
   }
 
   /**
@@ -338,7 +238,7 @@ class PluginDependencyResolver {
     const pluginVersions = new Map();
 
     // Collect all version requirements
-    const collectVersions = node => {
+    const collectVersions = (node, constraint = node.plugin.version, requiredBy = node.plugin.id) => {
       const pluginId = node.plugin.id;
 
       if (!pluginVersions.has(pluginId)) {
@@ -347,12 +247,13 @@ class PluginDependencyResolver {
 
       pluginVersions.get(pluginId).push({
         version: node.plugin.version,
-        requiredBy: node.plugin.id,
-        constraint: node.plugin.version,
+        requiredBy,
+        constraint,
       });
 
+      this.resolvedDependencies.set(`${pluginId}@${node.plugin.version}`, node.plugin);
       for (const dep of node.dependencies) {
-        collectVersions(dep.tree);
+        collectVersions(dep.tree, dep.constraint, node.plugin.id);
       }
     };
 
@@ -405,11 +306,7 @@ class PluginDependencyResolver {
       }
     }
 
-    // If no version satisfies all constraints, use the highest version
-    const highestVersion = sortedVersions[0];
-    console.warn(`⚠️ No version of ${pluginId} satisfies all constraints. Using ${highestVersion}`);
-
-    return highestVersion;
+    throw new Error(`No available version of ${pluginId} satisfies all constraints`);
   }
 
   /**
@@ -463,17 +360,13 @@ class PluginDependencyResolver {
 
     for (const item of installOrder) {
       // Get plugin details with resolved version
-      const plugin = await this.marketplace.findPlugin(item.id);
+      const plugin = this.resolvedDependencies.get(`${item.id}@${item.version}`);
 
       if (!plugin) {
         throw new Error(`Plugin ${item.id} not found for installation`);
       }
 
-      // Update with resolved version
-      plugin.version = item.version;
-      plugin.isDependency = item.isDependency;
-
-      plugins.push(plugin);
+      plugins.push({ ...plugin, isDependency: item.isDependency });
     }
 
     return {
@@ -564,7 +457,7 @@ class PluginDependencyResolver {
 
     if (issues.length > 0) {
       console.warn(`⚠️ Install plan validation found ${issues.length} issues`);
-      const highSeverityIssues = issues.filter(i => i.severity === 'high');
+      const highSeverityIssues = issues;
       if (highSeverityIssues.length > 0) {
         throw new Error(`Install plan validation failed: ${highSeverityIssues.length} critical issues found`);
       }

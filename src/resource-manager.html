@@ -614,42 +614,15 @@
                 console.error('Failed to load resources:', result.error);
               }
             } else {
-              // Fallback to mock data if electronAPI is not available
-              this.loadMockData();
+              this.resources.clear();
             }
 
             this.updateCounts();
           } catch (error) {
             console.error('Error loading resources:', error);
-            this.loadMockData();
+            this.resources.clear();
+            this.updateCounts();
           }
-        }
-
-        loadMockData() {
-          const mockResources = [
-            {
-              id: 'genome1',
-              type: 'fasta',
-              name: 'E.coli_K12.fasta',
-              path: '/Users/example/data/E.coli_K12.fasta',
-              size: 4641652,
-              loadedAt: new Date('2025-01-10T10:30:00'),
-              status: 'loaded',
-              chromosomes: ['NC_000913.3'],
-              sequences: 1,
-              metadata: {
-                organism: 'Escherichia coli K-12',
-                version: 'RefSeq',
-                source: 'NCBI',
-              },
-            },
-          ];
-
-          this.resources.clear();
-          mockResources.forEach(resource => {
-            this.resources.set(resource.id, resource);
-          });
-          this.updateCounts();
         }
 
         addResource(resource) {
@@ -842,9 +815,9 @@
                             </div>
                         </div>
                         <div class="resource-actions">
-                            <button class="btn btn-primary" onclick="event.stopPropagation(); openInBrowser('${resource.id}')">View</button>
-                            <button class="btn btn-secondary" onclick="event.stopPropagation(); exportResource('${resource.id}')">Export</button>
-                            <button class="btn btn-danger" onclick="event.stopPropagation(); removeResource('${resource.id}')">Remove</button>
+                            <button class="btn btn-primary" disabled title="Select this file in its genome window">View</button>
+                            <button class="btn btn-secondary" disabled title="Use the genome export menu">Export</button>
+                            <button class="btn btn-danger" disabled title="Use genome track controls">Remove</button>
                         </div>
                     </div>
                 `;

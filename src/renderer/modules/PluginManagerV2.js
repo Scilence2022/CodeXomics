@@ -23,7 +23,7 @@ class PluginManagerV2 {
       enableResourceManagement: true,
       enableCaching: true,
       enableMarketplace: true,
-      enableSecurityValidation: false, // Temporarily disabled for testing
+      enableSecurityValidation: false, // Optional static package checks; downloaded code execution stays blocked
       enableDependencyResolution: true,
       enableAutoUpdates: true,
       enableNewArchitecture: true, // Enable VS Code-inspired architecture
@@ -306,7 +306,7 @@ class PluginManagerV2 {
   /**
    * Uninstall a plugin from the system
    */
-  async uninstallPlugin(pluginId) {
+  async uninstallPlugin(pluginId, { keepFiles = false, notify = true } = {}) {
     try {
       console.log(`🗑️ Uninstalling plugin: ${pluginId}`);
 
@@ -327,7 +327,7 @@ class PluginManagerV2 {
       }
 
       // 1. Delete plugin files from disk
-      if (this.pathResolver && typeof window !== 'undefined' && window.electronAPI?.deletePluginFiles) {
+      if (!keepFiles && this.pathResolver && typeof window !== 'undefined' && window.electronAPI?.deletePluginFiles) {
         const installPath = this.pathResolver.getInstallPath(pluginId);
         console.log(`🗑️ Deleting plugin files from: ${installPath}`);
 
@@ -370,7 +370,7 @@ class PluginManagerV2 {
       this.metrics.pluginUsageStats.delete(pluginId);
 
       // 6. Emit uninstall event (PluginMarketplace listens to this)
-      this.emitEvent('plugin-uninstalled', { pluginId, type: pluginType });
+      if (notify) this.emitEvent('plugin-uninstalled', { pluginId, type: pluginType });
 
       console.log(`✅ Plugin ${pluginId} uninstalled successfully`);
 
@@ -1016,7 +1016,7 @@ class PluginManagerV2 {
     }
 
     const pluginId = parts[0];
-     // visualize, renderNetwork, etc.
+    // visualize, renderNetwork, etc.
 
     console.log(`🎨 [PluginManagerV2] Executing visualization tool: ${toolName}`);
 

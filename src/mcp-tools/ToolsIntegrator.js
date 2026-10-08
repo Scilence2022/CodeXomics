@@ -347,13 +347,7 @@ class ToolsIntegrator {
           case 'find_pathway_genes':
             return this.pathwayTools.findGenesInPathway(parameters.pathwayName, parameters.includeRegulation || false);
           case 'blast_search':
-            return await this.pathwayTools.performBLASTSearch(
-              parameters.sequence,
-              parameters.blastType,
-              parameters.database,
-              parameters.evalue,
-              parameters.maxTargets
-            );
+            return await this.pathwayTools.executeClientTool(toolName, parameters, clientId);
           default:
             return await this.pathwayTools.executeClientTool(toolName, parameters, clientId);
         }

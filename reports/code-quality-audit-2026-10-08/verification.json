@@ -1,0 +1,4936 @@
+{
+  "date": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "revision": "203baf4bdde6b843c0650d2d73f356c5abcbc010",
+  "node": "v25.6.1",
+  "npm": "11.9.0",
+  "scope": {
+    "trackedJsFiles": 281,
+    "physicalLines": 298580,
+    "sourceBytes": 10775777,
+    "classMethods": 7288,
+    "parseErrors": 0,
+    "duplicateMethodDefinitions": 0,
+    "exactTokenCloneGroups": 17,
+    "exactTokenCloneLocations": 40,
+    "redundantCloneLinesCandidate": 477
+  },
+  "lint": {
+    "command": "eslint . --format json",
+    "files": 455,
+    "errors": 0,
+    "warnings": 4,
+    "messages": [
+      {
+        "file": "scripts/prepare-mlx-tool-trajectories-v3.js",
+        "line": 479,
+        "rule": "no-template-curly-in-string",
+        "message": "Unexpected template string expression."
+      },
+      {
+        "file": "scripts/prepare-mlx-tool-trajectories-v3.js",
+        "line": 481,
+        "rule": "no-template-curly-in-string",
+        "message": "Unexpected template string expression."
+      },
+      {
+        "file": "test/unit/benchmark-test-numbering.test.js",
+        "line": 124,
+        "rule": "no-template-curly-in-string",
+        "message": "Unexpected template string expression."
+      },
+      {
+        "file": "test/unit/benchmark-test-numbering.test.js",
+        "line": 125,
+        "rule": "no-template-curly-in-string",
+        "message": "Unexpected template string expression."
+      }
+    ]
+  },
+  "tests": {
+    "defaultNode25": {
+      "exitCode": 1,
+      "filesFailed": 8,
+      "filesPassed": 169,
+      "testsFailed": 65,
+      "testsPassed": 2161,
+      "unhandledErrors": 2,
+      "primaryError": "localStorage.clear/getItem/setItem is not a function"
+    },
+    "withoutExperimentalWebStorage": {
+      "command": "NODE_OPTIONS=--no-experimental-webstorage npm test",
+      "exitCode": 0,
+      "filesPassed": 177,
+      "testsPassed": 2226
+    },
+    "coverage": {
+      "command": "NODE_OPTIONS=--no-experimental-webstorage npm run test:coverage -- --coverage.reporter=json-summary --coverage.reportsDirectory=/tmp/codexomics-audit-coverage",
+      "exitCode": 0,
+      "total": {
+        "lines": {
+          "total": 73449,
+          "covered": 8878,
+          "skipped": 0,
+          "pct": 12.08
+        },
+        "statements": {
+          "total": 78228,
+          "covered": 9524,
+          "skipped": 0,
+          "pct": 12.17
+        },
+        "functions": {
+          "total": 11147,
+          "covered": 1461,
+          "skipped": 0,
+          "pct": 13.1
+        },
+        "branches": {
+          "total": 57002,
+          "covered": 6650,
+          "skipped": 0,
+          "pct": 11.66
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "perFile": {
+        "src/renderer/modules/ActionManager.js": {
+          "lines": {
+            "total": 2764,
+            "covered": 1021,
+            "skipped": 0,
+            "pct": 36.93
+          },
+          "functions": {
+            "total": 323,
+            "covered": 139,
+            "skipped": 0,
+            "pct": 43.03
+          },
+          "statements": {
+            "total": 2868,
+            "covered": 1047,
+            "skipped": 0,
+            "pct": 36.5
+          },
+          "branches": {
+            "total": 2069,
+            "covered": 617,
+            "skipped": 0,
+            "pct": 29.82
+          }
+        },
+        "src/renderer/modules/AdvancedSearchManager.js": {
+          "lines": {
+            "total": 359,
+            "covered": 126,
+            "skipped": 0,
+            "pct": 35.09
+          },
+          "functions": {
+            "total": 69,
+            "covered": 23,
+            "skipped": 0,
+            "pct": 33.33
+          },
+          "statements": {
+            "total": 390,
+            "covered": 130,
+            "skipped": 0,
+            "pct": 33.33
+          },
+          "branches": {
+            "total": 283,
+            "covered": 79,
+            "skipped": 0,
+            "pct": 27.91
+          }
+        },
+        "src/renderer/modules/AnnotationChangeTracker.js": {
+          "lines": {
+            "total": 75,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 81,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 65,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/AnnotationReviewManager.js": {
+          "lines": {
+            "total": 626,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 151,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 726,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 663,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/BamReader.js": {
+          "lines": {
+            "total": 683,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 66,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 730,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 505,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/BaseCompositionAnalyzer.js": {
+          "lines": {
+            "total": 253,
+            "covered": 70,
+            "skipped": 0,
+            "pct": 27.66
+          },
+          "functions": {
+            "total": 38,
+            "covered": 5,
+            "skipped": 0,
+            "pct": 13.15
+          },
+          "statements": {
+            "total": 294,
+            "covered": 82,
+            "skipped": 0,
+            "pct": 27.89
+          },
+          "branches": {
+            "total": 270,
+            "covered": 77,
+            "skipped": 0,
+            "pct": 28.51
+          }
+        },
+        "src/renderer/modules/BenchmarkManager.js": {
+          "lines": {
+            "total": 237,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 39,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 244,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 98,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/BenchmarkReportGenerator.js": {
+          "lines": {
+            "total": 321,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 83,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 336,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 215,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/BenchmarkStatistics.js": {
+          "lines": {
+            "total": 291,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 140,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 380,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 181,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/BenchmarkUI.js": {
+          "lines": {
+            "total": 981,
+            "covered": 66,
+            "skipped": 0,
+            "pct": 6.72
+          },
+          "functions": {
+            "total": 173,
+            "covered": 15,
+            "skipped": 0,
+            "pct": 8.67
+          },
+          "statements": {
+            "total": 1079,
+            "covered": 71,
+            "skipped": 0,
+            "pct": 6.58
+          },
+          "branches": {
+            "total": 968,
+            "covered": 69,
+            "skipped": 0,
+            "pct": 7.12
+          }
+        },
+        "src/renderer/modules/BlastChatManagerIntegration.js": {
+          "lines": {
+            "total": 76,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 16,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 76,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 39,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/BlastConfigManager.js": {
+          "lines": {
+            "total": 149,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 26,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 149,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 88,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/BlastFunctionTools.js": {
+          "lines": {
+            "total": 410,
+            "covered": 32,
+            "skipped": 0,
+            "pct": 7.8
+          },
+          "functions": {
+            "total": 51,
+            "covered": 4,
+            "skipped": 0,
+            "pct": 7.84
+          },
+          "statements": {
+            "total": 432,
+            "covered": 33,
+            "skipped": 0,
+            "pct": 7.63
+          },
+          "branches": {
+            "total": 424,
+            "covered": 25,
+            "skipped": 0,
+            "pct": 5.89
+          }
+        },
+        "src/renderer/modules/BlastManager.js": {
+          "lines": {
+            "total": 2470,
+            "covered": 153,
+            "skipped": 0,
+            "pct": 6.19
+          },
+          "functions": {
+            "total": 311,
+            "covered": 19,
+            "skipped": 0,
+            "pct": 6.1
+          },
+          "statements": {
+            "total": 2579,
+            "covered": 160,
+            "skipped": 0,
+            "pct": 6.2
+          },
+          "branches": {
+            "total": 1720,
+            "covered": 108,
+            "skipped": 0,
+            "pct": 6.27
+          }
+        },
+        "src/renderer/modules/BookmarkPanelUI.js": {
+          "lines": {
+            "total": 184,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 48,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 213,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 229,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/CanvasGenesRenderer.js": {
+          "lines": {
+            "total": 394,
+            "covered": 33,
+            "skipped": 0,
+            "pct": 8.37
+          },
+          "functions": {
+            "total": 41,
+            "covered": 1,
+            "skipped": 0,
+            "pct": 2.43
+          },
+          "statements": {
+            "total": 412,
+            "covered": 33,
+            "skipped": 0,
+            "pct": 8
+          },
+          "branches": {
+            "total": 205,
+            "covered": 12,
+            "skipped": 0,
+            "pct": 5.85
+          }
+        },
+        "src/renderer/modules/CanvasReadsRenderer.js": {
+          "lines": {
+            "total": 501,
+            "covered": 15,
+            "skipped": 0,
+            "pct": 2.99
+          },
+          "functions": {
+            "total": 53,
+            "covered": 4,
+            "skipped": 0,
+            "pct": 7.54
+          },
+          "statements": {
+            "total": 533,
+            "covered": 17,
+            "skipped": 0,
+            "pct": 3.18
+          },
+          "branches": {
+            "total": 359,
+            "covered": 17,
+            "skipped": 0,
+            "pct": 4.73
+          }
+        },
+        "src/renderer/modules/CanvasSequenceRenderer.js": {
+          "lines": {
+            "total": 255,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 36,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 278,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 146,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ChatBoxSettingsManager.js": {
+          "lines": {
+            "total": 674,
+            "covered": 44,
+            "skipped": 0,
+            "pct": 6.52
+          },
+          "functions": {
+            "total": 104,
+            "covered": 6,
+            "skipped": 0,
+            "pct": 5.76
+          },
+          "statements": {
+            "total": 707,
+            "covered": 44,
+            "skipped": 0,
+            "pct": 6.22
+          },
+          "branches": {
+            "total": 445,
+            "covered": 20,
+            "skipped": 0,
+            "pct": 4.49
+          }
+        },
+        "src/renderer/modules/ChatManager.js": {
+          "lines": {
+            "total": 7347,
+            "covered": 1238,
+            "skipped": 0,
+            "pct": 16.85
+          },
+          "functions": {
+            "total": 1149,
+            "covered": 165,
+            "skipped": 0,
+            "pct": 14.36
+          },
+          "statements": {
+            "total": 7773,
+            "covered": 1324,
+            "skipped": 0,
+            "pct": 17.03
+          },
+          "branches": {
+            "total": 6268,
+            "covered": 928,
+            "skipped": 0,
+            "pct": 14.8
+          }
+        },
+        "src/renderer/modules/ChatModelSelector.js": {
+          "lines": {
+            "total": 70,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 16,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 83,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 60,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/CheckpointManager.js": {
+          "lines": {
+            "total": 385,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 93,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 415,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 192,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/CircosPluginTestSuite.js": {
+          "lines": {
+            "total": 314,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 52,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 343,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 22,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ConfigManager.js": {
+          "lines": {
+            "total": 616,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 87,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 625,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 364,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/DebugLogger.js": {
+          "lines": {
+            "total": 53,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 14,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 58,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 18,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/DynamicToolsSnapshotAdapter.js": {
+          "lines": {
+            "total": 575,
+            "covered": 452,
+            "skipped": 0,
+            "pct": 78.6
+          },
+          "functions": {
+            "total": 146,
+            "covered": 102,
+            "skipped": 0,
+            "pct": 69.86
+          },
+          "statements": {
+            "total": 677,
+            "covered": 528,
+            "skipped": 0,
+            "pct": 77.99
+          },
+          "branches": {
+            "total": 731,
+            "covered": 513,
+            "skipped": 0,
+            "pct": 70.17
+          }
+        },
+        "src/renderer/modules/EnhancedCitationDisplay.js": {
+          "lines": {
+            "total": 159,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 29,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 170,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 114,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Evo2UI.js": {
+          "lines": {
+            "total": 144,
+            "covered": 108,
+            "skipped": 0,
+            "pct": 75
+          },
+          "functions": {
+            "total": 38,
+            "covered": 17,
+            "skipped": 0,
+            "pct": 44.73
+          },
+          "statements": {
+            "total": 169,
+            "covered": 115,
+            "skipped": 0,
+            "pct": 68.04
+          },
+          "branches": {
+            "total": 74,
+            "covered": 38,
+            "skipped": 0,
+            "pct": 51.35
+          }
+        },
+        "src/renderer/modules/ExportManager.js": {
+          "lines": {
+            "total": 314,
+            "covered": 28,
+            "skipped": 0,
+            "pct": 8.91
+          },
+          "functions": {
+            "total": 44,
+            "covered": 3,
+            "skipped": 0,
+            "pct": 6.81
+          },
+          "statements": {
+            "total": 321,
+            "covered": 29,
+            "skipped": 0,
+            "pct": 9.03
+          },
+          "branches": {
+            "total": 199,
+            "covered": 12,
+            "skipped": 0,
+            "pct": 6.03
+          }
+        },
+        "src/renderer/modules/ExternalToolsManager.js": {
+          "lines": {
+            "total": 183,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 33,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 185,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 104,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ExternalToolsSystemTest.js": {
+          "lines": {
+            "total": 75,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 9,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 77,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 22,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/FileManager.js": {
+          "lines": {
+            "total": 1124,
+            "covered": 60,
+            "skipped": 0,
+            "pct": 5.33
+          },
+          "functions": {
+            "total": 92,
+            "covered": 6,
+            "skipped": 0,
+            "pct": 6.52
+          },
+          "statements": {
+            "total": 1158,
+            "covered": 63,
+            "skipped": 0,
+            "pct": 5.44
+          },
+          "branches": {
+            "total": 852,
+            "covered": 39,
+            "skipped": 0,
+            "pct": 4.57
+          }
+        },
+        "src/renderer/modules/FunctionCallsOrganizer.js": {
+          "lines": {
+            "total": 167,
+            "covered": 16,
+            "skipped": 0,
+            "pct": 9.58
+          },
+          "functions": {
+            "total": 31,
+            "covered": 2,
+            "skipped": 0,
+            "pct": 6.45
+          },
+          "statements": {
+            "total": 184,
+            "covered": 16,
+            "skipped": 0,
+            "pct": 8.69
+          },
+          "branches": {
+            "total": 123,
+            "covered": 5,
+            "skipped": 0,
+            "pct": 4.06
+          }
+        },
+        "src/renderer/modules/GelElectrophoresisRenderer.js": {
+          "lines": {
+            "total": 110,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 15,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 117,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 73,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/GeneAttachmentsManager.js": {
+          "lines": {
+            "total": 388,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 48,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 417,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 388,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/GeneNotesManager.js": {
+          "lines": {
+            "total": 92,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 15,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 100,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 61,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/GeneralSettingsManager.js": {
+          "lines": {
+            "total": 638,
+            "covered": 16,
+            "skipped": 0,
+            "pct": 2.5
+          },
+          "functions": {
+            "total": 98,
+            "covered": 2,
+            "skipped": 0,
+            "pct": 2.04
+          },
+          "statements": {
+            "total": 672,
+            "covered": 16,
+            "skipped": 0,
+            "pct": 2.38
+          },
+          "branches": {
+            "total": 352,
+            "covered": 10,
+            "skipped": 0,
+            "pct": 2.84
+          }
+        },
+        "src/renderer/modules/GenomeDataProxy.js": {
+          "lines": {
+            "total": 113,
+            "covered": 42,
+            "skipped": 0,
+            "pct": 37.16
+          },
+          "functions": {
+            "total": 17,
+            "covered": 7,
+            "skipped": 0,
+            "pct": 41.17
+          },
+          "statements": {
+            "total": 113,
+            "covered": 42,
+            "skipped": 0,
+            "pct": 37.16
+          },
+          "branches": {
+            "total": 56,
+            "covered": 15,
+            "skipped": 0,
+            "pct": 26.78
+          }
+        },
+        "src/renderer/modules/GenomeNavigationBar.js": {
+          "lines": {
+            "total": 593,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 53,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 616,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 248,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/GenomeStudioRPCHandler.js": {
+          "lines": {
+            "total": 88,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 88,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 102,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/GenomicDataDownloader.js": {
+          "lines": {
+            "total": 585,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 69,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 603,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 480,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/HighlightManager.js": {
+          "lines": {
+            "total": 106,
+            "covered": 101,
+            "skipped": 0,
+            "pct": 95.28
+          },
+          "functions": {
+            "total": 21,
+            "covered": 19,
+            "skipped": 0,
+            "pct": 90.47
+          },
+          "statements": {
+            "total": 123,
+            "covered": 111,
+            "skipped": 0,
+            "pct": 90.24
+          },
+          "branches": {
+            "total": 97,
+            "covered": 76,
+            "skipped": 0,
+            "pct": 78.35
+          }
+        },
+        "src/renderer/modules/HighlightRegionsUI.js": {
+          "lines": {
+            "total": 153,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 28,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 177,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 153,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/I18nManager.js": {
+          "lines": {
+            "total": 130,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 24,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 135,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 88,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/InternalMCPServer.js": {
+          "lines": {
+            "total": 256,
+            "covered": 41,
+            "skipped": 0,
+            "pct": 16.01
+          },
+          "functions": {
+            "total": 31,
+            "covered": 6,
+            "skipped": 0,
+            "pct": 19.35
+          },
+          "statements": {
+            "total": 257,
+            "covered": 41,
+            "skipped": 0,
+            "pct": 15.95
+          },
+          "branches": {
+            "total": 242,
+            "covered": 46,
+            "skipped": 0,
+            "pct": 19
+          }
+        },
+        "src/renderer/modules/LLMBenchmarkFramework.js": {
+          "lines": {
+            "total": 2134,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 272,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 2252,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 2013,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/LLMConfigManager.js": {
+          "lines": {
+            "total": 1715,
+            "covered": 410,
+            "skipped": 0,
+            "pct": 23.9
+          },
+          "functions": {
+            "total": 261,
+            "covered": 75,
+            "skipped": 0,
+            "pct": 28.73
+          },
+          "statements": {
+            "total": 1878,
+            "covered": 444,
+            "skipped": 0,
+            "pct": 23.64
+          },
+          "branches": {
+            "total": 1527,
+            "covered": 291,
+            "skipped": 0,
+            "pct": 19.05
+          }
+        },
+        "src/renderer/modules/LLMStreamClient.js": {
+          "lines": {
+            "total": 199,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 24,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 237,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 232,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/LiteratureAPIService.js": {
+          "lines": {
+            "total": 126,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 17,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 134,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 91,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/LiteratureSettings.js": {
+          "lines": {
+            "total": 53,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 13,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 54,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 22,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/MCPBridge.js": {
+          "lines": {
+            "total": 120,
+            "covered": 72,
+            "skipped": 0,
+            "pct": 60
+          },
+          "functions": {
+            "total": 19,
+            "covered": 9,
+            "skipped": 0,
+            "pct": 47.36
+          },
+          "statements": {
+            "total": 120,
+            "covered": 72,
+            "skipped": 0,
+            "pct": 60
+          },
+          "branches": {
+            "total": 75,
+            "covered": 40,
+            "skipped": 0,
+            "pct": 53.33
+          }
+        },
+        "src/renderer/modules/MCPServerManager.js": {
+          "lines": {
+            "total": 972,
+            "covered": 85,
+            "skipped": 0,
+            "pct": 8.74
+          },
+          "functions": {
+            "total": 116,
+            "covered": 22,
+            "skipped": 0,
+            "pct": 18.96
+          },
+          "statements": {
+            "total": 1000,
+            "covered": 90,
+            "skipped": 0,
+            "pct": 9
+          },
+          "branches": {
+            "total": 676,
+            "covered": 52,
+            "skipped": 0,
+            "pct": 7.69
+          }
+        },
+        "src/renderer/modules/MemorySystem.js": {
+          "lines": {
+            "total": 1153,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 294,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 1218,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 646,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/MicrobeGenomicsFunctions.js": {
+          "lines": {
+            "total": 434,
+            "covered": 25,
+            "skipped": 0,
+            "pct": 5.76
+          },
+          "functions": {
+            "total": 75,
+            "covered": 52,
+            "skipped": 0,
+            "pct": 69.33
+          },
+          "statements": {
+            "total": 509,
+            "covered": 26,
+            "skipped": 0,
+            "pct": 5.1
+          },
+          "branches": {
+            "total": 414,
+            "covered": 20,
+            "skipped": 0,
+            "pct": 4.83
+          }
+        },
+        "src/renderer/modules/ModalDragManager.js": {
+          "lines": {
+            "total": 104,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 18,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 115,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 49,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/MultiAgentSettingsManager.js": {
+          "lines": {
+            "total": 204,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 57,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 212,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 90,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/MultiAgentSystem.js": {
+          "lines": {
+            "total": 274,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 53,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 281,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 107,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/MultiFileManager.js": {
+          "lines": {
+            "total": 115,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 22,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 120,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 54,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/NavigationManager.js": {
+          "lines": {
+            "total": 1286,
+            "covered": 102,
+            "skipped": 0,
+            "pct": 7.93
+          },
+          "functions": {
+            "total": 143,
+            "covered": 15,
+            "skipped": 0,
+            "pct": 10.48
+          },
+          "statements": {
+            "total": 1373,
+            "covered": 110,
+            "skipped": 0,
+            "pct": 8.01
+          },
+          "branches": {
+            "total": 884,
+            "covered": 64,
+            "skipped": 0,
+            "pct": 7.23
+          }
+        },
+        "src/renderer/modules/PluginAPI.js": {
+          "lines": {
+            "total": 144,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 15,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 144,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 82,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginDemoGenerator.js": {
+          "lines": {
+            "total": 16,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 8,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 16,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 10,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginDependencyResolver.js": {
+          "lines": {
+            "total": 215,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 33,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 228,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 99,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginFunctionCallsIntegrator.js": {
+          "lines": {
+            "total": 101,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 11,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 101,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 48,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginImplementations.js": {
+          "lines": {
+            "total": 404,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 66,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 431,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 205,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginManagementUI.js": {
+          "lines": {
+            "total": 959,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 144,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 970,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 718,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginManagerV2.js": {
+          "lines": {
+            "total": 463,
+            "covered": 42,
+            "skipped": 0,
+            "pct": 9.07
+          },
+          "functions": {
+            "total": 51,
+            "covered": 6,
+            "skipped": 0,
+            "pct": 11.76
+          },
+          "statements": {
+            "total": 469,
+            "covered": 43,
+            "skipped": 0,
+            "pct": 9.16
+          },
+          "branches": {
+            "total": 307,
+            "covered": 21,
+            "skipped": 0,
+            "pct": 6.84
+          }
+        },
+        "src/renderer/modules/PluginMarketplace.js": {
+          "lines": {
+            "total": 634,
+            "covered": 93,
+            "skipped": 0,
+            "pct": 14.66
+          },
+          "functions": {
+            "total": 72,
+            "covered": 9,
+            "skipped": 0,
+            "pct": 12.5
+          },
+          "statements": {
+            "total": 661,
+            "covered": 94,
+            "skipped": 0,
+            "pct": 14.22
+          },
+          "branches": {
+            "total": 436,
+            "covered": 79,
+            "skipped": 0,
+            "pct": 18.11
+          }
+        },
+        "src/renderer/modules/PluginMarketplaceConfig.js": {
+          "lines": {
+            "total": 100,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 28,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 105,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 28,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginMarketplaceUI.js": {
+          "lines": {
+            "total": 277,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 39,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 289,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 268,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginPathResolver.js": {
+          "lines": {
+            "total": 60,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 13,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 61,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 38,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginPromptProvider.js": {
+          "lines": {
+            "total": 95,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 18,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 97,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 41,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginRealTestDemonstrator.js": {
+          "lines": {
+            "total": 118,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 16,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 119,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 82,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginResourceManager.js": {
+          "lines": {
+            "total": 100,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 17,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 109,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 52,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginSecurityValidator.js": {
+          "lines": {
+            "total": 176,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 25,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 183,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 76,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginSubmissionUI.js": {
+          "lines": {
+            "total": 121,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 29,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 127,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 38,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginSystemBootstrap.js": {
+          "lines": {
+            "total": 30,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 5,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 30,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 9,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginTestFramework.js": {
+          "lines": {
+            "total": 70,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 32,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 71,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 22,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginTestHelpers.js": {
+          "lines": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 10,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 36,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginTestManager.js": {
+          "lines": {
+            "total": 134,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 50,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 136,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 59,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginTestWindowMenuManager.js": {
+          "lines": {
+            "total": 137,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 27,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 142,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 75,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginUpdateManager.js": {
+          "lines": {
+            "total": 182,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 26,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 191,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 77,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginUtils.js": {
+          "lines": {
+            "total": 237,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 71,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 270,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 121,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PluginVisualization.js": {
+          "lines": {
+            "total": 376,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 33,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 394,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 116,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PrimerBindingService.js": {
+          "lines": {
+            "total": 151,
+            "covered": 98,
+            "skipped": 0,
+            "pct": 64.9
+          },
+          "functions": {
+            "total": 38,
+            "covered": 26,
+            "skipped": 0,
+            "pct": 68.42
+          },
+          "statements": {
+            "total": 179,
+            "covered": 107,
+            "skipped": 0,
+            "pct": 59.77
+          },
+          "branches": {
+            "total": 134,
+            "covered": 81,
+            "skipped": 0,
+            "pct": 60.44
+          }
+        },
+        "src/renderer/modules/PrimerChatManagerIntegration.js": {
+          "lines": {
+            "total": 19,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 2,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 19,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 4,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PrimerDesigner.js": {
+          "lines": {
+            "total": 286,
+            "covered": 114,
+            "skipped": 0,
+            "pct": 39.86
+          },
+          "functions": {
+            "total": 22,
+            "covered": 11,
+            "skipped": 0,
+            "pct": 50
+          },
+          "statements": {
+            "total": 316,
+            "covered": 123,
+            "skipped": 0,
+            "pct": 38.92
+          },
+          "branches": {
+            "total": 265,
+            "covered": 76,
+            "skipped": 0,
+            "pct": 28.67
+          }
+        },
+        "src/renderer/modules/PrimerFunctionTools.js": {
+          "lines": {
+            "total": 55,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 16,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 57,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 66,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/PrimerLibraryUI.js": {
+          "lines": {
+            "total": 430,
+            "covered": 26,
+            "skipped": 0,
+            "pct": 6.04
+          },
+          "functions": {
+            "total": 72,
+            "covered": 2,
+            "skipped": 0,
+            "pct": 2.77
+          },
+          "statements": {
+            "total": 483,
+            "covered": 26,
+            "skipped": 0,
+            "pct": 5.38
+          },
+          "branches": {
+            "total": 390,
+            "covered": 18,
+            "skipped": 0,
+            "pct": 4.61
+          }
+        },
+        "src/renderer/modules/PrimerManager.js": {
+          "lines": {
+            "total": 424,
+            "covered": 292,
+            "skipped": 0,
+            "pct": 68.86
+          },
+          "functions": {
+            "total": 95,
+            "covered": 68,
+            "skipped": 0,
+            "pct": 71.57
+          },
+          "statements": {
+            "total": 486,
+            "covered": 325,
+            "skipped": 0,
+            "pct": 66.87
+          },
+          "branches": {
+            "total": 550,
+            "covered": 340,
+            "skipped": 0,
+            "pct": 61.81
+          }
+        },
+        "src/renderer/modules/PrimerToolSchemas.js": {
+          "lines": {
+            "total": 8,
+            "covered": 8,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 8,
+            "covered": 8,
+            "skipped": 0,
+            "pct": 100
+          },
+          "branches": {
+            "total": 6,
+            "covered": 4,
+            "skipped": 0,
+            "pct": 66.66
+          }
+        },
+        "src/renderer/modules/ProjectManagerWindow.js": {
+          "lines": {
+            "total": 2289,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 326,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 2421,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 1535,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ProjectUtils.js": {
+          "lines": {
+            "total": 97,
+            "covered": 94,
+            "skipped": 0,
+            "pct": 96.9
+          },
+          "functions": {
+            "total": 22,
+            "covered": 22,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 122,
+            "covered": 118,
+            "skipped": 0,
+            "pct": 96.72
+          },
+          "branches": {
+            "total": 128,
+            "covered": 108,
+            "skipped": 0,
+            "pct": 84.37
+          }
+        },
+        "src/renderer/modules/ProjectXMLHandler.js": {
+          "lines": {
+            "total": 269,
+            "covered": 268,
+            "skipped": 0,
+            "pct": 99.62
+          },
+          "functions": {
+            "total": 33,
+            "covered": 33,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 269,
+            "covered": 268,
+            "skipped": 0,
+            "pct": 99.62
+          },
+          "branches": {
+            "total": 141,
+            "covered": 111,
+            "skipped": 0,
+            "pct": 78.72
+          }
+        },
+        "src/renderer/modules/ProteinStructureViewer.js": {
+          "lines": {
+            "total": 519,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 61,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 532,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 263,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ReadsManager.js": {
+          "lines": {
+            "total": 276,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 40,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 299,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 132,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ResizableModalManager.js": {
+          "lines": {
+            "total": 183,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 17,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 195,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 140,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ScreenshotManager.js": {
+          "lines": {
+            "total": 596,
+            "covered": 318,
+            "skipped": 0,
+            "pct": 53.35
+          },
+          "functions": {
+            "total": 106,
+            "covered": 73,
+            "skipped": 0,
+            "pct": 68.86
+          },
+          "statements": {
+            "total": 650,
+            "covered": 338,
+            "skipped": 0,
+            "pct": 52
+          },
+          "branches": {
+            "total": 678,
+            "covered": 380,
+            "skipped": 0,
+            "pct": 56.04
+          }
+        },
+        "src/renderer/modules/SequenceUtils.js": {
+          "lines": {
+            "total": 1862,
+            "covered": 680,
+            "skipped": 0,
+            "pct": 36.51
+          },
+          "functions": {
+            "total": 203,
+            "covered": 70,
+            "skipped": 0,
+            "pct": 34.48
+          },
+          "statements": {
+            "total": 1999,
+            "covered": 728,
+            "skipped": 0,
+            "pct": 36.41
+          },
+          "branches": {
+            "total": 1477,
+            "covered": 465,
+            "skipped": 0,
+            "pct": 31.48
+          }
+        },
+        "src/renderer/modules/SidecarManager.js": {
+          "lines": {
+            "total": 164,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 29,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 177,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 121,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/SkillsSettingsManager.js": {
+          "lines": {
+            "total": 110,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 24,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 125,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 120,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/SmartExecutor.js": {
+          "lines": {
+            "total": 134,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 30,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 144,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 91,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/TabManager.js": {
+          "lines": {
+            "total": 1326,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 170,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 1380,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 815,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ThemeManager.js": {
+          "lines": {
+            "total": 78,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 14,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 82,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 32,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/ToolExecutionTracker.js": {
+          "lines": {
+            "total": 149,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 34,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 158,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 89,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/TrackRenderer.js": {
+          "lines": {
+            "total": 6094,
+            "covered": 723,
+            "skipped": 0,
+            "pct": 11.86
+          },
+          "functions": {
+            "total": 662,
+            "covered": 108,
+            "skipped": 0,
+            "pct": 16.31
+          },
+          "statements": {
+            "total": 6381,
+            "covered": 776,
+            "skipped": 0,
+            "pct": 12.16
+          },
+          "branches": {
+            "total": 3990,
+            "covered": 493,
+            "skipped": 0,
+            "pct": 12.35
+          }
+        },
+        "src/renderer/modules/UIManager.js": {
+          "lines": {
+            "total": 857,
+            "covered": 151,
+            "skipped": 0,
+            "pct": 17.61
+          },
+          "functions": {
+            "total": 112,
+            "covered": 18,
+            "skipped": 0,
+            "pct": 16.07
+          },
+          "statements": {
+            "total": 893,
+            "covered": 158,
+            "skipped": 0,
+            "pct": 17.69
+          },
+          "branches": {
+            "total": 529,
+            "covered": 96,
+            "skipped": 0,
+            "pct": 18.14
+          }
+        },
+        "src/renderer/modules/UnifiedDNATranslation.js": {
+          "lines": {
+            "total": 67,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 11,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 70,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 63,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/UnifiedSequenceProcessing.js": {
+          "lines": {
+            "total": 149,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 17,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 158,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 137,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/VariantAnalyzer.js": {
+          "lines": {
+            "total": 214,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 22,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 216,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 147,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/WelcomeExamplesManager.js": {
+          "lines": {
+            "total": 84,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 25,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 103,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 54,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/WindowTabManager.js": {
+          "lines": {
+            "total": 118,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 24,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 129,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 104,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Agents/AgentBase.js": {
+          "lines": {
+            "total": 194,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 38,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 194,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 85,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Agents/AnalysisAgent.js": {
+          "lines": {
+            "total": 352,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 40,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 358,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 266,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Agents/CoordinatorAgent.js": {
+          "lines": {
+            "total": 348,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 68,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 374,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 171,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Agents/DataAgent.js": {
+          "lines": {
+            "total": 437,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 70,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 445,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 247,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Agents/DeepResearchAgent.js": {
+          "lines": {
+            "total": 237,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 57,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 260,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 162,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Agents/ExternalAgent.js": {
+          "lines": {
+            "total": 180,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 27,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 184,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 81,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Agents/NavigationAgent.js": {
+          "lines": {
+            "total": 300,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 59,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 325,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 278,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/Agents/PluginAgent.js": {
+          "lines": {
+            "total": 168,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 24,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 168,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 84,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/MemoryLayers/ShortTermMemory.js": {
+          "lines": {
+            "total": 125,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 22,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 129,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 51,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/benchmark-suites/AutomaticComplexSuite.js": {
+          "lines": {
+            "total": 927,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 134,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 1008,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 772,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/benchmark-suites/AutomaticSimpleSuite.js": {
+          "lines": {
+            "total": 272,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 36,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 278,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 222,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/benchmark-suites/BenchmarkEvaluatorBase.js": {
+          "lines": {
+            "total": 465,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 50,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 505,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 492,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/benchmark-suites/ManualComplexSuite.js": {
+          "lines": {
+            "total": 37,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 11,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 38,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 18,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/benchmark-suites/ManualSuite.js": {
+          "lines": {
+            "total": 120,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 125,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 84,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/benchmark-suites/StrictAutomaticEvaluator.js": {
+          "lines": {
+            "total": 494,
+            "covered": 419,
+            "skipped": 0,
+            "pct": 84.81
+          },
+          "functions": {
+            "total": 114,
+            "covered": 105,
+            "skipped": 0,
+            "pct": 92.1
+          },
+          "statements": {
+            "total": 601,
+            "covered": 503,
+            "skipped": 0,
+            "pct": 83.69
+          },
+          "branches": {
+            "total": 633,
+            "covered": 437,
+            "skipped": 0,
+            "pct": 69.03
+          }
+        },
+        "src/renderer/modules/chat/constants/DefaultSettings.js": {
+          "lines": {
+            "total": 2,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 2,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          }
+        },
+        "src/renderer/modules/chat/constants/ToolNames.js": {
+          "lines": {
+            "total": 1,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 1,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 0,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 100
+          }
+        },
+        "src/renderer/modules/chat/services/AnnotationChangeSetService.js": {
+          "lines": {
+            "total": 1808,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 251,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 2021,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 2261,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/AnnotationResearchWorkflowService.js": {
+          "lines": {
+            "total": 605,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 84,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 668,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 789,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/AnnotationService.js": {
+          "lines": {
+            "total": 513,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 97,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 572,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 668,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/BlastService.js": {
+          "lines": {
+            "total": 239,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 57,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 263,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 274,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/ConversationTranscriptService.js": {
+          "lines": {
+            "total": 137,
+            "covered": 132,
+            "skipped": 0,
+            "pct": 96.35
+          },
+          "functions": {
+            "total": 36,
+            "covered": 32,
+            "skipped": 0,
+            "pct": 88.88
+          },
+          "statements": {
+            "total": 174,
+            "covered": 160,
+            "skipped": 0,
+            "pct": 91.95
+          },
+          "branches": {
+            "total": 155,
+            "covered": 128,
+            "skipped": 0,
+            "pct": 82.58
+          }
+        },
+        "src/renderer/modules/chat/services/DNAMarkerDatabase.js": {
+          "lines": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 17,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 25,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 17,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/Evo2Service.js": {
+          "lines": {
+            "total": 7,
+            "covered": 7,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 4,
+            "covered": 4,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 10,
+            "covered": 9,
+            "skipped": 0,
+            "pct": 90
+          },
+          "branches": {
+            "total": 9,
+            "covered": 6,
+            "skipped": 0,
+            "pct": 66.66
+          }
+        },
+        "src/renderer/modules/chat/services/FileOperationService.js": {
+          "lines": {
+            "total": 410,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 55,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 447,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 444,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/GelElectrophoresisService.js": {
+          "lines": {
+            "total": 153,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 26,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 164,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 123,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/GelRenderer.js": {
+          "lines": {
+            "total": 278,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 29,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 292,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 124,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/GenomeAnalysisService.js": {
+          "lines": {
+            "total": 221,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 29,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 245,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 201,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/IntentParserService.js": {
+          "lines": {
+            "total": 288,
+            "covered": 152,
+            "skipped": 0,
+            "pct": 52.77
+          },
+          "functions": {
+            "total": 34,
+            "covered": 23,
+            "skipped": 0,
+            "pct": 67.64
+          },
+          "statements": {
+            "total": 325,
+            "covered": 166,
+            "skipped": 0,
+            "pct": 51.07
+          },
+          "branches": {
+            "total": 350,
+            "covered": 156,
+            "skipped": 0,
+            "pct": 44.57
+          }
+        },
+        "src/renderer/modules/chat/services/LLMContextService.js": {
+          "lines": {
+            "total": 681,
+            "covered": 98,
+            "skipped": 0,
+            "pct": 14.39
+          },
+          "functions": {
+            "total": 98,
+            "covered": 14,
+            "skipped": 0,
+            "pct": 14.28
+          },
+          "statements": {
+            "total": 716,
+            "covered": 106,
+            "skipped": 0,
+            "pct": 14.8
+          },
+          "branches": {
+            "total": 1070,
+            "covered": 111,
+            "skipped": 0,
+            "pct": 10.37
+          }
+        },
+        "src/renderer/modules/chat/services/PluginIntegrationService.js": {
+          "lines": {
+            "total": 31,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 10,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 32,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 22,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/PrimerService.js": {
+          "lines": {
+            "total": 213,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 31,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 226,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 306,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/ProteinService.js": {
+          "lines": {
+            "total": 842,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 110,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 936,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 751,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/ResearchProgressService.js": {
+          "lines": {
+            "total": 177,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 35,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 221,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 211,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/RestrictionDigestService.js": {
+          "lines": {
+            "total": 166,
+            "covered": 8,
+            "skipped": 0,
+            "pct": 4.81
+          },
+          "functions": {
+            "total": 27,
+            "covered": 1,
+            "skipped": 0,
+            "pct": 3.7
+          },
+          "statements": {
+            "total": 180,
+            "covered": 8,
+            "skipped": 0,
+            "pct": 4.44
+          },
+          "branches": {
+            "total": 138,
+            "covered": 4,
+            "skipped": 0,
+            "pct": 2.89
+          }
+        },
+        "src/renderer/modules/chat/services/RestrictionEnzymeDatabase.js": {
+          "lines": {
+            "total": 119,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 20,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 124,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 30,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/SkillService.js": {
+          "lines": {
+            "total": 108,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 29,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 117,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 124,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/TaskService.js": {
+          "lines": {
+            "total": 335,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 57,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 374,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 213,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/ToolCapabilityPolicy.js": {
+          "lines": {
+            "total": 11,
+            "covered": 11,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 2,
+            "covered": 2,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 11,
+            "covered": 11,
+            "skipped": 0,
+            "pct": 100
+          },
+          "branches": {
+            "total": 10,
+            "covered": 7,
+            "skipped": 0,
+            "pct": 70
+          }
+        },
+        "src/renderer/modules/chat/services/ToolExecutionPolicy.js": {
+          "lines": {
+            "total": 245,
+            "covered": 84,
+            "skipped": 0,
+            "pct": 34.28
+          },
+          "functions": {
+            "total": 32,
+            "covered": 12,
+            "skipped": 0,
+            "pct": 37.5
+          },
+          "statements": {
+            "total": 258,
+            "covered": 84,
+            "skipped": 0,
+            "pct": 32.55
+          },
+          "branches": {
+            "total": 250,
+            "covered": 72,
+            "skipped": 0,
+            "pct": 28.8
+          }
+        },
+        "src/renderer/modules/chat/services/ToolExecutionService.js": {
+          "lines": {
+            "total": 190,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 16,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 197,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 194,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/chat/services/UIService.js": {
+          "lines": {
+            "total": 127,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 14,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 132,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 54,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/ActivationEventsService.js": {
+          "lines": {
+            "total": 186,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 40,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 189,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 68,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/CommandRegistry.js": {
+          "lines": {
+            "total": 217,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 55,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 224,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 113,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/ContributionRegistry.js": {
+          "lines": {
+            "total": 203,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 72,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 216,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 127,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/Disposable.js": {
+          "lines": {
+            "total": 133,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 42,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 133,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 80,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/ErrorHandler.js": {
+          "lines": {
+            "total": 79,
+            "covered": 59,
+            "skipped": 0,
+            "pct": 74.68
+          },
+          "functions": {
+            "total": 22,
+            "covered": 15,
+            "skipped": 0,
+            "pct": 68.18
+          },
+          "statements": {
+            "total": 80,
+            "covered": 59,
+            "skipped": 0,
+            "pct": 73.75
+          },
+          "branches": {
+            "total": 66,
+            "covered": 34,
+            "skipped": 0,
+            "pct": 51.51
+          }
+        },
+        "src/renderer/modules/core/ExtensionContext.js": {
+          "lines": {
+            "total": 185,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 67,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 187,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 62,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/ExtensionHost.js": {
+          "lines": {
+            "total": 274,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 57,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 275,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 108,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/ExtensionManifest.js": {
+          "lines": {
+            "total": 235,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 50,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 236,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 200,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/ExtensionService.js": {
+          "lines": {
+            "total": 176,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 41,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 178,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 55,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/core/NotificationService.js": {
+          "lines": {
+            "total": 120,
+            "covered": 110,
+            "skipped": 0,
+            "pct": 91.66
+          },
+          "functions": {
+            "total": 32,
+            "covered": 28,
+            "skipped": 0,
+            "pct": 87.5
+          },
+          "statements": {
+            "total": 131,
+            "covered": 116,
+            "skipped": 0,
+            "pct": 88.54
+          },
+          "branches": {
+            "total": 67,
+            "covered": 50,
+            "skipped": 0,
+            "pct": 74.62
+          }
+        },
+        "src/renderer/modules/core/ServiceContainer.js": {
+          "lines": {
+            "total": 36,
+            "covered": 36,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 10,
+            "covered": 10,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 37,
+            "covered": 37,
+            "skipped": 0,
+            "pct": 100
+          },
+          "branches": {
+            "total": 15,
+            "covered": 13,
+            "skipped": 0,
+            "pct": 86.66
+          }
+        },
+        "src/renderer/modules/core/index.js": {
+          "lines": {
+            "total": 50,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 11,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 52,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 23,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/export/GenBankExporter.js": {
+          "lines": {
+            "total": 152,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 167,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 143,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/genomic-downloader/api/BaseAPIClient.js": {
+          "lines": {
+            "total": 75,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 16,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 79,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 54,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/genomic-downloader/api/NCBIClient.js": {
+          "lines": {
+            "total": 77,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 10,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 78,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 128,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/genomic-downloader/utils/ErrorHandler.js": {
+          "lines": {
+            "total": 56,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 5,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 61,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 78,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/genomic-downloader/utils/LRUCache.js": {
+          "lines": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 7,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 21,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 11,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/genomic-downloader/utils/RateLimiter.js": {
+          "lines": {
+            "total": 32,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 7,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 33,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 13,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/genomic-downloader/utils/Validator.js": {
+          "lines": {
+            "total": 46,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 5,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 46,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 59,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/security/SanitizeService.js": {
+          "lines": {
+            "total": 69,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 17,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 78,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 69,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/tracks/CanvasRendererBase.js": {
+          "lines": {
+            "total": 79,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 15,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 85,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 51,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        },
+        "src/renderer/modules/tracks/FeatureGlyphLegend.js": {
+          "lines": {
+            "total": 144,
+            "covered": 106,
+            "skipped": 0,
+            "pct": 73.61
+          },
+          "functions": {
+            "total": 29,
+            "covered": 24,
+            "skipped": 0,
+            "pct": 82.75
+          },
+          "statements": {
+            "total": 153,
+            "covered": 111,
+            "skipped": 0,
+            "pct": 72.54
+          },
+          "branches": {
+            "total": 84,
+            "covered": 46,
+            "skipped": 0,
+            "pct": 54.76
+          }
+        },
+        "src/renderer/modules/tracks/GeneShapeCreators.js": {
+          "lines": {
+            "total": 652,
+            "covered": 383,
+            "skipped": 0,
+            "pct": 58.74
+          },
+          "functions": {
+            "total": 30,
+            "covered": 25,
+            "skipped": 0,
+            "pct": 83.33
+          },
+          "statements": {
+            "total": 662,
+            "covered": 388,
+            "skipped": 0,
+            "pct": 58.61
+          },
+          "branches": {
+            "total": 262,
+            "covered": 117,
+            "skipped": 0,
+            "pct": 44.65
+          }
+        },
+        "src/renderer/modules/tracks/PrimerTrackSettingsPanel.js": {
+          "lines": {
+            "total": 10,
+            "covered": 10,
+            "skipped": 0,
+            "pct": 100
+          },
+          "functions": {
+            "total": 2,
+            "covered": 2,
+            "skipped": 0,
+            "pct": 100
+          },
+          "statements": {
+            "total": 10,
+            "covered": 10,
+            "skipped": 0,
+            "pct": 100
+          },
+          "branches": {
+            "total": 46,
+            "covered": 24,
+            "skipped": 0,
+            "pct": 52.17
+          }
+        },
+        "src/renderer/modules/workers/primer-binding-worker.js": {
+          "lines": {
+            "total": 10,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "functions": {
+            "total": 1,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "statements": {
+            "total": 10,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          },
+          "branches": {
+            "total": 7,
+            "covered": 0,
+            "skipped": 0,
+            "pct": 0
+          }
+        }
+      }
+    }
+  },
+  "registry": {
+    "success": true,
+    "counts": {
+      "registryTools": 219,
+      "uniqueRegistryTools": 213,
+      "builtInTools": 181,
+      "registryDiagnostics": 12
+    },
+    "comparisons": {
+      "builtInToolsMap": {
+        "checked": 181,
+        "totalInvalid": 8,
+        "allowedExceptions": [
+          "advanced_blast_search",
+          "batch_blast_search",
+          "find_gene",
+          "find_intergenic_regions",
+          "get_blast_databases",
+          "list_genome_windows",
+          "switch_active_window",
+          "toggle_annotation_track"
+        ],
+        "unexpected": [],
+        "staleExceptions": []
+      },
+      "ToolNames.js": {
+        "checked": 211,
+        "totalInvalid": 36,
+        "allowedExceptions": [
+          "add_annotation",
+          "add_track",
+          "add_variant",
+          "advanced_blast_search",
+          "amino_acid_composition",
+          "analyze_codon_usage",
+          "batch_blast_search",
+          "calculate_gc_content",
+          "calculate_melting_temp",
+          "check_genomics_environment",
+          "compare_regions",
+          "export_region_features",
+          "find_intergenic_regions",
+          "find_orfs",
+          "find_similar_sequences",
+          "get_blast_databases",
+          "get_current_region",
+          "get_current_region_details",
+          "get_file_info",
+          "get_multiple_coding_sequences",
+          "get_pdb_details",
+          "get_selected_gene",
+          "get_sequence_selection",
+          "get_upstream_region",
+          "get_downstream_region",
+          "merge_annotations",
+          "navigate_to",
+          "predict_rbs",
+          "predict_terminator",
+          "render_protein_structure_results",
+          "scroll_left",
+          "scroll_right",
+          "search_by_position",
+          "search_intergenic_regions",
+          "search_motif",
+          "toggle_annotation_track"
+        ],
+        "unexpected": [],
+        "staleExceptions": []
+      },
+      "FunctionCallsOrganizer.js": {
+        "checked": 268,
+        "totalInvalid": 26,
+        "allowedExceptions": [
+          "add_annotation",
+          "add_track",
+          "add_variant",
+          "advanced_blast_search",
+          "amino_acid_composition",
+          "analyze_codon_usage",
+          "batch_blast_search",
+          "calculate_gc_content",
+          "calculate_melting_temp",
+          "compare_regions",
+          "export_region_features",
+          "find_intergenic_regions",
+          "find_similar_sequences",
+          "get_blast_databases",
+          "get_current_region",
+          "get_file_info",
+          "get_pdb_details",
+          "merge_annotations",
+          "navigate_to",
+          "predict_rbs",
+          "predict_terminator",
+          "scroll_left",
+          "scroll_right",
+          "search_by_position",
+          "search_intergenic_regions",
+          "search_motif"
+        ],
+        "unexpected": [],
+        "staleExceptions": []
+      },
+      "LLMContextService.shouldAllowToolExecution": {
+        "checked": 0,
+        "totalInvalid": 0,
+        "allowedExceptions": [],
+        "unexpected": [],
+        "staleExceptions": []
+      },
+      "src/mcp-tools schemas": {
+        "checked": 130,
+        "totalInvalid": 7,
+        "allowedExceptions": [
+          "codexomics_chat",
+          "find_gene",
+          "list_genome_windows",
+          "render_protein_structure_results",
+          "run_on_windows",
+          "search_alphafold_by_sequence",
+          "switch_active_window"
+        ],
+        "unexpected": [],
+        "staleExceptions": []
+      }
+    },
+    "warnings": [],
+    "errors": []
+  },
+  "registryDiagnostics": [
+    {
+      "severity": "warning",
+      "message": "Duplicate tool name in registry root",
+      "source": "app_registry",
+      "file": "file_operations/load_annotation_file.yaml",
+      "tool": "load_annotation_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool name in registry root",
+      "source": "app_registry",
+      "file": "file_operations/load_genome_file.yaml",
+      "tool": "load_genome_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool name in registry root",
+      "source": "app_registry",
+      "file": "file_operations/load_operon_file.yaml",
+      "tool": "load_operon_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool name in registry root",
+      "source": "app_registry",
+      "file": "file_operations/load_reads_file.yaml",
+      "tool": "load_reads_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool name in registry root",
+      "source": "app_registry",
+      "file": "file_operations/load_variant_file.yaml",
+      "tool": "load_variant_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool name in registry root",
+      "source": "app_registry",
+      "file": "file_operations/load_wig_tracks.yaml",
+      "tool": "load_wig_tracks"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool definition encountered; first definition kept in toolsByName",
+      "tool": "load_annotation_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool definition encountered; first definition kept in toolsByName",
+      "tool": "load_genome_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool definition encountered; first definition kept in toolsByName",
+      "tool": "load_operon_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool definition encountered; first definition kept in toolsByName",
+      "tool": "load_reads_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool definition encountered; first definition kept in toolsByName",
+      "tool": "load_variant_file"
+    },
+    {
+      "severity": "warning",
+      "message": "Duplicate tool definition encountered; first definition kept in toolsByName",
+      "tool": "load_wig_tracks"
+    }
+  ]
+}
