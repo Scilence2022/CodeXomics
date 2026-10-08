@@ -1,0 +1,279 @@
+{
+  "applicationVersion": "0.722.0",
+  "branch": "codex/quality-audit-remediation",
+  "sourceCommit": "51901c34b6736866ecc008458578ac92507bc3db",
+  "nodeVersion": "22.23.3",
+  "vitest": {
+    "command": "node node_modules/vitest/vitest.mjs run --silent --reporter=json",
+    "testFiles": 190,
+    "total": 2293,
+    "passed": 2293,
+    "failed": 0,
+    "success": true
+  },
+  "eslint": {
+    "command": "npm run lint",
+    "exitCode": 0,
+    "errors": 0,
+    "existingWarnings": 4
+  },
+  "registry": {
+    "command": "npm run tool-registry:validate",
+    "exitCode": 0,
+    "tools": 213,
+    "uniqueTools": 213,
+    "policyNamesChecked": 195,
+    "documentedPolicyExceptions": 28
+  },
+  "docs": {
+    "command": "npm run docs:validate",
+    "exitCode": 0
+  },
+  "staticAnalysis": {
+    "command": "node reports/code-quality-audit-2026-10-08/static-analysis.cjs",
+    "baseline": {
+      "files": 281,
+      "lines": 298580,
+      "cloneGroups": 17
+    },
+    "current": {
+      "files": 277,
+      "lines": 294742,
+      "cloneGroups": 10,
+      "parseErrors": [],
+      "duplicateClassMethods": []
+    },
+    "retainedCloneGroups": [
+      [
+        {
+          "file": "packages/marketplace-server/marketplace-data/plugins/ecocyc-pathway-analyzer/1.0.0/demo.js",
+          "className": "EcoCycPathwayDemo",
+          "name": "executeDemo",
+          "start": 104,
+          "end": 132,
+          "lines": 29
+        },
+        {
+          "file": "packages/marketplace-server/marketplace-data/plugins/kegg-pathway-viewer/1.0.0/demo.js",
+          "className": "KEGGPathwayDemo",
+          "name": "executeDemo",
+          "start": 104,
+          "end": 132,
+          "lines": 29
+        },
+        {
+          "file": "packages/marketplace-server/marketplace-data/plugins/string-network-explorer/1.0.0/demo.js",
+          "className": "STRINGNetworkDemo",
+          "name": "executeDemo",
+          "start": 127,
+          "end": 157,
+          "lines": 31
+        }
+      ],
+      [
+        {
+          "file": "src/renderer/modules/CanvasGenesRenderer.js",
+          "className": "CanvasGenesRenderer",
+          "name": "setupResizeObserver",
+          "start": 164,
+          "end": 179,
+          "lines": 16
+        },
+        {
+          "file": "src/renderer/modules/CanvasReadsRenderer.js",
+          "className": "CanvasReadsRenderer",
+          "name": "setupResizeObserver",
+          "start": 1110,
+          "end": 1126,
+          "lines": 17
+        },
+        {
+          "file": "src/renderer/modules/CanvasSequenceRenderer.js",
+          "className": "CanvasSequenceRenderer",
+          "name": "setupResizeObserver",
+          "start": 641,
+          "end": 657,
+          "lines": 17
+        }
+      ],
+      [
+        {
+          "file": "src/renderer/modules/tracks/GeneShapeCreators.js",
+          "className": "GeneShapeCreators",
+          "name": "createJaggedRepeatPath",
+          "start": 1529,
+          "end": 1553,
+          "lines": 25
+        },
+        {
+          "file": "src/renderer/modules/tracks/GeneShapeCreators.js",
+          "className": "GeneShapeCreators",
+          "name": "createJaggedRNAPath",
+          "start": 1563,
+          "end": 1587,
+          "lines": 25
+        }
+      ],
+      [
+        {
+          "file": "src/renderer/modules/BookmarkPanelUI.js",
+          "className": "BookmarkPanelUI",
+          "name": "_esc",
+          "start": 413,
+          "end": 428,
+          "lines": 16
+        },
+        {
+          "file": "src/renderer/modules/HighlightRegionsUI.js",
+          "className": "HighlightRegionsUI",
+          "name": "_esc",
+          "start": 323,
+          "end": 338,
+          "lines": 16
+        },
+        {
+          "file": "src/renderer/modules/PrimerLibraryUI.js",
+          "className": "PrimerLibraryUI",
+          "name": "_esc",
+          "start": 899,
+          "end": 914,
+          "lines": 16
+        }
+      ],
+      [
+        {
+          "file": "src/renderer/modules/MicrobeGenomicsFunctions.js",
+          "className": "MicrobeGenomicsFunctions",
+          "name": "levenshteinDistance",
+          "start": 1022,
+          "end": 1044,
+          "lines": 23
+        },
+        {
+          "file": "src/renderer/modules/UnifiedSequenceProcessing.js",
+          "className": "UnifiedSequenceProcessing",
+          "name": "levenshteinDistance",
+          "start": 538,
+          "end": 560,
+          "lines": 23
+        }
+      ],
+      [
+        {
+          "file": "src/renderer/modules/benchmark-suites/AutomaticSimpleSuite.js",
+          "className": "AutomaticSimpleSuite",
+          "name": "evaluateNavigationCall",
+          "start": 2971,
+          "end": 2990,
+          "lines": 20
+        },
+        {
+          "file": "src/renderer/modules/benchmark-suites/ManualSuite.js",
+          "className": "ManualSuite",
+          "name": "evaluateNavigationCall",
+          "start": 772,
+          "end": 791,
+          "lines": 20
+        }
+      ],
+      [
+        {
+          "file": "src/renderer/modules/LLMBenchmarkFramework.js",
+          "className": "LLMBenchmarkFramework",
+          "name": "formatToolResults",
+          "start": 2470,
+          "end": 2486,
+          "lines": 17
+        },
+        {
+          "file": "src/renderer/modules/LLMBenchmarkFramework.js",
+          "className": "LLMBenchmarkFramework",
+          "name": "formatExecutionResults",
+          "start": 2698,
+          "end": 2714,
+          "lines": 17
+        }
+      ],
+      [
+        {
+          "file": "src/renderer/modules/CanvasGenesRenderer.js",
+          "className": "CanvasGenesRenderer",
+          "name": "shouldUseSpecializedShape",
+          "start": 682,
+          "end": 696,
+          "lines": 15
+        },
+        {
+          "file": "src/renderer/modules/tracks/GeneShapeCreators.js",
+          "className": "GeneShapeCreators",
+          "name": "shouldUseSpecializedShape",
+          "start": 247,
+          "end": 261,
+          "lines": 15
+        }
+      ],
+      [
+        {
+          "file": "src/mcp-tools/sequence/SequenceTools.js",
+          "className": "SequenceTools",
+          "name": "calculateEntropy",
+          "start": 401,
+          "end": 414,
+          "lines": 14
+        },
+        {
+          "file": "src/renderer/modules/MicrobeGenomicsFunctions.js",
+          "className": "MicrobeGenomicsFunctions",
+          "name": "calculateEntropy",
+          "start": 176,
+          "end": 190,
+          "lines": 15
+        }
+      ],
+      [
+        {
+          "file": "src/main/skill-registry-service.js",
+          "className": "SkillRegistryService",
+          "name": "getMetadata",
+          "start": 158,
+          "end": 169,
+          "lines": 12
+        },
+        {
+          "file": "src/main/tool-registry-service.js",
+          "className": "ToolRegistryService",
+          "name": "getMetadata",
+          "start": 110,
+          "end": 121,
+          "lines": 12
+        }
+      ]
+    ]
+  },
+  "issueCommits": {
+    "A18": "c9ea4b7a",
+    "A17": "9e06b6f8",
+    "A19": "fad7b1de",
+    "A16": "d4579f7a",
+    "A15": "f173348b",
+    "A14": "c0bb62e2",
+    "A13": "e9134998",
+    "A12": "eabb65d3",
+    "A11": "c2bf4d7b",
+    "A10": "371e4625",
+    "A09": "56bdc8d8",
+    "A08": "34b9d4aa",
+    "A07": "de201e8f",
+    "A06": "d62e9bee",
+    "A05": "c6bfbc17",
+    "A04": "488166e3",
+    "A03": "24efeea0",
+    "A02": "73df21dd",
+    "A01": "d4ddfc5a"
+  },
+  "limitations": [
+    "No desktop GUI end-to-end run",
+    "No live remote marketplace or bioinformatics execution",
+    "Remaining clone groups and large modules are documented maintenance candidates"
+  ]
+}
