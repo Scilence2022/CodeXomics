@@ -1137,6 +1137,10 @@ class PluginMarketplace {
 
         console.log(`✅ Downloaded ${plugin.id} as JSON package`);
 
+        if (data.data?.manifest?.id !== plugin.id || data.data.manifest.version !== plugin.version) {
+          throw new Error(`Downloaded package identity mismatch for ${plugin.id}@${plugin.version}`);
+        }
+
         // Use manifest from server response
         downloadResult = {
           pluginId: plugin.id,
@@ -1457,18 +1461,9 @@ class PluginMarketplace {
    * Compare version strings
    */
   compareVersions(version1, version2) {
-    const v1Parts = version1.split('.').map(Number);
-    const v2Parts = version2.split('.').map(Number);
-
-    for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-      const v1 = v1Parts[i] || 0;
-      const v2 = v2Parts[i] || 0;
-
-      if (v1 > v2) return 1;
-      if (v1 < v2) return -1;
-    }
-
-    return 0;
+    const utils =
+      typeof module !== 'undefined' && module.exports ? require('./PluginVersionUtils') : window.PluginVersionUtils;
+    return utils.compare(version1, version2);
   }
 
   /**

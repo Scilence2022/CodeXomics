@@ -1,3 +1,4 @@
+const semver = require('semver');
 const { contextBridge, ipcRenderer, shell, webUtils } = require('electron');
 
 const allowedInvokeChannels = [
@@ -714,6 +715,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 // Provide access to node process information (for development)
 contextBridge.exposeInMainWorld('nodeAPI', {
+  pluginVersions: {
+    compare: (a, b) => semver.compare(a, b),
+    validRange: range => semver.validRange(range),
+    satisfies: (version, range) => semver.satisfies(version, range),
+  },
   platform: process.platform,
   version: process.version,
   // Forwarded from the main process via webPreferences.additionalArguments.
