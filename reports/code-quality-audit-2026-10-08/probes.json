@@ -1,0 +1,48 @@
+{
+  "mcpBlast": {
+    "identicalInputIdentities": ["64.0", "96.0"],
+    "delegatedCalls": 0,
+    "simulationFlagPresent": false,
+    "fixedStatistics": {
+      "searchTime": "2.34 seconds",
+      "databaseSize": "1,234,567 sequences",
+      "effectiveSearchSpace": "4.56e+09"
+    }
+  },
+  "pluginSecurity": {
+    "samePluginDecisionsWithDifferentRandom": [true, false],
+    "rejectedIndividualApprovedPlan": {
+      "individual": false,
+      "plan": true
+    }
+  },
+  "reverseComplement": {
+    "input": "ARYN",
+    "mcp": "NYRT",
+    "rendererDefaultFallback": "NNNT",
+    "unified": "NRYT"
+  },
+  "blastFallbacks": {
+    "sameRegionWithoutChatManager": ["AAAAAAAA", "CCCCCCCC"],
+    "sameTabularRowMissingSubjectSequence": ["DDDD", "YYYY"],
+    "sourceLabel": "Local"
+  },
+  "pluginDependencies": {
+    "unknownPluginVersions": [],
+    "inventedExampleVersions": ["1.0.0", "1.1.0", "1.2.0", "2.0.0"],
+    "caretAcceptsZeroMinorUpgrade": true
+  },
+  "pluginUpdate": {
+    "resultingRegistryVersion": "2.0.0",
+    "registrySaves": 1,
+    "providedCapabilities": ["installedPlugins", "saveInstalledPluginsRegistry"]
+  },
+  "downloadMenu": {
+    "exportedFactoryType": "undefined",
+    "clickError": "createGenomicDownloadWindow is not a function"
+  },
+  "policyValidator": {
+    "obsoleteAnchorFound": false,
+    "actualUniquePolicyTools": 195
+  }
+}
