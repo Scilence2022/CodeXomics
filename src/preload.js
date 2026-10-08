@@ -585,6 +585,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Plugin file loading APIs
   selectPluginFile: () => ipcRenderer.invoke('select-plugin-file'),
   getPluginFileInfo: filePath => ipcRenderer.invoke('get-plugin-file-info', filePath),
+  inspectPluginPackage: options => ipcRenderer.invoke('inspect-plugin-package', options),
   readPluginFile: filePath => ipcRenderer.invoke('read-plugin-file', filePath),
   checkPluginFileExists: filePath => ipcRenderer.invoke('check-file-exists', filePath),
   extractPluginZip: zipPath => ipcRenderer.invoke('extract-plugin-zip', zipPath),

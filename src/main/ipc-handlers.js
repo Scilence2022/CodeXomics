@@ -13,6 +13,7 @@ const { ipcMain, app, dialog, BrowserWindow, nativeImage, clipboard, shell } = r
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { inspectPluginPackage } = require('./plugin-package-inspector');
 const VERSION_INFO = require('../version');
 const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
 const workspaceHostManager = require('./workspace-host-manager');
@@ -1883,9 +1884,21 @@ function registerIpcHandlers(deps) {
    * Write complete plugin package to disk
    * Handles both JSON (mock packages) and ZIP (real packages) data
    */
+  ipcMain.handle('inspect-plugin-package', async (event, options) => {
+    try {
+      return { success: true, evidence: inspectPluginPackage(options) };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('write-plugin-files', async (event, options) => {
     try {
-      const { pluginId, installPath, data, manifest } = options || {};
+      const { pluginId, installPath, data, manifest, packageSha256 } = options || {};
+      if (packageSha256) {
+        const inspection = inspectPluginPackage({ pluginId, version: manifest?.version, data, manifest });
+        if (inspection.sha256 !== packageSha256) throw new Error('Plugin package changed after validation');
+      }
       const safePluginId = sanitizePluginId(pluginId);
       const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
 

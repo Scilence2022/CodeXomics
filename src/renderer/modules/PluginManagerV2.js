@@ -23,7 +23,7 @@ class PluginManagerV2 {
       enableResourceManagement: true,
       enableCaching: true,
       enableMarketplace: true,
-      enableSecurityValidation: false, // Temporarily disabled for testing
+      enableSecurityValidation: false, // Optional static package checks; downloaded code execution stays blocked
       enableDependencyResolution: true,
       enableAutoUpdates: true,
       enableNewArchitecture: true, // Enable VS Code-inspired architecture
@@ -1016,7 +1016,7 @@ class PluginManagerV2 {
     }
 
     const pluginId = parts[0];
-     // visualize, renderNetwork, etc.
+    // visualize, renderNetwork, etc.
 
     console.log(`🎨 [PluginManagerV2] Executing visualization tool: ${toolName}`);
 

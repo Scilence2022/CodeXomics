@@ -49,7 +49,7 @@ class PluginSystemBootstrap {
       const pluginManager = new PluginManagerV2(app, configManager, {
         enableResourceManagement: true,
         enableMarketplace: true,
-        enableSecurityValidation: false, // Temporarily disabled for testing
+        enableSecurityValidation: false, // Optional static package checks; downloaded code execution stays blocked
         enableDependencyResolution: true,
         enableAutoUpdates: true,
         enableCaching: true,
