@@ -2,6 +2,7 @@ const semver = require('semver');
 const { contextBridge, ipcRenderer, shell, webUtils } = require('electron');
 
 const allowedInvokeChannels = [
+  'project-manager-action',
   'backup-plugin-package',
   'restore-plugin-package',
   'evo2:settings',
@@ -369,7 +370,19 @@ const safeRequire = moduleName => {
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
+let projectManagerActionHandler;
+const pendingProjectManagerActions = [];
+ipcRenderer.on('project-manager-action', (event, request) => {
+  if (projectManagerActionHandler) projectManagerActionHandler(request);
+  else if (pendingProjectManagerActions.length < 20) pendingProjectManagerActions.push(request);
+});
+
 contextBridge.exposeInMainWorld('electronAPI', {
+  projectManagerAction: options => ipcRenderer.invoke('project-manager-action', options),
+  onProjectManagerAction: callback => {
+    projectManagerActionHandler = callback;
+    for (const request of pendingProjectManagerActions.splice(0)) callback(request);
+  },
   // Resource management APIs
   getLoadedResources: () => ipcRenderer.invoke('get-loaded-resources'),
   refreshResources: () => ipcRenderer.invoke('refresh-resources'),
@@ -527,7 +540,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   onLoadProjectFromMenu: callback => {
-    ipcRenderer.on('load-project-from-menu', callback);
+    ipcRenderer.on('load-project-from-menu', (event, filePath) => callback(filePath));
   },
 
   // Remove listeners

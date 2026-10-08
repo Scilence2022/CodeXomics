@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const { requestResourceSnapshot } = require('./resource-snapshot');
 const { inspectPluginPackage } = require('./plugin-package-inspector');
 const pluginPackageStore = require('./plugin-package-store');
+const { extractPluginArchive } = require('./plugin-archive');
 const VERSION_INFO = require('../version');
 const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
 const workspaceHostManager = require('./workspace-host-manager');
@@ -1785,18 +1786,13 @@ function registerIpcHandlers(deps) {
         operation: 'extract plugin zip',
         mustExist: true,
       });
-      // Create temp directory for extraction
-      const tempDir = assertAllowedFileAccess(app, path.join(app.getPath('temp'), `plugin-${Date.now()}`), {
-        operation: 'create plugin extraction directory',
+      const result = await extractPluginArchive(zipPath, app.getPath('temp'));
+      permissionBroker.grantPath(result.extractPath, {
+        source: 'plugin-archive-extraction',
+        capabilities: [FILE_CAPABILITIES.READ, FILE_CAPABILITIES.LIST],
+        recursive: true,
       });
-      fs.mkdirSync(tempDir, { recursive: true });
-
-      // Note: This is a placeholder - you'll need to add a zip extraction library
-      // For now, return error indicating zip extraction not implemented
-      return {
-        success: false,
-        error: 'ZIP extraction not yet implemented. Please extract manually and select the plugin directory.',
-      };
+      return result;
     } catch (error) {
       return {
         success: false,

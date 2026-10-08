@@ -3590,11 +3590,13 @@ class GenomeBrowser {
     });
 
     // Handle project management from main menu
-    ipcRenderer.on('open-project-file', (event, filePath) => {
-      console.log('📂 Opening project file from main menu:', filePath);
-      this.showNotification(`Opening project: ${filePath}`, 'info');
-      // TODO: implement project-file opening logic
-      // Here you can call ProjectManager's methods to load the project
+    ipcRenderer.on('open-project-file', async (event, filePath) => {
+      try {
+        const manager = await this.openProjectManagerWindow();
+        await manager.projectManagerWindow.loadProjectFromFile(filePath);
+      } catch (error) {
+        this.showNotification(`Unable to open project: ${error.message}`, 'error');
+      }
     });
 
     ipcRenderer.on('save-current-project', async () => {
@@ -3603,7 +3605,7 @@ class GenomeBrowser {
         // Open the project manager and trigger saving the current project
         const projectManagerWindow = await this.openProjectManagerWindow();
         if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
-          await projectManagerWindow.projectManagerWindow.saveCurrentProjectAsXML();
+          await projectManagerWindow.projectManagerWindow.saveCurrentProject();
         } else {
           this.showNotification('Please open Project Manager to save current project', 'warning');
         }
@@ -3619,7 +3621,7 @@ class GenomeBrowser {
         // Open the project manager and trigger the Save As operation
         const projectManagerWindow = await this.openProjectManagerWindow();
         if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
-          await projectManagerWindow.projectManagerWindow.saveCurrentProjectAsXML();
+          await projectManagerWindow.projectManagerWindow.saveProjectAs();
         } else {
           this.showNotification('Please open Project Manager to save project', 'warning');
         }
@@ -3656,7 +3658,7 @@ class GenomeBrowser {
           if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
             // Load the project from the file
             await projectManagerWindow.projectManagerWindow.loadProjectFromFile(project.filePath);
-            this.showNotification(`Opened project: ${project.name}`, 'success');
+            this.showNotification(`Requested project opening: ${project.name}`, 'info');
           } else {
             this.showNotification('Failed to open Project Manager window', 'error');
           }
@@ -3676,8 +3678,8 @@ class GenomeBrowser {
 
         if (projectManagerWindow && projectManagerWindow.projectManagerWindow) {
           // Clear recent projects in ProjectManager
-          projectManagerWindow.projectManagerWindow.clearRecentProjects();
-          this.showNotification('Recent projects cleared', 'success');
+          await projectManagerWindow.projectManagerWindow.clearRecentProjects();
+          this.showNotification('Requested recent-project list clearing', 'info');
         } else {
           this.showNotification('Failed to open Project Manager window', 'warning');
         }
@@ -11499,33 +11501,22 @@ class GenomeBrowser {
    * Open Project Manager window
    */
   async openProjectManagerWindow() {
-    try {
-      // Use IPC to request opening the Project Manager from main process
-      ipcRenderer.send('open-project-manager');
-
-      this.showNotification('Project Manager window is opening...', 'info');
-
-      // Return a promise that waits for the project manager window to be available
-      return new Promise(resolve => {
-        // A listener could be added here to wait for the window to be ready
-        setTimeout(() => {
-          // Simulate returning an object containing the window instance
-          // In real use, the window instance may need to be obtained via IPC or another mechanism
-          resolve({
-            projectManagerWindow: {
-              saveCurrentProjectAsXML: async () => {
-                console.log('Triggered save current project as XML');
-                this.showNotification('Project saved as XML via Project Manager', 'success');
-              },
-            },
-          });
-        }, 500);
-      });
-    } catch (error) {
-      console.error('Failed to open Project Manager:', error);
-      this.showNotification('Unable to open Project Manager window', 'error');
-      throw error;
-    }
+    const request = async (action, filePath) => {
+      if (!window.electronAPI?.projectManagerAction) throw new Error('Project Manager API unavailable');
+      const result = await window.electronAPI.projectManagerAction({ action, filePath });
+      if (!result?.success) throw new Error(result?.error || 'Project Manager request failed');
+      return result;
+    };
+    await request('open');
+    return {
+      projectManagerWindow: {
+        saveCurrentProject: () => request('saveCurrentProject'),
+        saveProjectAs: () => request('saveProjectAs'),
+        saveCurrentProjectAsXML: () => request('exportProjectAsXML'),
+        loadProjectFromFile: filePath => request('loadProjectFromFile', filePath),
+        clearRecentProjects: () => request('clearRecentProjects'),
+      },
+    };
   }
 
   /**

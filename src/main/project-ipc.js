@@ -13,6 +13,7 @@
 const { ipcMain, dialog, app, BrowserWindow, Menu, MenuItem, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { dispatchProjectManagerAction } = require('./project-manager-dispatch');
 const { rememberApprovedPath, rememberApprovedDialogPaths, assertAllowedFileAccess } = require('./security-utils');
 
 function assertSafeProjectSegment(value, label = 'name') {
@@ -630,6 +631,17 @@ function registerProjectIpcHandlers(deps) {
       } else {
         return { success: true, data: null };
       }
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('project-manager-action', async (event, options = {}) => {
+    try {
+      if (options.action === 'loadProjectFromFile') {
+        assertAllowedFileAccess(app, options.filePath, { operation: 'open project', mustExist: true });
+      }
+      return await dispatchProjectManagerAction(deps.createProjectManagerWindow, options);
     } catch (error) {
       return { success: false, error: error.message };
     }
