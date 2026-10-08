@@ -53,6 +53,7 @@
 - 新增 `test/unit/blast-sandbox-path.test.js`：验证等待真实路径后才检测/扫描 BLAST、加载基因组后的目录优先级、主进程路径查询失败时不向伪造目录执行命令。
 - 第一项修复后全量测试：191 个文件、2,300 项通过。
 - 两项修复后全量测试：192 个文件、2,304 项通过。命令：`vitest run --maxWorkers=2`，使用 Node.js 22.23.3。
+- 覆盖率 CI 后续发现 UIManager 单元测试遗留延迟初始化计时器，在 worker 关闭时触发 Vitest 未处理错误。测试现改为清除与用例无关的定时器；修复后 `vitest run --coverage --maxWorkers=2` 通过，192 个文件、2,304 项断言通过，无 worker 错误。
 - 初次高并发全量运行有两项工具检索 benchmark 超过默认 5 秒时限；限制 worker 数后同一测试集全部通过，未修改断言或超时阈值。
 - 全库 ESLint：0 错误，4 条既有 warning（轨迹准备脚本及 benchmark 编号测试）。`git diff --check` 通过。
 
