@@ -96,6 +96,7 @@ const allowedInvokeChannels = [
 ];
 
 const allowedListenChannels = [
+  'collect-resource-info',
   'menu-new-project',
   'menu-open-project',
   'menu-save-project',
@@ -237,6 +238,7 @@ const allowedListenChannels = [
 ];
 
 const allowedSendChannels = [
+  'resource-info-response',
   'close-resource-manager',
   'project-manager-current-project-response',
   'analyze-in-chatbox',

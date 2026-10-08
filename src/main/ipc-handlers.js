@@ -13,6 +13,7 @@ const { ipcMain, app, dialog, BrowserWindow, nativeImage, clipboard, shell } = r
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { requestResourceSnapshot } = require('./resource-snapshot');
 const { inspectPluginPackage } = require('./plugin-package-inspector');
 const VERSION_INFO = require('../version');
 const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
@@ -3681,82 +3682,29 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  // Resource Manager IPC handlers
-  ipcMain.handle('get-loaded-resources', async () => {
+  // Resource Manager reads the selected genome view, not demonstration data.
+  const collectResources = async () => {
     try {
-      // In a real implementation, this would collect data from the main window
-      // For now, return mock data that matches the expected format
-      const mockResources = [
-        {
-          id: 'genome1',
-          type: 'fasta',
-          name: 'E.coli_K12.fasta',
-          path: '/Users/example/data/E.coli_K12.fasta',
-          size: 4641652,
-          loadedAt: new Date().toISOString(),
-          status: 'loaded',
-          chromosomes: ['NC_000913.3'],
-          sequences: 1,
-          metadata: {
-            organism: 'Escherichia coli K-12',
-            version: 'RefSeq',
-            source: 'NCBI',
-          },
-        },
-      ];
-
-      return { success: true, resources: mockResources };
+      return await requestResourceSnapshot(ipcMain, getMainGenomeTarget());
     } catch (error) {
       return { success: false, error: error.message };
     }
-  });
+  };
+  ipcMain.handle('get-loaded-resources', collectResources);
+  ipcMain.handle('refresh-resources', collectResources);
+  ipcMain.handle('remove-resource', async () => ({
+    success: false,
+    error: 'Resource removal is unavailable; use the genome track controls',
+  }));
+  ipcMain.handle('export-resource', async () => ({
+    success: false,
+    error: 'Resource export is unavailable here; use the genome export menu',
+  }));
 
-  ipcMain.handle('refresh-resources', async () => {
-    try {
-      // Send refresh request to main window and collect current state
-      const targetWindow = getMainGenomeTarget();
-      if (targetWindow) {
-        targetWindow.webContents.send('collect-resource-info');
-      }
-      return { success: true, message: 'Resources refreshed' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('remove-resource', async (event, resourceId) => {
-    try {
-      // In a real implementation, this would communicate with the main window
-      // to remove the resource
-      console.log('Removing resource:', resourceId);
-      return { success: true, message: 'Resource removed' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('export-resource', async (event, resourceId, options) => {
-    try {
-      // Implementation would show save dialog and export the resource
-      console.log('Exporting resource:', resourceId, options);
-      return { success: true, message: 'Resource exported' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('open-resource-in-browser', async (event, resourceId) => {
-    try {
-      // Send message to main window to display the resource
-      const targetWindow = getMainGenomeTarget();
-      if (targetWindow) {
-        targetWindow.webContents.send('open-resource', resourceId);
-      }
-      return { success: true, message: 'Resource opened in browser' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  });
+  ipcMain.handle('open-resource-in-browser', async () => ({
+    success: false,
+    error: 'Resource viewing is unavailable here; select the file in its genome window',
+  }));
 
   ipcMain.handle('select-and-load-file', async () => {
     try {

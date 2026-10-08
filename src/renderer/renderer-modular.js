@@ -3363,6 +3363,10 @@ class GenomeBrowser {
     });
 
     // Handle Resource Manager
+    ipcRenderer.on('collect-resource-info', (event, { requestId }) => {
+      ipcRenderer.send('resource-info-response', { requestId, resources: window.LoadedResourceSnapshot.collect(this) });
+    });
+
     ipcRenderer.on('open-resource-manager', () => {
       this.openResourceManager();
     });
