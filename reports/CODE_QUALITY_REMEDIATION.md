@@ -12,3 +12,4 @@ Each row is implemented, tested, and committed separately. Tests run using the i
 | A04 | Reject plans containing any rejected plugin or validation error; preserve zero source risk for trusted packages. | 12 tests passed under Node 22; targeted ESLint passed. |
 | A05 | Resolve only available packages; fail incompatible plans; share semver across plugin version paths. | Version integrity and marketplace regressions; docs validation. |
 | A06 | Load shared sequence modules and route MCP and renderer IUPAC complements and translation through them. | 26 IUPAC, translation, GC and coordinate regression tests passed. |
+| A07 | Export genomic download window factory, load shipped HTML and remove duplicate generated HTML. | 20 menu window, window management and project IPC tests passed. |

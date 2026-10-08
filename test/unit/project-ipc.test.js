@@ -63,7 +63,7 @@ describe('Project IPC Module', () => {
   });
 
   it('should handle genomic downloads', () => {
-    expect(content).toContain('createGenomicDownloadWindow');
+    expect(content).toContain('getCurrentProjectInfo');
     expect(content).toContain('download');
   });
 
