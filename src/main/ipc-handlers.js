@@ -16,6 +16,7 @@ const crypto = require('crypto');
 const { requestResourceSnapshot } = require('./resource-snapshot');
 const { inspectPluginPackage } = require('./plugin-package-inspector');
 const pluginPackageStore = require('./plugin-package-store');
+const { registerPluginVersionIpc } = require('./plugin-version-ipc');
 const { extractPluginArchive } = require('./plugin-archive');
 const VERSION_INFO = require('../version');
 const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
@@ -580,6 +581,7 @@ function getBamReaderState(reader) {
  * @param {Object} deps.i18n - Internationalization
  */
 function registerIpcHandlers(deps) {
+  registerPluginVersionIpc(ipcMain);
   const {
     mainWindow,
     windowRegistry,

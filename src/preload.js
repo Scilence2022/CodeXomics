@@ -1,4 +1,3 @@
-const semver = require('semver');
 const { contextBridge, ipcRenderer, shell, webUtils } = require('electron');
 
 const allowedInvokeChannels = [
@@ -733,11 +732,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
 });
 
 // Provide access to node process information (for development)
+// Sandboxed preloads cannot require npm packages. Keep the synchronous plugin
+// resolver contract while delegating these bounded, in-memory operations to main.
+const pluginVersionOperation = (operation, args) => {
+  const result = ipcRenderer.sendSync('plugin-version-operation', operation, args);
+  if (!result?.success) throw new Error(result?.error || 'Plugin version operation failed');
+  return result.value;
+};
+
 contextBridge.exposeInMainWorld('nodeAPI', {
   pluginVersions: {
-    compare: (a, b) => semver.compare(a, b),
-    validRange: range => semver.validRange(range),
-    satisfies: (version, range) => semver.satisfies(version, range),
+    compare: (a, b) => pluginVersionOperation('compare', [a, b]),
+    validRange: range => pluginVersionOperation('validRange', [range]),
+    satisfies: (version, range) => pluginVersionOperation('satisfies', [version, range]),
   },
   platform: process.platform,
   version: process.version,
