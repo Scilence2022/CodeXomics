@@ -854,7 +854,7 @@ class PluginMarketplace {
       console.log(`📦 Starting installation of plugin: ${pluginId}`);
 
       // 1. Find plugin in marketplace
-      const plugin = await this.findPlugin(pluginId);
+      const plugin = options.plugin || (await this.findPlugin(pluginId));
       if (!plugin) {
         throw new Error(`Plugin ${pluginId} not found in marketplace`);
       }
@@ -904,8 +904,10 @@ class PluginMarketplace {
       }
 
       // 5. Download and install plugins in dependency order
-      const results = await this.executeInstallPlan(installPlan, preparedDownloads);
+      const results = await this.executeInstallPlan(installPlan, preparedDownloads, options.requireDisk);
 
+      const failed = results.find(result => !result.success);
+      if (failed) throw new Error(failed.error || 'Plugin installation failed');
       this.stats.totalInstalls++;
       this.emitEvent('plugin-installed', { pluginId, results });
 
@@ -1057,7 +1059,7 @@ class PluginMarketplace {
   /**
    * Execute install plan
    */
-  async executeInstallPlan(installPlan, preparedDownloads = new Map()) {
+  async executeInstallPlan(installPlan, preparedDownloads = new Map(), requireDisk = false) {
     const results = [];
 
     for (const plugin of installPlan.plugins) {
@@ -1067,6 +1069,7 @@ class PluginMarketplace {
         // Download plugin
         const downloadResult = preparedDownloads.get(plugin.id) || (await this.downloadPlugin(plugin));
 
+        downloadResult.requireDisk = requireDisk;
         // Install plugin
         const installResult = await this.installDownloadedPlugin(downloadResult);
         if (!installResult?.success) throw new Error(installResult?.error || 'Plugin installation failed');
@@ -1250,12 +1253,14 @@ class PluginMarketplace {
             }
             console.log(`✅ Plugin files written to disk at ${installPath}`);
           } else {
-            if (downloadResult.packageSha256) throw new Error('Validated plugin package cannot be written');
+            if (downloadResult.packageSha256 || downloadResult.requireDisk) {
+              throw new Error('Validated plugin package cannot be written');
+            }
             console.warn('⚠️  electronAPI.writePluginFiles not available, plugin files not written to disk');
             console.warn('⚠️  Plugin will only exist in memory and will be lost on restart');
           }
         } catch (writeError) {
-          if (downloadResult.packageSha256) throw writeError;
+          if (downloadResult.packageSha256 || downloadResult.requireDisk) throw writeError;
           console.error(`❌ Failed to write plugin files to disk:`, writeError);
           console.warn('⚠️  Continuing with in-memory registration only');
         }
@@ -1289,6 +1294,9 @@ class PluginMarketplace {
 
       // 4. Register plugin with plugin manager (in-memory registration)
       if (this.pluginManager) {
+        if (downloadResult.requireDisk && this.pluginManager.getPlugin(downloadResult.pluginId)) {
+          await this.pluginManager.uninstallPlugin(downloadResult.pluginId, { keepFiles: true, notify: false });
+        }
         await this.pluginManager.registerPlugin(downloadResult.pluginId, pluginDefinition);
       } else {
         throw new Error('Plugin manager not available');
@@ -1420,7 +1428,7 @@ class PluginMarketplace {
         if (success) {
           console.log('✅ Plugin registry saved to localStorage immediately');
         } else {
-          console.error('❌ Failed to save plugin registry immediately');
+          throw new Error('Failed to persist installed plugin registry');
         }
       } else {
         // Fallback to regular set (for backward compatibility)

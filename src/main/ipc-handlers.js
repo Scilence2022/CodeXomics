@@ -15,6 +15,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { requestResourceSnapshot } = require('./resource-snapshot');
 const { inspectPluginPackage } = require('./plugin-package-inspector');
+const pluginPackageStore = require('./plugin-package-store');
 const VERSION_INFO = require('../version');
 const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
 const workspaceHostManager = require('./workspace-host-manager');
@@ -31,7 +32,6 @@ const {
   grantReadOnlyFileLoadPath,
   assertPluginPath,
   safePluginJoin,
-  safeExtractAdmZip,
   sanitizePluginId,
 } = require('./security-utils');
 const { ToolRegistryService } = require('./tool-registry-service');
@@ -1893,99 +1893,43 @@ function registerIpcHandlers(deps) {
     }
   });
 
+  const checkedInstallPath = options => {
+    const pluginId = sanitizePluginId(options.pluginId);
+    const installPath = assertPluginPath(app, options.installPath, 'plugin install path');
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(pluginId) || path.basename(installPath) !== pluginId) {
+      throw new Error('Plugin install path must match its id');
+    }
+    return installPath;
+  };
   ipcMain.handle('write-plugin-files', async (event, options) => {
     try {
-      const { pluginId, installPath, data, manifest, packageSha256 } = options || {};
-      if (packageSha256) {
-        const inspection = inspectPluginPackage({ pluginId, version: manifest?.version, data, manifest });
-        if (inspection.sha256 !== packageSha256) throw new Error('Plugin package changed after validation');
-      }
-      const safePluginId = sanitizePluginId(pluginId);
-      const safeInstallPath = assertPluginPath(app, installPath, 'plugin install path');
-
-      console.log(`[Main] Writing plugin files for ${safePluginId} to ${safeInstallPath}`);
-
-      // Create plugin directory if it doesn't exist
-      if (!fs.existsSync(safeInstallPath)) {
-        fs.mkdirSync(safeInstallPath, { recursive: true });
-        console.log(`[Main] Created plugin directory: ${safeInstallPath}`);
-      }
-
-      // Write manifest file (plugin.json)
-      const manifestPath = safePluginJoin(app, safeInstallPath, 'plugin.json', 'plugin manifest');
-      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
-      console.log(`[Main] Wrote manifest to: ${manifestPath}`);
-
-      // Handle the plugin data
-      if (data) {
-        if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'number') {
-          // Binary data sent as byte array - could be a ZIP file
-          const zipPath = safePluginJoin(app, safeInstallPath, `${safePluginId}.zip`, 'plugin zip');
-          const buffer = Buffer.from(data);
-          fs.writeFileSync(zipPath, buffer);
-          console.log(`[Main] Wrote ZIP file (${buffer.length} bytes): ${zipPath}`);
-
-          // Try to extract the ZIP file using native zlib if it's a valid zip
-          try {
-            const AdmZip = require('adm-zip');
-            const zip = new AdmZip(buffer);
-            safeExtractAdmZip(app, zip, safeInstallPath);
-            // Remove the zip file after extraction
-            fs.unlinkSync(zipPath);
-            console.log(`[Main] Extracted ZIP file to ${safeInstallPath}`);
-          } catch (extractError) {
-            // If adm-zip is not available or extraction fails, keep the ZIP for manual extraction
-            console.log(`[Main] ZIP extraction not available, keeping ZIP file: ${extractError.message}`);
-          }
-        } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-          // Binary data (ArrayBuffer/TypedArray) - should not normally reach here after IPC
-          const zipPath = safePluginJoin(app, safeInstallPath, `${safePluginId}.zip`, 'plugin zip');
-          const buffer = Buffer.from(data);
-          fs.writeFileSync(zipPath, buffer);
-          console.log(`[Main] Wrote binary data (${buffer.length} bytes): ${zipPath}`);
-        } else if (typeof data === 'object' && !Array.isArray(data)) {
-          // JSON package (mock package with files object)
-          for (const [filename, content] of Object.entries(data)) {
-            const filePath = safePluginJoin(app, safeInstallPath, filename, 'plugin package file');
-            const fileDir = path.dirname(filePath);
-
-            if (!fs.existsSync(fileDir)) {
-              fs.mkdirSync(fileDir, { recursive: true });
-            }
-
-            // Handle different content types
-            if (typeof content === 'string') {
-              fs.writeFileSync(filePath, content, 'utf8');
-            } else if (typeof content === 'object') {
-              fs.writeFileSync(filePath, JSON.stringify(content, null, 2), 'utf8');
-            }
-
-            console.log(`[Main] Wrote file: ${filePath}`);
-          }
-        }
-      }
-
-      // Create an index.js entry point if not provided
-      const indexPath = safePluginJoin(app, safeInstallPath, 'index.js', 'plugin index');
-      if (!fs.existsSync(indexPath)) {
-        const defaultIndex = `// Plugin: ${safePluginId}\n// Auto-generated entry point\nmodule.exports = ${JSON.stringify(manifest, null, 2)};\n`;
-        fs.writeFileSync(indexPath, defaultIndex, 'utf8');
-        console.log(`[Main] Created default index.js`);
-      }
-
-      console.log(`[Main] Plugin ${safePluginId} installed successfully to ${safeInstallPath}`);
-
-      return {
-        success: true,
-        installPath: safeInstallPath,
-        files: fs.readdirSync(safeInstallPath),
-      };
+      return await pluginPackageStore.installPackage({ ...options, installPath: checkedInstallPath(options) });
     } catch (error) {
-      console.error('[Main] Failed to write plugin files:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
+    }
+  });
+  ipcMain.handle('backup-plugin-package', async (event, options) => {
+    try {
+      return await pluginPackageStore.backupPackage(
+        checkedInstallPath(options),
+        path.join(app.getPath('userData'), 'plugin-rollbacks'),
+        options.pluginId,
+        options.version
+      );
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  ipcMain.handle('restore-plugin-package', async (event, options) => {
+    try {
+      return await pluginPackageStore.restorePackage(
+        checkedInstallPath(options),
+        path.join(app.getPath('userData'), 'plugin-rollbacks'),
+        options.pluginId,
+        options.snapshotId
+      );
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   });
 

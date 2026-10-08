@@ -189,14 +189,16 @@ class PluginUpdateManager {
    * Check if this is a security update
    */
   isSecurityUpdate(plugin) {
-    // Mock security update detection
-    return Math.random() > 0.8; // 20% chance of being security update
+    return plugin.securityUpdate === true;
   }
 
   /**
    * Update plugin to latest version
    */
   async updatePlugin(pluginId, options = {}) {
+    this.activeUpdates ||= new Set();
+    if (this.activeUpdates.has(pluginId)) throw new Error('Plugin update already in progress');
+    this.activeUpdates.add(pluginId);
     try {
       console.log(`📦 Starting update for plugin: ${pluginId}`);
 
@@ -212,6 +214,7 @@ class PluginUpdateManager {
         return { success: true, action: 'already-updated' };
       }
 
+      const fromVersion = installedPlugin.version;
       // Create rollback point
       await this.createRollbackPoint(pluginId, installedPlugin);
 
@@ -221,7 +224,7 @@ class PluginUpdateManager {
 
         // Record update history
         await this.recordUpdateHistory(pluginId, {
-          fromVersion: installedPlugin.version,
+          fromVersion,
           toVersion: updateInfo.latestVersion,
           updateType: updateInfo.updateType,
           success: true,
@@ -246,7 +249,7 @@ class PluginUpdateManager {
         // Emit update event
         this.marketplace.emitEvent('plugin-updated', {
           pluginId,
-          fromVersion: installedPlugin.version,
+          fromVersion,
           toVersion: updateInfo.latestVersion,
           updateType: updateInfo.updateType,
           automatic: options.automatic || false,
@@ -254,7 +257,7 @@ class PluginUpdateManager {
 
         return {
           success: true,
-          fromVersion: installedPlugin.version,
+          fromVersion,
           toVersion: updateInfo.latestVersion,
           updateType: updateInfo.updateType,
         };
@@ -266,7 +269,8 @@ class PluginUpdateManager {
           await this.rollbackPlugin(pluginId);
           console.log(`🔄 Plugin ${pluginId} rolled back successfully`);
         } catch (rollbackError) {
-          console.error(`❌ Rollback failed for ${pluginId}:`, rollbackError);
+          this.stats.failedUpdates++;
+          throw new Error(`Update failed: ${error.message}; rollback failed: ${rollbackError.message}`);
         }
 
         this.stats.failedUpdates++;
@@ -275,6 +279,8 @@ class PluginUpdateManager {
     } catch (error) {
       console.error(`❌ Failed to update plugin ${pluginId}:`, error);
       throw error;
+    } finally {
+      this.activeUpdates.delete(pluginId);
     }
   }
 
@@ -284,18 +290,17 @@ class PluginUpdateManager {
   async performUpdate(pluginId, updateInfo) {
     console.log(`🔧 Performing update for ${pluginId}...`);
 
-    // Simulate update process
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Update the installed plugin registry
-    const installedPlugin = this.marketplace.installedPlugins.get(pluginId);
-    installedPlugin.version = updateInfo.latestVersion;
-    installedPlugin.updatedAt = new Date();
-
-    // Save updated registry
-    await this.marketplace.saveInstalledPluginsRegistry();
-
-    return { success: true };
+    const result = await this.marketplace.installPlugin(pluginId, {
+      force: true,
+      requireDisk: true,
+      plugin: updateInfo.plugin,
+    });
+    if (!result?.success || result.results?.some(entry => !entry.success)) {
+      throw new Error('Plugin update installation failed');
+    }
+    const installed = this.marketplace.installedPlugins.get(pluginId);
+    if (installed?.version !== updateInfo.latestVersion) throw new Error('Installed update version mismatch');
+    return result;
   }
 
   /**
@@ -304,11 +309,21 @@ class PluginUpdateManager {
   async createRollbackPoint(pluginId, installedPlugin) {
     console.log(`💾 Creating rollback point for ${pluginId}...`);
 
+    if (!window.electronAPI?.backupPluginPackage) throw new Error('Plugin backup API unavailable');
+    const installPath = this.marketplace.pluginManager.pathResolver.getInstallPath(pluginId);
+    const backup = await window.electronAPI.backupPluginPackage({
+      pluginId,
+      installPath,
+      version: installedPlugin.version,
+    });
+    if (!backup?.success) throw new Error(backup?.error || 'Plugin backup failed');
     const rollbackPoint = {
+      snapshotId: backup.snapshotId,
+      installPath,
       pluginId,
       version: installedPlugin.version,
       timestamp: new Date(),
-      metadata: { ...installedPlugin },
+      metadata: JSON.parse(JSON.stringify(installedPlugin)),
     };
 
     if (!this.rollbackPoints.has(pluginId)) {
@@ -353,10 +368,27 @@ class PluginUpdateManager {
       const currentPlugin = this.marketplace.installedPlugins.get(pluginId);
       const currentVersion = currentPlugin.version;
 
-      // Restore plugin to rollback state
-      Object.assign(currentPlugin, rollbackPoint.metadata);
-      currentPlugin.rolledBackAt = new Date();
-      currentPlugin.rolledBackFrom = currentVersion;
+      if (!rollbackPoint.snapshotId || !window.electronAPI?.restorePluginPackage) {
+        throw new Error('Rollback point has no restorable package');
+      }
+      const restored = await window.electronAPI.restorePluginPackage({
+        pluginId,
+        installPath: rollbackPoint.installPath,
+        snapshotId: rollbackPoint.snapshotId,
+      });
+      if (!restored?.success || restored.manifest?.version !== rollbackPoint.version) {
+        throw new Error(restored?.error || 'Rollback package version mismatch');
+      }
+      const definition = this.marketplace.preparePluginDefinitionForRegistration(pluginId, restored.manifest);
+      if (this.marketplace.pluginManager.getPlugin(pluginId)) {
+        await this.marketplace.pluginManager.uninstallPlugin(pluginId, { keepFiles: true, notify: false });
+      }
+      await this.marketplace.pluginManager.registerPlugin(pluginId, definition);
+      this.marketplace.installedPlugins.set(pluginId, {
+        ...rollbackPoint.metadata,
+        rolledBackAt: new Date(),
+        rolledBackFrom: currentVersion,
+      });
 
       // Save updated registry
       await this.marketplace.saveInstalledPluginsRegistry();

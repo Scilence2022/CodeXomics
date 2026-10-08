@@ -745,18 +745,7 @@ class PluginMarketplaceUI {
   compareVersions(installedVersion, marketVersion) {
     if (!installedVersion || !marketVersion) return false;
 
-    const installed = installedVersion.split('.').map(Number);
-    const market = marketVersion.split('.').map(Number);
-
-    for (let i = 0; i < Math.max(installed.length, market.length); i++) {
-      const installedPart = installed[i] || 0;
-      const marketPart = market[i] || 0;
-
-      if (marketPart > installedPart) return true;
-      if (marketPart < installedPart) return false;
-    }
-
-    return false; // Versions are equal
+    return this.marketplace.compareVersions(marketVersion, installedVersion) > 0;
   }
 
   /**
@@ -767,16 +756,7 @@ class PluginMarketplaceUI {
       console.log(`🔄 Updating plugin: ${pluginId}`);
       document.getElementById('marketplace-status').textContent = `Updating ${pluginId}...`;
 
-      // Uninstall current version first
-      const uninstallResult = await this.marketplace.uninstallPlugin(pluginId);
-      if (!uninstallResult.success) {
-        throw new Error(uninstallResult.error || 'Failed to uninstall old version');
-      }
-
-      console.log(`✅ Old version uninstalled`);
-
-      // Install new version
-      const installResult = await this.marketplace.installPlugin(pluginId);
+      const installResult = await this.marketplace.updateManager.updatePlugin(pluginId);
 
       if (installResult.success) {
         alert(`✅ Plugin ${pluginId} updated successfully to v${installResult.plugin?.version || 'latest'}!`);

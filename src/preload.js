@@ -2,6 +2,8 @@ const semver = require('semver');
 const { contextBridge, ipcRenderer, shell, webUtils } = require('electron');
 
 const allowedInvokeChannels = [
+  'backup-plugin-package',
+  'restore-plugin-package',
   'evo2:settings',
   'evo2:save-settings',
   'evo2:generate',
@@ -588,6 +590,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Plugin file loading APIs
   selectPluginFile: () => ipcRenderer.invoke('select-plugin-file'),
   getPluginFileInfo: filePath => ipcRenderer.invoke('get-plugin-file-info', filePath),
+  backupPluginPackage: options => ipcRenderer.invoke('backup-plugin-package', options),
+  restorePluginPackage: options => ipcRenderer.invoke('restore-plugin-package', options),
   inspectPluginPackage: options => ipcRenderer.invoke('inspect-plugin-package', options),
   readPluginFile: filePath => ipcRenderer.invoke('read-plugin-file', filePath),
   checkPluginFileExists: filePath => ipcRenderer.invoke('check-file-exists', filePath),
