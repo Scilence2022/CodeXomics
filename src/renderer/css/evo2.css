@@ -1,8 +1,17 @@
 .evo2-modal .modal-content {
   width: min(860px, 94vw);
   max-height: 90vh;
+  /* Flex column so a resized height is taken up by the body (see #editGeneModal). */
+  display: flex;
+  flex-direction: column;
+}
+.evo2-modal .modal-header {
+  flex-shrink: 0;
 }
 .evo2-modal .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
 }
 .evo2-modal [hidden] {
