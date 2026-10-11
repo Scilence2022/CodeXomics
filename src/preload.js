@@ -172,6 +172,7 @@ const allowedListenChannels = [
   'configure-external-tools',
   'open-enzyme-browser',
   'open-dna-marker-browser',
+  'open-evo2',
   'configure-search',
   'mcp-settings',
   'multi-agent-settings',

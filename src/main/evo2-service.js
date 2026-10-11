@@ -126,7 +126,7 @@ class Evo2Service {
   async generate(ownerId, input) {
     const body = buildRequest(input);
     const key = await this.readKey();
-    if (!key) throw new Error('Configure the NVIDIA API key in Options → Evo 2 DNA Generation.');
+    if (!key) throw new Error('Configure the NVIDIA API key in Tools → Evo 2 DNA Generation.');
     for (const [id, job] of this.jobs) {
       if (job.status !== 'running' && Date.now() - job.startedAt > 3600000) this.jobs.delete(id);
     }

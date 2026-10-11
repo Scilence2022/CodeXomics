@@ -321,11 +321,5 @@ class Evo2UI {
 
 if (typeof window !== 'undefined') {
   window.Evo2UI = Evo2UI;
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('evo2Btn')?.addEventListener('click', () => {
-      if (!window.evo2UI) window.evo2UI = new Evo2UI(window.genomeBrowser);
-      window.evo2UI.open();
-    });
-  });
 }
 if (typeof module !== 'undefined' && module.exports) module.exports = Evo2UI;
