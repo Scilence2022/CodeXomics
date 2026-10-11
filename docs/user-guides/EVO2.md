@@ -1,6 +1,6 @@
 # Evo 2 DNA Generation
 
-CodeXomics supports **arc/evo2-40b** through NVIDIA NIM's hosted DNA generation API. Open **Options → Evo 2 DNA Generation** in a genome browser window. Evo 2 has its own sequence interface and does not replace the ChatBox's conversational model.
+CodeXomics supports **arc/evo2-40b** through NVIDIA NIM's hosted DNA generation API. Open **Options → Evo 2 DNA Generation** in a genome browser window. Drag the panel by its title bar and resize it from any edge or corner; the crosshair button in the header restores the default position and size. Evo 2 has its own sequence interface and does not replace the ChatBox's conversational model.
 
 ## Set up and generate
 

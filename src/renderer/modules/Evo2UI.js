@@ -7,6 +7,8 @@ class Evo2UI {
     this.result = null;
     this.timer = null;
     this.busy = false;
+    this.dragResizeReady = false;
+    this.dragResizeTimer = null;
   }
 
   element(id) {
@@ -22,9 +24,12 @@ class Evo2UI {
     this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-labelledby', 'evo2Title');
     this.modal.innerHTML = `
-      <div class="modal-content large">
+      <div class="modal-content large resizable">
         <div class="modal-header"><h3 id="evo2Title">Evo 2 · DNA Generation</h3>
-          <button type="button" class="modal-close" id="evo2Close" aria-label="Close Evo 2">&times;</button></div>
+          <div class="modal-controls">
+            <button type="button" class="reset-position-btn" id="evo2ResetLayout" title="Reset Position" aria-label="Reset panel position and size"><i class="fas fa-crosshairs"></i></button>
+            <button type="button" class="modal-close" id="evo2Close" aria-label="Close Evo 2">&times;</button>
+          </div></div>
         <div class="modal-body">
           <p class="help-text">arc/evo2-40b · NVIDIA NIM. Your input DNA is sent to NVIDIA when you generate.</p>
           <details id="evo2Credentials"><summary>NVIDIA API key <span id="evo2Configured"></span></summary>
@@ -75,10 +80,24 @@ class Evo2UI {
             </div>
           </section>
         </div>
+        <div class="resize-handle resize-handle-n"></div>
+        <div class="resize-handle resize-handle-s"></div>
+        <div class="resize-handle resize-handle-e"></div>
+        <div class="resize-handle resize-handle-w"></div>
+        <div class="resize-handle resize-handle-ne"></div>
+        <div class="resize-handle resize-handle-nw"></div>
+        <div class="resize-handle resize-handle-se"></div>
+        <div class="resize-handle resize-handle-sw"></div>
       </div>`;
     document.body.appendChild(this.modal);
     const on = (id, fn) => this.element(id).addEventListener('click', () => this.perform(fn));
     on('Close', () => this.close());
+    this.element('ResetLayout').addEventListener('click', event => {
+      event.stopPropagation();
+      window.resizableModalManager?.resetSize('#evo2Modal');
+      window.modalDragManager?.resetPosition('#evo2Modal');
+      window.resizableModalManager?.makeResizable('#evo2Modal');
+    });
     on('SaveKey', () => this.saveKey());
     on('RemoveKey', () => this.saveKey(true));
     on('Region', () => this.useRegion());
@@ -120,6 +139,23 @@ class Evo2UI {
     });
   }
 
+  /**
+   * Register the shared ModalDragManager / ResizableModalManager behaviour.
+   * Called from open() once the modal is visible: makeResizable() measures the
+   * element, and measuring a display:none modal would pin a fallback width.
+   */
+  initDragResize() {
+    if (this.dragResizeReady) return;
+    if (!window.modalDragManager || !window.resizableModalManager) {
+      clearTimeout(this.dragResizeTimer);
+      this.dragResizeTimer = setTimeout(() => this.initDragResize(), 100);
+      return;
+    }
+    window.modalDragManager.makeDraggable('#evo2Modal');
+    window.resizableModalManager.makeResizable('#evo2Modal');
+    this.dragResizeReady = true;
+  }
+
   async perform(action) {
     try {
       await action();
@@ -143,6 +179,7 @@ class Evo2UI {
     this.previousFocus = document.activeElement;
     document.getElementById('optionsDropdownMenu')?.classList.remove('show');
     this.modal.classList.add('show');
+    this.initDragResize();
     this.element('Close').focus();
     await this.perform(async () => {
       this.showSettings(this.check(await this.service.invoke('evo2:settings')));
