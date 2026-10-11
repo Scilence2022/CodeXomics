@@ -3391,6 +3391,11 @@ class GenomeBrowser {
       this.showDNAMarkerBrowserModal();
     });
 
+    ipcRenderer.on('open-evo2', () => {
+      if (!window.evo2UI) window.evo2UI = new window.Evo2UI(window.genomeBrowser);
+      window.evo2UI.open();
+    });
+
     ipcRenderer.on('configure-search', () => {
       this.navigationManager.showSearchSettingsModal();
     });

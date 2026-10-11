@@ -3,7 +3,7 @@ const TOOLS = {
   evo2_generate: {
     name: 'evo2_generate',
     description:
-      'Start DNA generation with NVIDIA arc/evo2-40b. Sends the supplied DNA to NVIDIA and returns a job_id immediately. Poll evo2_get_result until completed. Configure the API key in Options → Evo 2 DNA Generation; never put credentials in tool arguments. Does not edit the genome.',
+      'Start DNA generation with NVIDIA arc/evo2-40b. Sends the supplied DNA to NVIDIA and returns a job_id immediately. Poll evo2_get_result until completed. Configure the API key in Tools → Evo 2 DNA Generation; never put credentials in tool arguments. Does not edit the genome.',
     inputSchema: {
       type: 'object',
       properties: {

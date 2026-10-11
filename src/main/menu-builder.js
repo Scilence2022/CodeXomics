@@ -1727,6 +1727,13 @@ function createMenu() {
             await createDeepGeneResearchWindow();
           },
         },
+        {
+          label: 'Evo 2 DNA Generation',
+          accelerator: 'CmdOrCtrl+Alt+E',
+          click: () => {
+            sendToCurrentMainWindow('open-evo2');
+          },
+        },
 
         {
           label: 'CHOPCHOP CRISPR Toolbox',

@@ -480,8 +480,7 @@ The conversation also keeps a detailed status message for each run, updated in p
 
 ## External Tools
 
-For NVIDIA arc/evo2-40b sequence generation, see the [Evo 2 DNA Generation guide](EVO2.md). Open it from **Options → Evo 2 DNA Generation**.
-
+For NVIDIA arc/evo2-40b sequence generation, see the [Evo 2 DNA Generation guide](EVO2.md). Open it from **Tools → Evo 2 DNA Generation**.
 
 CodeXomics integrates with several powerful external tools.
 
