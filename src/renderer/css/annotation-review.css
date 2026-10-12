@@ -107,6 +107,7 @@
 
 .annotation-review-toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
@@ -116,11 +117,12 @@
 
 .annotation-review-filters {
   display: flex;
+  flex-wrap: wrap;
   flex: 1;
   gap: 8px;
 }
 
-.annotation-review-filters input,
+.annotation-review-filters input[type='search'],
 .annotation-review-filters select {
   min-height: 34px;
   border: 1px solid var(--border-color);
@@ -129,7 +131,7 @@
   color: var(--text-primary);
 }
 
-.annotation-review-filters input {
+.annotation-review-filters input[type='search'] {
   flex: 1;
   min-width: 220px;
   padding: 6px 10px;
@@ -345,6 +347,7 @@
 
 .annotation-review-batch-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -355,13 +358,14 @@
 
 .annotation-review-batch-bar > div {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .annotation-review-reason-dialog {
   position: fixed;
   inset: 0;
-  z-index: 3000;
+  z-index: 2147483001;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -860,4 +864,29 @@
     border-top: 1px solid var(--border-color);
     border-left: 0;
   }
+}
+
+.annotation-review-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.annotation-review-detail-actions small {
+  flex-basis: 100%;
+  color: var(--text-secondary);
+}
+
+.annotation-review-status.status-archived {
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.annotation-review-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }

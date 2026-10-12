@@ -19,6 +19,8 @@ class AnnotationReviewManager {
     this.activeDecisionSession = null;
     this.activeChangeSetId = null;
     this.isLoading = false;
+    this.isActing = false;
+    this.detailRequestId = 0;
     this.defaults = Object.freeze({
       curatorIdentity: 'local-curator',
       approvalExpiryMinutes: 30,
@@ -89,6 +91,10 @@ class AnnotationReviewManager {
     bind('annotationReviewApproveBtn', 'click', () => this.approveSelected(false));
     bind('annotationReviewApproveApplyBtn', 'click', () => this.approveSelected(true));
     bind('annotationReviewRejectBtn', 'click', () => this.rejectSelected());
+    bind('annotationReviewArchiveBtn', 'click', () => this.archiveSelected(true));
+    bind('annotationReviewRestoreBtn', 'click', () => this.archiveSelected(false));
+    bind('annotationReviewArchiveFilter', 'change', () => this.refreshQueue());
+    bind('annotationAppliedShowArchived', 'change', () => this.refreshAppliedGenes());
     bind('annotationGovernanceSaveBtn', 'click', () => this.saveGovernanceSettings());
     bind('annotationAppliedRefreshBtn', 'click', () => this.refreshAppliedGenes());
     bind('annotationAppliedSort', 'change', () => this.refreshAppliedGenes());
@@ -170,8 +176,10 @@ class AnnotationReviewManager {
   }
 
   showModalTab(tabName = 'queue') {
+    if (!['queue', 'applied', 'governance'].includes(tabName)) tabName = 'queue';
     document.querySelectorAll('#annotationReviewModal .annotation-review-nav-btn').forEach(button => {
       button.classList.toggle('active', button.dataset.reviewTab === tabName);
+      button.setAttribute('aria-selected', String(button.dataset.reviewTab === tabName));
     });
     document.querySelectorAll('#annotationReviewModal .annotation-review-panel').forEach(panel => {
       panel.classList.toggle('active', panel.dataset.reviewPanel === tabName);
@@ -194,7 +202,11 @@ class AnnotationReviewManager {
    */
   async refreshAppliedGenes() {
     const list = document.getElementById('annotationAppliedGenes');
-    if (!list || this.isAppliedLoading) return;
+    if (!list) return;
+    if (this.isAppliedLoading) {
+      this.pendingAppliedRefresh = true;
+      return;
+    }
     this.isAppliedLoading = true;
     list.innerHTML =
       '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading annotated genes…</div>';
@@ -202,6 +214,7 @@ class AnnotationReviewManager {
       const query = document.getElementById('annotationAppliedSearch')?.value || '';
       const result = await this._annotationService().listAnnotationChangesets({
         statuses: ['committed'],
+        includeArchived: document.getElementById('annotationAppliedShowArchived')?.checked === true,
         query,
         limit: 1000,
       });
@@ -218,6 +231,10 @@ class AnnotationReviewManager {
       list.innerHTML = `<div class="annotation-review-empty error"><i class="fas fa-exclamation-triangle"></i><p>${this._escape(error.message)}</p></div>`;
     } finally {
       this.isAppliedLoading = false;
+      if (this.pendingAppliedRefresh) {
+        this.pendingAppliedRefresh = false;
+        await this.refreshAppliedGenes();
+      }
     }
   }
 
@@ -310,8 +327,7 @@ class AnnotationReviewManager {
     const expanded = this.expandedAppliedGeneKeys.has(group.key);
     const locus = group.locusTag && group.locusTag !== group.label ? group.locusTag : '';
     const coordinates = group.coordinates || {};
-    const hasLocation =
-      group.chromosome && Number.isFinite(Number(coordinates.start)) && Number.isFinite(Number(coordinates.end));
+    const hasLocation = this._hasTargetLocation(group);
     const location = hasLocation
       ? `${group.chromosome}:${Number(coordinates.start).toLocaleString()}–${Number(coordinates.end).toLocaleString()}${coordinates.strand === -1 ? ' (−)' : coordinates.strand === 1 ? ' (+)' : ''}`
       : group.chromosome || '';
@@ -384,7 +400,7 @@ class AnnotationReviewManager {
       </div>`;
   }
 
-  _handleAppliedClick(event) {
+  async _handleAppliedClick(event) {
     const actionElement = event.target.closest('[data-action]');
     const action = actionElement?.dataset.action;
     if (action === 'applied-locate') {
@@ -394,7 +410,7 @@ class AnnotationReviewManager {
     }
     if (action === 'applied-open-record') {
       event.stopPropagation();
-      this.openAppliedRecord(actionElement.dataset.id);
+      await this.openAppliedRecord(actionElement.dataset.id);
       return;
     }
     const item = event.target.closest('.annotation-applied-item[data-applied-key]');
@@ -435,10 +451,23 @@ class AnnotationReviewManager {
    * coordinates as they were at commit time, so a missing or unresolvable
    * location is reported instead of silently doing nothing.
    */
+  _hasTargetLocation(group) {
+    const coordinates = group?.coordinates;
+    return Boolean(
+      group?.chromosome &&
+      coordinates?.start != null &&
+      coordinates?.end != null &&
+      Number.isFinite(Number(coordinates.start)) &&
+      Number.isFinite(Number(coordinates.end)) &&
+      Number(coordinates.start) >= 1 &&
+      Number(coordinates.end) >= Number(coordinates.start)
+    );
+  }
+
   locateAppliedGene(key) {
     const group = this.appliedGeneGroups.get(key);
     const coordinates = group?.coordinates || {};
-    if (!group || !group.chromosome || !Number.isFinite(Number(coordinates.start))) {
+    if (!this._hasTargetLocation(group)) {
       this._notify('This ChangeSet target has no recorded coordinates to navigate to.', 'warning');
       return;
     }
@@ -465,7 +494,12 @@ class AnnotationReviewManager {
     const filter = document.getElementById('annotationReviewFilter');
     if (filter && filter.value !== 'committed' && filter.value !== 'all') filter.value = 'committed';
     const search = document.getElementById('annotationReviewSearch');
-    if (search) search.value = '';
+    // Query the ID so an older record cannot fall outside the first page.
+    if (search) search.value = changeSetId;
+    const risk = document.getElementById('annotationReviewRiskFilter');
+    if (risk) risk.value = '';
+    const archiveFilter = document.getElementById('annotationReviewArchiveFilter');
+    if (archiveFilter) archiveFilter.value = 'all';
     this.showModalTab('queue');
     await this.refreshQueue({ focusChangeSetId: changeSetId });
   }
@@ -479,18 +513,25 @@ class AnnotationReviewManager {
   }
 
   async refreshQueue(options = {}) {
-    if (this.isLoading) return;
+    if (this.isLoading) {
+      this.pendingQueueRefresh = { ...this.pendingQueueRefresh, ...options };
+      return;
+    }
     const queue = document.getElementById('annotationReviewQueue');
     if (!queue) return;
     this.isLoading = true;
     this._renderQueueLoading();
+    this._updateActionState();
     try {
       const status = document.getElementById('annotationReviewFilter')?.value || 'active';
       const riskLevel = document.getElementById('annotationReviewRiskFilter')?.value || '';
       const query = document.getElementById('annotationReviewSearch')?.value || '';
+      const archiveFilter = document.getElementById('annotationReviewArchiveFilter')?.value || 'visible';
       const statuses = status === 'active' ? ['awaiting_approval', 'approved'] : status === 'all' ? [] : [status];
       const result = await this._annotationService().listAnnotationChangesets({
         statuses,
+        includeArchived: archiveFilter !== 'visible',
+        archivedOnly: archiveFilter === 'archived',
         riskLevels: riskLevel ? [riskLevel] : [],
         query,
         limit: 1000,
@@ -500,13 +541,20 @@ class AnnotationReviewManager {
       this._renderQueue(result);
       this._updatePendingBadge(result.statusCounts || {});
       this._updateAppliedCount(result.statusCounts || {});
-      if (options.focusChangeSetId && this.changeSets.has(options.focusChangeSetId)) {
-        await this.viewChangeSet(options.focusChangeSetId);
-      }
+      const focusId = options.focusChangeSetId || this.activeChangeSetId;
+      if (focusId && this.changeSets.has(focusId)) await this.viewChangeSet(focusId);
     } catch (error) {
+      this.changeSets.clear();
+      this._closeDetachedDetail();
       queue.innerHTML = `<div class="annotation-review-empty error"><i class="fas fa-exclamation-triangle"></i><p>${this._escape(error.message)}</p></div>`;
     } finally {
       this.isLoading = false;
+      this._updateActionState();
+      if (this.pendingQueueRefresh) {
+        const pending = this.pendingQueueRefresh;
+        this.pendingQueueRefresh = null;
+        await this.refreshQueue(pending);
+      }
     }
   }
 
@@ -517,7 +565,7 @@ class AnnotationReviewManager {
     if (!queue) return;
     const changeSets = result.changeSets || [];
     this.duplicateTargetCounts = changeSets
-      .filter(changeSet => ['awaiting_approval', 'approved'].includes(changeSet.status))
+      .filter(changeSet => !changeSet.archivedAt && ['awaiting_approval', 'approved'].includes(changeSet.status))
       .reduce((counts, changeSet) => {
         const key = this._targetKey(changeSet);
         if (key) counts.set(key, (counts.get(key) || 0) + 1);
@@ -541,9 +589,8 @@ class AnnotationReviewManager {
     const target = changeSet.target || {};
     const label = target.geneSymbol || target.locusTag || target.proteinId || target.featureId || 'Unknown target';
     const locus = target.locusTag && target.locusTag !== label ? target.locusTag : '';
-    const statusEligible = ['awaiting_approval', 'approved'].includes(changeSet.status);
+    const statusEligible = !changeSet.archivedAt && ['awaiting_approval', 'approved'].includes(changeSet.status);
     const selectedIdentityConflict = statusEligible && this.settings.curatorIdentity === changeSet.createdBy;
-    const eligible = statusEligible && !selectedIdentityConflict;
     const readOnlyReason = this._selectionReadOnlyReason(changeSet, selectedIdentityConflict);
     const duplicateTargetConflict =
       statusEligible && (this.duplicateTargetCounts.get(this._targetKey(changeSet)) || 0) > 1;
@@ -557,17 +604,10 @@ class AnnotationReviewManager {
     return `
       <article class="annotation-review-item${this.activeChangeSetId === changeSet.id ? ' is-active' : ''}"
         data-changeset-id="${this._escape(changeSet.id)}">
-        ${
-          eligible
-            ? `<label class="annotation-review-select" title="Select this ChangeSet for batch review">
-                <input type="checkbox" class="annotation-review-checkbox" value="${this._escape(changeSet.id)}"
-                  aria-label="Select ${this._escape(label)} ChangeSet for review">
-              </label>`
-            : `<span class="annotation-review-select annotation-review-read-only" title="${this._escape(readOnlyReason)}"
-                aria-label="Read-only ChangeSet: ${this._escape(readOnlyReason)}">
-                <i class="fas fa-lock" aria-hidden="true"></i>
-              </span>`
-        }
+        <label class="annotation-review-select" title="Select this ChangeSet for review, archive, or restore">
+          <input type="checkbox" class="annotation-review-checkbox" value="${this._escape(changeSet.id)}"
+            aria-label="Select ${this._escape(label)} ChangeSet">
+        </label>
         <div class="annotation-review-item-main" role="button" tabindex="0"
           aria-label="Review details for ${this._escape(label)}"
           aria-controls="annotationReviewDetail"
@@ -579,6 +619,7 @@ class AnnotationReviewManager {
               <span class="annotation-review-feature">${this._escape(target.featureType || '')}</span>
             </div>
             <div class="annotation-review-badges">
+              ${changeSet.archivedAt ? '<span class="annotation-review-status status-archived">Archived</span>' : ''}
               <span class="annotation-review-status status-${this._escape(changeSet.status)}">${this._escape(this._statusLabel(changeSet.status))}</span>
               <span class="annotation-review-risk risk-${this._escape(changeSet.riskLevel || 'unknown')}">${this._escape(changeSet.riskLevel || 'unknown')} risk</span>
             </div>
@@ -604,6 +645,9 @@ class AnnotationReviewManager {
     if (identityConflict) {
       return 'The configured curator identity matches the ChangeSet creator. Choose a distinct reviewer in Governance.';
     }
+    if (changeSet.archivedAt) {
+      return 'Archived. Restore this record before review; previous approvals are not restored.';
+    }
     const reasons = {
       committed: 'Already applied. This audit record is read-only.',
       stale: 'Stale because the target annotation changed. Create a fresh ChangeSet before review.',
@@ -615,17 +659,30 @@ class AnnotationReviewManager {
   async viewChangeSet(changeSetId) {
     const detail = document.getElementById('annotationReviewDetail');
     if (!detail) return;
+    const requestId = ++this.detailRequestId;
+    const genomePath = this.app.loadedGenomePath;
+    const annotations = this.app.currentAnnotations;
     this._setActiveChangeSet(changeSetId);
     detail.innerHTML =
       '<div class="annotation-review-loading"><i class="fas fa-spinner fa-spin"></i> Loading full proposal…</div>';
     try {
       const result = await this._annotationService().getAnnotationChangeset({ changeSetId });
+      if (
+        requestId !== this.detailRequestId ||
+        this.activeChangeSetId !== changeSetId ||
+        genomePath !== this.app.loadedGenomePath ||
+        annotations !== this.app.currentAnnotations
+      ) {
+        return;
+      }
       const changeSet = result.changeSet;
       const summary = this.changeSets.get(changeSetId) || {};
       detail.innerHTML = this._renderChangeSetDetail(changeSet, summary);
       detail.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
     } catch (error) {
-      detail.innerHTML = `<div class="annotation-review-empty error"><p>${this._escape(error.message)}</p></div>`;
+      if (requestId === this.detailRequestId && this.activeChangeSetId === changeSetId) {
+        detail.innerHTML = `<div class="annotation-review-empty error"><p>${this._escape(error.message)}</p></div>`;
+      }
     }
   }
 
@@ -639,6 +696,7 @@ class AnnotationReviewManager {
     if (!this.activeChangeSetId || this.changeSets.has(this.activeChangeSetId)) return;
     const detail = document.getElementById('annotationReviewDetail');
     if (detail) detail.innerHTML = '';
+    this.detailRequestId += 1;
     this._setActiveChangeSet(null);
   }
 
@@ -686,6 +744,7 @@ class AnnotationReviewManager {
         <span>Revision: ${this._escape(changeSet.baseRevision)}</span>
         <span>Risk: ${this._escape(changeSet.riskLevel || '')}</span>
         <span>Creator: ${this._escape(changeSet.createdBy || '')}</span>
+        <span>Status: ${this._escape(this._statusLabel(changeSet.status))}${changeSet.archivedAt ? ' · Archived' : ''}</span>
       </div>
       ${
         attachment
@@ -699,6 +758,14 @@ class AnnotationReviewManager {
               }</div>`
           : ''
       }
+      ${changeSet.rejectionReason ? `<p class="annotation-review-warning">Rejection reason: ${this._escape(changeSet.rejectionReason)}</p>` : ''}
+      <div class="annotation-review-detail-actions">
+        <button type="button" class="btn btn-secondary" data-action="${changeSet.archivedAt ? 'restore' : 'archive'}" data-id="${this._escape(changeSet.id)}" ${this.isActing ? 'disabled' : ''}>
+          <i class="fas fa-${changeSet.archivedAt ? 'rotate-left' : 'archive'}"></i> ${changeSet.archivedAt ? 'Restore record' : 'Archive record'}
+        </button>
+        ${changeSet.status === 'committed' ? `<button type="button" class="btn btn-secondary" data-action="rollback" data-id="${this._escape(changeSet.id)}" ${this.isActing ? 'disabled' : ''}><i class="fas fa-undo"></i> Propose rollback</button>` : ''}
+        <small>Archiving hides the record and preserves its history. A rollback requires approval before it changes annotations.</small>
+      </div>
       <div class="annotation-review-operations">${operations}</div>
       <details class="annotation-review-evidence" ${evidence ? '' : 'hidden'}>
         <summary>Evidence (${changeSet.evidence?.length || 0})</summary>
@@ -706,8 +773,18 @@ class AnnotationReviewManager {
       </details>`;
   }
 
-  _handleQueueClick(event) {
+  async _handleQueueClick(event) {
     const button = event.target.closest('[data-action]');
+    if (button?.disabled) return;
+    if (['archive', 'restore'].includes(button?.dataset.action)) {
+      const changeSet = this.changeSets.get(button.dataset.id);
+      if (changeSet) await this.archiveSelected(button.dataset.action === 'archive', [changeSet]);
+      return;
+    }
+    if (button?.dataset.action === 'rollback') {
+      await this.proposeRollback(button.dataset.id);
+      return;
+    }
     if (button?.dataset.action === 'open-report') {
       const taskId = String(button.dataset.taskId || '').trim();
       const reader = window.electronAPI?.readDgrReportAttachment;
@@ -724,7 +801,7 @@ class AnnotationReviewManager {
       return;
     }
     if (button?.dataset.action === 'details') {
-      void this.viewChangeSet(button.dataset.id);
+      await this.viewChangeSet(button.dataset.id);
       return;
     }
     if (button?.dataset.action === 'close-details') {
@@ -733,6 +810,7 @@ class AnnotationReviewManager {
       );
       const detail = document.getElementById('annotationReviewDetail');
       if (detail) detail.innerHTML = '';
+      this.detailRequestId += 1;
       this._setActiveChangeSet(null);
       activeItem?.focus();
       return;
@@ -832,47 +910,107 @@ class AnnotationReviewManager {
       .filter(Boolean);
   }
 
+  _isReviewable(changeSet) {
+    return !changeSet.archivedAt && ['awaiting_approval', 'approved'].includes(changeSet.status);
+  }
+
   _updateActionState() {
     const selected = this._selectedChangeSets();
     const count = document.getElementById('annotationReviewSelectedCount');
     if (count) count.textContent = `${selected.length} selected`;
-    ['annotationReviewApproveBtn', 'annotationReviewApproveApplyBtn', 'annotationReviewRejectBtn'].forEach(id => {
+    const batchAllowed =
+      selected.length > 0 &&
+      selected.length <= this.settings.batchSizeLimit &&
+      (this.settings.batchReviewEnabled || selected.length === 1);
+    const canReview = batchAllowed && selected.every(changeSet => this._isReviewable(changeSet));
+    const canApprove =
+      canReview &&
+      selected.every(changeSet => changeSet.createdBy !== this.settings.curatorIdentity) &&
+      this._duplicateTargets(selected).length === 0;
+    const actions = {
+      annotationReviewApproveBtn: canApprove,
+      annotationReviewApproveApplyBtn: canApprove,
+      annotationReviewRejectBtn: canReview,
+      annotationReviewArchiveBtn: batchAllowed && selected.every(changeSet => !changeSet.archivedAt),
+      annotationReviewRestoreBtn: batchAllowed && selected.every(changeSet => changeSet.archivedAt),
+    };
+    for (const [id, enabled] of Object.entries(actions)) {
       const button = document.getElementById(id);
-      if (button) button.disabled = selected.length === 0;
-    });
+      if (button) button.disabled = this.isActing || this.isLoading || !enabled;
+    }
+    document
+      .querySelectorAll(
+        '#annotationReviewDetail [data-action="archive"], #annotationReviewDetail [data-action="restore"], #annotationReviewDetail [data-action="rollback"]'
+      )
+      .forEach(button => {
+        button.disabled = this.isActing;
+      });
     const selectAll = document.getElementById('annotationReviewSelectAll');
     if (selectAll) {
       const eligible = document.querySelectorAll('#annotationReviewQueue .annotation-review-checkbox:not(:disabled)');
       const checked = document.querySelectorAll('#annotationReviewQueue .annotation-review-checkbox:checked');
       const eligibleLabel = document.getElementById('annotationReviewEligibleLabel');
-      const selectAllLabel = document.getElementById('annotationReviewSelectAllLabel');
-      if (eligibleLabel) eligibleLabel.textContent = `${eligible.length} eligible`;
-      selectAll.disabled = eligible.length === 0;
+      if (eligibleLabel) eligibleLabel.textContent = `${eligible.length} selectable`;
+      selectAll.disabled = this.isActing || this.isLoading || eligible.length === 0;
       selectAll.checked = eligible.length > 0 && eligible.length === checked.length;
       selectAll.indeterminate = checked.length > 0 && checked.length < eligible.length;
-      if (selectAllLabel) {
-        selectAllLabel.classList.toggle('is-disabled', eligible.length === 0);
-        selectAllLabel.title =
-          eligible.length === 0
-            ? 'No awaiting-review or approved ChangeSets are available. Applied, stale, and rejected records are read-only.'
-            : `Select all ${eligible.length} ChangeSets that are eligible for review`;
-      }
+      const label = document.getElementById('annotationReviewSelectAllLabel');
+      if (label) label.title = 'Select all visible records. Available actions depend on their status.';
     }
   }
 
-  async approveSelected(applyAfterApproval = false) {
-    const selectedChangeSets = this._selectedChangeSets();
-    if (!this.settings.batchReviewEnabled && selectedChangeSets.length > 1) {
+  _validateBatch(selected, reviewOnly = false) {
+    if (!selected.length) return false;
+    if (!this.settings.batchReviewEnabled && selected.length > 1) {
       this._notify('Batch review is disabled in Governance settings.', 'warning');
-      return;
+      return false;
     }
-    if (selectedChangeSets.length > this.settings.batchSizeLimit) {
+    if (selected.length > this.settings.batchSizeLimit) {
       this._notify(
         `Select no more than ${this.settings.batchSizeLimit} ChangeSets per batch, or raise the limit in Governance.`,
         'warning'
       );
-      return;
+      return false;
     }
+    if (reviewOnly && selected.some(changeSet => !this._isReviewable(changeSet))) {
+      this._notify('Select only unarchived awaiting-review or approved ChangeSets for this action.', 'warning');
+      return false;
+    }
+    return true;
+  }
+
+  async _runReviewAction(operation) {
+    if (this.isActing || this.isLoading) return;
+    this.isActing = true;
+    this.actionWorkspace = { path: this.app.loadedGenomePath, annotations: this.app.currentAnnotations };
+    this._updateActionState();
+    try {
+      return await operation();
+    } finally {
+      this.activeDecisionSession = null;
+      this.isActing = false;
+      this.actionWorkspace = null;
+      this._updateActionState();
+    }
+  }
+
+  _assertReviewWorkspace() {
+    const workspace = this.actionWorkspace;
+    if (
+      workspace &&
+      (workspace.path !== this.app.loadedGenomePath || workspace.annotations !== this.app.currentAnnotations)
+    ) {
+      throw new Error('The loaded genome workspace changed during review; retry the action');
+    }
+  }
+
+  async approveSelected(applyAfterApproval = false) {
+    return this._runReviewAction(() => this._approveSelected(applyAfterApproval));
+  }
+
+  async _approveSelected(applyAfterApproval = false) {
+    const selectedChangeSets = this._selectedChangeSets();
+    if (!this._validateBatch(selectedChangeSets, true)) return;
     const selected = selectedChangeSets;
     if (selected.length === 0) return;
     const duplicateTargets = this._duplicateTargets(selected);
@@ -897,7 +1035,14 @@ class AnnotationReviewManager {
     try {
       for (const changeSet of selected) {
         try {
-          let approvalToken = changeSet.status === 'approved' ? this.approvalTokens.get(changeSet.id) : null;
+          this._assertReviewWorkspace();
+          let approvalToken =
+            changeSet.status === 'approved' &&
+            Date.parse(changeSet.approval?.expiresAt || '') > Date.now() &&
+            !changeSet.approval?.revokedAt &&
+            changeSet.approval?.approver === this.settings.curatorIdentity
+              ? this.approvalTokens.get(changeSet.id)
+              : null;
           if (!approvalToken) {
             const approved = await this._annotationService().requestAnnotationApproval({
               changeSetId: changeSet.id,
@@ -909,6 +1054,7 @@ class AnnotationReviewManager {
           let applied = null;
           if (applyAfterApproval) {
             try {
+              this._assertReviewWorkspace();
               applied = await this._annotationService().applyAnnotationChangeset({
                 changeSetId: changeSet.id,
                 approvalToken,
@@ -932,15 +1078,12 @@ class AnnotationReviewManager {
   }
 
   async rejectSelected() {
+    return this._runReviewAction(() => this._rejectSelected());
+  }
+
+  async _rejectSelected() {
     const selected = this._selectedChangeSets();
-    if (selected.length === 0) return;
-    if (selected.length > this.settings.batchSizeLimit) {
-      this._notify(
-        `Select no more than ${this.settings.batchSizeLimit} ChangeSets per batch, or raise the limit in Governance.`,
-        'warning'
-      );
-      return;
-    }
+    if (!this._validateBatch(selected, true)) return;
     const reason = await this._promptForRejectionReason(selected);
     if (!reason) return;
     this._startDecisionSession('reject', selected);
@@ -948,6 +1091,7 @@ class AnnotationReviewManager {
     try {
       for (const changeSet of selected) {
         try {
+          this._assertReviewWorkspace();
           await this._annotationService().rejectAnnotationChangeset({
             changeSetId: changeSet.id,
             reason: reason.trim(),
@@ -965,6 +1109,60 @@ class AnnotationReviewManager {
     await this.refreshQueue();
   }
 
+  async archiveSelected(archived, items = this._selectedChangeSets()) {
+    return this._runReviewAction(async () => {
+      if (!this._validateBatch(items)) return;
+      if (items.some(changeSet => Boolean(changeSet.archivedAt) === archived)) {
+        this._notify(`Select only ${archived ? 'unarchived' : 'archived'} records.`, 'warning');
+        return;
+      }
+      const explanation = archived
+        ? '\nRecords will be hidden and approvals revoked. Genome annotations, reports, and audit history are preserved.'
+        : '\nRecords will be visible again. Previous approvals are not restored; pending proposals require a new review.';
+      if (!window.confirm(this._batchConfirmationText(items, archived ? 'archive' : 'restore') + explanation)) return;
+      this._startDecisionSession(archived ? 'archive' : 'restore', items);
+      const results = [];
+      for (const changeSet of items) {
+        try {
+          this._assertReviewWorkspace();
+          await this._annotationService().setAnnotationChangesetArchived({ changeSetId: changeSet.id, archived });
+          this.approvalTokens.delete(changeSet.id);
+          results.push({ id: changeSet.id, success: true });
+        } catch (error) {
+          results.push({ id: changeSet.id, success: false, error: error.message });
+        }
+      }
+      this._reportBatchResults(results, archived ? 'archived' : 'restored');
+      await this.refreshQueue();
+      await this.refreshAppliedGenes();
+    });
+  }
+
+  async proposeRollback(changeSetId) {
+    return this._runReviewAction(async () => {
+      if (
+        !window.confirm(
+          `Create a rollback proposal for ${changeSetId}?\nIt will restore the affected fields to their previous values after a separate review and approval. Newer edits to those fields must be resolved first.`
+        )
+      ) {
+        return;
+      }
+      this._assertReviewWorkspace();
+      const result = await this._annotationService().rollbackAnnotationChangeset({ changeSetId });
+      const proposal = result.changeSet;
+      const status = document.getElementById('annotationReviewFilter');
+      if (status) status.value = 'active';
+      const risk = document.getElementById('annotationReviewRiskFilter');
+      if (risk) risk.value = '';
+      const search = document.getElementById('annotationReviewSearch');
+      if (search) search.value = '';
+      const archiveFilter = document.getElementById('annotationReviewArchiveFilter');
+      if (archiveFilter) archiveFilter.value = proposal.archivedAt ? 'all' : 'visible';
+      await this.refreshQueue({ focusChangeSetId: proposal.id });
+      this._notify(`Rollback proposal ${proposal.id} is ready for review.`, 'success');
+    });
+  }
+
   /**
    * Collect the rejection reason and the batch confirmation in one dialog.
    * window.prompt() is unavailable in Electron renderers, so the reason is
@@ -973,8 +1171,6 @@ class AnnotationReviewManager {
    */
   _promptForRejectionReason(selected) {
     return new Promise(resolve => {
-      document.getElementById('annotationReviewReasonDialog')?.remove();
-
       const overlay = document.createElement('div');
       overlay.id = 'annotationReviewReasonDialog';
       overlay.className = 'annotation-review-reason-dialog';
@@ -999,12 +1195,14 @@ class AnnotationReviewManager {
       );
 
       const input = overlay.querySelector('#annotationReviewReasonInput');
+      const previousFocus = document.activeElement;
       let settled = false;
       const close = value => {
         if (settled) return;
         settled = true;
         document.removeEventListener('keydown', onKeydown, true);
         overlay.remove();
+        previousFocus?.focus();
         resolve(value);
       };
       const submit = () => {
@@ -1018,11 +1216,24 @@ class AnnotationReviewManager {
       };
       const onKeydown = event => {
         if (event.key === 'Escape') {
-          event.stopPropagation();
-          close(null);
-        } else if (event.key === 'Enter' && overlay.contains(event.target)) {
           event.preventDefault();
+          event.stopImmediatePropagation();
+          close(null);
+        } else if (event.key === 'Enter' && event.target === input) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
           submit();
+        } else if (event.key === 'Tab') {
+          const controls = Array.from(overlay.querySelectorAll('input, button'));
+          const first = controls[0];
+          const last = controls[controls.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
         }
       };
 
@@ -1051,7 +1262,7 @@ class AnnotationReviewManager {
       action,
       items,
       principal: this.settings.curatorIdentity,
-      expiresAt: Date.now() + 2 * 60 * 1000,
+      expiresAt: Date.now() + 30 * 60 * 1000,
     };
   }
 
@@ -1079,27 +1290,33 @@ class AnnotationReviewManager {
   }
 
   async confirmAnnotationChangeSet(request = {}) {
-    const action = request.action === 'reject' ? 'reject' : 'approve';
+    const action = ['reject', 'archive', 'restore'].includes(request.action) ? request.action : 'approve';
     const changeSet = request.changeSet || {};
     const session = this.activeDecisionSession;
     if (
       session &&
       session.action === action &&
       session.expiresAt >= Date.now() &&
+      session.items.has(changeSet.id) &&
       session.items.get(changeSet.id) === changeSet.changeSetHash
     ) {
-      return action === 'reject'
-        ? { rejected: true, confirmed: true, principal: session.principal }
-        : { approved: true, confirmed: true, principal: session.principal };
+      this._assertReviewWorkspace();
+      return action === 'archive' || action === 'restore'
+        ? { confirmed: true, principal: session.principal }
+        : action === 'reject'
+          ? { rejected: true, confirmed: true, principal: session.principal }
+          : { approved: true, confirmed: true, principal: session.principal };
     }
 
     const confirmed = window.confirm(
       request.prompt || `${action === 'reject' ? 'Reject' : 'Approve'} ${changeSet.id}?`
     );
     if (!confirmed) return false;
-    return action === 'reject'
-      ? { rejected: true, confirmed: true, principal: this.settings.curatorIdentity }
-      : { approved: true, confirmed: true, principal: this.settings.curatorIdentity };
+    return action === 'archive' || action === 'restore'
+      ? { confirmed: true, principal: this.settings.curatorIdentity }
+      : action === 'reject'
+        ? { rejected: true, confirmed: true, principal: this.settings.curatorIdentity }
+        : { approved: true, confirmed: true, principal: this.settings.curatorIdentity };
   }
 
   _batchConfirmationText(changeSets, verb) {
@@ -1182,12 +1399,17 @@ class AnnotationReviewManager {
   }
 
   async saveGovernanceSettings() {
+    if (this.isActing) {
+      this._notify('Finish the current review action before saving preferences.', 'warning');
+      return;
+    }
+    if (this.isSavingGovernance) return;
     const curatorIdentity = String(document.getElementById('annotationCuratorIdentity')?.value || '').trim();
     if (!curatorIdentity || curatorIdentity.length > 128) {
       this._notify('Curator identity must contain 1–128 characters.', 'error');
       return;
     }
-    this.settings = {
+    const nextSettings = {
       curatorIdentity,
       approvalExpiryMinutes: this._boundedNumber(
         document.getElementById('annotationApprovalExpiry')?.value,
@@ -1203,12 +1425,22 @@ class AnnotationReviewManager {
       ),
       batchReviewEnabled: document.getElementById('annotationBatchReviewEnabled')?.checked !== false,
     };
-    this.app.localCuratorIdentity = curatorIdentity;
-    await this.configManager?.set('generalSettings.annotationGovernance', this.settings);
-    await this.configManager?.save();
-    this._populateGovernanceForm();
-    this._notify('Annotation governance preferences saved.', 'success');
-    await this.refreshQueue();
+    const button = document.getElementById('annotationGovernanceSaveBtn');
+    this.isSavingGovernance = true;
+    if (button) button.disabled = true;
+    try {
+      await this.configManager?.set('generalSettings.annotationGovernance', nextSettings);
+      await this.configManager?.save();
+      this.settings = nextSettings;
+      this.app.localCuratorIdentity = curatorIdentity;
+      this.approvalTokens.clear();
+      this._populateGovernanceForm();
+      this._notify('Annotation governance preferences saved.', 'success');
+      await this.refreshQueue();
+    } finally {
+      this.isSavingGovernance = false;
+      if (button) button.disabled = false;
+    }
   }
 
   _refreshSelectedGene() {
@@ -1251,7 +1483,7 @@ class AnnotationReviewManager {
     // badge already counts the new ChangeSet. Reloading is only safe while the
     // curator has nothing selected and no decision is in flight.
     const modalIsOpen = document.getElementById('annotationReviewModal')?.classList.contains('show');
-    if (modalIsOpen && !this.activeDecisionSession && this._selectedChangeSets().length === 0) {
+    if (modalIsOpen && !this.isActing && !this.activeDecisionSession && this._selectedChangeSets().length === 0) {
       void this.refreshQueue();
     }
     if (modalIsOpen && this._isAppliedTabActive()) void this.refreshAppliedGenes();

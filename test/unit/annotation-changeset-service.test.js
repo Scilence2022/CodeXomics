@@ -2196,6 +2196,198 @@ describe('AnnotationChangeSetService', () => {
     expect(secondAnnotation.qualifiers.note).toBe('old snapshot, exact feature hash');
   });
 
+  it('archives approved proposals durably, revokes capabilities, and restores them without approval', async () => {
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'archive test' }],
+      evidence: ['PMID:12345678'],
+      __executionContext: agentContext,
+    });
+    const id = created.changeSet.id;
+    const approval = await annotationService.requestAnnotationApproval({
+      changeSetId: id,
+      __executionContext: curatorContext,
+    });
+    await annotationService.setAnnotationChangesetArchived({
+      changeSetId: id,
+      archived: true,
+      __executionContext: curatorContext,
+    });
+    const ledger = annotationService.app._sidecarData.annotationCuration;
+    expect(ledger.revision).toBe(0);
+    expect(ledger.changeSets[id]).toMatchObject({
+      status: 'awaiting_approval',
+      changeSetHash: created.changeSet.changeSetHash,
+      archivedBy: curatorContext.principal,
+    });
+    expect(ledger.approvals[approval.approval.id]).toMatchObject({ revocationReason: 'changeset_archived' });
+    expect(ledger.audit).toContainEqual(expect.objectContaining({ event: 'changeset_archived', changeSetId: id }));
+    expect(annotation.qualifiers.note).toBeUndefined();
+    const visible = await annotationService.listAnnotationChangesets({});
+    expect(visible.total).toBe(0);
+    expect(visible.statusCounts.awaiting_approval).toBeUndefined();
+    expect(visible.archivedCount).toBe(1);
+    const archived = await annotationService.listAnnotationChangesets({ archivedOnly: true });
+    expect(archived.changeSets[0]).toMatchObject({ id, archivedAt: expect.any(String) });
+    await expect(
+      annotationService.requestAnnotationApproval({ changeSetId: id, __executionContext: curatorContext })
+    ).rejects.toThrow('archived');
+    await expect(
+      annotationService.rejectAnnotationChangeset({ changeSetId: id, __executionContext: curatorContext })
+    ).rejects.toThrow('archived');
+    await expect(
+      annotationService.applyAnnotationChangeset({
+        changeSetId: id,
+        approvalToken: approval.approvalToken,
+        __executionContext: curatorContext,
+      })
+    ).rejects.toThrow('archived');
+    const reloaded = new (loadServices().AnnotationService)(annotationService.app, annotationService.chatManager);
+    const restored = await reloaded.setAnnotationChangesetArchived({
+      changeSetId: id,
+      archived: false,
+      __executionContext: curatorContext,
+    });
+    expect(restored.changeSet.archivedAt).toBeUndefined();
+    expect(restored.changeSet.approvalId).toBeUndefined();
+    expect((await reloaded.listAnnotationChangesets({})).total).toBe(1);
+    await expect(
+      reloaded.applyAnnotationChangeset({
+        changeSetId: id,
+        approvalToken: approval.approvalToken,
+        __executionContext: curatorContext,
+      })
+    ).rejects.toThrow('approval is required');
+    const fresh = await reloaded.requestAnnotationApproval({ changeSetId: id, __executionContext: curatorContext });
+    await reloaded.applyAnnotationChangeset({
+      changeSetId: id,
+      approvalToken: fresh.approvalToken,
+      __executionContext: curatorContext,
+    });
+    expect(annotation.qualifiers.note).toBe('archive test');
+  });
+
+  it('preserves committed revisions, receipts and overlay replay when applied records are archived', async () => {
+    const before = JSON.parse(JSON.stringify(annotation));
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'applied archive' }],
+      __executionContext: agentContext,
+    });
+    const id = created.changeSet.id;
+    const approval = await annotationService.requestAnnotationApproval({
+      changeSetId: id,
+      __executionContext: curatorContext,
+    });
+    const applied = await annotationService.applyAnnotationChangeset({
+      changeSetId: id,
+      approvalToken: approval.approvalToken,
+      __executionContext: curatorContext,
+    });
+    await annotationService.setAnnotationChangesetArchived({
+      changeSetId: id,
+      archived: true,
+      __executionContext: curatorContext,
+    });
+    const ledger = annotationService.app._sidecarData.annotationCuration;
+    expect(ledger.revision).toBe(1);
+    expect(ledger.changeSets[id].commitReceipt).toEqual(applied.receipt);
+    expect((await annotationService.listAnnotationChangesets({ statuses: ['committed'] })).total).toBe(0);
+    expect(
+      (await annotationService.listAnnotationChangesets({ statuses: ['committed'], includeArchived: true })).total
+    ).toBe(1);
+    annotationService.app.currentAnnotations['NC_000913.3'] = [before];
+    const reopened = new (loadServices().AnnotationService)(annotationService.app, annotationService.chatManager);
+    await reopened.restoreCommittedAnnotationOverlay();
+    expect(before.qualifiers.note).toBe('applied archive');
+    const rollback = await reopened.rollbackAnnotationChangeset({ changeSetId: id, __executionContext: agentContext });
+    expect(rollback.changeSet.status).toBe('awaiting_approval');
+    expect(before.qualifiers.note).toBe('applied archive');
+    const rollbackApproval = await reopened.requestAnnotationApproval({
+      changeSetId: rollback.changeSet.id,
+      __executionContext: curatorContext,
+    });
+    await reopened.applyAnnotationChangeset({
+      changeSetId: rollback.changeSet.id,
+      approvalToken: rollbackApproval.approvalToken,
+      __executionContext: curatorContext,
+    });
+    expect(before.qualifiers.note).toBeUndefined();
+    expect(annotationService.app._sidecarData.annotationCuration.revision).toBe(2);
+  });
+
+  it('requires trusted archive confirmation, isolates failed saves and rejects malformed archive requests', async () => {
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'permission test' }],
+      __executionContext: agentContext,
+    });
+    const params = { changeSetId: created.changeSet.id, archived: true };
+    await expect(
+      annotationService.setAnnotationChangesetArchived({ ...params, __executionContext: agentContext })
+    ).rejects.toThrow('annotation:approve');
+    await expect(annotationService.setAnnotationChangesetArchived(params)).rejects.toThrow('trusted interactive');
+    await expect(
+      annotationService.setAnnotationChangesetArchived({
+        ...params,
+        archived: 'true',
+        __executionContext: curatorContext,
+      })
+    ).rejects.toThrow('boolean');
+    annotationService.app.confirmAnnotationChangeSet = vi.fn(async () => ({ confirmed: false }));
+    await expect(annotationService.setAnnotationChangesetArchived(params)).rejects.toThrow('cancelled');
+    annotationService.app.confirmAnnotationChangeSet = vi.fn(async request => ({
+      confirmed: request.action === 'archive',
+      principal: 'local-curator',
+    }));
+    const save = annotationService.app.sidecarManager.setAndForceSave;
+    annotationService.app.sidecarManager.setAndForceSave = async () => {
+      throw new Error('disk full');
+    };
+    await expect(annotationService.setAnnotationChangesetArchived(params)).rejects.toThrow('disk full');
+    expect(
+      annotationService.app._sidecarData.annotationCuration.changeSets[params.changeSetId].archivedAt
+    ).toBeUndefined();
+    annotationService.app.sidecarManager.setAndForceSave = save;
+    await annotationService.setAnnotationChangesetArchived(params);
+    expect(annotationService.app.confirmAnnotationChangeSet).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'archive' })
+    );
+    const duplicate = await annotationService.setAnnotationChangesetArchived(params);
+    expect(duplicate.duplicate).toBe(true);
+  });
+
+  it('refuses rollback over a newer committed change to the same field', async () => {
+    const ids = [];
+    for (const value of ['first change', 'newer change']) {
+      const created = await annotationService.createAnnotationChangeset({
+        identifier: 'b0001',
+        operations: [{ op: 'replaceQualifier', field: 'note', value }],
+        __executionContext: agentContext,
+      });
+      ids.push(created.changeSet.id);
+      const approval = await annotationService.requestAnnotationApproval({
+        changeSetId: created.changeSet.id,
+        __executionContext: curatorContext,
+      });
+      await annotationService.applyAnnotationChangeset({
+        changeSetId: created.changeSet.id,
+        approvalToken: approval.approvalToken,
+        __executionContext: curatorContext,
+      });
+    }
+    await expect(
+      annotationService.rollbackAnnotationChangeset({ changeSetId: ids[0], __executionContext: agentContext })
+    ).rejects.toThrow('changed after');
+    expect(annotation.qualifiers.note).toBe('newer change');
+    const rollback = await annotationService.rollbackAnnotationChangeset({
+      changeSetId: ids[1],
+      __executionContext: agentContext,
+    });
+    expect(rollback.changeSet.operations[0].value).toBe('first change');
+    expect(annotation.qualifiers.note).toBe('newer change');
+  });
+
   it('collapses rollback operations to the original value for fields changed more than once', async () => {
     const created = await annotationService.createAnnotationChangeset({
       identifier: 'b0001',
