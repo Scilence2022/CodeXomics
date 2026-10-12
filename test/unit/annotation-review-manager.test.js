@@ -34,6 +34,9 @@ function reviewDom() {
     <button id="annotationReviewApproveBtn"></button>
     <button id="annotationReviewApproveApplyBtn"></button>
     <button id="annotationReviewRejectBtn"></button>
+    <button id="annotationReviewArchiveBtn"></button>
+    <button id="annotationReviewRestoreBtn"></button>
+    <select id="annotationReviewArchiveFilter"><option value="visible">visible</option><option value="archived">archived</option><option value="all">all</option></select>
     <div id="annotationReviewQueue"></div>
     <aside id="annotationReviewDetail"></aside>
     <input id="annotationCuratorIdentity" value="local-curator">
@@ -43,6 +46,7 @@ function reviewDom() {
     <button id="annotationGovernanceSaveBtn"></button>
     <input id="annotationAppliedSearch" value="">
     <select id="annotationAppliedSort"><option value="recent" selected>recent</option></select>
+    <input id="annotationAppliedShowArchived" type="checkbox">
     <button id="annotationAppliedRefreshBtn"></button>
     <span id="annotationAppliedTotal"></span>
     <div id="annotationAppliedGenes"></div>
@@ -106,6 +110,56 @@ function appliedSummary(id, gene, overrides = {}) {
     preview: [{ op: 'replaceQualifier', field: 'product', before: 'hypothetical protein', after: `${gene} synthase` }],
     ...overrides,
   };
+}
+
+function actionFixture(records, config = {}) {
+  const mockWindow = { confirm: vi.fn(() => true), alert: vi.fn() };
+  const service = {
+    listAnnotationChangesets: vi.fn(async params => ({
+      success: true,
+      statusCounts: {},
+      changeSets: records.filter(
+        record =>
+          (!params.statuses?.length || params.statuses.includes(record.status)) &&
+          (params.archivedOnly ? Boolean(record.archivedAt) : params.includeArchived || !record.archivedAt)
+      ),
+      total: records.length,
+    })),
+    getAnnotationChangeset: vi.fn(async ({ changeSetId }) => ({
+      changeSet: records.find(record => record.id === changeSetId),
+    })),
+    rejectAnnotationChangeset: vi.fn(async ({ changeSetId }) => {
+      const record = records.find(record => record.id === changeSetId);
+      const decision = await manager.confirmAnnotationChangeSet({ action: 'reject', changeSet: record });
+      expect(decision.rejected).toBe(true);
+      record.status = 'rejected';
+      return { success: true };
+    }),
+    requestAnnotationApproval: vi.fn(async ({ changeSetId }) => ({ approvalToken: `token-${changeSetId}` })),
+    applyAnnotationChangeset: vi.fn(async () => ({ success: true, applied: true })),
+    setAnnotationChangesetArchived: vi.fn(async ({ changeSetId, archived }) => {
+      const record = records.find(record => record.id === changeSetId);
+      const decision = await manager.confirmAnnotationChangeSet({
+        action: archived ? 'archive' : 'restore',
+        changeSet: record,
+      });
+      expect(decision.confirmed).toBe(true);
+      if (archived) record.archivedAt = '2026-10-12T00:00:00Z';
+      else delete record.archivedAt;
+      return { success: true };
+    }),
+    rollbackAnnotationChangeset: vi.fn(),
+  };
+  const app = {
+    configManager: { get: () => config, set: vi.fn(), save: vi.fn() },
+    chatManager: { services: { annotation: service } },
+    showNotification: vi.fn(),
+  };
+  const Manager = loadManager(mockWindow);
+  const manager = new Manager(app);
+  manager.changeSets = new Map(records.map(record => [record.id, record]));
+  manager._renderQueue({ total: records.length, changeSets: records });
+  return { manager, app, service, mockWindow };
 }
 
 describe('AnnotationReviewManager', () => {
@@ -347,7 +401,7 @@ describe('AnnotationReviewManager', () => {
     );
   });
 
-  it('renders applied and stale ChangeSets as explicit read-only history instead of broken checkboxes', () => {
+  it('allows history selection for archive while disabling approval and rejection', () => {
     const mockWindow = { confirm: vi.fn(), prompt: vi.fn(), alert: vi.fn() };
     const applied = summary('cs-applied', 'lysC', 'hash-applied');
     const stale = summary('cs-stale', 'lysC', 'hash-stale');
@@ -363,10 +417,16 @@ describe('AnnotationReviewManager', () => {
 
     manager._renderQueue({ total: 2, changeSets: [applied, stale] });
 
-    expect(document.querySelectorAll('.annotation-review-checkbox')).toHaveLength(0);
-    expect(document.querySelectorAll('.annotation-review-read-only')).toHaveLength(2);
-    expect(document.getElementById('annotationReviewSelectAll').disabled).toBe(true);
-    expect(document.getElementById('annotationReviewEligibleLabel').textContent).toBe('0 eligible');
+    manager.changeSets = new Map([
+      [applied.id, applied],
+      [stale.id, stale],
+    ]);
+    expect(document.querySelectorAll('.annotation-review-checkbox')).toHaveLength(2);
+    document.getElementById('annotationReviewSelectAll').click();
+    expect(document.getElementById('annotationReviewApproveBtn').disabled).toBe(true);
+    expect(document.getElementById('annotationReviewRejectBtn').disabled).toBe(true);
+    expect(document.getElementById('annotationReviewArchiveBtn').disabled).toBe(false);
+    expect(document.getElementById('annotationReviewEligibleLabel').textContent).toBe('2 selectable');
     expect(document.getElementById('annotationReviewQueue').textContent).toContain('Already applied');
     expect(document.getElementById('annotationReviewQueue').textContent).toContain('Stale because');
   });
@@ -393,7 +453,7 @@ describe('AnnotationReviewManager', () => {
     document.getElementById('annotationReviewSelectAll').click();
     expect(rowCheckbox.checked).toBe(true);
     expect(document.getElementById('annotationReviewSelectedCount').textContent).toBe('1 selected');
-    expect(document.getElementById('annotationReviewEligibleLabel').textContent).toBe('1 eligible');
+    expect(document.getElementById('annotationReviewEligibleLabel').textContent).toBe('1 selectable');
   });
 
   it('opens a ChangeSet detail view when its queue item is clicked or keyboard-activated', async () => {
@@ -694,7 +754,12 @@ describe('AnnotationReviewManager', () => {
       expect(document.querySelectorAll('.annotation-applied-item').length).toBe(2);
     });
 
-    expect(listAnnotationChangesets).toHaveBeenCalledWith({ statuses: ['committed'], query: '', limit: 1000 });
+    expect(listAnnotationChangesets).toHaveBeenCalledWith({
+      statuses: ['committed'],
+      includeArchived: false,
+      query: '',
+      limit: 1000,
+    });
     const items = Array.from(document.querySelectorAll('.annotation-applied-item'));
     // Most recently applied gene first, and its two commits are one entry.
     expect(items[0].textContent).toContain('lysC');
@@ -802,6 +867,9 @@ describe('AnnotationReviewManager', () => {
     expect(document.getElementById('annotationReviewFilter').value).toBe('committed');
     expect(document.querySelector('[data-review-panel="queue"]').classList.contains('active')).toBe(true);
     expect(getAnnotationChangeset).toHaveBeenCalledWith({ changeSetId: applied.id });
+    expect(listAnnotationChangesets).toHaveBeenCalledWith(
+      expect.objectContaining({ query: applied.id, includeArchived: true, riskLevels: [] })
+    );
   });
 
   it('exposes the annotated genes tab and panel in the review center markup', () => {
@@ -811,5 +879,348 @@ describe('AnnotationReviewManager', () => {
     expect(html).toContain('data-review-panel="applied"');
     expect(html).toContain('id="annotationAppliedGenes"');
     expect(html.indexOf('data-review-tab="applied"')).toBeLessThan(html.indexOf('data-review-tab="governance"'));
+  });
+  it.each([
+    ['awaiting_approval', false, true, true, true, false],
+    ['approved', false, true, true, true, false],
+    ['committed', false, false, false, true, false],
+    ['rejected', false, false, false, true, false],
+    ['stale', false, false, false, true, false],
+    ['awaiting_approval', true, false, false, false, true],
+    ['committed', true, false, false, false, true],
+  ])('enforces the button state for %s (archived=%s)', (status, archived, approve, reject, archive, restore) => {
+    const record = { ...summary('cs-state', 'thrB', 'hash'), status, archivedAt: archived ? '2026-10-12' : null };
+    actionFixture([record]);
+    document.querySelector('.annotation-review-checkbox').click();
+    for (const [id, enabled] of Object.entries({
+      annotationReviewApproveBtn: approve,
+      annotationReviewApproveApplyBtn: approve,
+      annotationReviewRejectBtn: reject,
+      annotationReviewArchiveBtn: archive,
+      annotationReviewRestoreBtn: restore,
+    })) {
+      expect(document.getElementById(id).disabled).toBe(!enabled);
+    }
+  });
+
+  it('allows rejection and archiving by the creator while preventing self-approval', () => {
+    actionFixture([{ ...summary('cs-own', 'thrB', 'hash'), createdBy: 'local-curator' }]);
+    document.querySelector('.annotation-review-checkbox').click();
+    expect(document.getElementById('annotationReviewApproveBtn').disabled).toBe(true);
+    expect(document.getElementById('annotationReviewRejectBtn').disabled).toBe(false);
+    expect(document.getElementById('annotationReviewArchiveBtn').disabled).toBe(false);
+  });
+
+  it('blocks every batch write when batch review is disabled', async () => {
+    const { manager, service, mockWindow } = actionFixture([summary('a', 'thrB', 'ha'), summary('b', 'thrC', 'hb')], {
+      batchReviewEnabled: false,
+    });
+    manager.toggleSelectAll(true);
+    for (const id of [
+      'annotationReviewApproveBtn',
+      'annotationReviewApproveApplyBtn',
+      'annotationReviewRejectBtn',
+      'annotationReviewArchiveBtn',
+    ]) {
+      expect(document.getElementById(id).disabled).toBe(true);
+    }
+    await manager.rejectSelected();
+    await manager.archiveSelected(true);
+    expect(service.rejectAnnotationChangeset).not.toHaveBeenCalled();
+    expect(mockWindow.confirm).not.toHaveBeenCalled();
+    expect(document.getElementById('annotationReviewReasonDialog')).toBeNull();
+  });
+
+  it('rejects through the real button with one dialog, ignores double clicks and prevents blank reasons', async () => {
+    const { manager, service, mockWindow } = actionFixture([summary('cs-reject-button', 'thrB', 'hash')]);
+    document.querySelector('.annotation-review-checkbox').click();
+    const button = document.getElementById('annotationReviewRejectBtn');
+    button.click();
+    button.click();
+    const extra = manager.rejectSelected();
+    expect(document.querySelectorAll('#annotationReviewReasonDialog')).toHaveLength(1);
+    const input = document.getElementById('annotationReviewReasonInput');
+    input.value = '   ';
+    document.querySelector('[data-reason-action="confirm"]').click();
+    expect(input.classList.contains('is-invalid')).toBe(true);
+    expect(service.rejectAnnotationChangeset).not.toHaveBeenCalled();
+    input.value = 'Evidence is insufficient';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await extra;
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(service.rejectAnnotationChangeset).toHaveBeenCalledExactlyOnceWith({
+      changeSetId: 'cs-reject-button',
+      reason: 'Evidence is insufficient',
+    });
+    expect(mockWindow.confirm).not.toHaveBeenCalled();
+  });
+
+  it('cancels rejection on Escape, keeps focus inside the dialog and honors Enter on Cancel', async () => {
+    const { manager, service } = actionFixture([summary('cs-cancel-keys', 'thrB', 'hash')]);
+    manager.toggleSelectAll(true);
+    const pending = manager.rejectSelected();
+    const input = document.getElementById('annotationReviewReasonInput');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
+    expect(document.activeElement.dataset.reasonAction).toBe('confirm');
+    const cancel = document.querySelector('[data-reason-action="cancel"]');
+    cancel.focus();
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    cancel.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(false);
+    expect(service.rejectAnnotationChangeset).not.toHaveBeenCalled();
+    const bubble = vi.fn();
+    document.addEventListener('keydown', bubble);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await pending;
+    document.removeEventListener('keydown', bubble);
+    expect(bubble).not.toHaveBeenCalled();
+    expect(service.rejectAnnotationChangeset).not.toHaveBeenCalled();
+    expect(manager.isActing).toBe(false);
+  });
+
+  it('archives and restores using the selected buttons and preserves the independent confirmation sessions', async () => {
+    const record = summary('cs-archive-buttons', 'thrB', 'hash');
+    const { manager, service, mockWindow } = actionFixture([record]);
+    manager.toggleSelectAll(true);
+    document.getElementById('annotationReviewArchiveBtn').click();
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(service.setAnnotationChangesetArchived).toHaveBeenCalledWith({ changeSetId: record.id, archived: true });
+    expect(document.querySelector('.annotation-review-checkbox')).toBeNull();
+    document.getElementById('annotationReviewArchiveFilter').value = 'archived';
+    document.getElementById('annotationReviewArchiveFilter').dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(document.querySelector('.annotation-review-checkbox')).not.toBeNull());
+    manager.toggleSelectAll(true);
+    document.getElementById('annotationReviewRestoreBtn').click();
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(service.setAnnotationChangesetArchived).toHaveBeenCalledWith({ changeSetId: record.id, archived: false });
+    expect(mockWindow.confirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('creates a rollback proposal through detail actions and clears filters before opening it', async () => {
+    const record = appliedSummary('cs-applied-rollback', 'thrB');
+    const { manager, service } = actionFixture([record]);
+    const proposal = summary('cs-rollback', 'thrB', 'rollback-hash');
+    service.rollbackAnnotationChangeset.mockImplementation(async () => {
+      // Fixture list reads the same mutable array used by actionFixture.
+      service.listAnnotationChangesets.mockResolvedValue({ total: 1, changeSets: [proposal], statusCounts: {} });
+      service.getAnnotationChangeset.mockResolvedValue({ changeSet: proposal });
+      return { changeSet: proposal };
+    });
+    await manager.viewChangeSet(record.id);
+    document.getElementById('annotationReviewRiskFilter').innerHTML =
+      '<option value="high">high</option><option value="">all</option>';
+    document.getElementById('annotationReviewSearch').value = 'old query';
+    document.querySelector('[data-action="rollback"]').click();
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(service.rollbackAnnotationChangeset).toHaveBeenCalledExactlyOnceWith({ changeSetId: record.id });
+    expect(service.applyAnnotationChangeset).not.toHaveBeenCalled();
+    expect(manager.activeChangeSetId).toBe(proposal.id);
+    expect(document.getElementById('annotationReviewSearch').value).toBe('');
+    expect(document.getElementById('annotationReviewRiskFilter').value).toBe('');
+  });
+
+  it('isolates batch failures, clears busy state and reports failed actions', async () => {
+    const { manager, service, app } = actionFixture([summary('fail', 'thrB', 'hf'), summary('ok', 'thrC', 'ho')]);
+    service.setAnnotationChangesetArchived.mockImplementation(async ({ changeSetId }) => {
+      if (changeSetId === 'fail') throw new Error('disk full');
+      return { success: true };
+    });
+    manager.toggleSelectAll(true);
+    await manager.archiveSelected(true);
+    expect(service.setAnnotationChangesetArchived).toHaveBeenCalledTimes(2);
+    expect(app.showNotification).toHaveBeenCalledWith('1/2 ChangeSets archived; 1 failed (disk full).', 'warning');
+    expect(manager.isActing).toBe(false);
+    expect(manager.activeDecisionSession).toBeNull();
+  });
+
+  it('does not authorize an action against a genome changed while the reason dialog was open', async () => {
+    const { manager, service, app } = actionFixture([summary('cs-workspace', 'thrB', 'hash')]);
+    manager.toggleSelectAll(true);
+    const pending = manager.rejectSelected();
+    app.loadedGenomePath = '/another/genome.gbk';
+    document.querySelector('[data-reason-action="confirm"]').click();
+    await pending;
+    expect(service.rejectAnnotationChangeset).not.toHaveBeenCalled();
+    expect(app.showNotification).toHaveBeenCalledWith(expect.stringContaining('workspace changed'), 'warning');
+  });
+
+  it('refreshes a retained detail after approval and ignores late detail responses after closing', async () => {
+    const record = summary('cs-detail-refresh', 'thrB', 'hash');
+    const { manager, service } = actionFixture([record]);
+    await manager.viewChangeSet(record.id);
+    record.status = 'approved';
+    await manager.refreshQueue();
+    expect(document.getElementById('annotationReviewDetail').textContent).toContain('Status: Approved');
+    let finish;
+    service.getAnnotationChangeset.mockReturnValueOnce(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const late = manager.viewChangeSet(record.id);
+    await manager._handleQueueClick({ target: { closest: () => ({ dataset: { action: 'close-details' } }) } });
+    finish({ changeSet: record });
+    await late;
+    expect(document.getElementById('annotationReviewDetail').innerHTML).toBe('');
+  });
+
+  it('queues filter refreshes while a ledger request is pending', async () => {
+    const { manager, service } = actionFixture([]);
+    let finish;
+    service.listAnnotationChangesets.mockReturnValueOnce(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const first = manager.refreshQueue();
+    document.getElementById('annotationReviewArchiveFilter').value = 'archived';
+    await manager.refreshQueue();
+    finish({ total: 0, changeSets: [], statusCounts: {} });
+    await first;
+    expect(service.listAnnotationChangesets).toHaveBeenLastCalledWith(
+      expect.objectContaining({ archivedOnly: true, includeArchived: true })
+    );
+  });
+
+  it('keeps the reason dialog above the production modal and exposes archive controls in the shipped markup', () => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'src/renderer/css/annotation-review.css'), 'utf8');
+    const modalCss = fs.readFileSync(path.join(process.cwd(), 'src/renderer/css/modals.css'), 'utf8');
+    const reasonLayer = Number(css.match(/\.annotation-review-reason-dialog\s*\{[^}]*z-index:\s*(\d+)/)[1]);
+    const modalLayer = Number(modalCss.match(/\.modal\s*\{[^}]*z-index:\s*(\d+)/)[1]);
+    expect(reasonLayer).toBeGreaterThan(modalLayer);
+    const html = fs.readFileSync(RENDERER_INDEX_PATH, 'utf8');
+    for (const id of [
+      'annotationReviewArchiveBtn',
+      'annotationReviewRestoreBtn',
+      'annotationReviewArchiveFilter',
+      'annotationAppliedShowArchived',
+    ]) {
+      expect(html).toContain(`id="${id}"`);
+    }
+  });
+  it('saves reviewer preferences through the button and rejects empty identities', async () => {
+    const { manager, app } = actionFixture([]);
+    const identity = document.getElementById('annotationCuratorIdentity');
+    identity.value = '  ';
+    document.getElementById('annotationGovernanceSaveBtn').click();
+    await vi.waitFor(() =>
+      expect(app.showNotification).toHaveBeenCalledWith('Curator identity must contain 1–128 characters.', 'error')
+    );
+    expect(app.configManager.set).not.toHaveBeenCalled();
+    identity.value = 'new-curator';
+    document.getElementById('annotationApprovalExpiry').value = '40';
+    document.getElementById('annotationBatchLimit').value = '10';
+    document.getElementById('annotationBatchReviewEnabled').checked = false;
+    document.getElementById('annotationGovernanceSaveBtn').click();
+    await vi.waitFor(() => expect(manager.settings.curatorIdentity).toBe('new-curator'));
+    expect(app.configManager.set).toHaveBeenCalledWith('generalSettings.annotationGovernance', {
+      curatorIdentity: 'new-curator',
+      approvalExpiryMinutes: 40,
+      batchSizeLimit: 10,
+      batchReviewEnabled: false,
+    });
+    expect(app.localCuratorIdentity).toBe('new-curator');
+  });
+
+  it('does not publish new reviewer settings when persistence fails', async () => {
+    const { manager, app } = actionFixture([]);
+    app.configManager.save.mockRejectedValue(new Error('settings write failed'));
+    document.getElementById('annotationCuratorIdentity').value = 'failed-curator';
+    await expect(manager.saveGovernanceSettings()).rejects.toThrow('settings write failed');
+    expect(manager.settings.curatorIdentity).toBe('local-curator');
+    expect(app.localCuratorIdentity).toBe('local-curator');
+    expect(document.getElementById('annotationGovernanceSaveBtn').disabled).toBe(false);
+    expect(app.showNotification).not.toHaveBeenCalledWith('Annotation governance preferences saved.', 'success');
+  });
+
+  it('opens research reports through the detail button and supports closing, Escape and read errors', async () => {
+    const record = {
+      ...summary('cs-report-button', 'thrB', 'hash'),
+      researchRun: 'task-report',
+      reportAttachment: 'dgr:task-report',
+    };
+    const { manager, app, mockWindow } = actionFixture([record]);
+    const reader = vi.fn().mockResolvedValue({
+      success: true,
+      title: 'Research report',
+      taskId: 'task-report',
+      reportMarkdown: '# Evidence report',
+    });
+    mockWindow.electronAPI = { readDgrReportAttachment: reader };
+    await manager.viewChangeSet(record.id);
+    document.querySelector('[data-action="open-report"]').click();
+    await vi.waitFor(() => expect(document.getElementById('dgrReportOverlay')).not.toBeNull());
+    expect(reader).toHaveBeenCalledWith('', 'task-report');
+    expect(document.getElementById('dgrReportOverlay').textContent).toContain('# Evidence report');
+    document.querySelector('#dgrReportOverlay button').click();
+    expect(document.getElementById('dgrReportOverlay')).toBeNull();
+    document.querySelector('[data-action="open-report"]').click();
+    await vi.waitFor(() => expect(document.getElementById('dgrReportOverlay')).not.toBeNull());
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.getElementById('dgrReportOverlay')).toBeNull();
+    reader.mockRejectedValue(new Error('attachment missing'));
+    document.querySelector('[data-action="open-report"]').click();
+    await vi.waitFor(() =>
+      expect(app.showNotification).toHaveBeenCalledWith('Failed to read research report: attachment missing', 'error')
+    );
+  });
+
+  it('refreshes both lists from their buttons and passes the archived toggle and applied sort', async () => {
+    const { manager, service } = actionFixture([]);
+    document.getElementById('annotationReviewRefreshBtn').click();
+    await vi.waitFor(() =>
+      expect(service.listAnnotationChangesets).toHaveBeenCalledWith(
+        expect.objectContaining({ statuses: ['awaiting_approval', 'approved'] })
+      )
+    );
+    document.getElementById('annotationAppliedShowArchived').click();
+    await vi.waitFor(() =>
+      expect(service.listAnnotationChangesets).toHaveBeenCalledWith(
+        expect.objectContaining({ statuses: ['committed'], includeArchived: true })
+      )
+    );
+    document.getElementById('annotationAppliedRefreshBtn').click();
+    await vi.waitFor(() => expect(manager.isAppliedLoading).toBe(false));
+    document.getElementById('annotationAppliedSort').innerHTML = '<option value="gene" selected>gene</option>';
+    const groups = [
+      { label: 'thrC', changeSets: [] },
+      { label: 'thrA', changeSets: [] },
+    ];
+    expect(manager._sortAppliedGroups(groups).map(group => group.label)).toEqual(['thrA', 'thrC']);
+  });
+
+  it.each([null, { start: null, end: 20 }, { start: 10, end: null }, { start: 30, end: 20 }])(
+    'disables Go to gene for invalid coordinates %s',
+    coordinates => {
+      const { manager, app } = actionFixture([]);
+      app.navigationManager = { navigateToPosition: vi.fn() };
+      const group = manager._groupAppliedChangeSets([
+        appliedSummary('cs-invalid-location', 'thrB', {
+          target: { featureId: 'f1', geneSymbol: 'thrB', chromosome: 'chr1', coordinates },
+        }),
+      ])[0];
+      manager.appliedGeneGroups.set(group.key, group);
+      manager._renderAppliedGenes([group]);
+      expect(document.querySelector('[data-action="applied-locate"]').disabled).toBe(true);
+      manager.locateAppliedGene(group.key);
+      expect(app.navigationManager.navigateToPosition).not.toHaveBeenCalled();
+    }
+  );
+
+  it('does not reuse an approval token after its expiry', async () => {
+    const record = {
+      ...summary('cs-expired', 'thrB', 'hash'),
+      status: 'approved',
+      approval: { expiresAt: '2000-01-01', approver: 'local-curator' },
+    };
+    const { manager, service } = actionFixture([record]);
+    manager.approvalTokens.set(record.id, 'expired-token');
+    manager.toggleSelectAll(true);
+    await manager.approveSelected(true);
+    expect(service.requestAnnotationApproval).toHaveBeenCalledOnce();
+    expect(service.applyAnnotationChangeset).toHaveBeenCalledWith({
+      changeSetId: record.id,
+      approvalToken: `token-${record.id}`,
+    });
   });
 });

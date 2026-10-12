@@ -49,6 +49,17 @@ Always resolve the target after the intended genome and primary annotations are 
 - The source genome file is not edited. Research runs, ChangeSets, audit events, approvals, and commit receipts are written atomically to the adjacent `<genome-basename>.CodeXomics` sidecar. If the source directory is read-only, CodeXomics uses its application-data `sidecar/` fallback. Committed overlays are verified and replayed when the genome is reopened.
 - If the source annotations and a committed overlay diverge, CodeXomics stops reconciliation rather than silently overwriting the live annotation.
 
+## Annotation Review controls
+
+The Review Queue supports individual detail views and selected-record actions. Approval and rejection apply only to unarchived awaiting-review or approved proposals. The configured curator cannot approve their own proposal. Batch actions respect the Governance batch setting and size limit.
+
+- **Reject selected** opens an in-app reason dialog. Confirm records the reason and revokes any issued approval; Cancel or Escape leaves the proposal unchanged.
+- **Archive record / Archive selected** removes records from the default lists without deleting proposals, research reports, evidence, receipts, or audit history. Archiving an approved proposal revokes its capability and returns it to awaiting review. Archiving an applied record does not undo the annotation.
+- Use the archive filter together with the status filter to find archived records. **Restore record / Restore selected** makes them visible again; previous approvals are not restored. Annotated Genes has an **Include archived records** option.
+- **Propose rollback** in an applied record's details creates an inverse ChangeSet for separate approval and application. It refuses to overwrite a newer change to any affected field. The original commit remains in the audit history.
+
+Archiving and restoration are local review UI actions persisted in the genome sidecar. They do not introduce additional AI-callable tools. Archived records remain available by ChangeSet ID; list results exclude them by default. Queue badges count unarchived records, while reconciliation still verifies and replays the complete committed history.
+
 ## Service setup
 
 Run DGR as a long-lived, single-process Node service with durable local storage. Use the same strong secret for the DGR service and the CodeXomics main-process proxy, but configure it separately in each process.

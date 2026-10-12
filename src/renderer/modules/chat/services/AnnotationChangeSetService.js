@@ -1514,7 +1514,7 @@ class AnnotationChangeSetService {
     try {
       const statusCounts = Object.create(null);
       for (const changeSet of Object.values(ledger?.changeSets || {})) {
-        if (!changeSet) continue;
+        if (!changeSet || changeSet.archivedAt) continue;
         const status = String(changeSet.status || 'unknown');
         this._ledgerMapSet(statusCounts, status, (statusCounts[status] || 0) + 1);
       }
@@ -3471,7 +3471,9 @@ class AnnotationChangeSetService {
     const creator = this._principal(params, 'unknown-agent');
     const pendingForCreator = Object.values(ledger.changeSets).filter(
       changeSet =>
-        changeSet?.createdBy === creator && ['awaiting_approval', 'approved'].includes(String(changeSet.status || ''))
+        !changeSet?.archivedAt &&
+        changeSet?.createdBy === creator &&
+        ['awaiting_approval', 'approved'].includes(String(changeSet.status || ''))
     ).length;
     if (pendingForCreator >= this.ledgerLimits.pendingChangeSetsPerPrincipal) {
       throw new Error(
@@ -3699,12 +3701,20 @@ class AnnotationChangeSetService {
       const offset = Math.max(0, Number(params.offset) || 0);
       const allChangeSets = Object.values(ledger.changeSets || {}).filter(Boolean);
       const statusCounts = allChangeSets.reduce((counts, changeSet) => {
+        if (changeSet.archivedAt) return counts;
         const status = String(changeSet.status || 'unknown');
         counts[status] = (counts[status] || 0) + 1;
         return counts;
       }, {});
       const filtered = allChangeSets
         .filter(changeSet => {
+          if (
+            params.archivedOnly === true
+              ? !changeSet.archivedAt
+              : params.includeArchived !== true && changeSet.archivedAt
+          ) {
+            return false;
+          }
           const status = String(changeSet.status || '').toLowerCase();
           const risk = String(changeSet.riskLevel || '').toLowerCase();
           if (requestedStatuses.length > 0 && !requestedStatuses.includes(status)) return false;
@@ -3773,6 +3783,9 @@ class AnnotationChangeSetService {
                 revokedAt: approval.revokedAt || null,
               }
             : null,
+          archivedAt: changeSet.archivedAt || null,
+          archivedBy: changeSet.archivedBy || null,
+          archiveReason: changeSet.archiveReason || null,
           rejectedAt: changeSet.rejectedAt || null,
           rejectedBy: changeSet.rejectedBy || null,
           rejectionReason: changeSet.rejectionReason || null,
@@ -3789,8 +3802,87 @@ class AnnotationChangeSetService {
         offset,
         limit,
         statusCounts,
+        archivedCount: allChangeSets.filter(changeSet => changeSet.archivedAt).length,
         changeSets: summaries,
       };
+    });
+  }
+
+  /** Reversible visibility metadata, outside the immutable proposal and receipt. */
+  async setAnnotationChangesetArchived(params = {}) {
+    const externalCurator = this._validatedExternalCurator(params, 'annotation:approve');
+    if (typeof params.archived !== 'boolean') throw new Error('archived must be a boolean');
+    return this._withLedgerLock(async workspace => {
+      this._assertDurableLedger(workspace);
+      const ledger = await this._loadLedger(workspace);
+      const changeSet = this._ledgerMapGet(ledger.changeSets, params.changeSetId || params.id);
+      if (!changeSet) throw new Error('ChangeSet not found');
+      const action = params.archived ? 'archive' : 'restore';
+      if (Boolean(changeSet.archivedAt) === params.archived) {
+        return { success: true, duplicate: true, changeSet: this._clone(changeSet) };
+      }
+      if ((await this._hash(this._immutableChangeSetPayload(changeSet))) !== changeSet.changeSetHash) {
+        throw new Error('ChangeSet payload changed after creation; archive or restore requires an intact proposal');
+      }
+      const approval = changeSet.approvalId ? this._ledgerMapGet(ledger.approvals, changeSet.approvalId) : null;
+      if (changeSet.status === 'approved' && !this._isApprovalBoundToChangeSet(approval, changeSet)) {
+        await this._markStale(ledger, changeSet, 'approval_binding_invalid_before_archive', workspace);
+        throw new Error('ChangeSet approval binding is invalid and was marked stale');
+      }
+      let curator = externalCurator?.principal;
+      if (!curator) {
+        if (typeof this.app?.confirmAnnotationChangeSet !== 'function') {
+          throw new Error('A trusted interactive curator confirmation UI is required for archiving');
+        }
+        const decision = await this.app.confirmAnnotationChangeSet({
+          action,
+          changeSet: this._clone(changeSet),
+          prompt: `${params.archived ? 'Archive' : 'Restore'} ${changeSet.id}? This does not change genome annotations.`,
+        });
+        this._assertWorkspace(workspace);
+        if (decision?.confirmed !== true) {
+          throw new Error('Annotation archive action was cancelled by the local curator');
+        }
+        curator = String(decision.principal || '').trim();
+      }
+      if (!curator) throw new Error('Authenticated curator identity is missing');
+      const timestamp = new Date().toISOString();
+      if (params.archived) {
+        if (changeSet.status === 'approved') {
+          if (!approval.revokedAt) {
+            approval.revokedAt = timestamp;
+            approval.revokedBy = curator;
+            approval.revocationReason = 'changeset_archived';
+            ledger.audit.push({
+              id: this._id('audit'),
+              event: 'annotation_approval_revoked',
+              changeSetId: changeSet.id,
+              approvalId: approval.id,
+              principal: curator,
+              timestamp,
+              reason: 'changeset_archived',
+            });
+          }
+          changeSet.status = 'awaiting_approval';
+          delete changeSet.approvalId;
+        }
+        changeSet.archivedAt = timestamp;
+        changeSet.archivedBy = curator;
+        changeSet.archiveReason = 'curator_archived';
+      } else {
+        delete changeSet.archivedAt;
+        delete changeSet.archivedBy;
+        delete changeSet.archiveReason;
+      }
+      ledger.audit.push({
+        id: this._id('audit'),
+        event: params.archived ? 'changeset_archived' : 'changeset_restored',
+        changeSetId: changeSet.id,
+        principal: curator,
+        timestamp,
+      });
+      await this._saveLedger(ledger, workspace);
+      return { success: true, changeSet: this._clone(changeSet) };
     });
   }
 
@@ -3806,6 +3898,7 @@ class AnnotationChangeSetService {
       const ledger = await this._loadLedger(workspace);
       const changeSet = this._ledgerMapGet(ledger.changeSets, params.changeSetId || params.id);
       if (!changeSet) throw new Error('ChangeSet not found');
+      if (changeSet.archivedAt) throw new Error('ChangeSet is archived; restore it before review');
       if (!['awaiting_approval', 'approved'].includes(changeSet.status)) {
         throw new Error(`ChangeSet is ${changeSet.status}, not eligible for rejection`);
       }
@@ -3895,6 +3988,7 @@ class AnnotationChangeSetService {
     const ledger = await this._loadLedger(workspace);
     const changeSet = this._ledgerMapGet(ledger.changeSets, params.changeSetId || params.id);
     if (!changeSet) throw new Error('ChangeSet not found');
+    if (changeSet.archivedAt) throw new Error('ChangeSet is archived; restore it before approval');
     if (!['awaiting_approval', 'approved'].includes(changeSet.status)) {
       throw new Error(`ChangeSet is ${changeSet.status}, not eligible for approval`);
     }
@@ -4082,6 +4176,7 @@ class AnnotationChangeSetService {
     if (changeSet.status === 'committed') {
       throw new Error(`Annotation ledger committed idempotency index is missing for ChangeSet ${changeSet.id}`);
     }
+    if (changeSet.archivedAt) throw new Error('ChangeSet is archived; restore and approve it before commit');
     if (changeSet.status !== 'approved') {
       throw new Error(`ChangeSet is ${changeSet.status}; approval is required before commit`);
     }
@@ -4260,11 +4355,29 @@ class AnnotationChangeSetService {
   async _rollbackAnnotationChangeset(params = {}, workspace) {
     const ledger = await this._loadLedger(workspace);
     const original = this._ledgerMapGet(ledger.changeSets, params.changeSetId || params.id);
-    if (!original?.commitReceipt) throw new Error('Only a committed ChangeSet can be rolled back');
+    if (original?.status !== 'committed' || !original.commitReceipt) {
+      throw new Error('Only a committed ChangeSet can be rolled back');
+    }
     const target = original.target;
+    const found = await this._findFeatureByRef(target, workspace);
+    if (!found) throw new Error('Rollback target is no longer available');
     const originalValues = new Map();
     for (const operation of original.commitReceipt.appliedOperations) {
       if (!originalValues.has(operation.field)) originalValues.set(operation.field, operation.oldValue);
+    }
+    const expected = { qualifiers: {} };
+    for (const [field, oldValue] of originalValues) {
+      if (oldValue !== undefined) expected.qualifiers[field] = this._clone(oldValue);
+    }
+    for (const operation of original.commitReceipt.appliedOperations) this._applyOperation(expected, operation);
+    for (const field of originalValues.keys()) {
+      if (
+        !this._canonicalValuesEqual(found.annotation.qualifiers?.[field] ?? null, expected.qualifiers[field] ?? null)
+      ) {
+        throw new Error(
+          `Cannot roll back: ${field} changed after this ChangeSet was applied. Review the newer changes first`
+        );
+      }
     }
     const operations = Array.from(originalValues, ([field, oldValue]) => ({
       op: oldValue === undefined || oldValue === null ? 'removeQualifier' : 'replaceQualifier',

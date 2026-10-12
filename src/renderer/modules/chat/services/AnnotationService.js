@@ -90,6 +90,11 @@ class AnnotationService {
     return this._getChangeSetService().listAnnotationChangesets(params);
   }
 
+  // Local review UI action; intentionally not exposed as an AI-callable tool.
+  async setAnnotationChangesetArchived(params) {
+    return this._getChangeSetService().setAnnotationChangesetArchived(params);
+  }
+
   async requestAnnotationApproval(params) {
     return this._getChangeSetService().requestAnnotationApproval(params);
   }

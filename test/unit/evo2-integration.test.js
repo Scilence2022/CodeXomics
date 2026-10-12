@@ -65,6 +65,7 @@ describe('Evo 2 GUI', () => {
   });
   afterEach(() => {
     clearTimeout(ui.timer);
+    clearTimeout(ui.dragResizeTimer);
     vi.restoreAllMocks();
     document.body.innerHTML = '';
   });
