@@ -145,12 +145,17 @@ class Evo2UI {
    * element, and measuring a display:none modal would pin a fallback width.
    */
   initDragResize() {
-    if (this.dragResizeReady) return;
+    if (this.dragResizeReady || !this.modal?.isConnected || !this.modal.classList.contains('show')) return;
     if (!window.modalDragManager || !window.resizableModalManager) {
       clearTimeout(this.dragResizeTimer);
-      this.dragResizeTimer = setTimeout(() => this.initDragResize(), 100);
+      this.dragResizeTimer = setTimeout(() => {
+        this.dragResizeTimer = null;
+        this.initDragResize();
+      }, 100);
       return;
     }
+    clearTimeout(this.dragResizeTimer);
+    this.dragResizeTimer = null;
     window.modalDragManager.makeDraggable('#evo2Modal');
     window.resizableModalManager.makeResizable('#evo2Modal');
     this.dragResizeReady = true;
@@ -190,6 +195,8 @@ class Evo2UI {
   close() {
     this.modal.classList.remove('show');
     clearTimeout(this.timer);
+    clearTimeout(this.dragResizeTimer);
+    this.dragResizeTimer = null;
     this.element('Key').value = '';
     this.previousFocus?.focus();
   }
