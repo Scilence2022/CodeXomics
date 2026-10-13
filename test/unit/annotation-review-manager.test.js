@@ -31,6 +31,7 @@ function reviewDom() {
     </label>
     <span id="annotationReviewTotal"></span>
     <span id="annotationReviewSelectedCount"></span>
+    <p id="annotationReviewActionHint" hidden></p>
     <button id="annotationReviewApproveBtn"></button>
     <button id="annotationReviewApproveApplyBtn"></button>
     <button id="annotationReviewRejectBtn"></button>
@@ -915,7 +916,7 @@ describe('AnnotationReviewManager', () => {
     const { manager, service, mockWindow } = actionFixture([summary('a', 'thrB', 'ha'), summary('b', 'thrC', 'hb')], {
       batchReviewEnabled: false,
     });
-    manager.toggleSelectAll(true);
+    document.querySelectorAll('.annotation-review-checkbox').forEach(input => input.click());
     for (const id of [
       'annotationReviewApproveBtn',
       'annotationReviewApproveApplyBtn',
@@ -929,6 +930,93 @@ describe('AnnotationReviewManager', () => {
     expect(service.rejectAnnotationChangeset).not.toHaveBeenCalled();
     expect(mockWindow.confirm).not.toHaveBeenCalled();
     expect(document.getElementById('annotationReviewReasonDialog')).toBeNull();
+  });
+
+  it('selects an actionable batch from 52 records sharing one target and rejects through the button', async () => {
+    const records = Array.from({ length: 52 }, (_, i) => summary(`cs-batch-${i}`, 'benchmark_bulk_gene', `hash-${i}`));
+    const { manager, service } = actionFixture(records);
+    const selectAll = document.getElementById('annotationReviewSelectAll');
+    selectAll.click();
+
+    expect(manager._selectedChangeSets()).toHaveLength(50);
+    expect(selectAll.checked).toBe(true);
+    expect(selectAll.indeterminate).toBe(false);
+    expect(document.getElementById('annotationReviewEligibleLabel').textContent).toBe('50 of 52 selectable');
+    expect(document.getElementById('annotationReviewArchiveBtn').disabled).toBe(false);
+    expect(document.getElementById('annotationReviewRejectBtn').disabled).toBe(false);
+    expect(document.getElementById('annotationReviewApproveBtn').disabled).toBe(true);
+    expect(document.getElementById('annotationReviewApproveBtn').title).toContain('one proposal per target');
+    const hint = document.getElementById('annotationReviewActionHint');
+    expect(hint.hidden).toBe(false);
+    expect(hint.textContent).toContain('up to 50 records');
+    expect(hint.textContent).toContain('benchmark_bulk_gene');
+
+    document.getElementById('annotationReviewRejectBtn').click();
+    document.getElementById('annotationReviewReasonInput').value = 'Duplicate benchmark proposals';
+    document.querySelector('[data-reason-action="confirm"]').click();
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(service.rejectAnnotationChangeset).toHaveBeenCalledTimes(50);
+    expect(records.slice(0, 50).every(record => record.status === 'rejected')).toBe(true);
+    expect(records.slice(50).every(record => record.status === 'awaiting_approval')).toBe(true);
+    selectAll.click();
+    expect(manager._selectedChangeSets()).toHaveLength(2);
+    expect(document.getElementById('annotationReviewRejectBtn').disabled).toBe(false);
+    selectAll.click();
+    expect(manager._selectedChangeSets()).toHaveLength(0);
+  });
+
+  it('selects a single actionable record when batch review is disabled', () => {
+    const { manager } = actionFixture([summary('a', 'thrB', 'ha'), summary('b', 'thrC', 'hb')], {
+      batchReviewEnabled: false,
+    });
+    const selectAll = document.getElementById('annotationReviewSelectAll');
+    selectAll.click();
+    expect(manager._selectedChangeSets()).toHaveLength(1);
+    expect(document.getElementById('annotationReviewApproveBtn').disabled).toBe(false);
+    expect(document.getElementById('annotationReviewRejectBtn').disabled).toBe(false);
+    expect(document.getElementById('annotationReviewArchiveBtn').disabled).toBe(false);
+    selectAll.click();
+    expect(manager._selectedChangeSets()).toHaveLength(0);
+  });
+
+  it('explains a manual over-limit selection and re-enables actions when it is corrected', async () => {
+    const { manager, service, app } = actionFixture([summary('a', 'thrB', 'ha'), summary('b', 'thrC', 'hb')], {
+      batchSizeLimit: 1,
+    });
+    const checkboxes = document.querySelectorAll('.annotation-review-checkbox');
+    checkboxes.forEach(input => input.click());
+    const archive = document.getElementById('annotationReviewArchiveBtn');
+    expect(archive.disabled).toBe(true);
+    expect(archive.title).toContain('no more than 1');
+    expect(document.getElementById('annotationReviewActionHint').textContent).toContain(
+      'raise the limit in Governance'
+    );
+    await manager.archiveSelected(true);
+    expect(service.setAnnotationChangesetArchived).not.toHaveBeenCalled();
+    expect(app.showNotification).toHaveBeenCalledWith(archive.title, 'warning');
+    checkboxes[1].click();
+    expect(archive.disabled).toBe(false);
+    expect(archive.title).toBe('');
+    expect(archive.hasAttribute('aria-description')).toBe(false);
+    expect(document.getElementById('annotationReviewApproveBtn').disabled).toBe(false);
+  });
+
+  it('keeps a capped archive batch actionable and restores through the button', async () => {
+    const records = Array.from({ length: 3 }, (_, i) => summary(`archive-${i}`, 'thrB', `hash-${i}`));
+    const { manager, service } = actionFixture(records, { batchSizeLimit: 2 });
+    document.getElementById('annotationReviewSelectAll').click();
+    document.getElementById('annotationReviewArchiveBtn').click();
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(service.setAnnotationChangesetArchived).toHaveBeenCalledTimes(2);
+    expect(records[2].archivedAt).toBeUndefined();
+    document.getElementById('annotationReviewArchiveFilter').value = 'archived';
+    await manager.refreshQueue();
+    document.getElementById('annotationReviewSelectAll').click();
+    expect(document.getElementById('annotationReviewRestoreBtn').disabled).toBe(false);
+    document.getElementById('annotationReviewRestoreBtn').click();
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(service.setAnnotationChangesetArchived).toHaveBeenCalledTimes(4);
+    expect(records.every(record => !record.archivedAt)).toBe(true);
   });
 
   it('rejects through the real button with one dialog, ignores double clicks and prevents blank reasons', async () => {

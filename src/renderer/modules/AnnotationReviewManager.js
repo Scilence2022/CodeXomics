@@ -898,9 +898,13 @@ class AnnotationReviewManager {
   }
 
   toggleSelectAll(checked) {
-    document.querySelectorAll('#annotationReviewQueue .annotation-review-checkbox:not(:disabled)').forEach(input => {
-      input.checked = checked;
-    });
+    if (this.isActing || this.isLoading) return;
+    const limit = this._selectionLimit();
+    document
+      .querySelectorAll('#annotationReviewQueue .annotation-review-checkbox:not(:disabled)')
+      .forEach((input, index) => {
+        input.checked = checked && index < limit;
+      });
     this._updateActionState();
   }
 
@@ -914,29 +918,73 @@ class AnnotationReviewManager {
     return !changeSet.archivedAt && ['awaiting_approval', 'approved'].includes(changeSet.status);
   }
 
+  _selectionLimit() {
+    return this.settings.batchReviewEnabled ? this.settings.batchSizeLimit : 1;
+  }
+
+  _batchSelectionReason(selected) {
+    if (!selected.length) return 'Choose at least one record.';
+    if (!this.settings.batchReviewEnabled && selected.length > 1) {
+      return 'Batch review is disabled in Governance settings. Choose one record or enable batch review.';
+    }
+    if (selected.length > this.settings.batchSizeLimit) {
+      return `Select no more than ${this.settings.batchSizeLimit} ChangeSets per batch, or raise the limit in Governance.`;
+    }
+    return '';
+  }
+
   _updateActionState() {
     const selected = this._selectedChangeSets();
     const count = document.getElementById('annotationReviewSelectedCount');
     if (count) count.textContent = `${selected.length} selected`;
-    const batchAllowed =
-      selected.length > 0 &&
-      selected.length <= this.settings.batchSizeLimit &&
-      (this.settings.batchReviewEnabled || selected.length === 1);
-    const canReview = batchAllowed && selected.every(changeSet => this._isReviewable(changeSet));
-    const canApprove =
-      canReview &&
-      selected.every(changeSet => changeSet.createdBy !== this.settings.curatorIdentity) &&
-      this._duplicateTargets(selected).length === 0;
+    const selectionReason = this._batchSelectionReason(selected);
+    const busyReason = this.isActing ? 'A review action is in progress.' : this.isLoading ? 'Loading records…' : '';
+    const commonReason = busyReason || selectionReason;
+    const reviewReason =
+      commonReason ||
+      (selected.some(changeSet => !this._isReviewable(changeSet))
+        ? 'Choose only unarchived awaiting-review or approved records to approve or reject.'
+        : '');
+    const duplicateTargets = this._duplicateTargets(selected);
+    const approvalReason =
+      reviewReason ||
+      (selected.some(changeSet => changeSet.createdBy === this.settings.curatorIdentity)
+        ? 'Choose a reviewer identity different from the proposal creator in Governance.'
+        : '') ||
+      (duplicateTargets.length
+        ? `Approve: choose only one proposal per target. Conflicting targets: ${duplicateTargets.join(', ')}.`
+        : '');
     const actions = {
-      annotationReviewApproveBtn: canApprove,
-      annotationReviewApproveApplyBtn: canApprove,
-      annotationReviewRejectBtn: canReview,
-      annotationReviewArchiveBtn: batchAllowed && selected.every(changeSet => !changeSet.archivedAt),
-      annotationReviewRestoreBtn: batchAllowed && selected.every(changeSet => changeSet.archivedAt),
+      annotationReviewApproveBtn: approvalReason,
+      annotationReviewApproveApplyBtn: approvalReason,
+      annotationReviewRejectBtn: reviewReason,
+      annotationReviewArchiveBtn:
+        commonReason ||
+        (selected.some(changeSet => changeSet.archivedAt) ? 'Choose only unarchived records to archive.' : ''),
+      annotationReviewRestoreBtn:
+        commonReason ||
+        (selected.some(changeSet => !changeSet.archivedAt) ? 'Choose only archived records to restore.' : ''),
     };
-    for (const [id, enabled] of Object.entries(actions)) {
+    for (const [id, reason] of Object.entries(actions)) {
       const button = document.getElementById(id);
-      if (button) button.disabled = this.isActing || this.isLoading || !enabled;
+      if (button) {
+        button.disabled = Boolean(reason);
+        button.title = reason;
+        if (reason) button.setAttribute('aria-description', reason);
+        else button.removeAttribute('aria-description');
+      }
+    }
+    const eligible = document.querySelectorAll('#annotationReviewQueue .annotation-review-checkbox:not(:disabled)');
+    const limit = this._selectionLimit();
+    const hint = document.getElementById('annotationReviewActionHint');
+    if (hint) {
+      const messages = [];
+      if (selected.length && (commonReason || approvalReason)) messages.push(commonReason || approvalReason);
+      if (eligible.length > limit && !selectionReason) {
+        messages.push(`Select all chooses up to ${limit} records. Review the remaining records in another batch.`);
+      }
+      hint.textContent = messages.join(' ');
+      hint.hidden = !messages.length;
     }
     document
       .querySelectorAll(
@@ -947,29 +995,28 @@ class AnnotationReviewManager {
       });
     const selectAll = document.getElementById('annotationReviewSelectAll');
     if (selectAll) {
-      const eligible = document.querySelectorAll('#annotationReviewQueue .annotation-review-checkbox:not(:disabled)');
       const checked = document.querySelectorAll('#annotationReviewQueue .annotation-review-checkbox:checked');
       const eligibleLabel = document.getElementById('annotationReviewEligibleLabel');
-      if (eligibleLabel) eligibleLabel.textContent = `${eligible.length} selectable`;
+      if (eligibleLabel) {
+        eligibleLabel.textContent =
+          eligible.length > limit ? `${limit} of ${eligible.length} selectable` : `${eligible.length} selectable`;
+      }
       selectAll.disabled = this.isActing || this.isLoading || eligible.length === 0;
-      selectAll.checked = eligible.length > 0 && eligible.length === checked.length;
-      selectAll.indeterminate = checked.length > 0 && checked.length < eligible.length;
+      const selectionSize = Math.min(limit, eligible.length);
+      selectAll.checked = selectionSize > 0 && checked.length === selectionSize;
+      selectAll.indeterminate = checked.length > 0 && checked.length !== selectionSize;
+      const selectAllDescription = `Select up to ${limit} visible records. Available actions depend on their status.`;
+      selectAll.setAttribute('aria-label', selectAllDescription);
       const label = document.getElementById('annotationReviewSelectAllLabel');
-      if (label) label.title = 'Select all visible records. Available actions depend on their status.';
+      if (label) label.title = selectAllDescription;
     }
   }
 
   _validateBatch(selected, reviewOnly = false) {
     if (!selected.length) return false;
-    if (!this.settings.batchReviewEnabled && selected.length > 1) {
-      this._notify('Batch review is disabled in Governance settings.', 'warning');
-      return false;
-    }
-    if (selected.length > this.settings.batchSizeLimit) {
-      this._notify(
-        `Select no more than ${this.settings.batchSizeLimit} ChangeSets per batch, or raise the limit in Governance.`,
-        'warning'
-      );
+    const reason = this._batchSelectionReason(selected);
+    if (reason) {
+      this._notify(reason, 'warning');
       return false;
     }
     if (reviewOnly && selected.some(changeSet => !this._isReviewable(changeSet))) {

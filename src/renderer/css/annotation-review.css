@@ -362,6 +362,13 @@
   gap: 8px;
 }
 
+.annotation-review-action-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .annotation-review-reason-dialog {
   position: fixed;
   inset: 0;
