@@ -3886,6 +3886,64 @@ class AnnotationChangeSetService {
     });
   }
 
+  /** Remove an unapplied proposal; retain audit events and independent research reports. */
+  async deleteAnnotationChangeset(params = {}) {
+    if (this._executionContext(params)) throw new Error('ChangeSet deletion requires the local review UI');
+    return this._withLedgerLock(async workspace => {
+      this._assertDurableLedger(workspace);
+      const ledger = await this._loadLedger(workspace);
+      const changeSet = this._ledgerMapGet(ledger.changeSets, params.changeSetId || params.id);
+      if (!changeSet) throw new Error('ChangeSet not found');
+      if (
+        !['awaiting_approval', 'approved', 'rejected', 'stale'].includes(changeSet.status) ||
+        changeSet.commitReceipt ||
+        Object.values(ledger.committedIdempotencyKeys).some(receipt => receipt.changeSetId === changeSet.id)
+      ) {
+        throw new Error(
+          'Applied ChangeSets cannot be deleted: their receipts are required to restore annotations. Archive this record instead.'
+        );
+      }
+      if ((await this._hash(this._immutableChangeSetPayload(changeSet))) !== changeSet.changeSetHash) {
+        throw new Error('ChangeSet payload changed after creation; deletion requires an intact proposal');
+      }
+      if (typeof this.app?.confirmAnnotationChangeSet !== 'function') {
+        throw new Error('A trusted interactive curator confirmation UI is required for deletion');
+      }
+      const decision = await this.app.confirmAnnotationChangeSet({
+        action: 'delete',
+        changeSet: this._clone(changeSet),
+        prompt: `Permanently delete ${changeSet.id}? This cannot be undone. Genome annotations and research reports are preserved.`,
+      });
+      this._assertWorkspace(workspace);
+      if (decision?.confirmed !== true) throw new Error('Annotation deletion was cancelled by the local curator');
+      const curator = String(decision.principal || '').trim();
+      if (!curator) throw new Error('Authenticated curator identity is missing');
+      const removedApprovalIds = [];
+      for (const [approvalId, approval] of Object.entries(ledger.approvals)) {
+        if (approval.changeSetId !== changeSet.id) continue;
+        removedApprovalIds.push(approvalId);
+        delete ledger.approvals[approvalId];
+      }
+      for (const [key, entry] of Object.entries(ledger.idempotencyKeys)) {
+        const ownerId = typeof entry === 'string' ? entry : entry.changeSetId || entry.id;
+        if (ownerId === changeSet.id) delete ledger.idempotencyKeys[key];
+      }
+      delete ledger.changeSets[changeSet.id];
+      ledger.audit.push({
+        id: this._id('audit'),
+        event: 'changeset_deleted',
+        changeSetId: changeSet.id,
+        changeSetHash: changeSet.changeSetHash,
+        previousStatus: changeSet.status,
+        removedApprovalIds,
+        principal: curator,
+        timestamp: new Date().toISOString(),
+      });
+      await this._saveLedger(ledger, workspace);
+      return { success: true, deleted: true, changeSetId: changeSet.id };
+    });
+  }
+
   async requestAnnotationApproval(params = {}) {
     this._validatedExternalCurator(params, 'annotation:approve');
     return this._withLedgerLock(workspace => this._requestAnnotationApproval(params, workspace));

@@ -95,6 +95,11 @@ class AnnotationService {
     return this._getChangeSetService().setAnnotationChangesetArchived(params);
   }
 
+  // Permanent deletion is a local, explicitly confirmed review UI action.
+  async deleteAnnotationChangeset(params) {
+    return this._getChangeSetService().deleteAnnotationChangeset(params);
+  }
+
   async requestAnnotationApproval(params) {
     return this._getChangeSetService().requestAnnotationApproval(params);
   }
