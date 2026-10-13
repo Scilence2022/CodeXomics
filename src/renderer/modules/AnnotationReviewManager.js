@@ -93,6 +93,7 @@ class AnnotationReviewManager {
     bind('annotationReviewRejectBtn', 'click', () => this.rejectSelected());
     bind('annotationReviewArchiveBtn', 'click', () => this.archiveSelected(true));
     bind('annotationReviewRestoreBtn', 'click', () => this.archiveSelected(false));
+    bind('annotationReviewDeleteBtn', 'click', () => this.deleteSelected());
     bind('annotationReviewArchiveFilter', 'change', () => this.refreshQueue());
     bind('annotationAppliedShowArchived', 'change', () => this.refreshAppliedGenes());
     bind('annotationGovernanceSaveBtn', 'click', () => this.saveGovernanceSettings());
@@ -764,6 +765,9 @@ class AnnotationReviewManager {
           <i class="fas fa-${changeSet.archivedAt ? 'rotate-left' : 'archive'}"></i> ${changeSet.archivedAt ? 'Restore record' : 'Archive record'}
         </button>
         ${changeSet.status === 'committed' ? `<button type="button" class="btn btn-secondary" data-action="rollback" data-id="${this._escape(changeSet.id)}" ${this.isActing ? 'disabled' : ''}><i class="fas fa-undo"></i> Propose rollback</button>` : ''}
+        <button type="button" class="btn btn-danger" data-action="delete" data-id="${this._escape(changeSet.id)}" ${this.isActing || !this._isDeletable(changeSet) ? 'disabled' : ''} title="${this._isDeletable(changeSet) ? 'Permanently delete this unapplied proposal' : 'Applied records are required to restore annotations. Archive instead.'}">
+          <i class="fas fa-trash"></i> Delete
+        </button>
         <small>Archiving hides the record and preserves its history. A rollback requires approval before it changes annotations.</small>
       </div>
       <div class="annotation-review-operations">${operations}</div>
@@ -779,6 +783,11 @@ class AnnotationReviewManager {
     if (['archive', 'restore'].includes(button?.dataset.action)) {
       const changeSet = this.changeSets.get(button.dataset.id);
       if (changeSet) await this.archiveSelected(button.dataset.action === 'archive', [changeSet]);
+      return;
+    }
+    if (button?.dataset.action === 'delete') {
+      const changeSet = this.changeSets.get(button.dataset.id);
+      if (changeSet) await this.deleteSelected([changeSet]);
       return;
     }
     if (button?.dataset.action === 'rollback') {
@@ -918,6 +927,12 @@ class AnnotationReviewManager {
     return !changeSet.archivedAt && ['awaiting_approval', 'approved'].includes(changeSet.status);
   }
 
+  _isDeletable(changeSet) {
+    return (
+      ['awaiting_approval', 'approved', 'rejected', 'stale'].includes(changeSet.status) && !changeSet.commitReceipt
+    );
+  }
+
   _selectionLimit() {
     return this.settings.batchReviewEnabled ? this.settings.batchSizeLimit : 1;
   }
@@ -955,6 +970,11 @@ class AnnotationReviewManager {
         ? `Approve: choose only one proposal per target. Conflicting targets: ${duplicateTargets.join(', ')}.`
         : '');
     const actions = {
+      annotationReviewDeleteBtn:
+        commonReason ||
+        (selected.some(changeSet => !this._isDeletable(changeSet))
+          ? 'Applied records are required to restore annotations. Choose only unapplied proposals to delete, or archive instead.'
+          : ''),
       annotationReviewApproveBtn: approvalReason,
       annotationReviewApproveApplyBtn: approvalReason,
       annotationReviewRejectBtn: reviewReason,
@@ -993,6 +1013,10 @@ class AnnotationReviewManager {
       .forEach(button => {
         button.disabled = this.isActing;
       });
+    document.querySelectorAll('#annotationReviewDetail [data-action="delete"]').forEach(button => {
+      const record = this.changeSets.get(button.dataset.id);
+      button.disabled = this.isActing || this.isLoading || !record || !this._isDeletable(record);
+    });
     const selectAll = document.getElementById('annotationReviewSelectAll');
     if (selectAll) {
       const checked = document.querySelectorAll('#annotationReviewQueue .annotation-review-checkbox:checked');
@@ -1185,6 +1209,34 @@ class AnnotationReviewManager {
     });
   }
 
+  async deleteSelected(items = this._selectedChangeSets()) {
+    return this._runReviewAction(async () => {
+      if (!this._validateBatch(items)) return;
+      if (items.some(changeSet => !this._isDeletable(changeSet))) {
+        this._notify('Applied records cannot be deleted. Archive them instead.', 'warning');
+        return;
+      }
+      const explanation =
+        'Deletion cannot be undone. Proposal payloads and approval capabilities will be removed. Research reports and audit history are retained. Genome annotations are unchanged. Failures are isolated.';
+      if (!window.confirm(this._batchConfirmationText(items, 'permanently delete', explanation))) return;
+      this._startDecisionSession('delete', items);
+      const results = [];
+      for (const changeSet of items) {
+        try {
+          this._assertReviewWorkspace();
+          await this._annotationService().deleteAnnotationChangeset({ changeSetId: changeSet.id });
+          this.approvalTokens.delete(changeSet.id);
+          this.changeSets.delete(changeSet.id);
+          results.push({ id: changeSet.id, success: true });
+        } catch (error) {
+          results.push({ id: changeSet.id, success: false, error: error.message });
+        }
+      }
+      this._reportBatchResults(results, 'deleted');
+      await this.refreshQueue();
+    });
+  }
+
   async proposeRollback(changeSetId) {
     return this._runReviewAction(async () => {
       if (
@@ -1337,7 +1389,7 @@ class AnnotationReviewManager {
   }
 
   async confirmAnnotationChangeSet(request = {}) {
-    const action = ['reject', 'archive', 'restore'].includes(request.action) ? request.action : 'approve';
+    const action = ['reject', 'archive', 'restore', 'delete'].includes(request.action) ? request.action : 'approve';
     const changeSet = request.changeSet || {};
     const session = this.activeDecisionSession;
     if (
@@ -1348,25 +1400,27 @@ class AnnotationReviewManager {
       session.items.get(changeSet.id) === changeSet.changeSetHash
     ) {
       this._assertReviewWorkspace();
-      return action === 'archive' || action === 'restore'
+      return ['archive', 'restore', 'delete'].includes(action)
         ? { confirmed: true, principal: session.principal }
         : action === 'reject'
           ? { rejected: true, confirmed: true, principal: session.principal }
           : { approved: true, confirmed: true, principal: session.principal };
     }
 
-    const confirmed = window.confirm(
-      request.prompt || `${action === 'reject' ? 'Reject' : 'Approve'} ${changeSet.id}?`
-    );
+    const confirmed = window.confirm(request.prompt || `${action[0].toUpperCase()}${action.slice(1)} ${changeSet.id}?`);
     if (!confirmed) return false;
-    return action === 'archive' || action === 'restore'
+    return ['archive', 'restore', 'delete'].includes(action)
       ? { confirmed: true, principal: this.settings.curatorIdentity }
       : action === 'reject'
         ? { rejected: true, confirmed: true, principal: this.settings.curatorIdentity }
         : { approved: true, confirmed: true, principal: this.settings.curatorIdentity };
   }
 
-  _batchConfirmationText(changeSets, verb) {
+  _batchConfirmationText(
+    changeSets,
+    verb,
+    explanation = 'Each ChangeSet will keep its own approval, commit receipt, and audit record. Failures are isolated.'
+  ) {
     const targets = changeSets
       .map(changeSet => changeSet.target?.geneSymbol || changeSet.target?.locusTag || changeSet.id)
       .slice(0, 20);
@@ -1384,7 +1438,7 @@ class AnnotationReviewManager {
         .join(', ')}`,
       `Targets: ${targets.join(', ')}${omitted > 0 ? `, and ${omitted} more` : ''}`,
       '',
-      'Each ChangeSet will keep its own approval, commit receipt, and audit record. Failures are isolated.',
+      explanation,
     ].join('\n');
   }
 

@@ -36,6 +36,7 @@ function reviewDom() {
     <button id="annotationReviewApproveApplyBtn"></button>
     <button id="annotationReviewRejectBtn"></button>
     <button id="annotationReviewArchiveBtn"></button>
+    <button id="annotationReviewDeleteBtn"></button>
     <button id="annotationReviewRestoreBtn"></button>
     <select id="annotationReviewArchiveFilter"><option value="visible">visible</option><option value="archived">archived</option><option value="all">all</option></select>
     <div id="annotationReviewQueue"></div>
@@ -148,6 +149,13 @@ function actionFixture(records, config = {}) {
       if (archived) record.archivedAt = '2026-10-12T00:00:00Z';
       else delete record.archivedAt;
       return { success: true };
+    }),
+    deleteAnnotationChangeset: vi.fn(async ({ changeSetId }) => {
+      const record = records.find(record => record.id === changeSetId);
+      const decision = await manager.confirmAnnotationChangeSet({ action: 'delete', changeSet: record });
+      expect(decision.confirmed).toBe(true);
+      records.splice(records.indexOf(record), 1);
+      return { success: true, deleted: true, changeSetId };
     }),
     rollbackAnnotationChangeset: vi.fn(),
   };
@@ -894,6 +902,7 @@ describe('AnnotationReviewManager', () => {
     actionFixture([record]);
     document.querySelector('.annotation-review-checkbox').click();
     for (const [id, enabled] of Object.entries({
+      annotationReviewDeleteBtn: status !== 'committed',
       annotationReviewApproveBtn: approve,
       annotationReviewApproveApplyBtn: approve,
       annotationReviewRejectBtn: reject,
@@ -922,6 +931,7 @@ describe('AnnotationReviewManager', () => {
       'annotationReviewApproveApplyBtn',
       'annotationReviewRejectBtn',
       'annotationReviewArchiveBtn',
+      'annotationReviewDeleteBtn',
     ]) {
       expect(document.getElementById(id).disabled).toBe(true);
     }
@@ -930,6 +940,67 @@ describe('AnnotationReviewManager', () => {
     expect(service.rejectAnnotationChangeset).not.toHaveBeenCalled();
     expect(mockWindow.confirm).not.toHaveBeenCalled();
     expect(document.getElementById('annotationReviewReasonDialog')).toBeNull();
+  });
+
+  it('deletes through the real button with one permanent confirmation and ignores double clicks', async () => {
+    const { manager, service, mockWindow } = actionFixture([summary('a', 'thrB', 'ha'), summary('b', 'thrC', 'hb')]);
+    manager.toggleSelectAll(true);
+    manager.approvalTokens.set('a', 'old-token');
+    const button = document.getElementById('annotationReviewDeleteBtn');
+    expect(button.disabled).toBe(false);
+    button.click();
+    button.click();
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(mockWindow.confirm).toHaveBeenCalledTimes(1);
+    expect(mockWindow.confirm.mock.calls[0][0]).toContain('Deletion cannot be undone');
+    expect(service.deleteAnnotationChangeset).toHaveBeenCalledTimes(2);
+    expect(manager.approvalTokens.has('a')).toBe(false);
+    expect(document.querySelectorAll('.annotation-review-checkbox')).toHaveLength(0);
+  });
+
+  it('cancels permanent deletion without touching records', async () => {
+    const { manager, service, mockWindow } = actionFixture([summary('a', 'thrB', 'ha')]);
+    manager.toggleSelectAll(true);
+    mockWindow.confirm.mockReturnValue(false);
+    await manager.deleteSelected();
+    expect(service.deleteAnnotationChangeset).not.toHaveBeenCalled();
+    expect(manager.changeSets.has('a')).toBe(true);
+    expect(document.getElementById('annotationReviewDeleteBtn').disabled).toBe(false);
+  });
+
+  it('blocks deletion of applied records and mixed batches before confirmation', async () => {
+    const { manager, service, mockWindow } = actionFixture([
+      summary('a', 'thrB', 'ha'),
+      { ...summary('b', 'thrC', 'hb'), status: 'committed' },
+    ]);
+    manager.toggleSelectAll(true);
+    expect(document.getElementById('annotationReviewDeleteBtn').disabled).toBe(true);
+    expect(document.getElementById('annotationReviewDeleteBtn').title).toContain('archive instead');
+    await manager.deleteSelected();
+    expect(mockWindow.confirm).not.toHaveBeenCalled();
+    expect(service.deleteAnnotationChangeset).not.toHaveBeenCalled();
+    expect(
+      manager._renderChangeSetDetail(manager.changeSets.get('b'), {}).match(/data-action="delete"[^>]*disabled/)
+    ).not.toBeNull();
+  });
+
+  it('deletes only the requested detail record and isolates batch failures', async () => {
+    const records = [summary('a', 'thrB', 'ha'), summary('b', 'thrC', 'hb')];
+    const { manager, service, app } = actionFixture(records);
+    await manager.viewChangeSet('a');
+    document.querySelector('#annotationReviewDetail [data-action="delete"]').click();
+    await vi.waitFor(() => expect(manager.isActing).toBe(false));
+    expect(service.deleteAnnotationChangeset).toHaveBeenCalledExactlyOnceWith({ changeSetId: 'a' });
+    expect(manager.changeSets.has('b')).toBe(true);
+    expect(document.getElementById('annotationReviewDetail').textContent).toBe('');
+    records.push(summary('c', 'thrD', 'hc'));
+    await manager.refreshQueue();
+    manager.toggleSelectAll(true);
+    service.deleteAnnotationChangeset.mockRejectedValueOnce(new Error('disk full'));
+    await manager.deleteSelected();
+    expect(manager.changeSets.has('b')).toBe(true);
+    expect(manager.changeSets.has('c')).toBe(false);
+    expect(app.showNotification).toHaveBeenCalledWith('1/2 ChangeSets deleted; 1 failed (disk full).', 'warning');
   });
 
   it('selects an actionable batch from 52 records sharing one target and rejects through the button', async () => {
@@ -987,6 +1058,7 @@ describe('AnnotationReviewManager', () => {
     checkboxes.forEach(input => input.click());
     const archive = document.getElementById('annotationReviewArchiveBtn');
     expect(archive.disabled).toBe(true);
+    expect(document.getElementById('annotationReviewDeleteBtn').disabled).toBe(true);
     expect(archive.title).toContain('no more than 1');
     expect(document.getElementById('annotationReviewActionHint').textContent).toContain(
       'raise the limit in Governance'

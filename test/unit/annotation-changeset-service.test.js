@@ -2316,6 +2316,129 @@ describe('AnnotationChangeSetService', () => {
     expect(annotationService.app._sidecarData.annotationCuration.revision).toBe(2);
   });
 
+  it('permanently deletes an approved proposal, its capabilities and idempotency entries while retaining audit history', async () => {
+    const params = {
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'delete me' }],
+      idempotencyKey: 'delete-and-recreate',
+      __executionContext: agentContext,
+    };
+    const created = await annotationService.createAnnotationChangeset(params);
+    const approval = await annotationService.requestAnnotationApproval({
+      changeSetId: created.changeSet.id,
+      __executionContext: curatorContext,
+    });
+    const before = structuredClone(annotationService.app._sidecarData.annotationCuration);
+    annotationService.app.confirmAnnotationChangeSet = vi.fn(async request => ({
+      confirmed: request.action === 'delete',
+      principal: 'local-curator',
+    }));
+    const result = await annotationService.deleteAnnotationChangeset({ changeSetId: created.changeSet.id });
+    expect(result).toEqual({ success: true, deleted: true, changeSetId: created.changeSet.id });
+    const ledger = annotationService.app._sidecarData.annotationCuration;
+    expect(ledger.changeSets[created.changeSet.id]).toBeUndefined();
+    expect(Object.values(ledger.approvals)).toHaveLength(0);
+    expect(ledger.idempotencyKeys['delete-and-recreate']).toBeUndefined();
+    expect(ledger.revision).toBe(before.revision);
+    expect(ledger.audit.slice(0, before.audit.length)).toEqual(before.audit);
+    expect(ledger.audit.at(-1)).toMatchObject({
+      event: 'changeset_deleted',
+      changeSetId: created.changeSet.id,
+      changeSetHash: created.changeSet.changeSetHash,
+      previousStatus: 'approved',
+      principal: 'local-curator',
+    });
+    expect(ledger.audit.at(-1).removedApprovalIds).toHaveLength(1);
+    expect(annotation.qualifiers.note).toBeUndefined();
+    await expect(
+      annotationService.applyAnnotationChangeset({
+        changeSetId: created.changeSet.id,
+        approvalToken: approval.approvalToken,
+        __executionContext: curatorContext,
+      })
+    ).rejects.toThrow('not found');
+    const reloaded = new (loadServices().AnnotationService)(annotationService.app, {});
+    expect((await reloaded.listAnnotationChangesets({ includeArchived: true })).total).toBe(0);
+    await expect(reloaded.getAnnotationChangeset({ changeSetId: created.changeSet.id })).rejects.toThrow('not found');
+    const recreated = await reloaded.createAnnotationChangeset(params);
+    expect(recreated.changeSet.id).not.toBe(created.changeSet.id);
+  });
+
+  it('deletes archived rejected proposals and preserves independent research data', async () => {
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'unwanted' }],
+      __executionContext: agentContext,
+    });
+    annotationService.app._sidecarData.annotationResearchRuns = { report: 'retained research report' };
+    await annotationService.rejectAnnotationChangeset({
+      changeSetId: created.changeSet.id,
+      reason: 'duplicate',
+      __executionContext: curatorContext,
+    });
+    await annotationService.setAnnotationChangesetArchived({
+      changeSetId: created.changeSet.id,
+      archived: true,
+      __executionContext: curatorContext,
+    });
+    annotationService.app.confirmAnnotationChangeSet = async () => ({ confirmed: true, principal: 'curator' });
+    await annotationService.deleteAnnotationChangeset({ changeSetId: created.changeSet.id });
+    expect((await annotationService.listAnnotationChangesets({ includeArchived: true })).total).toBe(0);
+    expect(annotationService.app._sidecarData.annotationResearchRuns).toEqual({ report: 'retained research report' });
+  });
+
+  it('requires local confirmation and durable deletion, leaving the ledger unchanged on cancellation or save failure', async () => {
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'keep me' }],
+      __executionContext: agentContext,
+    });
+    const params = { changeSetId: created.changeSet.id };
+    const before = structuredClone(annotationService.app._sidecarData.annotationCuration);
+    await expect(
+      annotationService.deleteAnnotationChangeset({ ...params, __executionContext: curatorContext })
+    ).rejects.toThrow('local review UI');
+    await expect(annotationService.deleteAnnotationChangeset({ ...params, confirmed: true })).rejects.toThrow(
+      'trusted interactive'
+    );
+    annotationService.app.confirmAnnotationChangeSet = async () => ({ confirmed: false });
+    await expect(annotationService.deleteAnnotationChangeset(params)).rejects.toThrow('cancelled');
+    annotationService.app.confirmAnnotationChangeSet = async () => ({ confirmed: true });
+    await expect(annotationService.deleteAnnotationChangeset(params)).rejects.toThrow('identity');
+    annotationService.app.confirmAnnotationChangeSet = async () => ({ confirmed: true, principal: 'curator' });
+    const save = annotationService.app.sidecarManager.setAndForceSave;
+    annotationService.app.sidecarManager.setAndForceSave = async () => {
+      throw new Error('disk full');
+    };
+    await expect(annotationService.deleteAnnotationChangeset(params)).rejects.toThrow('disk full');
+    expect(annotationService.app._sidecarData.annotationCuration).toEqual(before);
+    annotationService.app.sidecarManager.setAndForceSave = save;
+    expect((await annotationService.getAnnotationChangeset(params)).changeSet.id).toBe(created.changeSet.id);
+  });
+
+  it('blocks deletion of applied receipts and preserves annotation replay after reload', async () => {
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'must survive reload' }],
+      __executionContext: agentContext,
+    });
+    const params = { changeSetId: created.changeSet.id, __executionContext: curatorContext };
+    const approval = await annotationService.requestAnnotationApproval(params);
+    await annotationService.applyAnnotationChangeset({ ...params, approvalToken: approval.approvalToken });
+    const before = structuredClone(annotationService.app._sidecarData.annotationCuration);
+    const confirm = vi.fn(async () => ({ confirmed: true, principal: 'curator' }));
+    annotationService.app.confirmAnnotationChangeSet = confirm;
+    await expect(annotationService.deleteAnnotationChangeset({ changeSetId: created.changeSet.id })).rejects.toThrow(
+      'Applied ChangeSets cannot be deleted'
+    );
+    expect(confirm).not.toHaveBeenCalled();
+    expect(annotationService.app._sidecarData.annotationCuration).toEqual(before);
+    delete annotation.qualifiers.note;
+    const reloaded = new (loadServices().AnnotationService)(annotationService.app, {});
+    await reloaded.restoreCommittedAnnotationOverlay();
+    expect(annotation.qualifiers.note).toBe('must survive reload');
+  });
+
   it('requires trusted archive confirmation, isolates failed saves and rejects malformed archive requests', async () => {
     const created = await annotationService.createAnnotationChangeset({
       identifier: 'b0001',
