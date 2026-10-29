@@ -1,0 +1,128 @@
+:root {
+  color-scheme: light dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #172b42;
+  background: #f6f8fb;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 620px;
+  padding: 28px 32px;
+  margin: auto;
+}
+.app-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #1678a7;
+  color: white;
+  font-size: 30px;
+  font-weight: 650;
+  text-align: center;
+  line-height: 44px;
+}
+h1 {
+  font-size: 24px;
+  margin: 18px 0 6px;
+}
+h2 {
+  font-size: 18px;
+  margin-top: 24px;
+}
+p {
+  line-height: 1.5;
+  font-size: 14px;
+}
+.muted {
+  color: #56667a;
+  font-size: 12px;
+}
+progress {
+  width: 100%;
+  height: 12px;
+  accent-color: #1678a7;
+}
+details {
+  margin-top: 20px;
+  font-size: 14px;
+}
+summary {
+  cursor: pointer;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 170px;
+  overflow-y: auto;
+  font: inherit;
+  line-height: 1.5;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+button {
+  cursor: pointer;
+  padding: 9px 14px;
+  border-radius: 6px;
+  border: 1px solid #bac8d5;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+#primary {
+  background: #126e99;
+  border-color: #126e99;
+  color: #fff;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+button:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #43a9d6;
+  outline-offset: 3px;
+}
+.link {
+  display: block;
+  border: 0;
+  padding: 0;
+  margin-top: 20px;
+  background: transparent;
+  color: #126e99;
+  text-decoration: underline;
+}
+#actionError {
+  color: #aa2635;
+}
+[hidden] {
+  display: none !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    background: #192430;
+    color: #ecf2f8;
+  }
+  .muted {
+    color: #aebdce;
+  }
+  button {
+    background: #26394a;
+    border-color: #526c82;
+  }
+  .link {
+    color: #81c9ed;
+  }
+  #actionError {
+    color: #ffa8b2;
+  }
+}

@@ -89,7 +89,12 @@ git push origin v0.722.0
 
 ## GitHub Release
 
-Upload generated assets from `dist/` and paste the release notes. Mark prerelease builds as prereleases in GitHub.
+Dispatch **Build Signed Update Release** for the matching version tag. The workflow
+verifies native signing, update manifests and artifact checksums, and assembles a
+draft only after all platforms pass. Smoke-test real upgrades before publishing
+the draft; mark prerelease builds as prereleases. See the canonical
+[release workflow](https://github.com/Scilence2022/CodeXomics/blob/main/RELEASING.md)
+for signing secrets, package compatibility and required assets.
 
 ## GitHub Pages
 

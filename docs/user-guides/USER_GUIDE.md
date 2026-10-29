@@ -887,7 +887,18 @@ A: It depends on the genome size and features used. Try reducing active tracks a
 
 **Q: How do I update CodeXomics?**
 
-A: Download the latest version from GitHub Releases and install over the existing version.
+A: Open **Help → Check for Updates…**. Installed release builds also check after
+startup and every six hours. The update window shows the available version and
+release notes. Choose **Download Update** to see progress; you can cancel or close
+the window and return through Help. When verification finishes, save your work in
+all windows and choose **Restart and Install**. On macOS, a staged update also
+applies on the next normal quit; on Windows and Linux, use the restart button.
+
+Development builds, portable Windows editions and store-managed packages explain
+their update method in that window. If the release feed is unavailable, use the
+[official releases page](https://github.com/Scilence2022/CodeXomics/releases) or
+your package manager. In-app updates require release metadata as well as the
+installer; not every historical release includes that metadata.
 
 **Q: Where are my projects saved?**
 
