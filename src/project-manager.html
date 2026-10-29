@@ -3255,6 +3255,7 @@
         window.electronAPI?.onProjectManagerAction(async request => {
           try {
             const actions = {
+              createNewProject: () => projectManagerWindow.createNewProject(),
               loadProjectFromFile: () => projectManagerWindow.loadProjectFromFile(request.filePath),
               saveCurrentProject: () => projectManagerWindow.saveCurrentProject(),
               saveProjectAs: () => projectManagerWindow.saveProjectAs(),

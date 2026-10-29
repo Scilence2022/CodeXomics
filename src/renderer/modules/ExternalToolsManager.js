@@ -25,7 +25,7 @@ class ExternalToolsManager {
         name: 'ProGenFixer',
         url: 'https://progenfixer.biodesign.ac.cn',
         icon: 'fas fa-wrench',
-        accelerator: 'CmdOrCtrl+Shift+P',
+        accelerator: 'CmdOrCtrl+Alt+F',
       },
     };
 
@@ -411,7 +411,7 @@ class ExternalToolsManager {
         name: 'ProGenFixer',
         url: 'https://progenfixer.biodesign.ac.cn',
         icon: 'fas fa-wrench',
-        accelerator: 'CmdOrCtrl+Shift+P',
+        accelerator: 'CmdOrCtrl+Alt+F',
       },
     };
 
@@ -458,8 +458,7 @@ class ExternalToolsManager {
    */
   getIpcRenderer() {
     return (
-      (typeof window !== 'undefined' && window.ipcRenderer) ||
-      (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null)
+      (typeof window !== 'undefined' && window.ipcRenderer) || (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null)
     );
   }
 

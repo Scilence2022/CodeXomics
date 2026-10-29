@@ -1,5 +1,6 @@
 const ACTIONS = new Set([
   'open',
+  'createNewProject',
   'loadProjectFromFile',
   'saveCurrentProject',
   'saveProjectAs',
