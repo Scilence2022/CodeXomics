@@ -1,6 +1,6 @@
 # Build Instructions
 
-This guide describes the supported development and packaging workflow for CodeXomics `0.722.0`.
+This guide describes the supported development and packaging workflow for CodeXomics `0.723.0`.
 
 ## Supported Toolchain
 
@@ -134,12 +134,12 @@ export CSC_LINK="/path/to/codesign.pfx"
 export CSC_KEY_PASSWORD="<certificate password>"
 ```
 
-GitHub publishing:
-
-```bash
-export GH_TOKEN="<token with repository release access>"
-npx electron-builder --mac --win --linux --publish always
-```
+For distributable releases, use the manually dispatched **Build Signed Update
+Release** workflow with a matching version tag. It builds native packages, checks
+signatures and all update-manifest hashes, and uploads a draft for upgrade QA.
+Run `npm run updates:validate` against a complete local `dist/`, or pass
+`-- --platform mac`, `win`, or `linux` to validate one platform. Uploading only
+installers without their update manifests does not enable automatic updates.
 
 See the root [`RELEASING.md`](https://github.com/Scilence2022/CodeXomics/blob/main/RELEASING.md) for the complete signed-release and auto-update workflow.
 

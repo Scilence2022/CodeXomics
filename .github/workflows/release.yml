@@ -1,0 +1,138 @@
+name: Build Signed Update Release
+
+# Explicitly dispatched for an existing version tag. Assets stay in a draft
+# until a maintainer finishes native upgrade QA and publishes the release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing version tag (for example v0.722.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            command: npm run generate-dmg-bg && npx electron-builder --mac --x64 --arm64 --publish never -c.forceCodeSigning=true
+          - os: windows-latest
+            platform: win
+            command: npx electron-builder --win --x64 --publish never -c.forceCodeSigning=true
+          - os: ubuntu-22.04
+            platform: linux
+            command: npx electron-builder --linux AppImage deb --x64 --publish never
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Verify release tag and version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          node -e 'const p=require("./package.json"); if(process.env.RELEASE_TAG !== "v"+p.version) throw Error("Tag must match package.json version");'
+          npm run version-validate
+          npm run tool-registry:generate
+      - name: Require signing credentials
+        if: matrix.platform != 'linux'
+        shell: bash
+        env:
+          RELEASE_PLATFORM: ${{ matrix.platform }}
+          CSC_LINK: ${{ matrix.platform == 'mac' && secrets.MAC_CSC_LINK || matrix.platform == 'win' && secrets.WIN_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_CSC_KEY_PASSWORD || matrix.platform == 'win' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          node -e 'const keys=["CSC_LINK","CSC_KEY_PASSWORD"]; if(process.env.RELEASE_PLATFORM==="mac") keys.push("APPLE_ID","APPLE_APP_SPECIFIC_PASSWORD","APPLE_TEAM_ID"); for(const key of keys) if(!process.env[key]) throw Error("Missing release secret: "+key);'
+      - name: Build signed installers and update metadata
+        shell: bash
+        env:
+          CODEXOMICS_RELEASE_BUILD: '1'
+          CSC_LINK: ${{ matrix.platform == 'mac' && secrets.MAC_CSC_LINK || matrix.platform == 'win' && secrets.WIN_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_CSC_KEY_PASSWORD || matrix.platform == 'win' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: ${{ matrix.command }}
+      - name: Verify macOS signatures and notarization tickets
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          for app in dist/mac*/CodeXomics.app; do
+            codesign --verify --deep --strict "$app"
+            xcrun stapler validate "$app"
+          done
+      - name: Verify Windows signatures and updater publisher identity
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          $expected = (Get-Content package.json | ConvertFrom-Json).build.win.publisherName
+          Get-ChildItem dist/*.exe | ForEach-Object {
+            $signature = Get-AuthenticodeSignature $_.FullName
+            if ($signature.Status -ne 'Valid') { throw "Invalid Authenticode signature: $($_.Name)" }
+            $publisher = $signature.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false)
+            if ($expected -notcontains $publisher) { throw "Signing certificate subject must match build.win.publisherName" }
+          }
+      - name: Verify update metadata and artifact checksums
+        shell: bash
+        run: npm run updates:validate -- --platform ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: update-${{ matrix.platform }}
+          if-no-files-found: error
+          path: |
+            dist/*.yml
+            !dist/builder-*.yml
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.blockmap
+
+  draft:
+    name: Assemble draft release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: update-*
+          path: dist
+          merge-multiple: true
+      - run: npm run updates:validate
+      - name: Upload verified files to a draft only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: node scripts/upload-update-release.js

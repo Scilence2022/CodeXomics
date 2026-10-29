@@ -27,6 +27,9 @@ exports.default = async function notarizing(context) {
   const teamId = process.env.APPLE_TEAM_ID;
 
   if (!appleId || !appleIdPassword || !teamId) {
+    if (process.env.CODEXOMICS_RELEASE_BUILD === '1') {
+      throw new Error('Release notarization requires APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID.');
+    }
     console.log(
       '[notarize] Skipping notarization — set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID to enable it.'
     );

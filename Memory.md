@@ -1,4 +1,4 @@
-# CodeXomics Project Memory - v0.722.0
+# CodeXomics Project Memory - v0.723.0
 
 This document preserves project context, architectural decisions, implementation constraints, and discovered knowledge for agents working on CodeXomics.
 
@@ -8,10 +8,10 @@ CodeXomics is an AI-native genome browser (a bioinformatics desktop application)
 
 Current version sources:
 
-- `package.json`: `0.722.0`
-- `src/version.js`: major `0`, minor `722`, patch `0`, prerelease `` (none)
-- Display version: `v0.722`
-- Documentation release label: `v0.722.0`
+- `package.json`: `0.723.0`
+- `src/version.js`: major `0`, minor `723`, patch `0`, prerelease `` (none)
+- Display version: `v0.723`
+- Documentation release label: `v0.723.0`
 - Runtime baseline: Node.js 20 or 22, npm 10+, Electron `41.7.1`
 
 Core entry points:

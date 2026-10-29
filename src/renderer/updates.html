@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>CodeXomics Updates</title>
+    <link rel="stylesheet" href="css/updates.css" />
+    <script src="updates.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <div class="app-mark" aria-hidden="true">C</div>
+      <h1>CodeXomics Updates</h1>
+      <p id="version" class="muted"></p>
+      <section aria-live="polite" aria-atomic="true">
+        <h2 id="status">Preparing update check…</h2>
+        <p id="message"></p>
+      </section>
+      <div id="downloadProgress" hidden>
+        <progress id="progress" max="100" aria-label="Update download progress"></progress>
+        <p id="transfer" class="muted"></p>
+      </div>
+      <details id="notesSection" hidden>
+        <summary>Release notes</summary>
+        <pre id="notes"></pre>
+      </details>
+      <p id="checked" class="muted"></p>
+      <p id="actionError" role="alert" hidden></p>
+      <div class="actions">
+        <button id="primary" hidden></button>
+        <button id="cancel" hidden>Cancel Download</button>
+        <button id="close">Close</button>
+      </div>
+      <button id="releases" class="link">View Official Releases ↗</button>
+    </main>
+  </body>
+</html>

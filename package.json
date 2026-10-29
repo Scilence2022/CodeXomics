@@ -1,6 +1,6 @@
 {
   "name": "codexomics",
-  "version": "0.722.0",
+  "version": "0.723.0",
   "description": "An AI-native genome browser where conversational agents drive the visualization and run real bioinformatics analyses — BLAST, primer design, protein structures, and more — built with Electron.",
   "main": "src/main.js",
   "homepage": "https://github.com/Scilence2022/CodeXomics",
@@ -43,7 +43,8 @@
     "build:win": "electron-builder --win --x64",
     "build:linux": "electron-builder --linux",
     "build:all": "npm run generate-dmg-bg && electron-builder --mac --win --linux",
-    "dist": "electron-builder --publish=never",
+    "dist": "npm run generate-dmg-bg && electron-builder --publish=never",
+    "updates:validate": "node scripts/validate-update-artifacts.js",
     "pack": "electron-builder --dir",
     "pack:mac": "npm run generate-dmg-bg && electron-builder --mac --dir",
     "pack:win": "electron-builder --win --dir",
@@ -141,6 +142,7 @@
   "build": {
     "appId": "com.codexomics.app",
     "productName": "CodeXomics",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "copyright": "Copyright © 2026 ${author}",
     "publish": [
       {
@@ -222,6 +224,7 @@
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
+      "notarize": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
@@ -272,6 +275,7 @@
       "publisherName": "CodeXomics Team"
     },
     "nsis": {
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": true,
@@ -280,6 +284,9 @@
       "shortcutName": "${productName}",
       "perMachine": true,
       "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
     },
     "linux": {
       "target": [
