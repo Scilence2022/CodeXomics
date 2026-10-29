@@ -1,9 +1,94 @@
 'use strict';
 // @ts-check
 
-const { Menu, dialog, app, BrowserWindow } = require('electron');
+const { Menu, MenuItem, dialog, app, BrowserWindow } = require('electron');
 const { rememberApprovedDialogPaths } = require('./security-utils');
 const workspaceHostManager = require('./workspace-host-manager');
+const { dispatchProjectManagerAction } = require('./project-manager-dispatch');
+let recentProjects = [];
+
+async function loadRecentProjectsMenu() {
+  try {
+    const fs = require('fs').promises;
+    const path = require('path');
+    const data = JSON.parse(await fs.readFile(path.join(app.getPath('userData'), 'projects.json'), 'utf8'));
+    updateRecentProjectsMenu(
+      (data.recentProjects || [])
+        .map(id => data.projects?.[id])
+        .filter(Boolean)
+        .map(project => ({
+          ...project,
+          filePath: project.filePath || project.projectFilePath || project.xmlFilePath,
+        }))
+    );
+  } catch (error) {
+    if (error.code !== 'ENOENT') console.warn('Unable to load recent projects:', error.message);
+  }
+}
+
+function buildRecentProjectsSubmenu() {
+  if (!recentProjects.length) return [{ label: 'No recent projects', enabled: false }];
+  return [
+    ...recentProjects.slice(0, 10).map((project, index) => ({
+      label: project.name.replace(/&/g, '&&'),
+      accelerator: index < 9 ? `CmdOrCtrl+Alt+${index + 1}` : undefined,
+      click: () => sendToCurrentMainWindow('open-recent-project', project),
+    })),
+    { type: 'separator' },
+    { label: 'Clear Recent Projects', click: () => sendToCurrentMainWindow('clear-recent-projects') },
+  ];
+}
+
+function updateRecentProjectsMenu(projects = []) {
+  recentProjects = Array.isArray(projects)
+    ? projects.filter(project => project && typeof project.name === 'string').slice(0, 10)
+    : [];
+  const item = Menu.getApplicationMenu()?.getMenuItemById('recent-projects');
+  if (item) {
+    item.submenu.clear();
+    for (const template of buildRecentProjectsSubmenu()) item.submenu.append(new MenuItem(template));
+  }
+}
+
+async function runProjectMenuAction(action, filePath) {
+  try {
+    await dispatchProjectManagerAction(createProjectManagerWindow, { action, filePath });
+  } catch (error) {
+    console.error(`Project menu action ${action} failed:`, error);
+    await dialog.showMessageBox({ type: 'error', title: 'Project Manager', message: error.message });
+  }
+}
+
+function showAbout() {
+  return dialog.showMessageBox({
+    type: 'info',
+    title: `About ${APP_NAME}`,
+    message: VERSION_INFO.appTitle,
+    detail: 'An AI-native genome browser built with Electron',
+  });
+}
+
+function executeGenomeViewCommand(command) {
+  const contents = getCurrentGenomeEditWebContents();
+  if (!contents) return;
+  switch (command) {
+    case 'reload':
+      contents.reload();
+      break;
+    case 'forceReload':
+      contents.reloadIgnoringCache();
+      break;
+    case 'resetZoom':
+      contents.setZoomLevel(0);
+      break;
+    case 'zoomIn':
+      contents.setZoomLevel(contents.getZoomLevel() + 0.5);
+      break;
+    case 'zoomOut':
+      contents.setZoomLevel(contents.getZoomLevel() - 0.5);
+      break;
+  }
+}
 
 // External references (set by main module via setMenuDependencies)
 let APP_NAME;
@@ -143,11 +228,37 @@ let resetWindowPositions;
 const genomeFileDialogFilters = [
   {
     name: 'All Genome Files',
-    extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'],
+    extensions: [
+      'fasta',
+      'fa',
+      'fas',
+      'fna',
+      'gb',
+      'gbk',
+      'gbff',
+      'genbank',
+      'gff',
+      'gff3',
+      'gtf',
+      'bed',
+      'vcf',
+      'bam',
+      'sam',
+      'wig',
+      'bw',
+      'bigwig',
+      'fastq',
+      'fq',
+      'json',
+      'csv',
+      'tsv',
+      'txt',
+      'operon',
+    ],
   },
-  { name: 'FASTA Files', extensions: ['fasta', 'fa'] },
-  { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
-  { name: 'Annotation Files', extensions: ['gff', 'gtf', 'bed'] },
+  { name: 'FASTA Files', extensions: ['fasta', 'fa', 'fas', 'fna'] },
+  { name: 'GenBank Files', extensions: ['gb', 'gbk', 'gbff', 'genbank'] },
+  { name: 'Annotation Files', extensions: ['gff', 'gff3', 'gtf', 'bed'] },
   { name: 'Variant Files', extensions: ['vcf'] },
   { name: 'Alignment Files', extensions: ['bam', 'sam'] },
   { name: 'All Files', extensions: ['*'] },
@@ -169,6 +280,23 @@ function openFileInNewMainWindow(filePath) {
     newWindow.webContents.once('did-finish-load', sendFileToNewWindow);
   } else {
     sendFileToNewWindow();
+  }
+}
+
+async function openGenomeFileFromMenu(inNewWindow = false) {
+  try {
+    const currentWindow = (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow;
+    const result = await dialog.showOpenDialog(workspaceHostManager.getNativeWindow(currentWindow), {
+      properties: ['openFile'],
+      filters: genomeFileDialogFilters,
+    });
+    rememberApprovedDialogPaths(result);
+    if (result.canceled || !result.filePaths.length) return;
+    if (inNewWindow) openFileInNewMainWindow(result.filePaths[0]);
+    else sendToCurrentMainWindow('file-opened', result.filePaths[0]);
+  } catch (error) {
+    console.error('Unable to open genome file:', error);
+    await dialog.showMessageBox({ type: 'error', title: 'Open File', message: error.message });
   }
 }
 
@@ -1124,7 +1252,7 @@ function createMenu() {
               {
                 label: 'About CodeXomics',
                 click: () => {
-                  sendToCurrentMainWindow('show-about');
+                  showAbout();
                 },
               },
               { type: 'separator' },
@@ -1168,50 +1296,12 @@ function createMenu() {
         {
           label: 'New Project',
           accelerator: 'CmdOrCtrl+N',
-          click: () => {
-            // Create Project Manager window and trigger new project creation
-            createProjectManagerWindow();
-            // Send event to trigger new project modal after window is ready
-            setTimeout(() => {
-              const projectManagerWindow = BrowserWindow.getAllWindows().find(win =>
-                win.getTitle().includes('Project Manager')
-              );
-              if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
-                projectManagerWindow.webContents.send('create-new-project');
-              }
-            }, 500);
-          },
+          click: () => runProjectMenuAction('createNewProject'),
         },
         {
           label: 'Open File',
           accelerator: 'CmdOrCtrl+O',
-          click: async () => {
-            const result = await dialog.showOpenDialog(
-              workspaceHostManager.getNativeWindow(
-                (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow
-              ),
-              {
-                properties: ['openFile'],
-                filters: [
-                  {
-                    name: 'All Genome Files',
-                    extensions: ['fasta', 'fa', 'gb', 'gbk', 'genbank', 'gff', 'gtf', 'bed', 'vcf', 'bam', 'sam'],
-                  },
-                  { name: 'FASTA Files', extensions: ['fasta', 'fa'] },
-                  { name: 'GenBank Files', extensions: ['gb', 'gbk', 'genbank'] },
-                  { name: 'Annotation Files', extensions: ['gff', 'gtf', 'bed'] },
-                  { name: 'Variant Files', extensions: ['vcf'] },
-                  { name: 'Alignment Files', extensions: ['bam', 'sam'] },
-                  { name: 'All Files', extensions: ['*'] },
-                ],
-              }
-            );
-            rememberApprovedDialogPaths(result);
-
-            if (!result.canceled && result.filePaths.length > 0) {
-              sendToCurrentMainWindow('file-opened', result.filePaths[0]);
-            }
-          },
+          click: () => openGenomeFileFromMenu(),
         },
         { type: 'separator' },
         {
@@ -1226,33 +1316,22 @@ function createMenu() {
           label: 'Open Project',
           accelerator: 'CmdOrCtrl+Shift+O',
           click: async () => {
-            // Create or focus Project Manager window first
-            createProjectManagerWindow();
-
-            // Small delay to ensure window is ready
-            setTimeout(async () => {
-              const result = await dialog.showOpenDialog(null, {
+            try {
+              const result = await dialog.showOpenDialog({
                 properties: ['openFile'],
                 filters: [
-                  { name: 'CodeXomics Project Files', extensions: ['GAI', 'prj.GAI'] },
-                  { name: 'XML Files', extensions: ['xml'] },
-                  { name: 'Project Files', extensions: ['genomeproj', 'json'] },
+                  { name: 'CodeXomics Project Files', extensions: ['GAI', 'xml', 'genomeproj', 'json'] },
                   { name: 'All Files', extensions: ['*'] },
                 ],
                 title: 'Open Project',
               });
               rememberApprovedDialogPaths(result);
-
-              if (!result.canceled && result.filePaths.length > 0) {
-                // Send the file path to the Project Manager window
-                const projectManagerWindow = BrowserWindow.getAllWindows().find(win =>
-                  win.getTitle().includes('Project Manager')
-                );
-                if (projectManagerWindow && !projectManagerWindow.isDestroyed()) {
-                  projectManagerWindow.webContents.send('load-project-from-menu', result.filePaths[0]);
-                }
+              if (!result.canceled && result.filePaths.length) {
+                await runProjectMenuAction('loadProjectFromFile', result.filePaths[0]);
               }
-            }, 100);
+            } catch (error) {
+              await dialog.showMessageBox({ type: 'error', title: 'Open Project', message: error.message });
+            }
           },
         },
         {
@@ -1273,12 +1352,7 @@ function createMenu() {
         {
           label: 'Recent Projects',
           id: 'recent-projects',
-          submenu: [
-            {
-              label: 'No recent projects',
-              enabled: false,
-            },
-          ],
+          submenu: buildRecentProjectsSubmenu(),
         },
         ...(process.platform !== 'darwin'
           ? [
@@ -1305,18 +1379,7 @@ function createMenu() {
         },
         {
           label: 'Open (New Window)',
-          click: async () => {
-            const parentWindow = workspaceHostManager.getNativeWindow(getCurrentMainWindow() || mainWindow);
-            const result = await dialog.showOpenDialog(parentWindow, {
-              properties: ['openFile'],
-              filters: genomeFileDialogFilters,
-            });
-            rememberApprovedDialogPaths(result);
-
-            if (!result.canceled && result.filePaths.length > 0) {
-              openFileInNewMainWindow(result.filePaths[0]);
-            }
-          },
+          click: () => openGenomeFileFromMenu(true),
         },
         { type: 'separator' },
         {
@@ -1504,17 +1567,21 @@ function createMenu() {
     {
       label: 'View',
       submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
+        { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => executeGenomeViewCommand('reload') },
+        {
+          label: 'Force Reload',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => executeGenomeViewCommand('forceReload'),
+        },
         {
           label: 'Toggle Developer Tools',
           accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
           click: toggleCurrentGenomeDevTools,
         },
         { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
+        { label: 'Actual Size', accelerator: 'CmdOrCtrl+0', click: () => executeGenomeViewCommand('resetZoom') },
+        { label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus', click: () => executeGenomeViewCommand('zoomIn') },
+        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: () => executeGenomeViewCommand('zoomOut') },
         { type: 'separator' },
         { role: 'togglefullscreen' },
         { type: 'separator' },
@@ -1564,7 +1631,7 @@ function createMenu() {
         { type: 'separator' },
         {
           label: 'Resource Manager',
-          accelerator: 'CmdOrCtrl+R',
+          accelerator: 'CmdOrCtrl+Alt+U',
           click: () => {
             sendToCurrentMainWindow('open-resource-manager');
           },
@@ -1616,7 +1683,7 @@ function createMenu() {
         },
         {
           label: 'Insert Sequence',
-          accelerator: 'CmdOrCtrl+Shift+I',
+          accelerator: 'CmdOrCtrl+Alt+Shift+I',
           click: () => {
             sendToCurrentMainWindow('action-insert-sequence');
           },
@@ -1645,14 +1712,14 @@ function createMenu() {
         { type: 'separator' },
         {
           label: 'Create Checkpoint',
-          accelerator: 'CmdOrCtrl+Shift+P',
+          accelerator: 'CmdOrCtrl+Alt+K',
           click: () => {
             sendToCurrentMainWindow('create-checkpoint');
           },
         },
         {
           label: 'Rollback to Checkpoint',
-          accelerator: 'CmdOrCtrl+Shift+R',
+          accelerator: 'CmdOrCtrl+Alt+R',
           click: () => {
             sendToCurrentMainWindow('rollback-checkpoint');
           },
@@ -1713,7 +1780,6 @@ function createMenu() {
         },
         {
           label: 'InterPro Domain Analysis',
-          accelerator: 'CmdOrCtrl+Shift+I',
           enabled: false,
           click: () => {
             createInterProWindow();
@@ -1744,7 +1810,7 @@ function createMenu() {
         },
         {
           label: 'ProGenFixer',
-          accelerator: 'CmdOrCtrl+Shift+P',
+          accelerator: 'CmdOrCtrl+Alt+F',
           click: async () => {
             await createProGenFixerWindow();
           },
@@ -1775,7 +1841,7 @@ function createMenu() {
         { type: 'separator' },
         {
           label: 'CodeXomics MCP Server Manager',
-          accelerator: 'CmdOrCtrl+Alt+M',
+          accelerator: 'CmdOrCtrl+Alt+Shift+M',
           click: () => {
             createMCPServerManagerWindow();
           },
@@ -1833,7 +1899,7 @@ function createMenu() {
       submenu: [
         {
           label: 'Plugin Management',
-          accelerator: 'CmdOrCtrl+Alt+P',
+          accelerator: 'CmdOrCtrl+Alt+Shift+P',
           click: () => {
             sendToCurrentMainWindow('show-plugin-management');
           },
@@ -1932,13 +1998,7 @@ function createMenu() {
               {
                 label: `About ${APP_NAME}`,
                 click: () => {
-                  const currentWindow = getCurrentMainWindow();
-                  dialog.showMessageBox(currentWindow || null, {
-                    type: 'info',
-                    title: `About ${APP_NAME}`,
-                    message: VERSION_INFO.appTitle,
-                    detail: 'An AI-native genome browser built with Electron',
-                  });
+                  showAbout();
                 },
               },
               { type: 'separator' },
@@ -1948,7 +2008,9 @@ function createMenu() {
           label: 'User Guide',
           accelerator: 'F1',
           click: () => {
-            sendToCurrentMainWindow('show-user-guide');
+            require('electron').shell.openExternal(
+              'https://scilence2022.github.io/CodeXomics/user-guides/GETTING_STARTED/'
+            );
           },
         },
         {
@@ -3207,4 +3269,6 @@ module.exports = {
   createProjectManagerMenu,
   createMCPServerManagerMenu,
   setMenuDependencies,
+  updateRecentProjectsMenu,
+  loadRecentProjectsMenu,
 };

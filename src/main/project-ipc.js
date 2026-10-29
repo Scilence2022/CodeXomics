@@ -10,9 +10,10 @@
  * @module project-ipc
  */
 
-const { ipcMain, dialog, app, BrowserWindow, Menu, MenuItem, shell } = require('electron');
+const { ipcMain, dialog, app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { updateRecentProjectsMenu } = require('./menu-builder');
 const { dispatchProjectManagerAction } = require('./project-manager-dispatch');
 const { rememberApprovedPath, rememberApprovedDialogPaths, assertAllowedFileAccess } = require('./security-utils');
 
@@ -1186,59 +1187,6 @@ function registerProjectIpcHandlers(deps) {
       return { success: false, error: error.message };
     }
   });
-
-  // Function to update recent projects menu
-  function updateRecentProjectsMenu(recentProjects = []) {
-    const menu = Menu.getApplicationMenu();
-    if (!menu) return;
-
-    const recentProjectsMenuItem = menu.getMenuItemById('recent-projects');
-    if (!recentProjectsMenuItem) return;
-
-    // Clear existing submenu
-    recentProjectsMenuItem.submenu.clear();
-
-    if (recentProjects.length === 0) {
-      recentProjectsMenuItem.submenu.append(
-        new MenuItem({
-          label: 'No recent projects',
-          enabled: false,
-        })
-      );
-    } else {
-      // Add recent projects
-      recentProjects.slice(0, 10).forEach((project, index) => {
-        recentProjectsMenuItem.submenu.append(
-          new MenuItem({
-            label: `${project.name}`,
-            accelerator: index < 9 ? `CmdOrCtrl+${index + 1}` : undefined,
-            click: () => {
-              const targetWindow =
-                (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) || deps.mainWindow;
-              if (targetWindow && !targetWindow.isDestroyed()) {
-                targetWindow.webContents.send('open-recent-project', project);
-              }
-            },
-          })
-        );
-      });
-
-      // Add separator and clear menu item
-      recentProjectsMenuItem.submenu.append(new MenuItem({ type: 'separator' }));
-      recentProjectsMenuItem.submenu.append(
-        new MenuItem({
-          label: 'Clear Recent Projects',
-          click: () => {
-            const targetWindow =
-              (typeof deps.getCurrentMainWindow === 'function' && deps.getCurrentMainWindow()) || deps.mainWindow;
-            if (targetWindow && !targetWindow.isDestroyed()) {
-              targetWindow.webContents.send('clear-recent-projects');
-            }
-          },
-        })
-      );
-    }
-  }
 
   // Handle updating recent projects menu
   ipcMain.handle('updateRecentProjects', async (event, recentProjects) => {

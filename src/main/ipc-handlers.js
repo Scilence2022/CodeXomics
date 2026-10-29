@@ -3598,17 +3598,11 @@ function registerIpcHandlers(deps) {
         show: false,
       });
 
-      // Load the resource manager HTML
-      const resourceManagerPath = path.join(__dirname, 'resource-manager.html');
-
-      // Check if file exists, if not create a fallback
-      if (fs.existsSync(resourceManagerPath)) {
-        resourceManagerWindow.loadFile(resourceManagerPath);
-      } else {
-        console.log('Resource manager file not found, creating...');
-        // We'll create the file below
-        resourceManagerWindow.loadFile(resourceManagerPath);
-      }
+      const resourceManagerPath = path.join(__dirname, '..', 'resource-manager.html');
+      resourceManagerWindow.loadFile(resourceManagerPath).catch(error => {
+        console.error('Failed to load Resource Manager:', error);
+        resourceManagerWindow.destroy();
+      });
 
       // Show window when ready
       resourceManagerWindow.once('ready-to-show', () => {

@@ -391,6 +391,7 @@ app.whenReady().then(async () => {
   wr.setDependencies({ mainWindow, unifiedMCPServer });
 
   // Create initial menu
+  await mb.loadRecentProjectsMenu();
   mb.createMenu();
 
   // The combined launcher uses the in-process MCP server so authenticated
