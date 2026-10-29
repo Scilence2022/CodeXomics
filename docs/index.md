@@ -4,7 +4,7 @@
 
 _Talk to your genome — AI agents drive the view and run the analysis._
 
-[![Version](https://img.shields.io/badge/version-0.722.0-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
+[![Version](https://img.shields.io/badge/version-0.723.0-blue.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Scilence2022/CodeXomics/blob/main/LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/Scilence2022/CodeXomics/releases)
 
@@ -12,7 +12,7 @@ _Talk to your genome — AI agents drive the view and run the analysis._
 
 CodeXomics is an AI-native genome browser — a cross-platform Electron workspace where conversational AI agents drive the visualization and run real biological analyses, with plugin development, benchmark testing, and Model Context Protocol (MCP) integration.
 
-The current release is `v0.722`. Download installers from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases), or build from source for the latest changes.
+The current release is `v0.723`. Download installers from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases), or build from source for the latest changes.
 
 <div class="grid cards" markdown>
 
@@ -69,7 +69,7 @@ Then open `Options -> Configure LLMs`, add an API key or local endpoint, load a 
 - Ask the ChatBox to search features, inspect tracks, calculate GC content, design primers, run BLAST, look up protein structures, or research a gene.
 - Connect external clients through the [MCP Server](user-guides/MCP_SERVER_GUIDE.md), or extend the app with plugins.
 
-The current release is `0.722.0` (`v0.722` display). See the [release notes](release-notes/RELEASE_NOTES_v0.722.md) for version-specific changes.
+The current release is `0.723.0` (`v0.723` display). See the [release notes](release-notes/RELEASE_NOTES_v0.723.md) for version-specific changes.
 
 ### Genome Visualization
 
@@ -139,7 +139,7 @@ Designed primers rendered directly on the sequence view.
 | Architecture         | [Multi-Agent System](architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) |
 | BLAST                | [BLAST Guide](reference/BLAST_GUIDE.md)                                                     |
 | Benchmarks           | [Benchmark Methods](reference/BENCHMARK_METHODS.md)                                         |
-| Current release      | [v0.722.0 Release Notes](release-notes/RELEASE_NOTES_v0.722.md)                             |
+| Current release      | [v0.723.0 Release Notes](release-notes/RELEASE_NOTES_v0.723.md)                             |
 
 ## Repository Links
 

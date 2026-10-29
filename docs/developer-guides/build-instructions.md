@@ -1,6 +1,6 @@
 # Build Instructions
 
-This guide describes the supported development and packaging workflow for CodeXomics `0.722.0`.
+This guide describes the supported development and packaging workflow for CodeXomics `0.723.0`.
 
 ## Supported Toolchain
 

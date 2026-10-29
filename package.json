@@ -1,6 +1,6 @@
 {
   "name": "codexomics",
-  "version": "0.722.0",
+  "version": "0.723.0",
   "description": "An AI-native genome browser where conversational agents drive the visualization and run real bioinformatics analyses — BLAST, primer design, protein structures, and more — built with Electron.",
   "main": "src/main.js",
   "homepage": "https://github.com/Scilence2022/CodeXomics",

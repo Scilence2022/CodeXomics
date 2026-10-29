@@ -1,4 +1,4 @@
-# CodeXomics AI Agent Rules - v0.722.0
+# CodeXomics AI Agent Rules - v0.723.0
 
 This file is the operational contract for AI coding assistants working in the CodeXomics repository. For architectural background and project memory, read `Memory.md`.
 
@@ -15,9 +15,9 @@ This file is the operational contract for AI coding assistants working in the Co
 
 Versioned documentation must agree on all of the following:
 
-- Semantic application version: `0.722.0` in `package.json`, `src/version.js`, `CHANGELOG.md`, and current release notes.
-- Display version: `v0.722` where the compact in-app label is being described.
-- Documentation release label: `v0.722.0` in `mkdocs.yml` and the public documentation release selector.
+- Semantic application version: `0.723.0` in `package.json`, `src/version.js`, `CHANGELOG.md`, and current release notes.
+- Display version: `v0.723` where the compact in-app label is being described.
+- Documentation release label: `v0.723.0` in `mkdocs.yml` and the public documentation release selector.
 - Runtime baseline: Node.js 20 or 22, npm 10+, and Electron `41.7.1`.
 
 ## 2. Adding Or Changing Tools

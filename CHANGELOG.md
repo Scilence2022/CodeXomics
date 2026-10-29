@@ -66,6 +66,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add current production-readiness release notes, Node.js 20/22 build guidance, strict documentation validation, and a supported GitHub Pages deployment workflow.
 - Correct the documented Electron runtime from `42.4.0` to the Node 20-compatible `41.7.1` restored after the release cut.
 
+## [0.723.0] - 2026-10-29
+
+### Added
+
+- Complete application update status window with release notes, progress, cancellation, retry, package-specific guidance and confirmed restart.
+- Signed multi-platform release workflow with update manifest, architecture, file-size and SHA512 validation before draft assembly.
+
+### Fixed
+
+- Silent update failures, duplicate checks and stale status replies.
+- Electron network timeouts during connection setup and stalled responses.
+- macOS update readiness before native signature verification finishes.
+- Main menu actions and shortcut routing, including project-manager dispatch.
+- Missing DMG background generation in clean local distribution builds.
+
 ## [0.722.0] - 2026-06-10 - PRODUCTION-READINESS RELEASE
 
 **🚀 Milestone: Production hardening across security, release engineering, and CI**

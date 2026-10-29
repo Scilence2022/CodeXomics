@@ -1,6 +1,6 @@
 # Getting Started With CodeXomics
 
-This guide gets CodeXomics `0.722.0` running, connected to an AI provider, and ready to inspect genomic data.
+This guide gets CodeXomics `0.723.0` running, connected to an AI provider, and ready to inspect genomic data.
 
 ## Requirements
 

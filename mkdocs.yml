@@ -80,8 +80,8 @@ markdown_extensions:
 extra:
   version:
     method: mike
-    name: v0.722.0
-    default: v0.722.0
+    name: v0.723.0
+    default: v0.723.0
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Scilence2022/CodeXomics
@@ -123,7 +123,7 @@ nav:
       - Benchmark Methods: reference/BENCHMARK_METHODS.md
       - Workspace Migration: reference/WORKSPACE_MIGRATION_GUIDE.md
   - Release Notes:
-      - v0.722.0: release-notes/RELEASE_NOTES_v0.722.md
+      - v0.723.0: release-notes/RELEASE_NOTES_v0.723.md
       - Release Guide: release-notes/RELEASE_GUIDE.md
       - v0.533beta: release-notes/RELEASE_NOTES_v0.533beta.md
       - v0.532beta: release-notes/RELEASE_NOTES_v0.532beta.md
