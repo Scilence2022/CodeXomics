@@ -289,6 +289,7 @@
       "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
     },
     "linux": {
+      "artifactName": "${productName}-${version}-${os}-x64.${ext}",
       "target": [
         {
           "target": "AppImage",
