@@ -2090,8 +2090,11 @@ class AnnotationChangeSetService {
         this.inputLimits.valuesPerField,
         this.inputLimits.textLength
       );
-      if (!categories.has(fact.category) || fact.directness !== 'exact_target') {
-        throw new Error(`Research fact ${fact.id} is not classified as exact-target evidence`);
+      const supportedDirectness =
+        fact.directness === 'exact_target' ||
+        (fact.evidenceLevel === 'target_literature' && fact.directness === 'source_target_match');
+      if (!categories.has(fact.category) || !supportedDirectness) {
+        throw new Error(`Research fact ${fact.id} has an unsupported entity-match classification`);
       }
       if (!['reviewed_database', 'authoritative_database', 'target_literature'].includes(fact.evidenceLevel)) {
         throw new Error(`Research fact ${fact.id} has an unsupported evidence level`);
