@@ -1464,6 +1464,35 @@ describe('AnnotationChangeSetService', () => {
     ).rejects.toThrow('exact citation-bound research fact');
   });
 
+  it.each([
+    ['authoritative_database', 'source_target_match'],
+    ['target_literature', 'gene_linked_context'],
+  ])('rejects %s facts with unsupported %s classification', async (evidenceLevel, directness) => {
+    const summary = {
+      schema: 'dgr.curation-summary.v1',
+      headline: 'thrL research',
+      facts: [
+        {
+          id: 'fact_1',
+          category: 'function',
+          field: 'molecular_function',
+          value: 'attenuation control',
+          statement: 'molecular function: attenuation control',
+          evidenceIds: ['evidence_1'],
+          confidence: null,
+          directness,
+          evidenceLevel,
+          sourceDatabases: ['pubmed'],
+        },
+      ],
+      literature: [],
+      limitations: [],
+    };
+    await expect(
+      annotationService.changeSetService._validateResearchSummary(summary, [{ id: 'evidence_1' }])
+    ).rejects.toThrow('unsupported entity-match classification');
+  });
+
   it('validates and preserves versioned claims and evidence while retaining proposal metadata operations', async () => {
     const resolved = await annotationService.resolveAnnotationTarget({ identifier: 'b0001' });
     const literatureExcerpt = 'The Escherichia coli thrL target controls transcriptional attenuation.';
@@ -1665,6 +1694,17 @@ describe('AnnotationChangeSetService', () => {
         limitations: [],
       },
     };
+    // Keep legacy exact_target summaries readable, then import the new DGR
+    // classification with all abstract/full-text authentication checks intact.
+    await expect(
+      annotationService.changeSetService._validateResearchSummary(
+        proposal.researchSummary,
+        proposal.evidenceManifest.sourceRecords
+      )
+    ).resolves.toMatchObject({ facts: proposal.researchSummary.facts });
+    for (const fact of proposal.researchSummary.facts) {
+      if (fact.evidenceLevel === 'target_literature') fact.directness = 'source_target_match';
+    }
     const proposalSha256 = await annotationService.changeSetService._hash(proposal);
     const archivedAttachment = {
       id: 'dgr:dgr-task-123',
