@@ -595,7 +595,12 @@ class NavigationManager {
     }
 
     // Show visual feedback
-    this.showWheelZoomFeedback(zoomDirection, Math.round(end - start));
+    this.showWheelZoomFeedback(zoomDirection, Math.round(end - start), {
+      chromosome: currentChr,
+      start,
+      end,
+      sequenceLength: sequence.length,
+    });
   }
 
   /**
@@ -869,65 +874,146 @@ class NavigationManager {
   }
 
   /**
-   * Show visual feedback for wheel zoom operations
+   * Show visual feedback for wheel zoom operations.
+   *
+   * The HUD is built once and then only its text and meter are updated, so a
+   * trackpad gesture that commits every frame does not rebuild DOM each time.
    */
-  showWheelZoomFeedback(direction, newRange) {
-    // Create or get existing zoom indicator
-    let indicator = document.getElementById('wheelZoomIndicator');
-    if (!indicator) {
-      indicator = document.createElement('div');
-      indicator.id = 'wheelZoomIndicator';
-      indicator.className = 'wheel-zoom-indicator';
-      indicator.setAttribute('aria-live', 'polite');
-      document.body.appendChild(indicator);
+  showWheelZoomFeedback(direction, newRange, context = {}) {
+    const indicator = this.getWheelZoomIndicator();
+    const parts = this.wheelZoomIndicatorParts;
+    const zoomingOut = direction > 0;
+
+    // Log-scale meter between the configured minimum span and the widest span
+    // this sequence allows. A view opened wider than the wheel limit (e.g. the
+    // whole genome) still reads as full rather than overflowing.
+    const minRange = Math.max(1, this.wheelZoomConfig.minRange || 1);
+    const configuredMax = context.sequenceLength
+      ? Math.min(this.wheelZoomConfig.maxRange, context.sequenceLength)
+      : this.wheelZoomConfig.maxRange;
+    const maxRange = Math.max(minRange + 1, configuredMax, newRange);
+    const fraction = Math.min(1, Math.max(0, Math.log(newRange / minRange) / Math.log(maxRange / minRange)));
+
+    let actionText = zoomingOut ? 'Zoom out' : 'Zoom in';
+    if (!zoomingOut && newRange <= minRange) actionText = 'Max zoom';
+    if (zoomingOut && newRange >= configuredMax) actionText = 'Widest view';
+
+    indicator.classList.toggle('zoom-out', zoomingOut);
+    indicator.classList.toggle('zoom-in', !zoomingOut);
+    parts.iconSign.setAttribute('d', zoomingOut ? 'M7.5 10.5h6' : 'M7.5 10.5h6M10.5 7.5v6');
+    parts.action.textContent = actionText;
+    parts.span.textContent = this.formatRange(newRange);
+    parts.meterFill.style.width = `${(fraction * 100).toFixed(1)}%`;
+    parts.meterMin.textContent = this.formatRange(minRange);
+    parts.meterMax.textContent = this.formatRange(maxRange);
+
+    if (context.chromosome && Number.isFinite(context.start) && Number.isFinite(context.end)) {
+      parts.chromosome.textContent = context.chromosome;
+      parts.coords.textContent = `${(context.start + 1).toLocaleString()} – ${context.end.toLocaleString()}`;
+      parts.location.hidden = false;
+    } else {
+      parts.location.hidden = true;
     }
 
-    // Update indicator content
-    const directionIcon = direction > 0 ? '🔍-' : '🔍+';
-    const directionText = direction > 0 ? 'Zoom Out' : 'Zoom In';
-    const directionClass = direction > 0 ? 'zoom-out' : 'zoom-in';
-
-    indicator.innerHTML = `
-            <span class="zoom-direction ${directionClass}">${directionIcon}</span>
-            <span class="zoom-action">${directionText}</span>
-            <span class="zoom-range">${this.formatRange(newRange)}</span>
-        `;
-
-    // Show indicator with animation
-    indicator.classList.add('active', 'pulse');
+    this.positionWheelZoomIndicator(indicator);
+    indicator.classList.add('active');
 
     // Update genome browser cursor
     const genomeBrowser = document.querySelector('.genome-browser');
     if (genomeBrowser) {
       genomeBrowser.classList.add('wheel-zooming');
-      if (direction > 0) {
-        genomeBrowser.classList.add('zoom-out');
-      } else {
-        genomeBrowser.classList.remove('zoom-out');
-      }
+      genomeBrowser.classList.toggle('zoom-out', zoomingOut);
     }
 
     // Hide indicator after delay
     clearTimeout(this.zoomFeedbackTimeout);
     this.zoomFeedbackTimeout = setTimeout(() => {
-      indicator.classList.remove('active', 'pulse');
+      indicator.classList.remove('active');
       if (genomeBrowser) {
         genomeBrowser.classList.remove('wheel-zooming', 'zoom-out');
       }
-    }, 1500);
+    }, 1200);
+  }
+
+  /** Create the wheel-zoom HUD once and cache references to its live parts. */
+  getWheelZoomIndicator() {
+    let indicator = document.getElementById('wheelZoomIndicator');
+    if (indicator && this.wheelZoomIndicatorParts) return indicator;
+
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'wheelZoomIndicator';
+      document.body.appendChild(indicator);
+    }
+    indicator.className = 'wheel-zoom-indicator';
+    indicator.setAttribute('role', 'status');
+    indicator.setAttribute('aria-live', 'polite');
+    indicator.innerHTML = `
+      <div class="wzi-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10.5" cy="10.5" r="6.5"></circle>
+          <path d="M15.5 15.5L20 20"></path>
+          <path class="wzi-icon-sign" d="M7.5 10.5h6M10.5 7.5v6"></path>
+        </svg>
+      </div>
+      <div class="wzi-body">
+        <div class="wzi-header">
+          <span class="wzi-action"></span>
+          <span class="wzi-span"></span>
+        </div>
+        <div class="wzi-meter" aria-hidden="true">
+          <div class="wzi-meter-track"><div class="wzi-meter-fill"></div></div>
+          <div class="wzi-meter-scale">
+            <span class="wzi-meter-min"></span>
+            <span class="wzi-meter-max"></span>
+          </div>
+        </div>
+        <div class="wzi-location">
+          <span class="wzi-chromosome"></span><span class="wzi-coords"></span>
+        </div>
+      </div>
+    `;
+
+    this.wheelZoomIndicatorParts = {
+      iconSign: indicator.querySelector('.wzi-icon-sign'),
+      action: indicator.querySelector('.wzi-action'),
+      span: indicator.querySelector('.wzi-span'),
+      meterFill: indicator.querySelector('.wzi-meter-fill'),
+      meterMin: indicator.querySelector('.wzi-meter-min'),
+      meterMax: indicator.querySelector('.wzi-meter-max'),
+      location: indicator.querySelector('.wzi-location'),
+      chromosome: indicator.querySelector('.wzi-chromosome'),
+      coords: indicator.querySelector('.wzi-coords'),
+    };
+    return indicator;
+  }
+
+  /** Centre the HUD over the visible part of the genome viewer, not the window. */
+  positionWheelZoomIndicator(indicator) {
+    const viewer = document.getElementById('genomeViewer');
+    const rect = viewer?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) {
+      indicator.style.left = '';
+      indicator.style.top = '';
+      return;
+    }
+    const top = Math.max(rect.top, 0);
+    const bottom = Math.min(rect.bottom, window.innerHeight);
+    indicator.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
+    indicator.style.top = `${Math.round(top + Math.max(0, bottom - top) / 2)}px`;
   }
 
   /**
-   * Format range for display
+   * Format a span in base pairs with genomic units (bp / kb / Mb) and three
+   * significant figures, e.g. 1,212 bp -> "1.21 kb", 754,039 bp -> "754 kb".
    */
   formatRange(range) {
-    if (range >= 1000000) {
-      return `${(range / 1000000).toFixed(1)}M bp`;
-    } else if (range >= 1000) {
-      return `${(range / 1000).toFixed(1)}K bp`;
-    } else {
-      return `${range} bp`;
-    }
+    const value = Math.round(range);
+    if (value < 1000) return `${value} bp`;
+    const [scaled, unit] = value >= 999500 ? [value / 1000000, 'Mb'] : [value / 1000, 'kb'];
+    const digits = scaled >= 100 ? 0 : scaled >= 10 ? 1 : 2;
+    return `${scaled.toFixed(digits)} ${unit}`;
   }
 
   // Position navigation

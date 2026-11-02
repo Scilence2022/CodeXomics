@@ -1,49 +1,138 @@
 /* Wheel Zoom Visual Feedback Styles */
 
-/* Zoom indicator that appears during wheel zoom operations */
+/* Zoom HUD shown during wheel zoom: action, visible span, a log-scale zoom
+   meter and the visible coordinates. Dark glass in every UI preset so it reads
+   over light and dark tracks alike; the accent follows --primary-color. */
 .wheel-zoom-indicator {
+  --wzi-accent: color-mix(in srgb, var(--primary-color, #3b82f6) 62%, #ffffff);
+  --wzi-text: #f8fafc;
+  --wzi-muted: rgba(226, 232, 240, 0.62);
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 14px;
-  font-weight: 600;
   z-index: 10000;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 248px;
+  padding: 12px 16px 12px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 12px 32px rgba(15, 23, 42, 0.28),
+    0 2px 6px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  color: var(--wzi-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+  font-size: 12px;
+  line-height: 1.3;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s ease-in-out;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%) scale(0.96);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .wheel-zoom-indicator.active {
   opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 
-.wheel-zoom-indicator .zoom-direction {
-  display: inline-block;
-  margin-right: 8px;
-  font-size: 16px;
+.wheel-zoom-indicator .wzi-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: var(--wzi-accent);
+  background: color-mix(in srgb, var(--wzi-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--wzi-accent) 30%, transparent);
 }
 
-.wheel-zoom-indicator .zoom-direction.zoom-in {
-  color: #4ade80; /* Green for zoom in */
+.wheel-zoom-indicator .wzi-body {
+  flex: 1;
+  min-width: 0;
 }
 
-.wheel-zoom-indicator .zoom-direction.zoom-out {
-  color: #f87171; /* Red for zoom out */
+.wheel-zoom-indicator .wzi-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.wheel-zoom-indicator .zoom-range {
-  color: #94a3b8;
-  margin-left: 8px;
+.wheel-zoom-indicator .wzi-action {
+  color: var(--wzi-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wheel-zoom-indicator .wzi-span {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.wheel-zoom-indicator .wzi-meter {
+  margin-top: 8px;
+}
+
+.wheel-zoom-indicator .wzi-meter-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.wheel-zoom-indicator .wzi-meter-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--wzi-accent);
+  transition: width 0.12s ease-out;
+}
+
+.wheel-zoom-indicator .wzi-meter-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--wzi-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wheel-zoom-indicator .wzi-location {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wheel-zoom-indicator .wzi-location[hidden] {
+  display: none;
+}
+
+.wheel-zoom-indicator .wzi-chromosome {
+  color: var(--wzi-accent);
+  font-weight: 600;
+}
+
+.wheel-zoom-indicator .wzi-coords {
+  color: rgba(226, 232, 240, 0.86);
 }
 
 /* Genome browser cursor styles during wheel zoom */
@@ -160,12 +249,6 @@
 
 /* Dark theme adaptations */
 @media (prefers-color-scheme: dark) {
-  .wheel-zoom-indicator {
-    background: rgba(255, 255, 255, 0.9);
-    color: #1f2937;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-  }
-
   .wheel-zoom-settings-section {
     background: var(--bg-tertiary, #2d3748);
     border-color: var(--border-color, #4a5568);
@@ -178,28 +261,11 @@
   }
 }
 
-/* Animation for smooth zoom transitions */
-@keyframes zoomPulse {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.05);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-.wheel-zoom-indicator.pulse {
-  animation: zoomPulse 0.3s ease-in-out;
-}
-
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .wheel-zoom-indicator {
-    font-size: 12px;
-    padding: 8px 16px;
+    min-width: 0;
+    padding: 10px 12px 10px 10px;
   }
 
   .wheel-zoom-setting {
@@ -214,27 +280,20 @@
   }
 }
 
-/* Accessibility improvements */
-.wheel-zoom-indicator[aria-live='polite'] {
-  /* Screen reader friendly zoom feedback */
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .wheel-zoom-indicator {
+  .wheel-zoom-indicator,
+  .wheel-zoom-indicator .wzi-meter-fill {
     transition: none;
-  }
-
-  .wheel-zoom-indicator.pulse {
-    animation: none;
   }
 }
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .wheel-zoom-indicator {
-    background: black;
-    color: white;
-    border: 2px solid white;
+    --wzi-muted: #ffffff;
+    background: #000000;
+    border: 2px solid #ffffff;
+    backdrop-filter: none;
   }
 
   .sequence-track:hover::after,
