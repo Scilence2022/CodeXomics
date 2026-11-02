@@ -6982,7 +6982,8 @@ class TrackRenderer {
             overflow: hidden;
         `;
 
-    // Calculate actual container width dynamically
+    // Estimate the drawing width from the track being replaced. The new track is
+    // not in the DOM yet; observeGCVisualizationWidth() redraws at the real width.
     const gcTrack = document.querySelector('.gc-track .track-content');
     let containerWidth = 800; // Default fallback
     if (gcTrack) {
@@ -7034,7 +7035,7 @@ class TrackRenderer {
     );
 
     // Calculate GC content and skew data with dynamic parameters
-    const analysisData = this.calculateDynamicGCData(sequence, windowSize, stepSize);
+    const analysisData = this.calculateDynamicGCData(sequence, windowSize, stepSize, currentRange);
 
     if (!analysisData || analysisData.positions.length === 0) {
       // No data to display
@@ -7060,36 +7061,88 @@ class TrackRenderer {
     this.addSVGGCTooltip(container, svg, analysisData, viewStart, windowSize);
 
     // Add legend
-    const legend = this.createGCLegend();
+    const legend = this.createGCLegend(settings);
     container.appendChild(legend);
 
     container.appendChild(svg);
 
+    this.observeGCVisualizationWidth(container, svg, analysisData, containerWidth, settings);
+
     return container;
   }
 
-  calculateDynamicGCData(sequence, windowSize, stepSize) {
+  /**
+   * The SVG is stretched with preserveAspectRatio="none", so it has to be drawn
+   * at its real pixel width or text and strokes distort. Redraw once the track is
+   * laid out (the first render only had an estimate) and whenever it is resized.
+   */
+  observeGCVisualizationWidth(container, svg, data, initialWidth, settings) {
+    if (typeof ResizeObserver !== 'function') return;
+
+    const trackHeight = settings.height || 140;
+    let drawnWidth = Math.round(initialWidth);
+    const observer = new ResizeObserver(entries => {
+      if (!container.isConnected) {
+        observer.disconnect();
+        return;
+      }
+      const width = Math.round(entries[0].contentRect.width);
+      if (width <= 0 || width === drawnWidth) return;
+      drawnWidth = width;
+      svg.setAttribute('viewBox', `0 0 ${width} ${trackHeight}`);
+      this.renderSVGGCVisualization(svg, data, width, settings);
+    });
+    observer.observe(container);
+  }
+
+  /**
+   * Slide a window along the viewport sequence and measure GC% and GC skew.
+   *
+   * `domainLength` is the viewport span in bp. Positions are plotted against it
+   * rather than against the sequence length, so a view that runs past the end of
+   * a linear sequence keeps its data where the other tracks put it.
+   */
+  calculateDynamicGCData(sequence, windowSize, stepSize, domainLength = 0) {
     const gcData = [];
     const skewData = [];
     const positions = [];
     const detailedData = []; // Store detailed composition data
+    const segmentStarts = []; // Indices where a run of plottable windows begins
 
-    // Process sequence in windows with specified step size
+    const windowStarts = [];
     for (let i = 0; i <= sequence.length - windowSize; i += stepSize) {
+      windowStarts.push(i);
+    }
+    // The stepped loop can stop up to a step short of the end; add a window
+    // flush with the end so the plot reaches the right edge of the view.
+    const lastStart = sequence.length - windowSize;
+    if (windowStarts.length > 0 && windowStarts[windowStarts.length - 1] < lastStart) {
+      windowStarts.push(lastStart);
+    }
+
+    let previousSkipped = true;
+    for (const i of windowStarts) {
       const window = sequence.substring(i, i + windowSize);
       const analysis = this.analyzeGCWindow(window);
 
-      if (analysis.totalValidBases > 0) {
-        gcData.push(analysis.gcPercent);
-        skewData.push(analysis.gcSkew);
-        positions.push(i + windowSize / 2); // Center position of window
-        detailedData.push({
-          position: i + windowSize / 2,
-          windowStart: i,
-          windowEnd: i + windowSize,
-          ...analysis,
-        });
+      // Windows with no A/C/G/T (e.g. runs of N) break the line instead of
+      // being bridged by a straight segment.
+      if (analysis.totalValidBases === 0) {
+        previousSkipped = true;
+        continue;
       }
+      if (previousSkipped) segmentStarts.push(gcData.length);
+      previousSkipped = false;
+
+      gcData.push(analysis.gcPercent);
+      skewData.push(analysis.gcSkew);
+      positions.push(i + windowSize / 2); // Center position of window
+      detailedData.push({
+        position: i + windowSize / 2,
+        windowStart: i,
+        windowEnd: i + windowSize,
+        ...analysis,
+      });
     }
 
     if (gcData.length === 0) {
@@ -7102,22 +7155,26 @@ class TrackRenderer {
     const skewMin = Math.min(...skewData);
     const skewMax = Math.max(...skewData);
 
-    // Add some padding to the ranges for better visualization
+    // GC% is scaled to the view's own range (labelled on the plot) with padding.
     const gcRange = gcMax - gcMin;
-    const skewRange = skewMax - skewMin;
     const gcPadding = Math.max(1, gcRange * 0.1);
-    const skewPadding = Math.max(0.01, skewRange * 0.1);
+
+    // Skew is scaled symmetrically about zero, so the zero line sits mid-panel
+    // and the sign of every window reads directly off the plot.
+    const skewLimit = Math.max(0.01, Math.max(Math.abs(skewMin), Math.abs(skewMax)) * 1.1);
 
     return {
       gcData,
       skewData,
       positions,
       detailedData,
-      gcMin: gcMin - gcPadding,
-      gcMax: gcMax + gcPadding,
-      skewMin: skewMin - skewPadding,
-      skewMax: skewMax + skewPadding,
+      segmentStarts,
+      gcMin: Math.max(0, gcMin - gcPadding),
+      gcMax: Math.min(100, gcMax + gcPadding),
+      skewMin: -skewLimit,
+      skewMax: skewLimit,
       sequenceLength: sequence.length,
+      domainLength: Math.max(sequence.length, domainLength || 0),
       windowSize,
       stepSize,
     };
@@ -7166,384 +7223,243 @@ class TrackRenderer {
     };
   }
 
-  renderSVGGCVisualization(svg, data, containerWidth = 800, settings = {}) {
-    const { gcData, skewData, positions, gcMin, gcMax, skewMin, skewMax, sequenceLength } = data;
+  /**
+   * Map GC analysis data to SVG coordinates. GC% fills the upper panel; skew
+   * fills the lower panel around a zero line at its vertical centre. Returns one
+   * point list per contiguous run of windows (see `segmentStarts`).
+   */
+  computeGCSkewLayout(data, viewWidth, viewHeight) {
+    const padding = 2;
+    const centerY = viewHeight / 2;
+    const geometry = {
+      viewWidth,
+      viewHeight,
+      padding,
+      plotLeft: padding,
+      plotRight: viewWidth - padding,
+      centerY,
+      gcTop: padding,
+      gcBottom: centerY - padding,
+      skewTop: centerY + padding,
+      skewBottom: viewHeight - padding,
+    };
+    geometry.zeroY = (geometry.skewTop + geometry.skewBottom) / 2;
 
+    const plotWidth = geometry.plotRight - geometry.plotLeft;
+    const domain = data.domainLength || data.sequenceLength || 1;
+    const gcSpan = data.gcMax - data.gcMin;
+    const skewHalfHeight = (geometry.skewBottom - geometry.skewTop) / 2;
+
+    const xAt = position => geometry.plotLeft + (position / domain) * plotWidth;
+    const gcYAt = value => {
+      const normalized = gcSpan > 0 ? (value - data.gcMin) / gcSpan : 0.5;
+      return geometry.gcBottom - normalized * (geometry.gcBottom - geometry.gcTop);
+    };
+    const skewYAt = value => geometry.zeroY - (data.skewMax > 0 ? value / data.skewMax : 0) * skewHalfHeight;
+
+    const starts = data.segmentStarts?.length ? data.segmentStarts : [0];
+    const gcSegments = [];
+    const skewSegments = [];
+    starts.forEach((start, index) => {
+      const end = index + 1 < starts.length ? starts[index + 1] : data.positions.length;
+      const gcPoints = [];
+      const skewPoints = [];
+      for (let i = start; i < end; i++) {
+        const x = xAt(data.positions[i]);
+        gcPoints.push([x, gcYAt(data.gcData[i])]);
+        skewPoints.push([x, skewYAt(data.skewData[i])]);
+      }
+      if (gcPoints.length > 0) {
+        gcSegments.push(gcPoints);
+        skewSegments.push(skewPoints);
+      }
+    });
+
+    return { geometry, gcSegments, skewSegments };
+  }
+
+  createGCSVGElement(tag, attributes = {}) {
+    const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+    return element;
+  }
+
+  renderSVGGCVisualization(svg, data, containerWidth = 800, settings = {}) {
     // Get settings with defaults
-    const contentColor = settings.contentColor || '#3b82f6';
-    const skewPositiveColor = settings.skewPositiveColor || '#10b981';
-    const skewNegativeColor = settings.skewNegativeColor || '#ef4444';
+    const colors = {
+      content: settings.contentColor || '#3b82f6',
+      skewPositive: settings.skewPositiveColor || '#10b981',
+      skewNegative: settings.skewNegativeColor || '#ef4444',
+    };
     const lineWidth = settings.lineWidth || 2;
     const trackHeight = settings.height || 140;
 
     // Clear any existing content
     svg.innerHTML = '';
 
-    // Define dimensions and layout with minimal padding
-    const viewWidth = containerWidth; // Use dynamic container width
-    const viewHeight = trackHeight;
-    const padding = 2; // Reduced from 20 to 2 for minimal padding
-    const plotWidth = viewWidth - 2 * padding;
-    const plotHeight = viewHeight - 2 * padding;
-    const centerY = viewHeight / 2;
-    const gcHeight = centerY - padding;
+    const layout = this.computeGCSkewLayout(data, containerWidth, trackHeight);
+    const { geometry } = layout;
 
-    // Create gradient definitions
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    // Gradient and clip ids must be unique per document: url(#id) resolves to
+    // the first match, so a second GC plot would otherwise borrow these.
+    this.constructor.gcSvgSequence = (this.constructor.gcSvgSequence || 0) + 1;
+    const uid = `gc-skew-${this.constructor.gcSvgSequence}`;
+    const ids = {
+      gcGradient: `${uid}-gc`,
+      skewPosGradient: `${uid}-pos`,
+      skewNegGradient: `${uid}-neg`,
+      aboveZero: `${uid}-above`,
+      belowZero: `${uid}-below`,
+    };
 
-    // GC content gradient
-    const gcGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    gcGradient.setAttribute('id', 'gcGradient');
-    gcGradient.setAttribute('x1', '0%');
-    gcGradient.setAttribute('y1', '0%');
-    gcGradient.setAttribute('x2', '0%');
-    gcGradient.setAttribute('y2', '100%');
+    const defs = this.createGCSVGElement('defs');
+    const addGradient = (id, color, y1, y2, opacity1, opacity2) => {
+      const gradient = this.createGCSVGElement('linearGradient', {
+        id,
+        gradientUnits: 'userSpaceOnUse',
+        x1: 0,
+        y1,
+        x2: 0,
+        y2,
+      });
+      gradient.appendChild(
+        this.createGCSVGElement('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': opacity1 })
+      );
+      gradient.appendChild(
+        this.createGCSVGElement('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': opacity2 })
+      );
+      defs.appendChild(gradient);
+    };
+    addGradient(ids.gcGradient, colors.content, geometry.gcTop, geometry.gcBottom, 0.8, 0.2);
+    addGradient(ids.skewPosGradient, colors.skewPositive, geometry.skewTop, geometry.zeroY, 0.8, 0.15);
+    addGradient(ids.skewNegGradient, colors.skewNegative, geometry.zeroY, geometry.skewBottom, 0.15, 0.8);
 
-    const gcStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    gcStop1.setAttribute('offset', '0%');
-    gcStop1.setAttribute('stop-color', contentColor);
-    gcStop1.setAttribute('stop-opacity', '0.8');
-
-    const gcStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    gcStop2.setAttribute('offset', '100%');
-    gcStop2.setAttribute('stop-color', contentColor);
-    gcStop2.setAttribute('stop-opacity', '0.2');
-
-    gcGradient.appendChild(gcStop1);
-    gcGradient.appendChild(gcStop2);
-
-    // GC skew gradients (positive and negative)
-    const skewPosGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    skewPosGradient.setAttribute('id', 'skewPosGradient');
-    skewPosGradient.setAttribute('x1', '0%');
-    skewPosGradient.setAttribute('y1', '0%');
-    skewPosGradient.setAttribute('x2', '0%');
-    skewPosGradient.setAttribute('y2', '100%');
-
-    const skewPosStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    skewPosStop1.setAttribute('offset', '0%');
-    skewPosStop1.setAttribute('stop-color', skewPositiveColor);
-    skewPosStop1.setAttribute('stop-opacity', '0.8');
-
-    const skewPosStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    skewPosStop2.setAttribute('offset', '100%');
-    skewPosStop2.setAttribute('stop-color', skewPositiveColor);
-    skewPosStop2.setAttribute('stop-opacity', '0.2');
-
-    skewPosGradient.appendChild(skewPosStop1);
-    skewPosGradient.appendChild(skewPosStop2);
-
-    const skewNegGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    skewNegGradient.setAttribute('id', 'skewNegGradient');
-    skewNegGradient.setAttribute('x1', '0%');
-    skewNegGradient.setAttribute('y1', '0%');
-    skewNegGradient.setAttribute('x2', '0%');
-    skewNegGradient.setAttribute('y2', '100%');
-
-    const skewNegStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    skewNegStop1.setAttribute('offset', '0%');
-    skewNegStop1.setAttribute('stop-color', skewNegativeColor);
-    skewNegStop1.setAttribute('stop-opacity', '0.2');
-
-    const skewNegStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    skewNegStop2.setAttribute('offset', '100%');
-    skewNegStop2.setAttribute('stop-color', skewNegativeColor);
-    skewNegStop2.setAttribute('stop-opacity', '0.8');
-
-    skewNegGradient.appendChild(skewNegStop1);
-    skewNegGradient.appendChild(skewNegStop2);
-
-    defs.appendChild(gcGradient);
-    defs.appendChild(skewPosGradient);
-    defs.appendChild(skewNegGradient);
+    // Split skew fills and strokes at the zero line, so every crossing is
+    // coloured correctly without computing intersection points.
+    const addClip = (id, y, height) => {
+      const clip = this.createGCSVGElement('clipPath', { id });
+      clip.appendChild(this.createGCSVGElement('rect', { x: 0, y, width: geometry.viewWidth, height }));
+      defs.appendChild(clip);
+    };
+    addClip(ids.aboveZero, 0, geometry.zeroY);
+    addClip(ids.belowZero, geometry.zeroY, geometry.viewHeight - geometry.zeroY);
     svg.appendChild(defs);
 
-    // Draw background grid
-    this.drawSVGGrid(svg, padding, plotWidth, plotHeight, centerY);
-
-    // Draw GC content area and line with settings
-    this.drawSVGGCContent(
-      svg,
-      gcData,
-      positions,
-      sequenceLength,
-      padding,
-      plotWidth,
-      gcHeight,
-      gcMin,
-      gcMax,
-      contentColor,
-      lineWidth
-    );
-
-    // Draw GC skew areas and line with settings
-    this.drawSVGGCSkew(
-      svg,
-      skewData,
-      positions,
-      sequenceLength,
-      padding,
-      plotWidth,
-      centerY,
-      plotHeight,
-      skewMin,
-      skewMax,
-      skewPositiveColor,
-      skewNegativeColor,
-      lineWidth
-    );
-
-    // Draw axis labels with custom colors
-    this.drawSVGAxisLabels(
-      svg,
-      viewWidth,
-      viewHeight,
-      gcMin,
-      gcMax,
-      skewMin,
-      skewMax,
-      contentColor,
-      skewPositiveColor,
-      skewNegativeColor
-    );
+    this.drawSVGGrid(svg, geometry);
+    this.drawSVGGCContent(svg, layout, ids, colors, lineWidth);
+    this.drawSVGGCSkew(svg, layout, ids, colors, lineWidth);
+    this.drawSVGAxisLabels(svg, geometry, data);
   }
 
-  drawSVGGrid(svg, padding, plotWidth, plotHeight, centerY) {
-    const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    gridGroup.setAttribute('class', 'grid-lines');
+  drawSVGGrid(svg, geometry) {
+    const gridGroup = this.createGCSVGElement('g', { class: 'grid-lines' });
+    const { plotLeft, plotRight } = geometry;
+    const horizontalLine = (y, style) =>
+      gridGroup.appendChild(this.createGCSVGElement('line', { x1: plotLeft, y1: y, x2: plotRight, y2: y, style }));
 
-    // Grid line style
-    const gridStyle = 'stroke: #e9ecef; stroke-width: 0.5; stroke-dasharray: 2,2; opacity: 0.6;';
+    // Quarter lines in each panel; the skew panel's middle one is the zero line.
+    const gridStyle = 'stroke: #ced4da; stroke-width: 0.5; stroke-dasharray: 2,2; opacity: 0.8;';
+    [
+      [geometry.gcTop, geometry.gcBottom],
+      [geometry.skewTop, geometry.skewBottom],
+    ].forEach(([top, bottom], panel) => {
+      for (let i = 1; i <= 3; i++) {
+        if (panel === 1 && i === 2) continue;
+        horizontalLine(top + (i * (bottom - top)) / 4, gridStyle);
+      }
+    });
 
-    // Horizontal grid lines for GC content (upper half)
-    for (let i = 1; i <= 3; i++) {
-      const y = padding + (i * (centerY - padding)) / 4;
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', padding);
-      line.setAttribute('y1', y);
-      line.setAttribute('x2', padding + plotWidth);
-      line.setAttribute('y2', y);
-      line.setAttribute('style', gridStyle);
-      gridGroup.appendChild(line);
-    }
+    // Divider between the GC% and skew panels
+    horizontalLine(geometry.centerY, 'stroke: #adb5bd; stroke-width: 1; opacity: 0.6;');
 
-    // Horizontal grid lines for GC skew (lower half)
-    for (let i = 1; i <= 3; i++) {
-      const y = centerY + padding + (i * (plotHeight - centerY - padding)) / 4;
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', padding);
-      line.setAttribute('y1', y);
-      line.setAttribute('x2', padding + plotWidth);
-      line.setAttribute('y2', y);
-      line.setAttribute('style', gridStyle);
-      gridGroup.appendChild(line);
-    }
-
-    // Center line (zero line for GC skew)
-    const centerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    centerLine.setAttribute('x1', padding);
-    centerLine.setAttribute('y1', centerY);
-    centerLine.setAttribute('x2', padding + plotWidth);
-    centerLine.setAttribute('y2', centerY);
-    centerLine.setAttribute('style', 'stroke: #6c757d; stroke-width: 1; opacity: 0.8;');
-    gridGroup.appendChild(centerLine);
+    // GC skew zero line
+    horizontalLine(geometry.zeroY, 'stroke: #6c757d; stroke-width: 1; opacity: 0.8;');
 
     svg.appendChild(gridGroup);
   }
 
-  drawSVGGCContent(
-    svg,
-    gcData,
-    positions,
-    sequenceLength,
-    padding,
-    plotWidth,
-    maxHeight,
-    gcMin,
-    gcMax,
-    contentColor = '#3b82f6',
-    lineWidth = 2
-  ) {
-    if (gcData.length < 2) return;
+  drawSVGGCContent(svg, layout, ids, colors, lineWidth = 2) {
+    const { geometry, gcSegments } = layout;
+    const plotted = gcSegments.filter(points => points.length >= 2);
+    if (plotted.length === 0) return;
 
-    const gcRange = gcMax - gcMin;
+    const toLine = points => points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ');
+    const baseline = geometry.gcBottom;
+    const areaData = plotted
+      .map(
+        points =>
+          `M ${points[0][0]} ${baseline} ${toLine(points).replace(/^M/, 'L')} L ${points.at(-1)[0]} ${baseline} Z`
+      )
+      .join(' ');
 
-    // Create path for filled area
-    const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    let pathData = `M ${padding} ${maxHeight}`;
-
-    // Add points for the area
-    for (let i = 0; i < gcData.length; i++) {
-      const x = padding + (positions[i] / sequenceLength) * plotWidth;
-      const normalizedGC = gcRange > 0 ? (gcData[i] - gcMin) / gcRange : 0.5;
-      const y = maxHeight - normalizedGC * (maxHeight - padding);
-      pathData += ` L ${x} ${y}`;
-    }
-
-    pathData += ` L ${padding + plotWidth} ${maxHeight} Z`;
-
-    areaPath.setAttribute('d', pathData);
-    areaPath.setAttribute('fill', 'url(#gcGradient)');
-    areaPath.setAttribute('stroke', 'none');
-    svg.appendChild(areaPath);
-
-    // Create path for line
-    const linePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    let lineData = '';
-
-    for (let i = 0; i < gcData.length; i++) {
-      const x = padding + (positions[i] / sequenceLength) * plotWidth;
-      const normalizedGC = gcRange > 0 ? (gcData[i] - gcMin) / gcRange : 0.5;
-      const y = maxHeight - normalizedGC * (maxHeight - padding);
-
-      if (i === 0) {
-        lineData = `M ${x} ${y}`;
-      } else {
-        lineData += ` L ${x} ${y}`;
-      }
-    }
-
-    linePath.setAttribute('d', lineData);
-    linePath.setAttribute('fill', 'none');
-    linePath.setAttribute('stroke', contentColor);
-    linePath.setAttribute('stroke-width', lineWidth);
-    linePath.setAttribute('stroke-linecap', 'round');
-    linePath.setAttribute('stroke-linejoin', 'round');
-    svg.appendChild(linePath);
+    svg.appendChild(this.createGCSVGElement('path', { d: areaData, fill: `url(#${ids.gcGradient})`, stroke: 'none' }));
+    svg.appendChild(
+      this.createGCSVGElement('path', {
+        d: plotted.map(toLine).join(' '),
+        fill: 'none',
+        stroke: colors.content,
+        'stroke-width': lineWidth,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+        'vector-effect': 'non-scaling-stroke',
+      })
+    );
   }
 
-  drawSVGGCSkew(
-    svg,
-    skewData,
-    positions,
-    sequenceLength,
-    padding,
-    plotWidth,
-    centerY,
-    plotHeight,
-    skewMin,
-    skewMax,
-    skewPositiveColor = '#10b981',
-    skewNegativeColor = '#ef4444',
-    lineWidth = 2
-  ) {
-    if (skewData.length < 2) return;
+  drawSVGGCSkew(svg, layout, ids, colors, lineWidth = 2) {
+    const { geometry, skewSegments } = layout;
+    const plotted = skewSegments.filter(points => points.length >= 2);
+    if (plotted.length === 0) return;
 
-    const skewRange = skewMax - skewMin;
+    const toLine = points => points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ');
+    const zeroY = geometry.zeroY;
+    const areaData = plotted
+      .map(points => `M ${points[0][0]} ${zeroY} ${toLine(points).replace(/^M/, 'L')} L ${points.at(-1)[0]} ${zeroY} Z`)
+      .join(' ');
+    const lineData = plotted.map(toLine).join(' ');
 
-    // Calculate zero line position in the lower half
-    const skewHalfHeight = plotHeight - centerY;
-    const zeroRatio = skewRange > 0 ? Math.abs(skewMin) / skewRange : 0.5;
-    const zeroY = centerY + zeroRatio * skewHalfHeight;
-
-    // Create continuous area paths for positive and negative regions
-    let posAreaData = '';
-    let negAreaData = '';
-    let hasPositive = false;
-    let hasNegative = false;
-
-    // Build continuous area paths
-    for (let i = 0; i < skewData.length; i++) {
-      const x = padding + (positions[i] / sequenceLength) * plotWidth;
-      const normalizedSkew = skewRange > 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
-      const y = centerY + (1 - normalizedSkew) * skewHalfHeight;
-
-      if (skewData[i] >= 0) {
-        if (!hasPositive) {
-          posAreaData = `M ${x} ${zeroY}`;
-          hasPositive = true;
-        }
-        posAreaData += ` L ${x} ${Math.min(y, zeroY)}`;
-      }
-
-      if (skewData[i] <= 0) {
-        if (!hasNegative) {
-          negAreaData = `M ${x} ${zeroY}`;
-          hasNegative = true;
-        }
-        negAreaData += ` L ${x} ${Math.max(y, zeroY)}`;
-      }
-    }
-
-    // Close positive area path
-    if (hasPositive && posAreaData) {
-      posAreaData += ` L ${padding + plotWidth} ${zeroY} L ${padding} ${zeroY} Z`;
-      const posPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      posPath.setAttribute('d', posAreaData);
-      posPath.setAttribute('fill', 'url(#skewPosGradient)');
-      posPath.setAttribute('stroke', 'none');
-      svg.appendChild(posPath);
-    }
-
-    // Close negative area path
-    if (hasNegative && negAreaData) {
-      negAreaData += ` L ${padding + plotWidth} ${zeroY} L ${padding} ${zeroY} Z`;
-      const negPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      negPath.setAttribute('d', negAreaData);
-      negPath.setAttribute('fill', 'url(#skewNegGradient)');
-      negPath.setAttribute('stroke', 'none');
-      svg.appendChild(negPath);
-    }
-
-    // Create path for skew line
-    const linePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    let lineData = '';
-
-    for (let i = 0; i < skewData.length; i++) {
-      const x = padding + (positions[i] / sequenceLength) * plotWidth;
-      const normalizedSkew = skewRange > 0 ? (skewData[i] - skewMin) / skewRange : 0.5;
-      const y = centerY + (1 - normalizedSkew) * skewHalfHeight;
-
-      if (i === 0) {
-        lineData = `M ${x} ${y}`;
-      } else {
-        lineData += ` L ${x} ${y}`;
-      }
-    }
-
-    linePath.setAttribute('d', lineData);
-    linePath.setAttribute('fill', 'none');
-    linePath.setAttribute('stroke', skewPositiveColor);
-    linePath.setAttribute('stroke-width', lineWidth);
-    linePath.setAttribute('stroke-linecap', 'round');
-    linePath.setAttribute('stroke-linejoin', 'round');
-    svg.appendChild(linePath);
+    // One area and one line, each drawn twice: clipped above zero in the
+    // positive colour and below zero in the negative colour.
+    [
+      [ids.aboveZero, ids.skewPosGradient, colors.skewPositive],
+      [ids.belowZero, ids.skewNegGradient, colors.skewNegative],
+    ].forEach(([clipId, gradientId, color]) => {
+      const group = this.createGCSVGElement('g', { 'clip-path': `url(#${clipId})` });
+      group.appendChild(this.createGCSVGElement('path', { d: areaData, fill: `url(#${gradientId})`, stroke: 'none' }));
+      group.appendChild(
+        this.createGCSVGElement('path', {
+          d: lineData,
+          fill: 'none',
+          stroke: color,
+          'stroke-width': lineWidth,
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          'vector-effect': 'non-scaling-stroke',
+        })
+      );
+      svg.appendChild(group);
+    });
   }
 
-  drawSVGAxisLabels(
-    svg,
-    viewWidth,
-    viewHeight,
-    gcMin,
-    gcMax,
-    skewMin,
-    skewMax,
-    contentColor = '#3b82f6',
-    skewPositiveColor = '#10b981',
-    skewNegativeColor = '#ef4444'
-  ) {
-    const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    labelGroup.setAttribute('class', 'axis-labels');
+  /** Label each panel with the scale it was drawn at; both panels auto-scale per view. */
+  drawSVGAxisLabels(svg, geometry, data) {
+    const labelGroup = this.createGCSVGElement('g', { class: 'axis-labels' });
+    const style =
+      'font-family: Inter, sans-serif; font-size: 10px; fill: #495057; font-variant-numeric: tabular-nums;' +
+      ' paint-order: stroke; stroke: rgba(248, 249, 250, 0.9); stroke-width: 3px; stroke-linejoin: round;';
+    const x = geometry.plotLeft + 4;
+    const label = (text, y, baseline) => {
+      const element = this.createGCSVGElement('text', { x, y, 'dominant-baseline': baseline, style });
+      element.textContent = text;
+      labelGroup.appendChild(element);
+    };
+    const skew = value => value.toFixed(value >= 0.1 ? 2 : 3);
 
-    const labelStyle = 'font-family: Inter, sans-serif; font-size: 10px;';
-
-    // Track labels (right side) - adjusted for reduced padding
-    const gcLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    gcLabel.setAttribute('x', viewWidth - 25); // Moved further right to account for reduced padding
-    gcLabel.setAttribute('y', '15');
-    gcLabel.setAttribute('text-anchor', 'start');
-    gcLabel.setAttribute('style', labelStyle + ` fill: ${contentColor}; font-weight: 600;`);
-    gcLabel.textContent = 'GC%';
-
-    const skewLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    skewLabel.setAttribute('x', viewWidth - 25); // Moved further right to account for reduced padding
-    skewLabel.setAttribute('y', viewHeight - 5);
-    skewLabel.setAttribute('text-anchor', 'start');
-    skewLabel.setAttribute('style', labelStyle + ` fill: ${skewPositiveColor}; font-weight: 600;`);
-    skewLabel.textContent = 'Skew';
-
-    labelGroup.appendChild(gcLabel);
-    labelGroup.appendChild(skewLabel);
+    label(`GC ${data.gcMax.toFixed(1)}%`, geometry.gcTop + 1, 'hanging');
+    label(`${data.gcMin.toFixed(1)}%`, geometry.gcBottom - 2, 'auto');
+    label(`Skew +${skew(data.skewMax)}`, geometry.skewTop + 1, 'hanging');
+    label('0', geometry.zeroY, 'middle');
+    label(`−${skew(data.skewMax)}`, geometry.skewBottom - 2, 'auto');
 
     svg.appendChild(labelGroup);
   }
@@ -7558,7 +7474,7 @@ class TrackRenderer {
       const x = (e.clientX - rect.left) / rect.width;
 
       // Find closest data point
-      const sequencePos = x * data.sequenceLength;
+      const sequencePos = x * (data.domainLength || data.sequenceLength);
       let closestIndex = 0;
       let minDistance = Math.abs(data.positions[0] - sequencePos);
 
@@ -8618,7 +8534,10 @@ class TrackRenderer {
     return formatUnit(position / 1000, 1000, 'K');
   }
 
-  createGCLegend() {
+  createGCLegend(settings = {}) {
+    const contentColor = settings.contentColor || '#3b82f6';
+    const skewPositiveColor = settings.skewPositiveColor || '#10b981';
+    const skewNegativeColor = settings.skewNegativeColor || '#ef4444';
     const legend = document.createElement('div');
     legend.className = 'gc-legend';
     legend.style.cssText = `
@@ -8636,16 +8555,20 @@ class TrackRenderer {
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         `;
 
-    legend.innerHTML = `
-            <div style="display: flex; align-items: center; margin-bottom: 2px;">
-                <div style="width: 12px; height: 3px; background: #28a745; margin-right: 4px; border-radius: 1px;"></div>
-                <span>GC Content</span>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <div style="width: 12px; height: 3px; background: linear-gradient(to right, #dc3545, #495057, #ffc107); margin-right: 4px; border-radius: 1px;"></div>
-                <span>GC Skew</span>
-            </div>
-        `;
+    // Swatches use the same (user-configurable) colours the plot is drawn in.
+    const addRow = (label, swatchBackground, marginBottom) => {
+      const row = document.createElement('div');
+      row.style.cssText = `display: flex; align-items: center; margin-bottom: ${marginBottom};`;
+      const swatch = document.createElement('div');
+      swatch.style.cssText = 'width: 12px; height: 3px; margin-right: 4px; border-radius: 1px;';
+      swatch.style.background = swatchBackground;
+      const text = document.createElement('span');
+      text.textContent = label;
+      row.append(swatch, text);
+      legend.appendChild(row);
+    };
+    addRow('GC Content', contentColor, '2px');
+    addRow('GC Skew (+ / −)', `linear-gradient(to right, ${skewPositiveColor} 50%, ${skewNegativeColor} 50%)`, '0');
 
     return legend;
   }
