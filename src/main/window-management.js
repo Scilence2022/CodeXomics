@@ -133,7 +133,9 @@ function createWindow(options = {}) {
   });
 
   newWindow.webContents.on('render-process-gone', (event, details) => {
-    console.error(`📋 [createMainWindow] Genome view ${windowId} render process gone: ${details.reason}`);
+    console.error(
+      `📋 [createMainWindow] Genome view ${windowId} render process gone: ${details.reason} (exitCode ${details.exitCode})`
+    );
     cleanupWindowRegistration(windowId);
   });
 
