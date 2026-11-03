@@ -1180,6 +1180,10 @@ class TabManager {
       if (typeof this.genomeBrowser.updateAppTitle === 'function') {
         this.genomeBrowser.updateAppTitle();
       }
+      // Checkpoints are per genome file; show this genome's list
+      if (typeof this.genomeBrowser.checkpointManager?.refresh === 'function') {
+        this.genomeBrowser.checkpointManager.refresh();
+      }
     }
 
     // Update all existing tabs with the new genome data
