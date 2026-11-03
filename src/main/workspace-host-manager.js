@@ -885,7 +885,9 @@ function createGenomeView({ windowId, sourceHandle = null, activate = true, file
     }
   });
   view.webContents.on('render-process-gone', (event, details) => {
-    console.error(`[WorkspaceHost] Genome view ${windowId} render process gone: ${details.reason}`);
+    console.error(
+      `[WorkspaceHost] Genome view ${windowId} render process gone: ${details.reason} (exitCode ${details.exitCode})`
+    );
   });
 
   if (process.argv.includes('--dev')) {

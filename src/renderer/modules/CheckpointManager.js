@@ -10,6 +10,10 @@ class CheckpointManager {
     this.maxCheckpoints = 50; // Maximum number of checkpoints to keep
     this.autoSaveInterval = 300000; // Auto-save every 5 minutes
     this.autoSaveTimer = null;
+    // Upper bound for the serialized 'genomeai_checkpoints' value. localStorage is shared by every
+    // genome view, and each write is broadcast (old + new value) to all of their renderers, so an
+    // unbounded value exhausts renderer memory in background views.
+    this.maxStorageChars = 2 * 1024 * 1024;
 
     // Checkpoint types
     this.CHECKPOINT_TYPES = {
@@ -107,15 +111,15 @@ class CheckpointManager {
   /**
    * Create a new checkpoint
    */
-  async createCheckpoint(name, type = this.CHECKPOINT_TYPES.MANUAL, metadata = {}) {
+  async createCheckpoint(name, type = this.CHECKPOINT_TYPES.MANUAL, metadata = {}, capturedState = null) {
     try {
       // Generate unique name if not provided
       if (!name) {
         name = this.generateCheckpointName(type);
       }
 
-      // Capture current system state
-      const state = await this.captureSystemState();
+      // Capture current system state (auto checkpoints pass the state they already compared)
+      const state = capturedState || (await this.captureSystemState());
 
       // Create checkpoint object
       const checkpoint = {
@@ -158,7 +162,7 @@ class CheckpointManager {
 
       // Genome Browser State
       genomeBrowser: {
-        currentFile: this.genomeBrowser.currentFile,
+        currentFile: this.summarizeCurrentFile(this.genomeBrowser.currentFile),
         currentChromosome: this.genomeBrowser.currentChromosome,
         currentPosition: this.genomeBrowser.currentPosition,
         zoomLevel: this.genomeBrowser.zoomLevel,
@@ -190,6 +194,31 @@ class CheckpointManager {
     };
 
     return state;
+  }
+
+  /**
+   * Describe the current file by reference only. Loaders such as the operon loader attach the whole
+   * parsed file as `data`; copying that into every checkpoint is what grew storage to tens of MB,
+   * and rollback never reloads it anyway.
+   */
+  summarizeCurrentFile(currentFile) {
+    if (!currentFile || typeof currentFile !== 'object') {
+      return currentFile || null;
+    }
+
+    return {
+      path: currentFile.path || null,
+      type: currentFile.type || null,
+      info: currentFile.info || null,
+    };
+  }
+
+  /**
+   * Serialize a state for equality checks, ignoring when it was captured
+   */
+  getStateSignature(state) {
+    if (!state) return '';
+    return JSON.stringify({ ...state, timestamp: undefined });
   }
 
   /**
@@ -618,7 +647,7 @@ class CheckpointManager {
             <strong>Size:</strong> ${this.formatSize(checkpoint.size)}<br>
             <strong>ID:</strong> ${checkpoint.id}<br><br>
             <strong>State Summary:</strong><br>
-            • File: ${checkpoint.state.genomeBrowser?.currentFile || 'None'}<br>
+            • File: ${checkpoint.state.genomeBrowser?.currentFile?.path || checkpoint.state.genomeBrowser?.currentFile || 'None'}<br>
             • Chromosome: ${checkpoint.state.genomeBrowser?.currentChromosome || 'None'}<br>
             • Position: ${checkpoint.state.genomeBrowser?.currentPosition || 'None'}<br>
             • Actions: ${checkpoint.state.actionManager?.actions?.length || 0}<br>
@@ -916,10 +945,13 @@ class CheckpointManager {
   async createAutoCheckpoint() {
     try {
       // Only create auto checkpoint if there are significant changes
-      if (this.shouldCreateAutoCheckpoint()) {
+      const state = await this.captureSystemState();
+      if (this.shouldCreateAutoCheckpoint(state)) {
         await this.createCheckpoint(
           this.generateCheckpointName(this.CHECKPOINT_TYPES.AUTO),
-          this.CHECKPOINT_TYPES.AUTO
+          this.CHECKPOINT_TYPES.AUTO,
+          {},
+          state
         );
         console.log('🕐 Auto checkpoint created');
       }
@@ -931,7 +963,7 @@ class CheckpointManager {
   /**
    * Check if auto checkpoint should be created
    */
-  shouldCreateAutoCheckpoint() {
+  shouldCreateAutoCheckpoint(state = null) {
     // Don't create if no checkpoints exist
     if (this.checkpoints.length === 0) return true;
 
@@ -939,6 +971,9 @@ class CheckpointManager {
     const lastCheckpoint = this.checkpoints[this.checkpoints.length - 1];
     const timeSinceLastCheckpoint = Date.now() - new Date(lastCheckpoint.timestamp).getTime();
     if (timeSinceLastCheckpoint < 240000) return false; // 4 minutes
+
+    // Don't create if nothing changed since the last checkpoint
+    if (state && this.getStateSignature(state) === this.getStateSignature(lastCheckpoint.state)) return false;
 
     // Create if there are pending actions
     if (window.actionManager && window.actionManager.actions.length > 0) return true;
@@ -954,17 +989,100 @@ class CheckpointManager {
    */
   async saveCheckpointsToStorage() {
     try {
+      const checkpoints = this.selectCheckpointsForStorage();
       const data = {
-        checkpoints: this.checkpoints,
+        checkpoints,
         nextCheckpointId: this.nextCheckpointId,
         lastSaved: new Date().toISOString(),
       };
 
       localStorage.setItem('genomeai_checkpoints', JSON.stringify(data));
-      console.log(`💾 Saved ${this.checkpoints.length} checkpoints to storage`);
+      console.log(`💾 Saved ${checkpoints.length} checkpoints to storage`);
     } catch (error) {
       console.error('❌ Error saving checkpoints to storage:', error);
     }
+  }
+
+  /**
+   * Pick the checkpoints that fit in the storage budget. Checkpoints that alone exceed the budget
+   * stay in memory for this session only; otherwise the oldest auto checkpoints, then the oldest of
+   * any type, are dropped until the rest fit.
+   */
+  selectCheckpointsForStorage() {
+    const entries = this.checkpoints.map(checkpoint => ({
+      checkpoint,
+      length: JSON.stringify(checkpoint).length,
+    }));
+
+    const persisted = entries.filter(entry => {
+      if (entry.length <= this.maxStorageChars) return true;
+      console.warn(
+        `⚠️ Checkpoint "${entry.checkpoint.name}" (${entry.length} chars) exceeds the storage budget; keeping it in memory only`
+      );
+      return false;
+    });
+
+    let total = persisted.reduce((sum, entry) => sum + entry.length, 0);
+    if (total <= this.maxStorageChars) {
+      return persisted.map(entry => entry.checkpoint);
+    }
+
+    const byAge = (a, b) => new Date(a.checkpoint.timestamp) - new Date(b.checkpoint.timestamp);
+    const isAuto = entry => entry.checkpoint.type === this.CHECKPOINT_TYPES.AUTO;
+    const evictionOrder = [
+      ...persisted.filter(isAuto).sort(byAge),
+      ...persisted.filter(entry => !isAuto(entry)).sort(byAge),
+    ];
+
+    const evicted = new Set();
+    for (const entry of evictionOrder) {
+      if (total <= this.maxStorageChars) break;
+      evicted.add(entry.checkpoint);
+      total -= entry.length;
+    }
+
+    this.checkpoints = this.checkpoints.filter(checkpoint => !evicted.has(checkpoint));
+    console.warn(`⚠️ Removed ${evicted.size} oldest checkpoints to stay within the storage budget`);
+
+    return persisted.filter(entry => !evicted.has(entry.checkpoint)).map(entry => entry.checkpoint);
+  }
+
+  /**
+   * Shrink checkpoints written by older versions: strip embedded file data and collapse runs of
+   * identical auto checkpoints. Returns true when anything changed.
+   */
+  migrateLoadedCheckpoints() {
+    let changed = false;
+    const kept = [];
+    let previousAutoSignature = null;
+
+    for (const checkpoint of this.checkpoints) {
+      const genomeBrowserState = checkpoint.state?.genomeBrowser;
+      if (genomeBrowserState?.currentFile && typeof genomeBrowserState.currentFile === 'object') {
+        const summary = this.summarizeCurrentFile(genomeBrowserState.currentFile);
+        if (JSON.stringify(summary) !== JSON.stringify(genomeBrowserState.currentFile)) {
+          genomeBrowserState.currentFile = summary;
+          checkpoint.size = this.calculateStateSize(checkpoint.state);
+          changed = true;
+        }
+      }
+
+      if (checkpoint.type === this.CHECKPOINT_TYPES.AUTO) {
+        const signature = this.getStateSignature(checkpoint.state);
+        if (signature === previousAutoSignature) {
+          changed = true;
+          continue;
+        }
+        previousAutoSignature = signature;
+      } else {
+        previousAutoSignature = null;
+      }
+
+      kept.push(checkpoint);
+    }
+
+    this.checkpoints = kept;
+    return changed;
   }
 
   /**
@@ -985,6 +1103,10 @@ class CheckpointManager {
         this.nextCheckpointId = data.nextCheckpointId || 1;
 
         console.log(`📂 Loaded ${this.checkpoints.length} checkpoints from storage`);
+
+        if (this.migrateLoadedCheckpoints() || stored.length > this.maxStorageChars) {
+          this.saveCheckpointsToStorage();
+        }
       }
     } catch (error) {
       console.error('❌ Error loading checkpoints from storage:', error);
