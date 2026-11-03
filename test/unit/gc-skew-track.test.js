@@ -38,7 +38,8 @@ describe('GC content & skew track layout', () => {
     const { geometry, skewSegments } = r.computeGCSkewLayout(data, 400, 140);
 
     expect(geometry.zeroY).toBeCloseTo((geometry.skewTop + geometry.skewBottom) / 2);
-    const [gRich, , cRich] = skewSegments[0];
+    // Skip the flat extension point prepended before the first window centre.
+    const [gRich, , cRich] = skewSegments[0].slice(1);
     expect(gRich[1]).toBeLessThan(geometry.zeroY);
     expect(cRich[1]).toBeGreaterThan(geometry.zeroY);
     for (const [, y] of skewSegments[0]) {
@@ -55,6 +56,45 @@ describe('GC content & skew track layout', () => {
       expect(y).toBeGreaterThanOrEqual(geometry.gcTop);
       expect(y).toBeLessThanOrEqual(geometry.gcBottom);
     }
+  });
+
+  it('extends the plot flush with both edges of the view', () => {
+    const r = renderer();
+    const data = r.calculateDynamicGCData(G_THEN_C, 50, 25);
+    const { geometry, gcSegments, skewSegments } = r.computeGCSkewLayout(data, 400, 140);
+
+    for (const segments of [gcSegments, skewSegments]) {
+      const [firstX] = segments[0][0];
+      const [lastX] = segments.at(-1).at(-1);
+      expect(firstX).toBeCloseTo(geometry.plotLeft);
+      expect(lastX).toBeCloseTo(geometry.plotRight);
+    }
+  });
+
+  it('holds the edge windows flat out to their boundaries', () => {
+    const r = renderer();
+    const data = r.calculateDynamicGCData(G_THEN_C, 50, 25);
+    const { gcSegments } = r.computeGCSkewLayout(data, 400, 140);
+
+    // Extension points share the y of the window centre they extend.
+    expect(gcSegments[0][0][1]).toBeCloseTo(gcSegments[0][1][1]);
+    expect(gcSegments[0].at(-1)[1]).toBeCloseTo(gcSegments[0].at(-2)[1]);
+  });
+
+  it('stops the plot at the sequence end when the view runs past it', () => {
+    const r = renderer();
+    // 100 bp of sequence inside a 200 bp view.
+    const data = r.calculateDynamicGCData(
+      'G'.repeat(25) + 'A'.repeat(25) + 'C'.repeat(25) + 'T'.repeat(25),
+      50,
+      50,
+      200
+    );
+    const { geometry, gcSegments } = r.computeGCSkewLayout(data, 400, 140);
+
+    expect(gcSegments[0][0][0]).toBeCloseTo(geometry.plotLeft);
+    expect(gcSegments[0].at(-1)[0]).toBeCloseTo(geometry.plotLeft + 0.5 * (geometry.plotRight - geometry.plotLeft));
+    expect(gcSegments[0].at(-1)[0]).toBeLessThan(geometry.plotRight);
   });
 });
 
