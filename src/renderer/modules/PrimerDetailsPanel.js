@@ -325,7 +325,6 @@ class PrimerDetailsPanel {
   }
 
   _sequenceHtml(model) {
-    const esc = PrimerDetailsPanel.escapeHtml;
     if (!model.oligo) return '';
     const tailHtml = model.tailLength ? this._baseSpans(model.tail, [], 'primer-base-tail') : '';
     const annealHtml = this._baseSpans(model.annealing, model.mismatchPositions);
