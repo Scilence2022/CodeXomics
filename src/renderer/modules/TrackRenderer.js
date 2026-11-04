@@ -7721,7 +7721,41 @@ class TrackRenderer {
     );
   }
 
+  /**
+   * Refresh the "Operons in View" sidebar panel for the active tab.
+   *
+   * The panel lives in the shared sidebar, so the entries are also stored on
+   * the active tab's state; TabManager repaints them on every tab switch
+   * (including cached restores, which never re-render the gene track).
+   */
   updateOperonsPanel(operons, visibleOperons) {
+    const entries = this.buildOperonPanelEntries(operons, visibleOperons);
+    this.genomeBrowser.tabManager?.setCurrentTabOperonsInView?.(entries);
+    this.renderOperonsPanel(entries);
+  }
+
+  /**
+   * Reduce the visible operons to the plain, serialisable fields the panel
+   * shows, so each tab can keep (and persist) its own snapshot cheaply.
+   */
+  buildOperonPanelEntries(operons, visibleOperons) {
+    const operonList = Array.isArray(operons) ? operons : [];
+    const entries = [];
+    Array.from(visibleOperons || []).forEach(operonName => {
+      const operonData = operonList.find(op => op.name === operonName);
+      if (!operonData) return;
+      entries.push({
+        name: operonName,
+        start: operonData.start,
+        end: operonData.end,
+        strand: operonData.strand,
+        geneCount: Array.isArray(operonData.genes) ? operonData.genes.length : Number(operonData.geneCount) || 0,
+      });
+    });
+    return entries;
+  }
+
+  renderOperonsPanel(entries) {
     const operonsList = document.getElementById('operonsList');
 
     if (!operonsList) return;
@@ -7729,7 +7763,7 @@ class TrackRenderer {
     // Clear existing content
     operonsList.innerHTML = '';
 
-    if (visibleOperons.size === 0) {
+    if (!Array.isArray(entries) || entries.length === 0) {
       const noOperons = document.createElement('p');
       noOperons.className = 'no-operons';
       noOperons.textContent = 'No operons detected in current view';
@@ -7737,12 +7771,8 @@ class TrackRenderer {
       return;
     }
 
-    // Create operon items for visible operons
-    Array.from(visibleOperons).forEach(operonName => {
-      // Find the operon data
-      const operonData = operons.find(op => op.name === operonName);
-      if (!operonData) return;
-
+    entries.forEach(entry => {
+      const operonName = entry.name;
       const color = this.genomeBrowser.assignOperonColor(operonName);
 
       const operonItem = document.createElement('div');
@@ -7760,11 +7790,11 @@ class TrackRenderer {
 
       const operonNameEl = document.createElement('div');
       operonNameEl.className = 'operon-name';
-      operonNameEl.textContent = operonName.replace('_operon', '');
+      operonNameEl.textContent = String(operonName).replace('_operon', '');
 
       const operonDetails = document.createElement('div');
       operonDetails.className = 'operon-details';
-      operonDetails.textContent = `${operonData.start.toLocaleString()}-${operonData.end.toLocaleString()} (${operonData.strand === -1 ? '-' : '+'})`;
+      operonDetails.textContent = `${Number(entry.start).toLocaleString()}-${Number(entry.end).toLocaleString()} (${entry.strand === -1 ? '-' : '+'})`;
 
       operonInfo.appendChild(operonNameEl);
       operonInfo.appendChild(operonDetails);
@@ -7772,12 +7802,12 @@ class TrackRenderer {
       // Gene count badge
       const geneCount = document.createElement('div');
       geneCount.className = 'operon-gene-count';
-      geneCount.textContent = operonData.genes.length.toString();
-      geneCount.title = `${operonData.genes.length} genes in this operon`;
+      geneCount.textContent = String(entry.geneCount);
+      geneCount.title = `${entry.geneCount} genes in this operon`;
 
       // Add click handler to navigate to operon
       operonItem.addEventListener('click', () => {
-        this.navigateToOperon(operonData);
+        this.navigateToOperon(entry);
       });
 
       operonItem.appendChild(colorIndicator);
@@ -7804,6 +7834,14 @@ class TrackRenderer {
 
     // Update statistics
     this.genomeBrowser.updateStatistics(currentChr, this.genomeBrowser.currentSequence[currentChr]);
+
+    // Record the jump on the active tab only, so other tabs keep their own position
+    if (currentChr) {
+      this.genomeBrowser.genomeNavigationBar?.update?.();
+      this.genomeBrowser.tabManager?.updateCurrentTabPosition?.(currentChr, newStart + 1, newEnd, {
+        source: 'navigation',
+      });
+    }
   }
 
   // New method to dispatch gene arrangement based on layout mode
