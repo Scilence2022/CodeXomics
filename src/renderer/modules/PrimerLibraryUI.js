@@ -9,6 +9,9 @@
  * source genome file is never modified).
  */
 class PrimerLibraryUI {
+  /** Minimum flanking sequence (bp) shown on each side of a located primer site. */
+  static LOCATE_MIN_FLANK_BP = 100;
+
   constructor(genomeBrowser) {
     this.gb = genomeBrowser;
     this.modalId = 'primerLibraryModal';
@@ -320,8 +323,48 @@ class PrimerLibraryUI {
       (a, b) =>
         (b.bindingScore || 0) - (a.bindingScore || 0) || (a.mismatches?.length || 0) - (b.mismatches?.length || 0)
     )[0];
-    this.gb.navigationManager?.navigateToPosition(best.chromosome || chr, best.start, best.end);
+    this._navigateToSite(best.chromosome || chr, best.start, best.end);
     this.close();
+  }
+
+  /**
+   * Compute the view window for a binding site (1-based inclusive). A primer is
+   * only ~20 bp, so jumping to exactly its span zooms in so far that the
+   * surrounding context (template, partner primer, nearby features) is lost.
+   * The site is centred in a window padded on both sides with
+   * max(LOCATE_MIN_FLANK_BP, siteLength) of flanking sequence, then shifted (not
+   * shrunk) to stay inside the chromosome.
+   *
+   * @param {number} start - 1-based inclusive site start
+   * @param {number} end - 1-based inclusive site end
+   * @param {number} [chromosomeLength] - clamp bound; omitted means unbounded
+   * @returns {{start: number, end: number}} 1-based inclusive window
+   */
+  static siteViewWindow(start, end, chromosomeLength) {
+    const lo = Math.min(start, end);
+    const hi = Math.max(start, end);
+    const flank = Math.max(PrimerLibraryUI.LOCATE_MIN_FLANK_BP, hi - lo + 1);
+    let winStart = lo - flank;
+    let winEnd = hi + flank;
+    const maxEnd = Number.isFinite(chromosomeLength) && chromosomeLength > 0 ? chromosomeLength : Infinity;
+    if (winStart < 1) {
+      winEnd = Math.min(maxEnd, winEnd + (1 - winStart));
+      winStart = 1;
+    }
+    if (winEnd > maxEnd) {
+      winStart = Math.max(1, winStart - (winEnd - maxEnd));
+      winEnd = maxEnd;
+    }
+    return { start: winStart, end: winEnd };
+  }
+
+  _navigateToSite(chr, start, end) {
+    const nav = this.gb?.navigationManager;
+    if (!nav || !chr) return;
+    const resolved = typeof nav.resolveChromosomeName === 'function' ? nav.resolveChromosomeName(chr) : null;
+    const seqLength = this.gb?.currentSequence?.[resolved?.name || chr]?.length;
+    const win = PrimerLibraryUI.siteViewWindow(start, end, seqLength);
+    nav.navigateToPosition(chr, win.start, win.end);
   }
 
   _applyStringency() {
@@ -486,7 +529,7 @@ class PrimerLibraryUI {
           const chr = el.getAttribute('data-site-chr');
           const start = parseInt(el.getAttribute('data-site-start'), 10);
           const end = parseInt(el.getAttribute('data-site-end'), 10);
-          this.gb.navigationManager?.navigateToPosition(chr, start, end);
+          this._navigateToSite(chr, start, end);
         }
       }
     });
