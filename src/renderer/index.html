@@ -881,253 +881,306 @@
 
         <!-- Main Content -->
         <main class="main-content sidebar-collapsed" id="mainContent">
-            <!-- Sidebar -->
+            <!-- Sidebar view rail: switches between the grouped sidebar views below -->
+            <nav class="sidebar-rail" id="sidebarRail" role="tablist" aria-label="Sidebar views">
+                <button class="sidebar-rail-btn active" data-view="display" role="tab" title="Display: tracks and feature types">
+                    <i class="fas fa-sliders"></i>
+                </button>
+                <button class="sidebar-rail-btn" data-view="inspect" role="tab" title="Inspect: details of the selected gene, primer, read or variant">
+                    <i class="fas fa-magnifying-glass-plus"></i>
+                    <span class="sidebar-rail-dot" hidden></span>
+                </button>
+                <button class="sidebar-rail-btn" data-view="explore" role="tab" title="Explore: search results, operons and bookmarks">
+                    <i class="fas fa-compass"></i>
+                    <span class="sidebar-rail-badge" hidden></span>
+                </button>
+                <button class="sidebar-rail-btn" data-view="info" role="tab" title="Info: file information and statistics">
+                    <i class="fas fa-circle-info"></i>
+                </button>
+            </nav>
+
             <aside class="sidebar collapsed" id="sidebar">
-                <div class="sidebar-section" id="geneDetailsSection" style="display: none;">
-                    <div class="section-header">
-                        <h3>Gene Details</h3>
-                        <div class="section-header-buttons">
-                            <button class="annotation-review-panel-btn"
-                                onclick="window.genomeBrowser.showAnnotationReviewCenter()"
-                                title="Annotation ChangeSet Review">
-                                <i class="fas fa-clipboard-check"></i>
-                                <span class="annotation-review-badge" hidden>0</span>
-                            </button>
-                            <button class="notes-panel-btn" onclick="window.genomeBrowser.toggleGeneNotes()"
-                                title="Open User Notes (saved separately, not exported)" id="geneNotesBtn">
-                                <i class="fas fa-sticky-note"></i>
-                            </button>
-                            <button class="settings-panel-btn" onclick="window.genomeBrowser.showGeneDetailSettings()"
-                                title="Gene Details Settings">
-                                <i class="fas fa-cog"></i>
-                            </button>
-                            <button class="close-panel-btn" data-panel="geneDetailsSection">
+                <div class="sidebar-view active" data-view="display" id="sidebarViewDisplay" role="tabpanel" aria-label="Display">
+                    <div class="sidebar-view-title">Display</div>
+                    <div class="sidebar-section" id="tracksSection" data-restorable="true">
+                        <div class="section-header">
+                            <h3>Track Control</h3>
+                            <button class="close-panel-btn" data-panel="tracksSection">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                    </div>
-                    <div id="geneDetailsContent" class="gene-details-content">
-                        <div class="no-gene-selected">
-                            <i class="fas fa-dna gene-icon"></i>
-                            <p>Click on a gene in the Genes & Features track to view details</p>
+                        <div class="track-controls" id="sidebarTrackControls">
+                            <!-- Dynamically populated based on active track instances -->
                         </div>
                     </div>
-                </div>
 
-                <div class="sidebar-section" id="primerDetailsSection" style="display: none;">
-                    <div class="section-header">
-                        <h3>Primer Details</h3>
-                        <div class="section-header-buttons">
-                            <button class="close-panel-btn" data-panel="primerDetailsSection">
+                    <div class="sidebar-section" id="featuresSection" data-restorable="true">
+                        <div class="section-header">
+                            <h3>Show Features</h3>
+                            <button class="close-panel-btn" data-panel="featuresSection">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                    </div>
-                    <div id="primerDetailsContent" class="primer-details-content">
-                        <div class="no-primer-selected">
-                            <i class="fas fa-vial gene-icon"></i>
-                            <p>Click on a primer in the Primers track to view details</p>
+                        <div class="feature-controls">
+                            <div class="feature-group-title">Core</div>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowGenes">
+                                <span>Genes</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowCDS" checked>
+                                <span>CDS</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowMRNA" checked>
+                                <span>mRNA</span>
+                            </label>
+                            <div class="feature-group-title">RNA</div>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowTRNA" checked>
+                                <span>tRNA</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowRRNA" checked>
+                                <span>rRNA</span>
+                            </label>
+                            <div class="feature-group-title">Regulatory</div>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowPromoter" checked>
+                                <span>Promoters</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowTerminator" checked>
+                                <span>Terminators</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowRegulatory" checked>
+                                <span>Regulatory Sites</span>
+                            </label>
+                            <div class="feature-group-title">Other</div>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowSource">
+                                <span>Source Features</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowMiscFeature" checked>
+                                <span>Misc Features</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowRepeatRegion" checked>
+                                <span>Repeat Regions</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowBedFeature" checked>
+                                <span>BED Features</span>
+                            </label>
+                            <label class="feature-control-item">
+                                <input type="checkbox" id="sidebarShowOther" checked>
+                                <span>Other</span>
+                            </label>
                         </div>
                     </div>
+
+                    <div class="sidebar-view-empty">
+                        <i class="fas fa-sliders"></i>
+                        <p>All display panels are hidden.</p>
+                    </div>
+                    <div class="sidebar-view-restore" hidden></div>
                 </div>
 
-                <div class="sidebar-section" id="readDetailsSection" style="display: none;">
-                    <div class="section-header">
-                        <h3>Read Details</h3>
-                        <button class="close-panel-btn" data-panel="readDetailsSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="readDetailsContent" class="read-details-content">
-                        <div class="no-read-selected">
-                            <i class="fas fa-align-left read-icon"></i>
-                            <p>Click on a read in the Aligned Reads track to view details</p>
+                <div class="sidebar-view" data-view="inspect" data-transient="true" id="sidebarViewInspect" role="tabpanel" aria-label="Inspect">
+                    <div class="sidebar-view-title">Inspect</div>
+                    <div class="sidebar-section" id="geneDetailsSection" style="display: none;">
+                        <div class="section-header">
+                            <h3>Gene Details</h3>
+                            <div class="section-header-buttons">
+                                <button class="annotation-review-panel-btn"
+                                    onclick="window.genomeBrowser.showAnnotationReviewCenter()"
+                                    title="Annotation ChangeSet Review">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    <span class="annotation-review-badge" hidden>0</span>
+                                </button>
+                                <button class="notes-panel-btn" onclick="window.genomeBrowser.toggleGeneNotes()"
+                                    title="Open User Notes (saved separately, not exported)" id="geneNotesBtn">
+                                    <i class="fas fa-sticky-note"></i>
+                                </button>
+                                <button class="settings-panel-btn" onclick="window.genomeBrowser.showGeneDetailSettings()"
+                                    title="Gene Details Settings">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                                <button class="close-panel-btn" data-panel="geneDetailsSection">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="geneDetailsContent" class="gene-details-content">
+                            <div class="no-gene-selected">
+                                <i class="fas fa-dna gene-icon"></i>
+                                <p>Click on a gene in the Genes & Features track to view details</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="sidebar-section" id="variantDetailsSection" style="display: none;">
-                    <div class="section-header">
-                        <h3>Variant Details</h3>
-                        <button class="close-panel-btn" data-panel="variantDetailsSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="variantDetailsContent" class="variant-details-content">
-                        <div class="no-variant-selected">
-                            <i class="fas fa-dna variant-icon"></i>
-                            <p>Click on a variant in the VCF track to view detailed analysis</p>
+                    <div class="sidebar-section" id="primerDetailsSection" style="display: none;">
+                        <div class="section-header">
+                            <h3>Primer Details</h3>
+                            <div class="section-header-buttons">
+                                <button class="close-panel-btn" data-panel="primerDetailsSection">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="primerDetailsContent" class="primer-details-content">
+                            <div class="no-primer-selected">
+                                <i class="fas fa-vial gene-icon"></i>
+                                <p>Click on a primer in the Primers track to view details</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="sidebar-section" id="searchResultsSection" style="display: none;">
-                    <div class="section-header">
-                        <h3>Search Results</h3>
-                        <button class="close-panel-btn" data-panel="searchResultsSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="searchResultsList" class="search-results-list">
-                        <p class="no-results">No search results</p>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="bookmarksSection" style="display: none;">
-                    <div class="section-header">
-                        <h3>Bookmarks</h3>
-                        <button class="close-panel-btn" data-panel="bookmarksSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="bookmarksContent" class="bookmarks-panel">
-                        <p class="bookmarks-empty">No bookmarks saved</p>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="operonsSection">
-                    <div class="section-header">
-                        <h3>Operons in View</h3>
-                        <button class="close-panel-btn" data-panel="operonsSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="operonsList" class="operons-list">
-                        <p class="no-operons">No operons detected in current view</p>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="tracksSection">
-                    <div class="section-header">
-                        <h3>Track Control</h3>
-                        <button class="close-panel-btn" data-panel="tracksSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="track-controls" id="sidebarTrackControls">
-                        <!-- Dynamically populated based on active track instances -->
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="featuresSection">
-                    <div class="section-header">
-                        <h3>Show Features</h3>
-                        <button class="close-panel-btn" data-panel="featuresSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="feature-controls">
-                        <div class="feature-group-title">Core</div>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowGenes">
-                            <span>Genes</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowCDS" checked>
-                            <span>CDS</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowMRNA" checked>
-                            <span>mRNA</span>
-                        </label>
-                        <div class="feature-group-title">RNA</div>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowTRNA" checked>
-                            <span>tRNA</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowRRNA" checked>
-                            <span>rRNA</span>
-                        </label>
-                        <div class="feature-group-title">Regulatory</div>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowPromoter" checked>
-                            <span>Promoters</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowTerminator" checked>
-                            <span>Terminators</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowRegulatory" checked>
-                            <span>Regulatory Sites</span>
-                        </label>
-                        <div class="feature-group-title">Other</div>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowSource">
-                            <span>Source Features</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowMiscFeature" checked>
-                            <span>Misc Features</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowRepeatRegion" checked>
-                            <span>Repeat Regions</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowBedFeature" checked>
-                            <span>BED Features</span>
-                        </label>
-                        <label class="feature-control-item">
-                            <input type="checkbox" id="sidebarShowOther" checked>
-                            <span>Other</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="fileInfoSection">
-                    <div class="section-header">
-                        <h3>File Information</h3>
-                        <button class="close-panel-btn" data-panel="fileInfoSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="fileInfo" class="file-info">
-                        <p class="no-file">No file loaded</p>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="navigationSection">
-                    <div class="section-header">
-                        <h3>Navigation</h3>
-                        <button class="close-panel-btn" data-panel="navigationSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="navigation-controls">
-                        <button id="prevBtn" class="btn btn-block">
-                            <i class="fas fa-chevron-left"></i>
-                            Previous
-                        </button>
-                        <button id="nextBtn" class="btn btn-block">
-                            Next
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="statisticsSection">
-                    <div class="section-header">
-                        <h3>Statistics</h3>
-                        <button class="close-panel-btn" data-panel="statisticsSection">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="stats" class="stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Length:</span>
-                            <span class="stat-value" id="sequenceLength">-</span>
+                    <div class="sidebar-section" id="readDetailsSection" style="display: none;">
+                        <div class="section-header">
+                            <h3>Read Details</h3>
+                            <button class="close-panel-btn" data-panel="readDetailsSection">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                        <div class="stat-item">
-                            <span class="stat-label">GC Content:</span>
-                            <span class="stat-value" id="gcContent">-</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Current Position:</span>
-                            <span class="stat-value" id="currentPosition">-</span>
+                        <div id="readDetailsContent" class="read-details-content">
+                            <div class="no-read-selected">
+                                <i class="fas fa-align-left read-icon"></i>
+                                <p>Click on a read in the Aligned Reads track to view details</p>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="sidebar-section" id="variantDetailsSection" style="display: none;">
+                        <div class="section-header">
+                            <h3>Variant Details</h3>
+                            <button class="close-panel-btn" data-panel="variantDetailsSection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="variantDetailsContent" class="variant-details-content">
+                            <div class="no-variant-selected">
+                                <i class="fas fa-dna variant-icon"></i>
+                                <p>Click on a variant in the VCF track to view detailed analysis</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-view-empty">
+                        <i class="fas fa-magnifying-glass-plus"></i>
+                        <p>Click a gene, primer, read or variant in the tracks to inspect it here.</p>
+                    </div>
+                    <div class="sidebar-view-restore" hidden></div>
+                </div>
+
+                <div class="sidebar-view" data-view="explore" id="sidebarViewExplore" role="tabpanel" aria-label="Explore">
+                    <div class="sidebar-view-title">Explore</div>
+                    <div class="sidebar-section" id="searchResultsSection" style="display: none;">
+                        <div class="section-header">
+                            <h3>Search Results</h3>
+                            <button class="close-panel-btn" data-panel="searchResultsSection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="searchResultsList" class="search-results-list">
+                            <p class="no-results">No search results</p>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section" id="operonsSection" data-restorable="true">
+                        <div class="section-header">
+                            <h3>Operons in View</h3>
+                            <button class="close-panel-btn" data-panel="operonsSection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="operonsList" class="operons-list">
+                            <p class="no-operons">No operons detected in current view</p>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section" id="bookmarksSection" data-restorable="true" style="display: none;">
+                        <div class="section-header">
+                            <h3>Bookmarks</h3>
+                            <button class="close-panel-btn" data-panel="bookmarksSection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="bookmarksContent" class="bookmarks-panel">
+                            <p class="bookmarks-empty">No bookmarks saved</p>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-view-empty">
+                        <i class="fas fa-compass"></i>
+                        <p>Search results, operons and bookmarks appear here.</p>
+                    </div>
+                    <div class="sidebar-view-restore" hidden></div>
+                </div>
+
+                <div class="sidebar-view" data-view="info" id="sidebarViewInfo" role="tabpanel" aria-label="Info">
+                    <div class="sidebar-view-title">Info</div>
+                    <div class="sidebar-section" id="fileInfoSection" data-restorable="true">
+                        <div class="section-header">
+                            <h3>File Information</h3>
+                            <button class="close-panel-btn" data-panel="fileInfoSection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="fileInfo" class="file-info">
+                            <p class="no-file">No file loaded</p>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section" id="statisticsSection" data-restorable="true">
+                        <div class="section-header">
+                            <h3>Statistics</h3>
+                            <button class="close-panel-btn" data-panel="statisticsSection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="stats" class="stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Length:</span>
+                                <span class="stat-value" id="sequenceLength">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">GC Content:</span>
+                                <span class="stat-value" id="gcContent">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Current Position:</span>
+                                <span class="stat-value" id="currentPosition">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section" id="navigationSection" data-restorable="true" style="display: none;">
+                        <div class="section-header">
+                            <h3>Navigation</h3>
+                            <button class="close-panel-btn" data-panel="navigationSection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="navigation-controls">
+                            <button id="prevBtn" class="btn btn-block">
+                                <i class="fas fa-chevron-left"></i>
+                                Previous
+                            </button>
+                            <button id="nextBtn" class="btn btn-block">
+                                Next
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-view-empty">
+                        <i class="fas fa-circle-info"></i>
+                        <p>All info panels are hidden.</p>
+                    </div>
+                    <div class="sidebar-view-restore" hidden></div>
                 </div>
             </aside>
 

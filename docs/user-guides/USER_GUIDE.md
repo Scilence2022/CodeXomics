@@ -85,7 +85,7 @@ When you first launch CodeXomics, you'll see the main interface with:
 - **Header Bar** - File operations, tools menu, and settings
 - **Genome Viewer** - Central visualization area
 - **ChatBox** - AI assistant interface (right sidebar)
-- **Gene Details** - Information panel (left sidebar)
+- **Sidebar** - Left panel with an icon rail that switches between four views: **Display** (track and feature-type toggles), **Inspect** (details of the selected gene, primer, read or variant), **Explore** (search results, operons, bookmarks) and **Info** (file information and statistics). Click a section header to collapse it; click the active rail icon to hide the sidebar.
 
 ### Quick Start Workflow
 

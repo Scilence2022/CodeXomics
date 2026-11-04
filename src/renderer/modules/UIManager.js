@@ -17,6 +17,7 @@ class UIManager {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
         this.initializeSidebarSplitter();
+        this.initializeSidebarViews();
         this.initializeNavigationDrag();
         this.initializeSplitterToggleDrag();
       });
@@ -28,6 +29,7 @@ class UIManager {
         // detached global document.
         if (typeof document === 'undefined') return;
         this.initializeSidebarSplitter();
+        this.initializeSidebarViews();
         this.initializeNavigationDrag();
         this.initializeSplitterToggleDrag();
       }, 100);
@@ -136,6 +138,9 @@ class UIManager {
     const panel = document.getElementById(panelId);
     if (panel) {
       panel.style.display = 'block';
+
+      // Switch the sidebar to the view that holds this panel
+      this.revealSidebarPanel(panelId);
 
       // Show sidebar and splitter if they were hidden
       this.showSidebarIfHidden();
@@ -251,6 +256,267 @@ class UIManager {
     sidebar.style.removeProperty('overflow-y');
     sidebar.style.flex = 'none';
     sidebar.dataset.previousWidth = previousWidth;
+  }
+
+  // Sidebar views
+  //
+  // The sidebar groups its sections into views (Display, Inspect, Explore,
+  // Info) that the rail switches between. A section's open/closed state stays
+  // in its own style.display, so every existing panel code path keeps working;
+  // the view only decides which group of sections is on screen.
+
+  initializeSidebarViews() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar || this._sidebarViewsInitialized || !sidebar.querySelector('.sidebar-view')) return;
+    this._sidebarViewsInitialized = true;
+
+    const rail = document.getElementById('sidebarRail');
+    if (rail) {
+      rail.addEventListener('click', e => {
+        const button = e.target.closest('.sidebar-rail-btn');
+        if (button?.dataset.view) this.handleSidebarRailClick(button.dataset.view);
+      });
+    }
+
+    // Delegated, because some panels have their innerHTML replaced on tab restore
+    sidebar.addEventListener('click', e => {
+      const chip = e.target.closest('.sidebar-restore-chip');
+      if (chip) {
+        this.showPanel(chip.dataset.panel);
+        return;
+      }
+      const header = e.target.closest('.sidebar-section > .section-header');
+      if (!header || e.target.closest('button, a, input, select, textarea, label')) return;
+      this.toggleSidebarSectionCollapsed(header.parentElement.id);
+    });
+
+    this.getStoredCollapsedSidebarSections().forEach(sectionId => {
+      document.getElementById(sectionId)?.classList.add('section-collapsed');
+    });
+
+    let savedView = null;
+    try {
+      savedView = localStorage.getItem('sidebarActiveView');
+    } catch (error) {
+      savedView = null;
+    }
+    const initialView =
+      savedView && this.getSidebarViewElement(savedView) ? savedView : this.getActiveSidebarView() || 'display';
+    this.setActiveSidebarView(initialView, { persist: false });
+
+    if (typeof MutationObserver !== 'undefined') {
+      this._sidebarViewObserver = new MutationObserver(mutations => {
+        const panelChanged = mutations.some(
+          mutation => mutation.type === 'childList' || mutation.target.classList?.contains('sidebar-section')
+        );
+        if (panelChanged) this.refreshSidebarViews({ fromPanelChange: true });
+      });
+      sidebar.querySelectorAll('.sidebar-section').forEach(section => {
+        const watchContent = section.id === 'searchResultsSection';
+        this._sidebarViewObserver.observe(section, {
+          attributes: true,
+          attributeFilter: ['style'],
+          childList: watchContent,
+          subtree: watchContent,
+        });
+      });
+    }
+  }
+
+  getSidebarViews() {
+    return Array.from(document.querySelectorAll('#sidebar > .sidebar-view'));
+  }
+
+  getSidebarViewElement(view) {
+    return this.getSidebarViews().find(element => element.dataset.view === view) || null;
+  }
+
+  getActiveSidebarView() {
+    return document.querySelector('#sidebar > .sidebar-view.active')?.dataset.view || null;
+  }
+
+  getSidebarViewForPanel(panelId) {
+    return document.getElementById(panelId)?.closest('.sidebar-view')?.dataset.view || null;
+  }
+
+  isSidebarSectionOpen(section) {
+    return Boolean(section) && !section.hidden && section.style.display !== 'none';
+  }
+
+  setActiveSidebarView(view, options = {}) {
+    const { persist = true } = options;
+    const target = this.getSidebarViewElement(view);
+    if (!target) return false;
+
+    const current = this.getActiveSidebarView();
+    if (current && current !== view) {
+      this._previousSidebarView = current;
+    }
+
+    this.getSidebarViews().forEach(element => {
+      element.classList.toggle('active', element === target);
+    });
+    document.querySelectorAll('#sidebarRail .sidebar-rail-btn').forEach(button => {
+      const isActive = button.dataset.view === view;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    // Transient views (Inspect) follow the selection, so they are never the
+    // view a fresh start opens on.
+    if (persist && target.dataset.transient !== 'true') {
+      try {
+        localStorage.setItem('sidebarActiveView', view);
+      } catch (error) {
+        console.warn('Unable to persist sidebar view:', error);
+      }
+    }
+
+    if (current !== view) {
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar) sidebar.scrollTop = 0;
+    }
+
+    this.refreshSidebarViews();
+    return true;
+  }
+
+  /**
+   * Bring a panel on screen: switch to its view and expand it if collapsed.
+   * Does not change whether the panel itself is open.
+   */
+  revealSidebarPanel(panelId) {
+    const view = this.getSidebarViewForPanel(panelId);
+    if (view) {
+      this.setActiveSidebarView(view);
+    }
+    const section = document.getElementById(panelId);
+    if (section?.classList.contains('section-collapsed')) {
+      this.toggleSidebarSectionCollapsed(panelId, true);
+    }
+  }
+
+  handleSidebarRailClick(view) {
+    const sidebar = document.getElementById('sidebar');
+    const isCollapsed = !sidebar || sidebar.classList.contains('collapsed') || sidebar.offsetWidth === 0;
+
+    if (isCollapsed) {
+      this.setActiveSidebarView(view);
+      this.setSidebarCollapsed(false, { persist: true });
+    } else if (this.getActiveSidebarView() === view) {
+      // Clicking the active view again hides the sidebar, as in VS Code
+      this.setSidebarCollapsed(true, { persist: true });
+    } else {
+      this.setActiveSidebarView(view);
+    }
+  }
+
+  refreshSidebarViews(options = {}) {
+    const { fromPanelChange = false } = options;
+    const views = this.getSidebarViews();
+    if (!views.length) return;
+
+    const openCounts = {};
+    views.forEach(view => {
+      const sections = Array.from(view.querySelectorAll(':scope > .sidebar-section'));
+      const openSections = sections.filter(section => this.isSidebarSectionOpen(section));
+      openCounts[view.dataset.view] = openSections.length;
+      view.classList.toggle('is-empty', openSections.length === 0);
+
+      const restore = view.querySelector(':scope > .sidebar-view-restore');
+      if (restore) {
+        const closedSections = sections.filter(
+          section => section.dataset.restorable === 'true' && !this.isSidebarSectionOpen(section)
+        );
+        this.renderSidebarRestoreChips(restore, closedSections);
+      }
+    });
+
+    const active = this.getActiveSidebarView();
+    const rail = document.getElementById('sidebarRail');
+    if (rail) {
+      const inspectDot = rail.querySelector('[data-view="inspect"] .sidebar-rail-dot');
+      if (inspectDot) {
+        inspectDot.hidden = !(openCounts.inspect > 0 && active !== 'inspect');
+      }
+
+      const badge = rail.querySelector('[data-view="explore"] .sidebar-rail-badge');
+      if (badge) {
+        const searchSection = document.getElementById('searchResultsSection');
+        const resultCount = this.isSidebarSectionOpen(searchSection)
+          ? this.genomeBrowser?.navigationManager?.searchResults?.length || 0
+          : 0;
+        badge.hidden = resultCount === 0;
+        badge.textContent = resultCount > 99 ? '99+' : String(resultCount);
+        badge.title = resultCount ? `${resultCount} search result${resultCount === 1 ? '' : 's'}` : '';
+      }
+    }
+
+    // When the last panel of a transient view closes (a selection was
+    // cleared), return to the view the user was on before it opened.
+    const activeElement = active ? this.getSidebarViewElement(active) : null;
+    if (fromPanelChange && activeElement?.dataset.transient === 'true' && openCounts[active] === 0) {
+      const previous = this._previousSidebarView;
+      const previousElement = previous ? this.getSidebarViewElement(previous) : null;
+      const fallback = previousElement && previousElement.dataset.transient !== 'true' ? previous : 'display';
+      this.setActiveSidebarView(fallback, { persist: false });
+    }
+  }
+
+  renderSidebarRestoreChips(container, closedSections) {
+    const key = closedSections.map(section => section.id).join(',');
+    if (container.dataset.panels === key) return;
+    container.dataset.panels = key;
+    container.hidden = closedSections.length === 0;
+    container.replaceChildren();
+    if (!closedSections.length) return;
+
+    const label = document.createElement('span');
+    label.className = 'sidebar-view-restore-label';
+    label.textContent = 'Hidden panels';
+    container.appendChild(label);
+
+    closedSections.forEach(section => {
+      const name = section.querySelector('.section-header h3')?.textContent.trim() || section.id;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'sidebar-restore-chip';
+      chip.dataset.panel = section.id;
+      chip.title = `Show ${name}`;
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-plus';
+      chip.append(icon, document.createTextNode(` ${name}`));
+      container.appendChild(chip);
+    });
+  }
+
+  toggleSidebarSectionCollapsed(sectionId, expand) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    const collapsed =
+      expand === undefined
+        ? section.classList.toggle('section-collapsed')
+        : section.classList.toggle('section-collapsed', !expand);
+    section.querySelector(':scope > .section-header')?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+
+    const stored = new Set(this.getStoredCollapsedSidebarSections());
+    if (collapsed) stored.add(sectionId);
+    else stored.delete(sectionId);
+    try {
+      localStorage.setItem('sidebarCollapsedSections', JSON.stringify(Array.from(stored)));
+    } catch (error) {
+      console.warn('Unable to persist collapsed sidebar sections:', error);
+    }
+  }
+
+  getStoredCollapsedSidebarSections() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem('sidebarCollapsedSections') || '[]');
+      return Array.isArray(parsed) ? parsed.filter(id => typeof id === 'string') : [];
+    } catch (error) {
+      return [];
+    }
   }
 
   // Toggle functionality
@@ -461,6 +727,12 @@ class UIManager {
     // Update toolbar mac-style toggle (checkbox)
     if (toggleSidebarBtn) {
       toggleSidebarBtn.checked = !isCollapsed;
+    }
+
+    // The rail stays visible while the sidebar is hidden; drop its active highlight then
+    const rail = document.getElementById('sidebarRail');
+    if (rail) {
+      rail.classList.toggle('sidebar-hidden', isCollapsed);
     }
   }
 
