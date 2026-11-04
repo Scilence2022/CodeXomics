@@ -5844,6 +5844,13 @@ class TrackRenderer {
             z-index: 49;
         `;
 
+    // CanvasReadsRenderer takes over its container's style (position: relative,
+    // height: auto), which would wipe the absolute offset above and leave the
+    // reads under the coverage/reference bands. Give it a separate inner div,
+    // as renderVisibleRowsCanvas does for the scrollable view.
+    const rendererContainer = document.createElement('div');
+    canvasContainer.appendChild(rendererContainer);
+
     // Prepare Canvas renderer options from settings.
     // Coverage and reference are drawn as fixed DOM bands above this canvas
     // (createCoverageVisualization / createReferenceVisualization), so the
@@ -5882,7 +5889,7 @@ class TrackRenderer {
 
     try {
       // Create Canvas renderer
-      const canvasRenderer = new CanvasReadsRenderer(canvasContainer, readRows, viewport, canvasOptions);
+      const canvasRenderer = new CanvasReadsRenderer(rendererContainer, readRows, viewport, canvasOptions);
 
       // Store renderer for cleanup and updates (extend the existing canvas renderers)
       if (!this.canvasRenderers) {
