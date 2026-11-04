@@ -2092,68 +2092,43 @@ class NavigationManager {
   }
 
   /**
-   * Perform lightweight visual updates during dragging
-   * Uses unified container approach for consistent movement
+   * Resolve the element that carries the live drag transform for ONE track
+   * (single-track mode, i.e. global dragging disabled). It must be the dragged
+   * track's own content - the same surface performGlobalDragUpdate moves for
+   * that track - so the preview matches the release render:
+   *  - genes: the `.unified-gene-container` inside that track's content
+   *  - every other track: its `.track-content`
+   * `element` may be the `.track-content`, the outer track, or something
+   * inside the content. A draggable that isn't part of a track (the detailed
+   * coordinate ruler) returns null: it is redrawn from currentPosition on each
+   * move by updateDetailedRulers(), so it needs no transform.
+   */
+  getVisualDragTarget(element) {
+    if (!element || element.nodeType !== 1) return null;
+
+    const trackContent = element.matches('.track-content')
+      ? element
+      : element.closest('.track-content') || element.querySelector('.track-content');
+    if (!trackContent) return null;
+
+    return trackContent.querySelector('.unified-gene-container') || trackContent;
+  }
+
+  /**
+   * Perform lightweight visual updates during dragging (single-track mode):
+   * shift only the dragged track. The other tracks re-render at drag end.
    */
   performVisualDragUpdate(shiftPercent, element) {
-    // Percentage transforms keep the preview aligned with the eventual render
-    // regardless of the exact track width (see handleDocumentMouseMove). SVG
-    // transform attributes can't take percentages, so the legacy SVG-element
-    // path uses a pixel value derived from the width captured at drag start.
-    const svgDeltaX = (shiftPercent / 100) * (this.dragState.elementWidth || this.getEffectiveWidth(element));
-
-    // Check if this is a reads track and handle it directly
-    const readsTrackElement = element.closest('.reads-track');
-    if (readsTrackElement) {
-      const trackContent = readsTrackElement.querySelector('.track-content');
-      if (trackContent) {
-        // Cache original transform if not already cached. Guard on
-        // `=== undefined` (not truthiness): a cached '' is a valid base, and
-        // treating it as uncached would re-cache this frame's translateX next
-        // frame and compound the offset (see cacheTrackTransform).
-        if (trackContent.dataset.baseTransform === undefined) {
-          trackContent.dataset.baseTransform = trackContent.style.transform || '';
-        }
-
-        const baseTransform = trackContent.dataset.baseTransform || '';
-        trackContent.style.transform = baseTransform
-          ? `${baseTransform} translateX(${shiftPercent}%)`
-          : `translateX(${shiftPercent}%)`;
-        return; // Early return for reads track
-      }
-    }
-
-    // Try to find the unified gene container for genes track
-    const unifiedContainer = document.querySelector('.unified-gene-container');
-
-    if (unifiedContainer) {
-      // Apply transform to the unified container only
-      const baseTransform = unifiedContainer.dataset.baseTransform || '';
-      unifiedContainer.style.transform = baseTransform
+    const target = this.getVisualDragTarget(element);
+    if (target) {
+      // Percentage transforms keep the preview aligned with the eventual render
+      // regardless of the exact track width (see handleDocumentMouseMove).
+      this.cacheTrackTransform(target);
+      const baseTransform = target.dataset.baseTransform || '';
+      target.style.transform = baseTransform
         ? `${baseTransform} translateX(${shiftPercent}%)`
         : `translateX(${shiftPercent}%)`;
-    } else {
-      // Fallback to individual element updates
-      const allElements = document.querySelectorAll('[data-base-transform]');
-
-      allElements.forEach(el => {
-        const baseTransform = el.dataset.baseTransform || '';
-        const isHTMLElement = el.classList.contains('gene-element');
-        const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
-
-        if (isHTMLElement) {
-          // HTML elements: use style.transform (percentage of own width)
-          el.style.transform = baseTransform
-            ? `${baseTransform} translateX(${shiftPercent}%)`
-            : `translateX(${shiftPercent}%)`;
-        } else if (isSVGElement) {
-          // SVG elements: only use transform attribute (user units, px-derived)
-          el.setAttribute(
-            'transform',
-            baseTransform ? `${baseTransform} translate(${svgDeltaX}, 0)` : `translate(${svgDeltaX}, 0)`
-          );
-        }
-      });
+      target.classList.add('visual-dragging');
     }
 
     // Add visual feedback class
@@ -2381,118 +2356,32 @@ class NavigationManager {
   }
 
   /**
-   * Cache original transforms before dragging starts
+   * Cache original transforms before dragging starts (single-track mode).
    */
   cacheOriginalTransforms(element) {
-    // Find the unified gene container or fall back to individual elements
-    const unifiedContainer = document.querySelector('.unified-gene-container');
-
-    if (unifiedContainer) {
-      // Cache transform for the unified container only
-      console.log('🔧 [DRAG] Caching transform for unified container');
-      const originalTransform = unifiedContainer.style.transform || '';
-      unifiedContainer.dataset.baseTransform = originalTransform;
-      console.log('🔧 [DRAG] Cached unified container transform:', originalTransform);
-    } else {
-      // Fallback to individual elements for backward compatibility
-      const geneElements = document.querySelectorAll('.gene-element, .svg-gene-element, .genes-svg-container');
-
-      console.log('🔧 [DRAG] Caching transforms for', geneElements.length, 'individual elements');
-
-      geneElements.forEach(el => {
-        const isHTMLElement = el.classList.contains('gene-element');
-        const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
-
-        if (isHTMLElement) {
-          // Cache HTML element's style.transform
-          const originalTransform = el.style.transform || '';
-          el.dataset.baseTransform = originalTransform;
-          console.log('🔧 [DRAG] Cached HTML transform:', el.className, '-> "' + originalTransform + '"');
-        } else if (isSVGElement) {
-          // Cache SVG element's transform attribute
-          const originalTransform = el.getAttribute('transform') || '';
-          el.dataset.baseTransform = originalTransform;
-          console.log('🔧 [DRAG] Cached SVG transform:', el.tagName, '-> "' + originalTransform + '"');
-        }
-      });
-    }
+    const target = this.getVisualDragTarget(element);
+    if (!target) return;
+    // Drop any base left over from an earlier global-mode drag (that path
+    // restores but keeps the cache) so this drag starts from the live value.
+    delete target.dataset.baseTransform;
+    this.cacheTrackTransform(target);
   }
 
   /**
-   * Reset visual transforms after drag ends
+   * Reset visual transforms after drag ends (single-track mode).
    */
   resetVisualDragUpdates(element) {
-    // No Canvas-specific transforms to reset - using unified container approach
-
-    // Check if this is a reads track and reset it directly
-    const readsTrackElement = element.closest('.reads-track');
-    if (readsTrackElement) {
-      const trackContent = readsTrackElement.querySelector('.track-content');
-      if (trackContent) {
-        const baseTransform = trackContent.dataset.baseTransform || '';
-        trackContent.style.transform = baseTransform;
-
-        // Clean up cache
-        delete trackContent.dataset.baseTransform;
-
-        console.log('🔧 [DRAG-RESET] Reads track container reset:');
-        console.log('  - Restored transform:', baseTransform || 'none');
-        return; // Early return for reads track
+    const target = this.getVisualDragTarget(element);
+    if (target) {
+      if (target.dataset.baseTransform !== undefined) {
+        target.style.transform = target.dataset.baseTransform;
+        delete target.dataset.baseTransform;
       }
-    }
-
-    // Try to find the unified gene container for genes track
-    const unifiedContainer = document.querySelector('.unified-gene-container');
-
-    if (unifiedContainer) {
-      // Reset the unified container only
-      const baseTransform = unifiedContainer.dataset.baseTransform || '';
-      unifiedContainer.style.transform = baseTransform;
-
-      // Clean up cache
-      delete unifiedContainer.dataset.baseTransform;
-
-      console.log('🔧 [DRAG-RESET] Unified container reset:');
-      console.log('  - Restored transform:', baseTransform || 'none');
-    } else {
-      // Fallback to individual element reset
-      const cachedElements = document.querySelectorAll('[data-base-transform]');
-
-      console.log('🔧 [DRAG-RESET] Fallback individual element reset:');
-      console.log('  - Elements to reset:', cachedElements.length);
-
-      let htmlElementsReset = 0;
-      let svgElementsReset = 0;
-
-      cachedElements.forEach(el => {
-        const baseTransform = el.dataset.baseTransform || '';
-        const isHTMLElement = el.classList.contains('gene-element');
-        const isSVGElement = el.tagName === 'svg' || el.tagName === 'g' || el.classList.contains('svg-gene-element');
-
-        if (isHTMLElement) {
-          // Restore HTML element's style.transform
-          el.style.transform = baseTransform;
-          htmlElementsReset++;
-          console.log('🔧 [DRAG-RESET] HTML element reset:', el.className, '-> "' + baseTransform + '"');
-        } else if (isSVGElement) {
-          // Restore SVG element's transform attribute
-          el.setAttribute('transform', baseTransform);
-          svgElementsReset++;
-          console.log('🔧 [DRAG-RESET] SVG element reset:', el.tagName, '-> "' + baseTransform + '"');
-        }
-
-        // Clean up cache
-        delete el.dataset.baseTransform;
-      });
-
-      console.log('🔧 [DRAG-RESET] Reset summary:');
-      console.log('  - HTML elements reset:', htmlElementsReset);
-      console.log('  - SVG elements reset:', svgElementsReset);
+      target.classList.remove('visual-dragging');
     }
 
     // Remove visual feedback class
     element.classList.remove('visual-dragging');
-    console.log('🔧 [DRAG-RESET] Transform reset completed');
   }
 
   // Method to move Search Results panel to the top
