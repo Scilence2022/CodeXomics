@@ -271,3 +271,28 @@ describe('security-utils', () => {
     expect(fs.existsSync(path.join(installPath, 'nested'))).toBe(true);
   });
 });
+
+describe('external tool and configuration boundaries', () => {
+  it('keeps external tools in a separate session without an application preload', () => {
+    const preferences = securityUtils.createExternalToolWebPreferences();
+    expect(preferences).toMatchObject({ sandbox: true, contextIsolation: true, nodeIntegration: false });
+    expect(preferences.partition).toBeTruthy();
+    expect(preferences.preload).toBeUndefined();
+    expect(securityUtils.parseExternalToolURL('https://example.test/page')?.hostname).toBe('example.test');
+    expect(securityUtils.parseExternalToolURL('http://127.0.0.1:3000')?.hostname).toBe('127.0.0.1');
+    for (const url of ['file:///tmp/a.html', 'javascript:alert(1)', 'https://user@example.test', 'invalid']) {
+      expect(securityUtils.parseExternalToolURL(url)).toBeNull();
+    }
+  });
+
+  it('matches the exact bundled file and rejects remote and child frames', async () => {
+    const { pathToFileURL } = await import('node:url');
+    const page = path.resolve('src/renderer/index.html');
+    const mainFrame = { url: `${pathToFileURL(page).href}?workspaceView=1#active` };
+    const sender = { mainFrame };
+    expect(securityUtils.isMainFrameAtFile({ sender, senderFrame: mainFrame }, page)).toBe(true);
+    expect(securityUtils.isMainFrameAtFile({ sender, senderFrame: { ...mainFrame } }, page)).toBe(false);
+    mainFrame.url = 'https://example.test/src/renderer/index.html';
+    expect(securityUtils.isMainFrameAtFile({ sender, senderFrame: mainFrame }, page)).toBe(false);
+  });
+});

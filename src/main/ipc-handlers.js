@@ -23,6 +23,7 @@ const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store
 const workspaceHostManager = require('./workspace-host-manager');
 const {
   createSecureWebPreferences,
+  isMainFrameAtFile,
   permissionBroker,
   ALL_FILE_CAPABILITIES,
   FILE_CAPABILITIES,
@@ -2660,10 +2661,23 @@ function registerIpcHandlers(deps) {
     allowAriaAttributes: true,
   }));
 
-  ipcMain.handle('config:load', async () => {
+  const genomePage = path.join(__dirname, '..', 'renderer', 'index.html');
+  const workspacePage = path.join(__dirname, '..', 'renderer', 'workspace-host.html');
+
+  ipcMain.handle('config:load', async event => {
+    if (!isMainFrameAtFile(event, genomePage) && !isMainFrameAtFile(event, workspacePage)) {
+      return { success: false, error: 'Untrusted configuration IPC sender', config: {} };
+    }
     try {
       const dir = getConfigStorageDir();
       const paths = getConfigStoragePaths();
+      if (isMainFrameAtFile(event, workspacePage)) {
+        const uiStyle =
+          readConfigFileIfPresent(paths.generalSettings)?.uiStyle ||
+          readConfigFileIfPresent(paths.main)?.generalSettings?.uiStyle;
+        return { success: true, config: { generalSettings: { uiStyle } } };
+      }
+
       const config = {};
       for (const [section, filePath] of Object.entries(paths)) {
         const data = readConfigFileIfPresent(filePath);
@@ -2688,6 +2702,10 @@ function registerIpcHandlers(deps) {
   });
 
   ipcMain.handle('config:save', async (event, config = {}) => {
+    if (!isMainFrameAtFile(event, genomePage)) {
+      return { success: false, error: 'Untrusted configuration IPC sender' };
+    }
+
     try {
       const dir = getConfigStorageDir();
       const paths = getConfigStoragePaths();

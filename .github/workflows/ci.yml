@@ -39,6 +39,10 @@ jobs:
       - name: Validate tool registry consistency
         run: npm run tool-registry:validate
 
+      - name: Audit production dependencies
+        if: matrix.node-version == '22.x'
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Test (with coverage)
         run: npm run test:coverage
 

@@ -7,8 +7,8 @@ released version only.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.722.x | :white_check_mark: |
-| < 0.722 | :x:                |
+| 0.723.x | :white_check_mark: |
+| < 0.723 | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -36,7 +36,7 @@ CodeXomics is an Electron desktop application. The current hardening baseline:
 - **Renderer isolation:** `contextIsolation: true`, `sandbox: true`,
   `nodeIntegration: false`, `enableRemoteModule: false`, `webSecurity: true`,
   `allowRunningInsecureContent: false` enforced centrally in
-  `src/main/security-utils.js`.
+  `src/main/security-utils.js`. External tool pages run in a separate session without the application preload. Configuration IPC checks the bundled page and main frame.
 - **Content Security Policy:** applied to all renderer responses with
   `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`,
   `form-action 'self'`, no `unsafe-eval`, and an explicit CDN allowlist for
@@ -48,8 +48,7 @@ CodeXomics is an Electron desktop application. The current hardening baseline:
   with an executable allowlist — never through a shell.
 - **Secrets at rest:** LLM API keys are encrypted with the OS keychain via
   Electron `safeStorage` before being written to disk (`src/main/secret-store.js`).
-- **Dependencies:** production dependencies are kept free of known advisories
-  (`npm audit --omit=dev`); CI fails on lint, test, and version drift.
+- **Dependencies:** CI runs `npm audit --omit=dev --audit-level=high` on the lockfile. Review moderate and lower findings through `npm audit --omit=dev`.
 
 ## Known Hardening Follow-ups
 
