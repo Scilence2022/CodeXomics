@@ -3488,6 +3488,13 @@ class TrackRenderer {
     const { track, trackContent } = this.createTrackBase('gc', chromosome);
     const viewport = this.getCurrentViewport();
 
+    // The plot fills the track content, so the height setting sizes the track.
+    // A height restored from a resize-handle drag still overrides it afterwards.
+    const settingsHeight = parseInt(this.getTrackSettings('gc').height);
+    if (settingsHeight > 0) {
+      trackContent.style.height = `${settingsHeight}px`;
+    }
+
     // Get subsequence for current viewport
     const subsequence = this.getWrappedSequence(sequence, viewport.start, viewport.end, chromosome);
 
@@ -6979,26 +6986,23 @@ class TrackRenderer {
 
     // Get GC track settings
     const settings = this.getTrackSettings('gc');
-    const trackHeight = settings.height || 140;
 
+    // Fill the track content, so a resize-handle drag (or any restored track
+    // height) resizes the plot instead of clipping a fixed-height one.
     container.style.cssText = `
             position: relative;
-            height: ${trackHeight}px;
+            height: 100%;
+            min-height: 40px;
+            box-sizing: border-box;
             background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
             border: 1px solid #dee2e6;
             border-radius: 6px;
             overflow: hidden;
         `;
 
-    // Estimate the drawing width from the track being replaced. The new track is
-    // not in the DOM yet; observeGCVisualizationWidth() redraws at the real width.
-    const gcTrack = document.querySelector('.gc-track .track-content');
-    let containerWidth = 800; // Default fallback
-    if (gcTrack) {
-      // Force layout recalculation and get actual width
-      gcTrack.style.width = '100%';
-      containerWidth = gcTrack.getBoundingClientRect().width || gcTrack.offsetWidth || 800;
-    }
+    // Estimate the drawing size from the track being replaced. The new plot is
+    // not in the DOM yet; observeGCVisualizationSize() redraws at the real size.
+    const { width: containerWidth, height: trackHeight } = this.estimateGCDrawingSize(settings);
 
     // Create SVG for crisp, scalable visualization
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -7063,7 +7067,7 @@ class TrackRenderer {
     }
 
     // Create SVG visualization with settings
-    this.renderSVGGCVisualization(svg, analysisData, containerWidth, settings);
+    this.renderSVGGCVisualization(svg, analysisData, containerWidth, settings, trackHeight);
 
     // Add interactive tooltip
     this.addSVGGCTooltip(container, svg, analysisData, viewStart, windowSize);
@@ -7073,32 +7077,56 @@ class TrackRenderer {
     container.appendChild(legend);
 
     container.appendChild(svg);
+    container.appendChild(this.createGCAxisLabels(analysisData));
 
-    this.observeGCVisualizationWidth(container, svg, analysisData, containerWidth, settings);
+    this.observeGCVisualizationSize(container, svg, analysisData, containerWidth, trackHeight, settings);
 
     return container;
   }
 
   /**
-   * The SVG is stretched with preserveAspectRatio="none", so it has to be drawn
-   * at its real pixel width or text and strokes distort. Redraw once the track is
-   * laid out (the first render only had an estimate) and whenever it is resized.
+   * Best guess at the plot's pixel size before it is in the DOM: the content
+   * box of the GC track being replaced, less the plot's own 1px border.
    */
-  observeGCVisualizationWidth(container, svg, data, initialWidth, settings) {
+  estimateGCDrawingSize(settings = {}) {
+    const fallback = { width: 800, height: settings.height || 140 };
+    const trackContent = document.querySelector('.gc-track .track-content');
+    if (!trackContent) return fallback;
+
+    const style = getComputedStyle(trackContent);
+    const verticalPadding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+    const width = trackContent.clientWidth - 2;
+    const height = trackContent.clientHeight - verticalPadding - 2;
+    return {
+      width: width > 0 ? width : fallback.width,
+      height: height > 0 ? height : fallback.height,
+    };
+  }
+
+  /**
+   * The SVG is stretched with preserveAspectRatio="none", so it has to be drawn
+   * at its real pixel size or the plot distorts. Redraw once the track is laid
+   * out (the first render only had an estimate) and whenever it is resized -
+   * in width (window, side panels) or height (the track's resize handle).
+   */
+  observeGCVisualizationSize(container, svg, data, initialWidth, initialHeight, settings) {
     if (typeof ResizeObserver !== 'function') return;
 
-    const trackHeight = settings.height || 140;
     let drawnWidth = Math.round(initialWidth);
+    let drawnHeight = Math.round(initialHeight);
     const observer = new ResizeObserver(entries => {
       if (!container.isConnected) {
         observer.disconnect();
         return;
       }
       const width = Math.round(entries[0].contentRect.width);
-      if (width <= 0 || width === drawnWidth) return;
+      const height = Math.round(entries[0].contentRect.height);
+      if (width <= 0 || height <= 0) return;
+      if (width === drawnWidth && height === drawnHeight) return;
       drawnWidth = width;
-      svg.setAttribute('viewBox', `0 0 ${width} ${trackHeight}`);
-      this.renderSVGGCVisualization(svg, data, width, settings);
+      drawnHeight = height;
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      this.renderSVGGCVisualization(svg, data, width, settings, height);
     });
     observer.observe(container);
   }
@@ -7311,7 +7339,7 @@ class TrackRenderer {
     return element;
   }
 
-  renderSVGGCVisualization(svg, data, containerWidth = 800, settings = {}) {
+  renderSVGGCVisualization(svg, data, containerWidth = 800, settings = {}, trackHeight = settings.height || 140) {
     // Get settings with defaults
     const colors = {
       content: settings.contentColor || '#3b82f6',
@@ -7319,7 +7347,6 @@ class TrackRenderer {
       skewNegative: settings.skewNegativeColor || '#ef4444',
     };
     const lineWidth = settings.lineWidth || 2;
-    const trackHeight = settings.height || 140;
 
     // Clear any existing content
     svg.innerHTML = '';
@@ -7375,7 +7402,6 @@ class TrackRenderer {
     this.drawSVGGrid(svg, geometry);
     this.drawSVGGCContent(svg, layout, ids, colors, lineWidth);
     this.drawSVGGCSkew(svg, layout, ids, colors, lineWidth);
-    this.drawSVGAxisLabels(svg, geometry, data);
   }
 
   drawSVGGrid(svg, geometry) {
@@ -7468,27 +7494,37 @@ class TrackRenderer {
     });
   }
 
-  /** Label each panel with the scale it was drawn at; both panels auto-scale per view. */
-  drawSVGAxisLabels(svg, geometry, data) {
-    const labelGroup = this.createGCSVGElement('g', { class: 'axis-labels' });
-    const style =
-      'font-family: Inter, sans-serif; font-size: 10px; fill: #495057; font-variant-numeric: tabular-nums;' +
-      ' paint-order: stroke; stroke: rgba(248, 249, 250, 0.9); stroke-width: 3px; stroke-linejoin: round;';
-    const x = geometry.plotLeft + 4;
-    const label = (text, y, baseline) => {
-      const element = this.createGCSVGElement('text', { x, y, 'dominant-baseline': baseline, style });
-      element.textContent = text;
-      labelGroup.appendChild(element);
-    };
+  /**
+   * Label each panel with the scale it was drawn at; both panels auto-scale per
+   * view. The labels are HTML laid over the plot, not SVG text: the plot SVG is
+   * stretched with preserveAspectRatio="none", which would stretch text with it
+   * whenever its drawn size and its on-screen size disagree. Positions mirror
+   * computeGCSkewLayout() (2px padding, panels split at 50%, zero line at 75%).
+   */
+  createGCAxisLabels(data) {
+    const layer = document.createElement('div');
+    layer.className = 'gc-axis-labels';
+    layer.style.cssText = 'position: absolute; inset: 0; pointer-events: none; z-index: 1;';
+
     const skew = value => value.toFixed(value >= 0.1 ? 2 : 3);
+    const label = (text, position) => {
+      const element = document.createElement('span');
+      element.textContent = text;
+      element.style.cssText =
+        'position: absolute; left: 6px; font-family: Inter, sans-serif; font-size: 10px; line-height: 1;' +
+        ' color: #495057; font-variant-numeric: tabular-nums; white-space: nowrap;' +
+        ' text-shadow: 0 0 2px #f8f9fa, 0 0 2px #f8f9fa, 0 0 3px #f8f9fa;' +
+        position;
+      layer.appendChild(element);
+    };
 
-    label(`GC ${data.gcMax.toFixed(1)}%`, geometry.gcTop + 1, 'hanging');
-    label(`${data.gcMin.toFixed(1)}%`, geometry.gcBottom - 2, 'auto');
-    label(`Skew +${skew(data.skewMax)}`, geometry.skewTop + 1, 'hanging');
-    label('0', geometry.zeroY, 'middle');
-    label(`−${skew(data.skewMax)}`, geometry.skewBottom - 2, 'auto');
+    label(`GC ${data.gcMax.toFixed(1)}%`, 'top: 3px;');
+    label(`${data.gcMin.toFixed(1)}%`, 'bottom: calc(50% + 3px);');
+    label(`Skew +${skew(data.skewMax)}`, 'top: calc(50% + 3px);');
+    label('0', 'top: 75%; transform: translateY(-50%);');
+    label(`−${skew(data.skewMax)}`, 'bottom: 3px;');
 
-    svg.appendChild(labelGroup);
+    return layer;
   }
 
   addSVGGCTooltip(container, svg, data, viewStart, windowSize) {
@@ -13437,8 +13473,8 @@ This action cannot be undone.`;
     // the live DOM height (and the persisted size used when nothing is
     // captured live) to the new setting first, so the redraw's restore step
     // carries the new value forward instead of the stale one.
-    if (trackType === 'reads' && settings.height) {
-      this.applyExplicitTrackHeight('reads', `${parseInt(settings.height)}px`, fileId);
+    if ((trackType === 'reads' || trackType === 'gc') && settings.height) {
+      this.applyExplicitTrackHeight(trackType, `${parseInt(settings.height)}px`, fileId);
     }
 
     // Trigger the same complete redraw that drag-end uses for consistency
