@@ -83,9 +83,15 @@
   /* Prevent interference during drag */
 }
 
+/* The drag transform must reach the screen in the same frame as the mouse
+   move, so no transition may run on whatever NavigationManager is moving.
+   `.visual-dragging` / `.dragging` are put on the moved element itself (the
+   .track-content or .unified-gene-container), not on an ancestor, so the
+   element must be matched directly as well as its descendants. */
+.visual-dragging,
+.track-content.dragging,
 .visual-dragging .track-content {
   transition: none !important;
-  /* Disable transitions during drag for better performance */
 }
 
 .visual-dragging .gene-element,
@@ -97,10 +103,13 @@
   /* Optimize for transform changes */
 }
 
-/* Smooth transitions when drag ends */
-.track-content {
-  transition: transform 0.1s ease-out;
-}
+/* .track-content deliberately has no transform transition. A 0.1s ease-out
+   on transform used to live here; it made every per-mousemove translateX
+   animate behind the cursor. Gene/GC/reads/variant/protein/sequence tracks
+   escaped it only because legacy/01-main-interface.css overrides their
+   `transition` with a height-only one, so newer tracks (WIG, primers, BLAST,
+   single-line sequence, actions) visibly lagged while the old ones tracked
+   the mouse 1:1. */
 
 .gene-element,
 .ruler,

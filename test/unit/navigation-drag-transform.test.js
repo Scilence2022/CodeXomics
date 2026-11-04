@@ -110,6 +110,88 @@ describe('NavigationManager drag transform caching', () => {
     });
   });
 
+  describe('single-track mode (global dragging disabled)', () => {
+    // Builds: gene track (with unified container) + WIG track + a ruler that
+    // is draggable but not part of any track.
+    function buildView() {
+      const geneTrack = document.createElement('div');
+      geneTrack.className = 'gene-track';
+      const geneContent = document.createElement('div');
+      geneContent.className = 'track-content';
+      const uc = document.createElement('div');
+      uc.className = 'unified-gene-container';
+      geneContent.appendChild(uc);
+      geneTrack.appendChild(geneContent);
+
+      const wigTrack = document.createElement('div');
+      wigTrack.className = 'wig-track';
+      const wigContent = document.createElement('div');
+      wigContent.className = 'track-content';
+      wigTrack.appendChild(wigContent);
+
+      const ruler = document.createElement('div');
+      ruler.className = 'detailed-ruler-container';
+
+      document.body.append(geneTrack, wigTrack, ruler);
+      return { geneContent, uc, wigContent, ruler };
+    }
+
+    function nonGlobalNM() {
+      const nm = makeNM();
+      nm.globalDraggingEnabled = false;
+      return nm;
+    }
+
+    it('moves the dragged track itself, not the gene track', () => {
+      const nm = nonGlobalNM();
+      const { uc, wigContent } = buildView();
+
+      nm.cacheOriginalTransforms(wigContent);
+      nm.performVisualDragUpdate(-4.15, wigContent);
+      nm.performVisualDragUpdate(-8.3, wigContent);
+
+      expect(wigContent.style.transform).toBe('translateX(-8.3%)');
+      expect(uc.style.transform).toBe('');
+    });
+
+    it('moves the unified container of the dragged gene track', () => {
+      const nm = nonGlobalNM();
+      const { geneContent, uc, wigContent } = buildView();
+
+      nm.cacheOriginalTransforms(geneContent);
+      nm.performVisualDragUpdate(3, geneContent);
+
+      expect(uc.style.transform).toBe('translateX(3%)');
+      expect(geneContent.style.transform).toBe('');
+      expect(wigContent.style.transform).toBe('');
+    });
+
+    it('leaves every track alone when the ruler is dragged', () => {
+      const nm = nonGlobalNM();
+      const { uc, wigContent, ruler } = buildView();
+
+      nm.cacheOriginalTransforms(ruler);
+      nm.performVisualDragUpdate(5, ruler);
+
+      expect(uc.style.transform).toBe('');
+      expect(wigContent.style.transform).toBe('');
+    });
+
+    it('restores the base transform and clears the cache on release', () => {
+      const nm = nonGlobalNM();
+      const { wigContent } = buildView();
+
+      nm.cacheOriginalTransforms(wigContent);
+      nm.performVisualDragUpdate(-6, wigContent);
+      expect(wigContent.classList.contains('visual-dragging')).toBe(true);
+
+      nm.resetVisualDragUpdates(wigContent);
+      expect(wigContent.style.transform).toBe('');
+      expect(wigContent.dataset.baseTransform).toBeUndefined();
+      expect(wigContent.classList.contains('visual-dragging')).toBe(false);
+    });
+  });
+
   describe('drag viewport overlays', () => {
     it('repositions highlights in the same update as the detailed rulers', () => {
       const nm = makeNM();
