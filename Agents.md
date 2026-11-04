@@ -91,6 +91,12 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
 - Offline CLI benchmarks run `oracle-assisted` by default and `production-parity` with
   `--production-parity`. Only production-parity numbers are comparable to in-app behaviour;
   every report records which mode produced it in `harness_mode`. Never pool the two.
+- The in-app harness defaults to `production-parity`: each test runs inside
+  `startConversation()`/`endConversation(requestId)` and uses the user's ChatBox settings.
+  The only request override is `disableFallback`. Oracle early stop, temperature 0, no
+  streaming, the 24-tool pin, and forcing Smart Executor / agent routing off belong to
+  `oracle-assisted` alone, through `ChatManager.getBenchmarkRequestOverrides()` and the
+  harness profile. Do not reintroduce unconditional `benchmarkAutomationActive` overrides.
 - When debugging `Policy blocked: <tool_name>`, check whether the tool has an explicit policy, whether identical parameters already succeeded, and whether stale system messages are being matched by `wasToolExecutedSuccessfully()`.
 
 ## 5a. Tool Result Protocol Rules

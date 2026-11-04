@@ -3678,9 +3678,10 @@ class LLMConfigManager {
    * The default is tuned for the path that actually runs: nearly every request
    * from this app carries native tool schemas, and the model's job is selecting
    * a tool and extracting arguments that must match a JSON Schema exactly. 0.7
-   * is a prose-writing default and measurably costs accuracy there; the
-   * benchmark harness already pins temperature 0 for the same reason. Users who
-   * want more variety set `chatboxSettings.chatboxLLMTemperature`.
+   * is a prose-writing default and measurably costs accuracy there. A
+   * production-parity benchmark run uses this value too; only an
+   * oracle-assisted run pins 0. Users who want more variety set
+   * `chatboxSettings.chatboxLLMTemperature`.
    */
   getTemperature() {
     const chatboxSettings = this.configManager ? this.configManager.get('chatboxSettings') : null;

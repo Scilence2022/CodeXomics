@@ -839,6 +839,16 @@ class BenchmarkUI {
                                         </small>
                                     </div>
                                     <div>
+                                        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-weight: 500;">Harness Mode:</label>
+                                        <select id="benchmarkHarnessMode">
+                                            <option value="production-parity" selected>Production parity (same pipeline as ChatBox)</option>
+                                            <option value="oracle-assisted">Oracle-assisted (legacy controlled run)</option>
+                                        </select>
+                                        <small style="color: #6c757d; font-size: 12px; margin-top: 4px; display: block;">
+                                            Only production-parity results reflect what a ChatBox user gets. Never compare the two modes.
+                                        </small>
+                                    </div>
+                                    <div>
                                         <label style="display: block; margin-bottom: 8px; color: #34495e; font-weight: 500;">Batch Delay (Rate Limit):</label>
                                         <select id="testDelay">
                                             <option value="0" selected>No delay</option>
@@ -3718,6 +3728,7 @@ class BenchmarkUI {
       testDelay: parseInt(document.getElementById('testDelay')?.value || '0'), // Delay every 10 tests to avoid rate limits
       concurrency: parseInt(document.getElementById('concurrency')?.value || '1'),
       defaultDirectory: this.getDefaultDirectory(), // CRITICAL: Include default directory
+      harnessMode: document.getElementById('benchmarkHarnessMode')?.value || 'production-parity',
       onProgress: (progress, suiteId, suiteResult) => {
         this.updateMainWindowProgress(progress, suiteId, suiteResult);
       },
