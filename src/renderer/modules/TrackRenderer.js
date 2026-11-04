@@ -8373,19 +8373,19 @@ class TrackRenderer {
     // half-base nudge to the right once individual bases are visible.
     const halfBase = width / range / 2;
 
-    // Major ticks - track drawn X positions for spacing checks (not sequence positions)
+    // Major ticks. All tick marks go into one path and are stroked once; labels
+    // are spaced by drawn X position (not sequence position) so circular mode,
+    // where positions wrap at the origin, still spaces them correctly.
     const firstMajorTick = Math.ceil(start / majorInterval) * majorInterval;
-    const drawnXPositions = []; // Track X positions to avoid label overlap
+    let lastLabelX = -Infinity; // ticks run left to right, so only the last label can collide
 
+    ctx.beginPath();
     for (let pos = firstMajorTick; pos <= end; pos += majorInterval) {
       const x = ((pos - start) / range) * width + halfBase;
 
       if (x >= 0 && x <= width) {
-        // Draw major tick - reduced height from 22 to 16
-        ctx.beginPath();
         ctx.moveTo(x, 3);
         ctx.lineTo(x, 19);
-        ctx.stroke();
 
         // In circular mode, normalize the position for display
         let displayPos = pos;
@@ -8393,31 +8393,23 @@ class TrackRenderer {
           displayPos = ((pos % seqLen) + seqLen) % seqLen;
         }
 
-        // Draw label with minimum spacing check - moved up from 32 to 28
         const label = this.formatDetailedPosition(displayPos, majorInterval);
         const labelWidth = ctx.measureText(label).width;
 
-        // Check if there's enough space using X positions (works correctly in circular mode)
-        let canDrawLabel = true;
-        for (const prevX of drawnXPositions) {
-          if (Math.abs(x - prevX) < labelWidth + 10) {
-            // 10px minimum spacing
-            canDrawLabel = false;
-            break;
-          }
-        }
-
-        if (canDrawLabel) {
+        // 10px minimum gap between neighbouring labels
+        if (x - lastLabelX >= labelWidth + 10) {
           ctx.fillText(label, x, 28);
-          drawnXPositions.push(x);
+          lastLabelX = x;
         }
       }
     }
+    ctx.stroke();
 
     // Minor ticks (if there's enough space) - reduced height from 10 to 7
     if (width / (range / minorInterval) > 8) {
       // Only show if ticks are spaced enough
       ctx.strokeStyle = '#adb5bd';
+      ctx.beginPath();
       const firstMinorTick = Math.ceil(start / minorInterval) * minorInterval;
       for (let pos = firstMinorTick; pos <= end; pos += minorInterval) {
         // Normalize position for major interval check in circular mode
@@ -8431,13 +8423,12 @@ class TrackRenderer {
           const x = ((pos - start) / range) * width + halfBase;
 
           if (x >= 0 && x <= width) {
-            ctx.beginPath();
             ctx.moveTo(x, 3);
             ctx.lineTo(x, 10);
-            ctx.stroke();
           }
         }
       }
+      ctx.stroke();
     }
 
     // In circular mode, draw origin marker LAST (after all ticks for higher z-order)
@@ -8486,18 +8477,25 @@ class TrackRenderer {
   calculateDetailedTickSpacing(range, width) {
     const targetMajorTicks = Math.max(3, Math.min(8, width / 100));
 
-    // Base intervals to choose from
-    const baseIntervals = [
-      1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000,
-    ];
-
-    // Find best major interval
-    let majorInterval = baseIntervals[0];
-    for (const interval of baseIntervals) {
-      const tickCount = range / interval;
-      if (tickCount <= targetMajorTicks) {
-        majorInterval = interval;
-        break;
+    // Smallest "nice" interval (1, 2, 2.5, 5 x 10^k; whole bp only) that keeps
+    // the tick count at or under the target. The ladder is open-ended on
+    // purpose: a fixed list used to stop at 100 kb, so any view wider than
+    // ~800 kb found no fit and fell back to a 1 bp interval — one tick, label
+    // and measureText per base, which froze the UI for seconds on every redraw.
+    let majorInterval = 1;
+    if (range > targetMajorTicks) {
+      const mantissas = [1, 2, 2.5, 5];
+      let found = false;
+      for (let magnitude = 1; !found && magnitude <= 1e15; magnitude *= 10) {
+        for (const m of mantissas) {
+          const interval = m * magnitude;
+          if (!Number.isInteger(interval)) continue;
+          if (range / interval <= targetMajorTicks) {
+            majorInterval = interval;
+            found = true;
+            break;
+          }
+        }
       }
     }
 

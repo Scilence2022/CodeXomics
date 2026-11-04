@@ -5416,6 +5416,29 @@ class GenomeBrowser {
     return this.operonColorMap.get(operonName);
   }
 
+  /**
+   * Operon lookup index for `operons`, shared by every getGeneOperonInfo() call
+   * in the current synchronous pass (row layout, canvas render, operon panel,
+   * sequence colouring). It is dropped in a microtask, so the next pass, after
+   * any annotation edit, builds a fresh one from current coordinates and names.
+   */
+  getOperonLookupIndex(operons) {
+    const list = Array.isArray(operons) ? operons : [];
+    const cached = this._operonLookupCache;
+    if (cached && cached.operons === list) return cached.index;
+
+    const index = new OperonLookupIndex(
+      list,
+      g => this.getQualifierValue(g.qualifiers, 'gene') || this.getQualifierValue(g.qualifiers, 'locus_tag') || ''
+    );
+    const entry = { operons: list, index };
+    this._operonLookupCache = entry;
+    queueMicrotask(() => {
+      if (this._operonLookupCache === entry) this._operonLookupCache = null;
+    });
+    return index;
+  }
+
   // Override getGeneOperonInfo to handle user-defined features
   getGeneOperonInfo(gene, operons) {
     // If it's a user-defined feature, return a special color
@@ -5428,47 +5451,17 @@ class GenomeBrowser {
       };
     }
 
-    // Find which operon this gene belongs to
-    // Check by: 1) exact feature match, 2) position overlap, 3) name match
-    for (const operon of operons) {
-      // Method 1: Check if this exact gene object is in the operon's genes array
-      if (operon.genes.some(g => g === gene)) {
-        return {
-          operonName: operon.name,
-          color: this.assignOperonColor(operon.name),
-          isInOperon: true,
-        };
-      }
-
-      // Method 2: Check by position match (start and end)
-      if (operon.genes.some(g => g.start === gene.start && g.end === gene.end)) {
-        return {
-          operonName: operon.name,
-          color: this.assignOperonColor(operon.name),
-          isInOperon: true,
-        };
-      }
-
-      // Method 3: Check if gene is within operon boundaries and has matching strand
-      if (gene.start >= operon.start && gene.end <= operon.end && gene.strand === operon.strand) {
-        // Also check if gene name matches any gene in the operon
-        const geneName =
-          this.getQualifierValue(gene.qualifiers, 'gene') || this.getQualifierValue(gene.qualifiers, 'locus_tag') || '';
-        if (
-          geneName &&
-          operon.genes.some(g => {
-            const operonGeneName =
-              this.getQualifierValue(g.qualifiers, 'gene') || this.getQualifierValue(g.qualifiers, 'locus_tag') || '';
-            return operonGeneName === geneName;
-          })
-        ) {
-          return {
-            operonName: operon.name,
-            color: this.assignOperonColor(operon.name),
-            isInOperon: true,
-          };
-        }
-      }
+    // Find which operon this gene belongs to. The index applies the three
+    // checks (exact feature, start/end match, name inside the operon span on
+    // the same strand) with the same first-operon-wins precedence as a linear
+    // scan, without scanning every operon for every gene.
+    const operon = this.getOperonLookupIndex(operons).find(gene);
+    if (operon) {
+      return {
+        operonName: operon.name,
+        color: this.assignOperonColor(operon.name),
+        isInOperon: true,
+      };
     }
 
     // Gene is not in an operon, assign individual color
