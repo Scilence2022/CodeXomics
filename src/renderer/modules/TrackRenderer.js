@@ -7226,7 +7226,9 @@ class TrackRenderer {
   /**
    * Map GC analysis data to SVG coordinates. GC% fills the upper panel; skew
    * fills the lower panel around a zero line at its vertical centre. Returns one
-   * point list per contiguous run of windows (see `segmentStarts`).
+   * point list per contiguous run of windows (see `segmentStarts`); the first and
+   * last lists are extended flat to their window boundaries so the plot reaches
+   * both edges of the view.
    */
   computeGCSkewLayout(data, viewWidth, viewHeight) {
     const padding = 2;
@@ -7258,6 +7260,7 @@ class TrackRenderer {
     const skewYAt = value => geometry.zeroY - (data.skewMax > 0 ? value / data.skewMax : 0) * skewHalfHeight;
 
     const starts = data.segmentStarts?.length ? data.segmentStarts : [0];
+    const windowSize = data.windowSize || 0;
     const gcSegments = [];
     const skewSegments = [];
     starts.forEach((start, index) => {
@@ -7270,6 +7273,22 @@ class TrackRenderer {
         skewPoints.push([x, skewYAt(data.skewData[i])]);
       }
       if (gcPoints.length > 0) {
+        // Window values are plotted at the window centre, which leaves the plot
+        // floating half a window short of each edge. A window's value holds
+        // across its whole span, so extend the first and last segments flat to
+        // their window boundaries: the first window starts at bp 0 and the last
+        // ends at the sequence end (clamped to the domain when the view runs
+        // past it, matching where the other tracks stop).
+        if (index === 0 && windowSize > 0) {
+          const leftX = xAt(Math.max(0, data.positions[start] - windowSize / 2));
+          gcPoints.unshift([leftX, gcPoints[0][1]]);
+          skewPoints.unshift([leftX, skewPoints[0][1]]);
+        }
+        if (end === data.positions.length && windowSize > 0) {
+          const rightX = xAt(Math.min(domain, data.positions[end - 1] + windowSize / 2));
+          gcPoints.push([rightX, gcPoints[gcPoints.length - 1][1]]);
+          skewPoints.push([rightX, skewPoints[skewPoints.length - 1][1]]);
+        }
         gcSegments.push(gcPoints);
         skewSegments.push(skewPoints);
       }
