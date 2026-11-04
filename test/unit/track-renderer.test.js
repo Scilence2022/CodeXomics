@@ -507,6 +507,38 @@ describe('Primer Track Rendering', () => {
     expect(arrow.getAttribute('d')).toContain('L 352 ');
   });
 
+  it('draws primers as half-arrows whose barb points away from the template strand', () => {
+    const renderer = createPrimerRenderer();
+    const points = d => d.match(/[ML] [-\d.]+ [-\d.]+/g).map(token => token.slice(2).split(' ').map(Number));
+
+    // x 10..60, y 20..31, head 9.
+    const forward = points(renderer.buildPrimerArrowPath(10, 20, 50, 11, 9, false));
+    const reverse = points(renderer.buildPrimerArrowPath(10, 20, 50, 11, 9, true));
+
+    // Forward: flat bottom edge runs into the 3' tip at the bottom-right corner,
+    // and the single barb rises above the body; nothing hangs below it.
+    expect(forward).toContainEqual([60, 31]);
+    expect(Math.min(...forward.map(([, y]) => y))).toBeLessThan(20);
+    expect(Math.max(...forward.map(([, y]) => y))).toBe(31);
+
+    // Reverse: mirror image, tip at the top-left, barb below, flat top edge.
+    expect(reverse).toContainEqual([10, 20]);
+    expect(Math.max(...reverse.map(([, y]) => y))).toBeGreaterThan(31);
+    expect(Math.min(...reverse.map(([, y]) => y))).toBe(20);
+  });
+
+  it('keeps forward and reverse barbs on adjacent rows from touching', () => {
+    const renderer = createPrimerRenderer();
+    const style = renderer.constructor.PRIMER_TRACK_STYLE;
+    const height = style.glyphHeight;
+    const ys = d => d.match(/[ML] [-\d.]+ [-\d.]+/g).map(token => Number(token.slice(2).split(' ')[1]));
+
+    // Reverse site on row 0, forward site on row 1 directly beneath it.
+    const row0Bottom = Math.max(...ys(renderer.buildPrimerArrowPath(0, 0, 200, height, 9, true)));
+    const row1Top = Math.min(...ys(renderer.buildPrimerArrowPath(0, height + style.rowSpacing, 200, height, 9, false)));
+    expect(row1Top).toBeGreaterThan(row0Bottom);
+  });
+
   it('caps the arrow head so a sub-pixel primer stays an arrow, not a triangle', () => {
     const renderer = createPrimerRenderer();
     const placement = renderer.computePrimerPlacement(
