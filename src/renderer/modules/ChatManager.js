@@ -819,6 +819,7 @@ class ChatManager {
 
       // Initialize conversation state (same as sendMessage)
       this.startConversation();
+      const agentRequestId = this.conversationState.currentRequestId;
 
       // Add user message to ChatBox with MCP source marker
       this.addMessageToChat(markedPrompt, 'user');
@@ -859,7 +860,7 @@ class ChatManager {
         }
         throw llmError;
       } finally {
-        this.endConversation();
+        this.endConversation(agentRequestId);
       }
     } catch (error) {
       console.error('[AgentMode] processAgentPrompt failed:', error);
@@ -1037,8 +1038,10 @@ class ChatManager {
    * @returns {boolean} True if in benchmark mode
    */
   isBenchmarkMode() {
-    const benchmarkInterface = document.getElementById('benchmarkInterface');
-    if (benchmarkInterface && benchmarkInterface.style.display !== 'none') {
+    // Tied to an active run only. Merely having the benchmark panel open used to
+    // count, which silently stripped the skill index from ordinary ChatBox
+    // requests sent while the panel was visible.
+    if (this.benchmarkAutomationActive === true) {
       return true;
     }
 
@@ -1889,7 +1892,7 @@ class ChatManager {
     return {
       enabled: settingsEnabled && this.dynamicToolsEnabled,
       settingsEnabled: settingsEnabled,
-      limitSelection: this.configManager.get('chatboxSettings.limitDynamicToolsSelection', false),
+      limitSelection: this.configManager.get('chatboxSettings.limitDynamicToolsSelection', true),
       selectionLimit: this.getDynamicToolsSelectionLimit(),
       systemEnabled: this.dynamicToolsEnabled,
       initialized: this.dynamicTools !== null,
@@ -1898,7 +1901,10 @@ class ChatManager {
   }
 
   getDynamicToolsSelectionLimit() {
-    if (this.benchmarkAutomationActive === true) return 24;
+    // Only an oracle-assisted benchmark run pins the candidate count; a
+    // production-parity run selects exactly as many tools as ChatBox would.
+    const pinnedLimit = this.getBenchmarkHarnessProfile()?.toolSelectionLimit;
+    if (Number.isFinite(pinnedLimit) && pinnedLimit >= 1) return Math.floor(pinnedLimit);
 
     const shouldLimit = this.configManager.get('chatboxSettings.limitDynamicToolsSelection', true);
     if (!shouldLimit) return Infinity;
@@ -5115,11 +5121,49 @@ class ChatManager {
     );
   }
 
-  /** Abort checkpoint for the round loop and the tool queue. */
-  throwIfConversationAborted() {
-    if (this.isConversationAborted()) {
+  /**
+   * Abort checkpoint for the round loop and the tool queue.
+   *
+   * Pass the controller the running request was started with. The sticky flag
+   * is reset by the next startConversation(), so a loop that is still unwinding
+   * after its request was cancelled (a timed-out benchmark test, or a user who
+   * aborted and immediately sent again) would otherwise read the new request's
+   * clean state and keep executing tools underneath it.
+   * @param {AbortController|null} [requestController]
+   */
+  throwIfConversationAborted(requestController = null) {
+    if (this.isConversationAborted() || requestController?.signal?.aborted === true) {
       throw this.createAbortError();
     }
+  }
+
+  /**
+   * The benchmark harness profile of the run in progress, or null outside a
+   * benchmark run. Set by LLMBenchmarkFramework.runAllBenchmarks().
+   * @returns {object|null}
+   */
+  getBenchmarkHarnessProfile() {
+    if (this.benchmarkAutomationActive !== true) return null;
+    return this.benchmarkHarnessProfile || null;
+  }
+
+  /**
+   * Request options a benchmark run layers over the normal ChatBox request.
+   *
+   * Outside a benchmark nothing changes. Every benchmark run disables provider
+   * fallback, because a scored answer must come from the model the record
+   * names. Only an oracle-assisted run also pins the temperature and turns
+   * streaming off; a production-parity run otherwise sends exactly the request
+   * ChatBox sends.
+   * @returns {{disableFallback?: boolean, temperatureOverride?: number, disableStreaming?: boolean}}
+   */
+  getBenchmarkRequestOverrides() {
+    if (this.benchmarkAutomationActive !== true) return {};
+    const profile = this.getBenchmarkHarnessProfile() || {};
+    const overrides = { disableFallback: true };
+    if (Number.isFinite(profile.temperature)) overrides.temperatureOverride = profile.temperature;
+    if (profile.disableStreaming === true) overrides.disableStreaming = true;
+    return overrides;
   }
 
   async sendMessage() {
@@ -5141,6 +5185,7 @@ class ChatManager {
 
     // Initialize the conversation state
     this.startConversation();
+    const requestId = this.conversationState.currentRequestId;
 
     // Add user message to chat
     this.addMessageToChat(message, 'user');
@@ -5166,7 +5211,7 @@ class ChatManager {
       }
     } finally {
       // End the conversation state
-      this.endConversation();
+      this.endConversation(requestId);
     }
   }
 
@@ -5189,6 +5234,7 @@ class ChatManager {
 
     // Initialize the conversation state
     this.startConversation();
+    const requestId = this.conversationState.currentRequestId;
 
     // Add user message to chat
     this.addMessageToChat(trimmedMessage, 'user');
@@ -5211,7 +5257,7 @@ class ChatManager {
         console.error('Error in sendMessageProgrammatically:', error);
       }
     } finally {
-      this.endConversation();
+      this.endConversation(requestId);
     }
   }
 
@@ -5277,8 +5323,11 @@ class ChatManager {
     console.log('=== ChatManager.sendToLLM DEBUG START ===');
     console.log('User message:', message);
 
-    // Set up the AbortController
-    this.conversationState.abortController = new AbortController();
+    // Set up the AbortController. The loop keeps its own reference so its
+    // abort checkpoints stay bound to this request even after the shared
+    // conversation state has moved on to a newer one.
+    const requestAbortController = new AbortController();
+    this.conversationState.abortController = requestAbortController;
     console.log('AbortController initialized:', !!this.conversationState.abortController);
 
     try {
@@ -5376,7 +5425,7 @@ class ChatManager {
         // A missing controller means the conversation was torn down under us —
         // that is an abort, never a reason to mint a fresh controller and keep
         // spending rounds the user already asked to stop.
-        this.throwIfConversationAborted();
+        this.throwIfConversationAborted(requestAbortController);
 
         currentRound++;
         executionData.rounds = currentRound;
@@ -5416,7 +5465,7 @@ class ChatManager {
             onToken: token => this.appendStreamingToken(token),
             onReasoningToken: token => this.appendStreamingReasoningToken(token),
             onStreamReset: () => this.resetStreamingResponse(),
-            signal: this.conversationState.abortController?.signal,
+            signal: requestAbortController.signal,
             modelType: this.chatBoxSettingsManager?.getSetting('chatboxModelType', 'auto'),
             providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
             modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
@@ -5425,9 +5474,7 @@ class ChatManager {
             constrainedToolOutput: this.configManager.get('chatboxSettings.enableConstrainedToolOutput', true),
             toolChoice: 'auto',
             parallelToolCalls: true,
-            temperatureOverride: this.benchmarkAutomationActive === true ? 0 : undefined,
-            disableFallback: this.benchmarkAutomationActive === true,
-            disableStreaming: this.benchmarkAutomationActive === true,
+            ...this.getBenchmarkRequestOverrides(),
           });
         } finally {
           // The completed message is rendered by the normal path below, so the
@@ -5438,7 +5485,7 @@ class ChatManager {
         const responseText = responseAnalysis.text;
 
         // Check whether the response was aborted
-        this.throwIfConversationAborted();
+        this.throwIfConversationAborted(requestAbortController);
 
         // Logged as a single object: the console call is a no-op unless debug
         // logging is on, and passing `response` directly avoids serializing the
@@ -5736,7 +5783,7 @@ class ChatManager {
             }
 
             // Check whether it was aborted
-            this.throwIfConversationAborted();
+            this.throwIfConversationAborted(requestAbortController);
 
             let toolResults;
             const hasToolParameterReferences = toolsToExecute.some(tool =>
@@ -5750,7 +5797,9 @@ class ChatManager {
             if (this.smartExecutor && this.isSmartExecutionEnabled && !hasToolParameterReferences) {
               console.log('🚀 Using Smart Executor for optimized execution');
               const smartToolsToExecute = pendingToolExecutionQueue.splice(0, pendingToolExecutionQueue.length);
-              const smartResult = await this.smartExecutor.smartExecute(message, smartToolsToExecute);
+              const smartResult = await this.smartExecutor.smartExecute(message, smartToolsToExecute, {
+                abortController: requestAbortController,
+              });
 
               if (smartResult.success) {
                 toolResults = smartResult.results;
@@ -5800,13 +5849,15 @@ class ChatManager {
                 pendingToolExecutionQueue.push(...smartToolsToExecute);
                 toolResults = await this.executePendingToolExecutionQueue(
                   pendingToolExecutionQueue,
-                  toolReferenceResults
+                  toolReferenceResults,
+                  { abortController: requestAbortController }
                 );
               }
             } else {
               toolResults = await this.executePendingToolExecutionQueue(
                 pendingToolExecutionQueue,
-                toolReferenceResults
+                toolReferenceResults,
+                { abortController: requestAbortController }
               );
             }
 
@@ -9127,12 +9178,12 @@ class ChatManager {
     return false;
   }
 
-  async executePendingToolExecutionQueue(pendingToolExecutionQueue, referenceToolResults = []) {
+  async executePendingToolExecutionQueue(pendingToolExecutionQueue, referenceToolResults = [], options = {}) {
     const toolResults = [];
     const referenceContext = Array.isArray(referenceToolResults) ? referenceToolResults.slice() : [];
 
     while (pendingToolExecutionQueue.length > 0) {
-      this.throwIfConversationAborted();
+      this.throwIfConversationAborted(options.abortController || null);
 
       const tool = pendingToolExecutionQueue.shift();
       const recordedParameters = this.cloneToolParameters(tool.parameters);
@@ -17744,7 +17795,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   startConversation() {
     this.conversationState.isProcessing = true;
     this.conversationState.aborted = false;
-    this.conversationState.currentRequestId = Date.now().toString();
+    // Unique even for two requests started in the same millisecond, because
+    // endConversation(expectedRequestId) relies on it to tell them apart.
+    this.conversationRequestSeq = (this.conversationRequestSeq || 0) + 1;
+    this.conversationState.currentRequestId = `${Date.now()}_${this.conversationRequestSeq}`;
     this.conversationState.startTime = Date.now();
     this.conversationState.processSteps = [];
     this.conversationState.currentStep = 0;
@@ -17761,9 +17815,17 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   /**
    * End conversation state management
    */
-  endConversation() {
+  endConversation(expectedRequestId = null) {
     // Save the current thinking process before clearing the state
     const currentRequestId = this.conversationState.currentRequestId;
+
+    // A request that was already aborted (abortCurrentConversation() ends it
+    // on the spot) unwinds later and reaches its own finally block. By then a
+    // newer request may own the state; ending that one would unlock the UI
+    // and drop its abort controller mid-flight.
+    if (expectedRequestId !== null && expectedRequestId !== currentRequestId) {
+      return;
+    }
 
     // Convert the current thinking process into a history record
     this.finalizeCurrentThinkingProcess(currentRequestId);
@@ -20626,6 +20688,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const llmInteractionsFailedOnly =
       parameters.llm_interactions_failed_only !== undefined ? parameters.llm_interactions_failed_only : false;
     const stopOnError = parameters.stop_on_error !== undefined ? parameters.stop_on_error : false;
+    const harnessMode = parameters.harness_mode || 'production-parity';
+    if (!['production-parity', 'oracle-assisted'].includes(harnessMode)) {
+      return {
+        success: false,
+        error: `Unknown harness_mode '${harnessMode}'. Use 'production-parity' or 'oracle-assisted'.`,
+      };
+    }
 
     // Open the interface first so the user can see progress
     try {
@@ -20664,6 +20733,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
         if (failedOnlyEl) failedOnlyEl.checked = llmInteractionsFailedOnly;
         const stopOnErrorEl = document.getElementById('stopOnError');
         if (stopOnErrorEl) stopOnErrorEl.checked = stopOnError;
+        const harnessModeEl = document.getElementById('benchmarkHarnessMode');
+        if (harnessModeEl) harnessModeEl.value = harnessMode;
 
         // Trigger via the UI so it handles running-state, elapsed timer, and results display
         if (bm.ui && typeof bm.ui.startMainWindowBenchmark === 'function') {
@@ -20683,6 +20754,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
               includeLLMInteractions,
               llmInteractionsFailedOnly,
               stopOnError,
+              harnessMode,
             })
             .catch(err => console.error('[startBenchmark] Fallback run error:', err));
         }
@@ -20693,8 +20765,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     return {
       success: true,
-      message: `Benchmark starting with suites: ${suites.join(', ')}`,
+      message: `Benchmark starting with suites: ${suites.join(', ')} (${harnessMode})`,
       suites,
+      harness_mode: harnessMode,
     };
   }
 

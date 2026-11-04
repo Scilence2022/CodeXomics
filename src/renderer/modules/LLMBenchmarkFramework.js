@@ -168,6 +168,105 @@ class LLMBenchmarkFramework {
   }
 
   /**
+   * The two in-app harness modes. They mirror the offline CLI harnesses'
+   * `harness_mode` so every report states which one produced it.
+   *
+   * - `production-parity` (default): the test instruction goes through the same
+   *   ChatBox pipeline a user message does, with the user's own settings —
+   *   temperature, streaming, tool-selection limit, Smart Executor and agent
+   *   routing — and the round loop ends the way it does in normal use. The one
+   *   deviation is that provider fallback is off, so a scored answer always
+   *   comes from the model the record names.
+   * - `oracle-assisted`: the legacy controlled configuration. The test oracle
+   *   ends the round loop as soon as every expected call has executed, the
+   *   temperature is pinned to 0, streaming is off, exactly 24 candidate tools
+   *   are advertised, and Smart Executor / agent routing are disabled. These
+   *   numbers measure how a model does under assistance, not what a user sees.
+   *
+   * Accuracy from the two modes measures different things; never pool them.
+   */
+  static get HARNESS_PROFILES() {
+    return {
+      'production-parity': {
+        harness_mode: 'production-parity',
+        oracleEarlyStop: false,
+        temperature: null,
+        disableStreaming: false,
+        disableFallback: true,
+        toolSelectionLimit: null,
+        forceAgentSystemOff: false,
+        forceSmartExecutionOff: false,
+      },
+      'oracle-assisted': {
+        harness_mode: 'oracle-assisted',
+        oracleEarlyStop: true,
+        temperature: 0,
+        disableStreaming: true,
+        disableFallback: true,
+        toolSelectionLimit: 24,
+        forceAgentSystemOff: true,
+        forceSmartExecutionOff: true,
+      },
+    };
+  }
+
+  /**
+   * Resolve the harness profile a run uses. Accepts `options.harnessMode`
+   * ('production-parity' | 'oracle-assisted') or the CLI-style boolean
+   * `options.productionParity`. An unknown mode throws instead of silently
+   * running one mode under the other's label.
+   */
+  resolveHarnessProfile(options = {}) {
+    let mode = options.harnessMode;
+    if (mode === undefined || mode === null || mode === '') {
+      mode = options.productionParity === false ? 'oracle-assisted' : 'production-parity';
+    }
+    const profile = LLMBenchmarkFramework.HARNESS_PROFILES[mode];
+    if (!profile) {
+      throw new Error(`Unknown benchmark harness mode '${mode}'. Use 'production-parity' or 'oracle-assisted'.`);
+    }
+    return { ...profile };
+  }
+
+  /**
+   * What the run actually did, for the results record: the mode plus the
+   * effective request settings, so a report never needs to infer them.
+   */
+  describeHarness(profile) {
+    const chatManager = this.chatManager;
+    let configuredTemperature = null;
+    try {
+      const value = chatManager?.llmConfigManager?.getTemperature?.();
+      configuredTemperature = Number.isFinite(value) ? value : null;
+    } catch (error) {
+      configuredTemperature = null;
+    }
+    let toolSelectionLimit = null;
+    try {
+      const limit = chatManager?.getDynamicToolsSelectionLimit?.();
+      toolSelectionLimit = Number.isFinite(limit) ? limit : null;
+    } catch (error) {
+      toolSelectionLimit = null;
+    }
+    return {
+      harness_mode: profile.harness_mode,
+      harness_assistance: {
+        oracle_early_stop: profile.oracleEarlyStop === true,
+        expected_steps_disclosed: false,
+      },
+      effective_request: {
+        temperature: Number.isFinite(profile.temperature) ? profile.temperature : configuredTemperature,
+        streaming: profile.disableStreaming === true ? 'disabled' : 'as configured',
+        provider_fallback: 'disabled',
+        tool_selection_limit: toolSelectionLimit,
+        smart_execution: chatManager?.isSmartExecutionEnabled === true,
+        agent_system: chatManager?.agentSystemEnabled === true,
+        context_mode: 'current message only',
+      },
+    };
+  }
+
+  /**
    * Run all benchmarks
    */
   async runAllBenchmarks(options = {}) {
@@ -207,12 +306,16 @@ class LLMBenchmarkFramework {
 
     console.log('✅ [Benchmark] LLM Configuration validated:', enabledProviders.join(', '));
 
+    // Resolved before the run starts so an unknown mode fails fast.
+    const harnessProfile = this.resolveHarnessProfile(options);
+
     this.isRunning = true;
     const startTime = Date.now();
     let benchmarkRunSessionId = null;
     const previousBenchmarkAutomationActive = this.chatManager?.benchmarkAutomationActive === true;
     const previousAgentSystemEnabled = this.chatManager?.agentSystemEnabled;
     const previousSmartExecutionEnabled = this.chatManager?.isSmartExecutionEnabled;
+    const previousHarnessProfile = this.chatManager?.benchmarkHarnessProfile;
 
     // Set timeout from options if provided
     // If timeout is null, it means use individual test timeouts
@@ -244,8 +347,11 @@ class LLMBenchmarkFramework {
     try {
       if (this.chatManager) {
         this.chatManager.benchmarkAutomationActive = true;
-        this.chatManager.agentSystemEnabled = false;
-        this.chatManager.isSmartExecutionEnabled = false;
+        this.chatManager.benchmarkHarnessProfile = harnessProfile;
+        // A production-parity run keeps the user's routing and execution
+        // settings: that is the pipeline whose behaviour it claims to measure.
+        if (harnessProfile.forceAgentSystemOff) this.chatManager.agentSystemEnabled = false;
+        if (harnessProfile.forceSmartExecutionOff) this.chatManager.isSmartExecutionEnabled = false;
         if (this.chatManager.toolExecutionTracker) {
           benchmarkRunSessionId = `benchmark_run_${startTime}`;
           this.chatManager.toolExecutionTracker.startSession(benchmarkRunSessionId, {
@@ -264,7 +370,10 @@ class LLMBenchmarkFramework {
         testSuiteResults: [],
         overallStats: null,
         options: options,
+        harness: this.describeHarness(harnessProfile),
       };
+      this.harnessProfile = harnessProfile;
+      console.log(`🔬 [Benchmark] Harness mode: ${harnessProfile.harness_mode}`, results.harness);
 
       // Calculate total test count for accurate progress tracking
       let totalTestCount = 0;
@@ -412,7 +521,9 @@ class LLMBenchmarkFramework {
         this.chatManager.benchmarkAutomationActive = previousBenchmarkAutomationActive;
         this.chatManager.agentSystemEnabled = previousAgentSystemEnabled;
         this.chatManager.isSmartExecutionEnabled = previousSmartExecutionEnabled;
+        this.chatManager.benchmarkHarnessProfile = previousHarnessProfile;
       }
+      this.harnessProfile = null;
       this.isRunning = false;
     }
   }
@@ -1048,6 +1159,65 @@ class LLMBenchmarkFramework {
   }
 
   /**
+   * The profile of the run in progress. A test executed outside
+   * runAllBenchmarks() (single-test debugging) gets production parity.
+   */
+  getActiveHarnessProfile() {
+    return this.harnessProfile || LLMBenchmarkFramework.HARNESS_PROFILES['production-parity'];
+  }
+
+  /**
+   * The temperature the request is really sent with: the harness pin when the
+   * profile has one, otherwise the ChatBox temperature the provider call
+   * resolves. The provider's own `temperature` field is not what is sent.
+   */
+  getEffectiveRequestTemperature(providerConfig = {}) {
+    const profile = this.getActiveHarnessProfile();
+    if (Number.isFinite(profile.temperature)) return profile.temperature;
+    try {
+      const configured = this.chatManager?.llmConfigManager?.getTemperature?.();
+      if (Number.isFinite(configured)) return configured;
+    } catch (error) {
+      console.warn('[Benchmark] Could not resolve the request temperature:', error);
+    }
+    return Number.isFinite(providerConfig?.temperature) ? providerConfig.temperature : null;
+  }
+
+  /**
+   * Open the ChatBox conversation a test runs in. Returns a handle for
+   * endBenchmarkConversation(), or null when the ChatManager has no
+   * conversation lifecycle (unit-test doubles).
+   */
+  beginBenchmarkConversation(testId = null) {
+    const chatManager = this.chatManager;
+    if (!chatManager || typeof chatManager.startConversation !== 'function' || !chatManager.conversationState) {
+      return null;
+    }
+    if (chatManager.conversationState.isProcessing) {
+      throw new Error(
+        `ChatBox is busy with another conversation; benchmark test ${testId || 'unknown'} was not started.`
+      );
+    }
+    chatManager.startConversation();
+    return { requestId: chatManager.conversationState.currentRequestId };
+  }
+
+  /**
+   * Close the conversation a test opened — and only that one. A timed-out test
+   * has already been ended by abortCurrentConversation(); when its abandoned
+   * promise finally unwinds, the next test may own the conversation state.
+   */
+  endBenchmarkConversation(handle) {
+    if (!handle || typeof this.chatManager?.endConversation !== 'function') return;
+    try {
+      if (this.chatManager.conversationState?.currentRequestId !== handle.requestId) return;
+      this.chatManager.endConversation(handle.requestId);
+    } catch (error) {
+      console.warn('[Benchmark] Failed to close the test conversation:', error);
+    }
+  }
+
+  /**
    * Put the expected tools of an `assertCallOnly` test into call-only mode, so the model's
    * tool call is recorded but never executed. Returns a restore function.
    *
@@ -1559,6 +1729,7 @@ class LLMBenchmarkFramework {
         contextLength: 0, // Length of conversation context
         availableTools: [], // Available function tools
         requestId: this.generateRequestId(),
+        harnessMode: this.getActiveHarnessProfile().harness_mode,
       },
 
       // Response details
@@ -1612,7 +1783,7 @@ class LLMBenchmarkFramework {
           const providerConfig = this.chatManager.llmConfigManager.providers[selection.providerKey] || {};
           interactionData.request.provider = selection.providerKey;
           interactionData.request.model = selection.model || providerConfig.model;
-          interactionData.request.temperature = providerConfig.temperature;
+          interactionData.request.temperature = this.getEffectiveRequestTemperature(providerConfig);
           interactionData.request.maxTokens = providerConfig.maxTokens;
         } else {
           interactionData.request.provider = 'unknown';
@@ -1701,9 +1872,19 @@ class LLMBenchmarkFramework {
       // This ensures only the current test instruction is sent, not the entire conversation history
       const originalContextMode = this.chatManager.contextModeEnabled;
 
+      // Opened inside the try so the finally below always closes it.
+      let benchmarkConversation = null;
+
       try {
         // CRITICAL FIX: Enable context mode for benchmark tests to prevent token overflow
         this.chatManager.contextModeEnabled = true;
+
+        // Run the test inside a real ChatBox conversation, exactly as
+        // sendMessage() does. Without it the conversation is never marked as
+        // processing, so a timed-out test cannot be aborted, a sticky abort from
+        // an earlier chat fails every test, and a user message can start a
+        // second loop on top of the running test.
+        benchmarkConversation = this.beginBenchmarkConversation(options.testInfo?.id);
 
         console.log('🔧 [Benchmark] Enabled context mode to prevent token overflow');
         console.log('🔧 [Benchmark] Original context mode:', originalContextMode);
@@ -1742,6 +1923,10 @@ class LLMBenchmarkFramework {
         // cannot over-complete with extra viewer/verification/wrap-up calls.
         // Uses the same completion+execution evaluator as final scoring, so the
         // stop decision matches the pass decision.
+        // Oracle-assisted runs only: production ChatBox has no oracle to tell
+        // it the task is done, so a production-parity run lets the loop end
+        // on its own and any over-completion is scored as it happened.
+        const harnessProfile = this.getActiveHarnessProfile();
         const shouldStopAfterRound = async ({ functionCalls, toolResults }) => {
           if (!options.testInfo) return false;
           const partialResult = {
@@ -1756,7 +1941,10 @@ class LLMBenchmarkFramework {
           };
           return this.strictAutomaticEvaluator.evaluate(options.testInfo, partialResult).success === true;
         };
-        response = await this.chatManager.sendToLLM(instruction, { shouldStopAfterRound });
+        response = await this.chatManager.sendToLLM(
+          instruction,
+          harnessProfile.oracleEarlyStop ? { shouldStopAfterRound } : {}
+        );
         console.log(
           `[Benchmark][request] test ${options.testInfo?.id || 'unknown'} LLM returned in ${Date.now() - requestSentAt}ms at ${new Date().toISOString()}`
         );
@@ -1962,6 +2150,8 @@ class LLMBenchmarkFramework {
           }
         }
       } finally {
+        this.endBenchmarkConversation(benchmarkConversation);
+
         // Restore original console.log
         console.log = originalConsoleLog;
 

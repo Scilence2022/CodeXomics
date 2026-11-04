@@ -60,6 +60,12 @@ parameters:
       description: 'Whether to halt benchmark execution on the first test failure. Default false.'
       default: false
       example: false
+    harness_mode:
+      type: 'string'
+      enum: ['production-parity', 'oracle-assisted']
+      description: 'production-parity (default) runs each test through the same ChatBox pipeline and settings a user message gets. oracle-assisted is the legacy controlled run: the test oracle ends the round loop once every expected call has executed, temperature is pinned to 0, streaming is off and 24 tools are advertised. Results from the two modes are not comparable.'
+      default: 'production-parity'
+      example: 'production-parity'
 
 responses:
   success:

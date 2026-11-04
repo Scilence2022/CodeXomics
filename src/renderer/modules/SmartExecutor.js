@@ -26,10 +26,13 @@ class SmartExecutor {
    * Main entry point for smart execution of function calls
    * @param {string} userMessage - the user message
    * @param {Array|Object} tools - the requested tools (an array or a single tool object)
+   * @param {{abortController?: AbortController}} [options] - the controller of the
+   *   request these calls belong to, so a cancelled request stops between tools
    * @returns {Object} the execution result
    */
-  async smartExecute(userMessage, tools) {
+  async smartExecute(userMessage, tools, options = {}) {
     const startTime = Date.now();
+    this.requestAbortController = options.abortController || null;
 
     try {
       // Normalize the tools format
@@ -53,8 +56,13 @@ class SmartExecutor {
 
       this.isExecuting = true;
 
-      // Execute according to the strategy
-      const results = await this.executeWithStrategy(toolRequests, optimization.strategy);
+      // Execute according to the strategy, then report in call order. The
+      // strategy regroups calls into phases, but the round transcript binds
+      // each result to its call by tool_call_id and reads them in call order.
+      const results = this.orderResultsLikeRequests(
+        await this.executeWithStrategy(toolRequests, optimization.strategy),
+        toolRequests
+      );
 
       // Update the performance metrics
       this.updateMetrics(startTime, results);
@@ -70,6 +78,9 @@ class SmartExecutor {
         executionTime: Date.now() - startTime,
       };
     } catch (error) {
+      // A cancelled request is not an execution failure: returning one would
+      // make the caller re-queue every call for the standard executor.
+      if (this.chatManager?.isAbortError?.(error)) throw error;
       console.error('SmartExecutor error:', error);
       return {
         success: false,
@@ -79,7 +90,46 @@ class SmartExecutor {
     } finally {
       this.isExecuting = false;
       this.currentExecution = null;
+      this.requestAbortController = null;
     }
+  }
+
+  /**
+   * The fields every execution record carries, matching the standard tool
+   * queue in ChatManager.executePendingToolExecutionQueue(). Without
+   * `tool_call_id` a round of native calls cannot be replayed natively and
+   * falls back to the prose `[Tool Result]` envelope.
+   */
+  buildResultRecord(tool, fields) {
+    return {
+      tool: tool.tool_name,
+      tool_name: tool.tool_name,
+      tool_call_id: tool.tool_call_id ?? tool.id ?? null,
+      parameters: tool.parameters,
+      ...fields,
+      request: tool,
+    };
+  }
+
+  /** Same abort checkpoint the standard tool queue uses between calls. */
+  throwIfAborted() {
+    this.chatManager?.throwIfConversationAborted?.(this.requestAbortController);
+  }
+
+  /** Sort results back into request order and drop the internal request link. */
+  orderResultsLikeRequests(results, toolRequests) {
+    const position = new Map(toolRequests.map((tool, index) => [tool, index]));
+    return results
+      .map((result, index) => ({ result, index }))
+      .sort((left, right) => {
+        const a = position.has(left.result.request) ? position.get(left.result.request) : Infinity;
+        const b = position.has(right.result.request) ? position.get(right.result.request) : Infinity;
+        return a === b ? left.index - right.index : a - b;
+      })
+      .map(({ result }) => {
+        const { request, ...record } = result;
+        return record;
+      });
   }
 
   /**
@@ -146,6 +196,7 @@ class SmartExecutor {
     }
 
     for (const phase of executionPlan) {
+      this.throwIfAborted();
       console.log(`🚀 Executing ${phase.phase} (Priority: ${phase.priority})`);
 
       // Get the tool requests for the current stage
@@ -188,8 +239,10 @@ class SmartExecutor {
    * Execute tools in parallel
    */
   async executeParallel(tools) {
+    const startedAt = Date.now();
     const promises = tools.map(tool => this.executeSingleTool(tool));
     const results = await Promise.allSettled(promises);
+    const executionTime = Date.now() - startedAt;
 
     return results.map((result, index) => {
       const explicitFailure =
@@ -197,9 +250,7 @@ class SmartExecutor {
         result.value &&
         typeof result.value === 'object' &&
         result.value.success === false;
-      return {
-        tool: tools[index].tool_name,
-        parameters: tools[index].parameters,
+      return this.buildResultRecord(tools[index], {
         success: result.status === 'fulfilled' && !explicitFailure,
         result: result.status === 'fulfilled' && !explicitFailure ? result.value : null,
         error:
@@ -208,8 +259,9 @@ class SmartExecutor {
             : explicitFailure
               ? result.value.error || result.value.message || 'Tool reported an unsuccessful result'
               : null,
+        executionTime,
         executionMode: 'parallel',
-      };
+      });
     });
   }
 
@@ -220,26 +272,30 @@ class SmartExecutor {
     const results = [];
 
     for (const tool of tools) {
+      this.throwIfAborted();
+      const startedAt = Date.now();
       try {
         const result = await this.executeSingleTool(tool);
         const explicitFailure = result && typeof result === 'object' && result.success === false;
-        results.push({
-          tool: tool.tool_name,
-          parameters: tool.parameters,
-          success: !explicitFailure,
-          result: explicitFailure ? null : result,
-          error: explicitFailure ? result.error || result.message || 'Tool reported an unsuccessful result' : null,
-          executionMode: 'sequential',
-        });
+        results.push(
+          this.buildResultRecord(tool, {
+            success: !explicitFailure,
+            result: explicitFailure ? null : result,
+            error: explicitFailure ? result.error || result.message || 'Tool reported an unsuccessful result' : null,
+            executionTime: Date.now() - startedAt,
+            executionMode: 'sequential',
+          })
+        );
       } catch (error) {
-        results.push({
-          tool: tool.tool_name,
-          parameters: tool.parameters,
-          success: false,
-          result: null,
-          error: error.message,
-          executionMode: 'sequential',
-        });
+        results.push(
+          this.buildResultRecord(tool, {
+            success: false,
+            result: null,
+            error: error.message,
+            executionTime: Date.now() - startedAt,
+            executionMode: 'sequential',
+          })
+        );
       }
     }
 

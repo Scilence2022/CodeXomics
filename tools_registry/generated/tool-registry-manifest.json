@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-10-11T16:40:11.822Z",
-  "registryHash": "b5c171611e541f6ee72b5ff1601b1d412ae00b7a045bef404288aaba36558de7",
+  "generatedAt": "2026-11-04T08:40:57.895Z",
+  "registryHash": "3867b790c98f68fcb69c021097610e3ec358d0f1ac5032c09f8aafe89a08acde",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -3845,6 +3845,16 @@
             "description": "Whether to halt benchmark execution on the first test failure. Default false.",
             "default": false,
             "example": false
+          },
+          "harness_mode": {
+            "type": "string",
+            "enum": [
+              "production-parity",
+              "oracle-assisted"
+            ],
+            "description": "production-parity (default) runs each test through the same ChatBox pipeline and settings a user message gets. oracle-assisted is the legacy controlled run: the test oracle ends the round loop once every expected call has executed, temperature is pinned to 0, streaming is off and 24 tools are advertised. Results from the two modes are not comparable.",
+            "default": "production-parity",
+            "example": "production-parity"
           }
         }
       },
@@ -30512,6 +30522,16 @@
             "description": "Whether to halt benchmark execution on the first test failure. Default false.",
             "default": false,
             "example": false
+          },
+          "harness_mode": {
+            "type": "string",
+            "enum": [
+              "production-parity",
+              "oracle-assisted"
+            ],
+            "description": "production-parity (default) runs each test through the same ChatBox pipeline and settings a user message gets. oracle-assisted is the legacy controlled run: the test oracle ends the round loop once every expected call has executed, temperature is pinned to 0, streaming is off and 24 tools are advertised. Results from the two modes are not comparable.",
+            "default": "production-parity",
+            "example": "production-parity"
           }
         }
       },

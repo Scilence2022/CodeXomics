@@ -14,11 +14,18 @@ The production tool-calling evaluation covered here contains 172 cases: 143 Auto
 
 ## Test Execution Protocol
 
-For each case, the system establishes a request-scoped execution context, applies the configured timeout, retrieves at most 24 high-recall candidate tools in benchmark mode, and sends their strict JSON Schemas through the provider's native function-calling protocol. Benchmark requests use temperature 0, disable provider fallback and streaming, and retain the configured multi-round execution limit. Logs remain available for diagnosis, but only the current request's structured calls and execution results are admissible scoring evidence.
+For each case, the system opens a real ChatBox conversation (`startConversation()`, exactly as a typed message does), applies the configured timeout, sends only the current instruction (context mode "current message only"), and passes the selected tools' strict JSON Schemas through the provider's native function-calling protocol. Opening the conversation is what makes a timed-out test abortable, clears any abort left by an earlier chat, and locks the ChatBox input so a user message cannot start a second loop on top of the test. Provider fallback is always disabled, so a scored answer comes from the model the record names; every other request setting depends on the harness mode (below). Logs remain available for diagnosis, but only the current request's structured calls and execution results are admissible scoring evidence.
 
 ## In-App Versus Offline Harnesses
 
-Two harnesses produce numbers. The **in-app** harness (`LLMBenchmarkFramework`) drives the shipped `ChatManager` round loop, so its results reflect the loop's own recovery, policy, and termination behaviour. The **offline CLI** harnesses (`scripts/ollama-tool-benchmark.js`, `scripts/deepseek-tool-benchmark.js`) re-implement a minimal loop against synthetic contract tool results, which keeps a sweep independent of NCBI latency and local subprocesses.
+Two harnesses produce numbers. The **in-app** harness (`LLMBenchmarkFramework`) drives the shipped `ChatManager` round loop. It also runs in one of two modes, chosen in the Benchmark panel ("Harness Mode") or with `start_benchmark`'s `harness_mode`, and recorded in `results.harness` and in every interaction record:
+
+- **`production-parity`** (default). The test goes through the same pipeline and the user's own settings: ChatBox temperature, streaming, tool-selection limit, Smart Executor and agent routing. The round loop ends on its own, so over-completion is scored as it happened. These are the numbers that reflect what a ChatBox user gets.
+- **`oracle-assisted`**. The legacy controlled run: the test oracle stops the round loop as soon as every expected call has executed, temperature is pinned to 0, streaming is off, exactly 24 candidate tools are advertised, and Smart Executor and agent routing are disabled.
+
+`results.harness.effective_request` lists the temperature, streaming, tool limit and routing that were actually in force. Skills stay out of every benchmark prompt in both modes (see `Agents.md`).
+
+The **offline CLI** harnesses (`scripts/ollama-tool-benchmark.js`, `scripts/deepseek-tool-benchmark.js`) re-implement a minimal loop against synthetic contract tool results, which keeps a sweep independent of NCBI latency and local subprocesses.
 
 The offline harnesses run in one of two modes, recorded as `harness_mode` in every report and record:
 

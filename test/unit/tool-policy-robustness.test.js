@@ -74,7 +74,7 @@ function loadChatManagerClass() {
     /\n\s{2}hasProgressSinceLastSuccess\s*\(toolExecutionState,\s*toolKey\)\s*\{[\s\S]*?\n\s{2}\}\n\n\s{2}async executePendingToolExecutionQueue/
   );
   const executePendingToolExecutionQueueMatch = content.match(
-    /\n\s{2}async executePendingToolExecutionQueue\s*\(pendingToolExecutionQueue,\s*referenceToolResults\s*=\s*\[\]\)\s*\{[\s\S]*?\}\n\n\s{2}addToolResultsToReferenceContext/
+    /\n\s{2}async executePendingToolExecutionQueue\s*\(pendingToolExecutionQueue,\s*referenceToolResults\s*=\s*\[\](?:,\s*options\s*=\s*\{\})?\)\s*\{[\s\S]*?\}\n\n\s{2}addToolResultsToReferenceContext/
   );
   const toolReferenceMethodsMatch = content.match(
     /\n\s{2}addToolResultsToReferenceContext\s*\(referenceContext,\s*toolResults\)\s*\{[\s\S]*?\}\n\n\s{2}normalizeParams/
