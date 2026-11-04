@@ -645,6 +645,23 @@ describe('Primer Track Rendering', () => {
     });
   });
 
+  it('labels the site origin in the legend with the same short words in every case', () => {
+    const renderer = createPrimerRenderer();
+    const legendChips = sites => {
+      const trackContent = document.createElement('div');
+      trackContent.getBoundingClientRect = () => ({ width: 640 });
+      renderer.renderPrimerElements(trackContent, sites, { start: 0, end: 1000 }, {});
+      return [...trackContent.querySelectorAll('.primer-legend-chip')].map(chip => chip.textContent);
+    };
+    const pinned = { type: 'primer', start: 100, end: 120, name: 'P', strand: 1, origin: 'pinned' };
+    const predicted = { type: 'primer', start: 600, end: 620, name: 'Q', strand: -1, origin: 'predicted' };
+
+    expect(legendChips([pinned])).toContain('pinned');
+    expect(legendChips([predicted])).toContain('predicted');
+    expect(legendChips([pinned, predicted])).toContain('1 pinned · 1 predicted');
+    expect(legendChips([predicted]).join(' ')).not.toMatch(/real time/);
+  });
+
   it('drops predicted binding sites when the track settings ask it to', () => {
     const renderer = createPrimerRenderer();
     const sites = [
