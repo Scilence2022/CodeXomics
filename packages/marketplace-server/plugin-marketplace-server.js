@@ -604,15 +604,14 @@ app.post('/api/v1/plugins/submit', upload.single('files'), async (req, res) => {
       .status(201)
       .json({ success: true, data: { submissionId, pluginId, status: 'pending', sha256: packageSha256 } });
   } catch (error) {
+    if (file && !retained) {
+      await fs.rm(file.path, { force: true }).catch(error => console.error('Failed to clean up upload:', error));
+    }
     return res.status(error.statusCode || 400).json({
       success: false,
       error: 'Plugin submission failed',
       message: error.message,
     });
-  } finally {
-    if (file && !retained) {
-      await fs.rm(file.path, { force: true }).catch(error => console.error('Failed to clean up upload:', error));
-    }
   }
 });
 
