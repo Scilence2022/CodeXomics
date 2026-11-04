@@ -1145,7 +1145,7 @@ class TrackRenderer {
   }
 
   /**
-   * Render primers as oriented oligo arrows sitting on a genome baseline.
+   * Render primers as oriented half-arrows sitting on a genome baseline.
    *
    * A primer is a ~20 bp oligo, so at anything but base-level zoom its true
    * footprint is a fraction of a pixel. The glyph therefore has a floor size in
@@ -1517,7 +1517,8 @@ class TrackRenderer {
     const effectiveRows = Math.max(1, Math.min(primerRows.length, maxRows));
     const rowsHeight = effectiveRows * primerHeight + (effectiveRows - 1) * rowSpacing;
     const ampliconLane = options.ampliconCount > 0 ? style.ampliconLaneHeight : 0;
-    const legendY = topPadding + rowsHeight + ampliconLane + 4;
+    // A reverse barb overhangs the last row downward; keep it off the legend.
+    const legendY = topPadding + rowsHeight + ampliconLane + Math.max(4, style.barbFlare + 2);
 
     return {
       primerHeight,
@@ -1528,7 +1529,7 @@ class TrackRenderer {
       effectiveRows,
       rowsHeight,
       ampliconLane,
-      ampliconY: topPadding + rowsHeight + ampliconLane / 2 + 4,
+      ampliconY: topPadding + rowsHeight + ampliconLane / 2 + Math.max(4, style.barbFlare + 2),
       legendY,
       totalHeight: Math.max(style.minTrackHeight, legendY + style.legendLaneHeight + bottomPadding),
     };
@@ -1539,28 +1540,36 @@ class TrackRenderer {
   }
 
   /**
-   * Outline of one binding site: a flat body with a chevron head at the 3' end.
+   * Outline of one binding site, drawn as a half-arrow (the SnapGene / Benchling
+   * primer convention). The edge facing the template strand stays flat all the
+   * way to the 3' tip, which is the annealed face that polymerase extends from.
+   * A single barb points away from the DNA: upward for a forward primer (which
+   * anneals to the bottom strand) and downward for a reverse primer (which
+   * anneals to the top strand). The barb doubles as the strand cue, so a
+   * forward and a reverse site stay distinguishable even when the glyph is
+   * inflated to its minimum width.
+   *
    * The head length is capped in pixels so a sub-pixel primer cannot degenerate
    * into a giant triangle.
    */
   buildPrimerArrowPath(x, y, width, height, headLength, isReverse) {
     const round = value => Math.round(value * 100) / 100;
     const head = Math.min(headLength, width);
-    // Tie the head's overhang to the width as well as the height, so a glyph at
-    // the minimum width does not end up taller than it is wide.
-    const flare = Math.min(3, height * 0.32, width * 0.25);
+    // Tie the barb's overhang to the width as well as the height, so a glyph at
+    // the minimum width does not end up taller than it is wide. The row spacing
+    // and the gap above the legend are sized from barbFlare, so a reverse barb
+    // on one row and a forward barb on the row below it never touch.
+    const flare = Math.min(TrackRenderer.PRIMER_TRACK_STYLE.barbFlare, height * 0.5, width * 0.3);
     const top = round(y);
     const bottom = round(y + height);
-    const midY = round(y + height / 2);
     const left = round(x);
     const right = round(x + width);
 
     if (isReverse) {
+      // Points left; flat top edge runs into the tip, barb hangs below.
       const neck = round(x + head);
       return [
-        `M ${left} ${midY}`,
-        `L ${neck} ${round(y - flare)}`,
-        `L ${neck} ${top}`,
+        `M ${left} ${top}`,
         `L ${right} ${top}`,
         `L ${right} ${bottom}`,
         `L ${neck} ${bottom}`,
@@ -1569,14 +1578,13 @@ class TrackRenderer {
       ].join(' ');
     }
 
+    // Points right; flat bottom edge runs into the tip, barb rises above.
     const neck = round(x + width - head);
     return [
       `M ${left} ${top}`,
       `L ${neck} ${top}`,
       `L ${neck} ${round(y - flare)}`,
-      `L ${right} ${midY}`,
-      `L ${neck} ${round(y + height + flare)}`,
-      `L ${neck} ${bottom}`,
+      `L ${right} ${bottom}`,
       `L ${left} ${bottom}`,
       'Z',
     ].join(' ');
@@ -15998,7 +16006,8 @@ TrackRenderer.PRIMER_TRACK_STYLE = {
   minHeadLength: 4,
   maxHeadLength: 9,
   headFraction: 0.45, // head length as a share of the glyph, before the cap
-  rowSpacing: 9,
+  barbFlare: 5, // how far a half-arrow's single barb overhangs the body, at most
+  rowSpacing: 11, // >= 2 * barbFlare + 1: opposing barbs on adjacent rows stay apart
   rowGutter: 8, // horizontal breathing room required between two sites on a row
   topPadding: 12,
   bottomPadding: 6,
