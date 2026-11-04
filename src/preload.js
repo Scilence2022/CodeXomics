@@ -9,6 +9,10 @@ const allowedInvokeChannels = [
   'evo2:generate',
   'evo2:result',
   'evo2:cancel',
+  'checkpoints:list',
+  'checkpoints:add',
+  'checkpoints:remove',
+  'checkpoints:import-legacy',
   'mcp-server-start',
   'mcp-server-stop',
   'mcp-server-status',
@@ -98,6 +102,7 @@ const allowedInvokeChannels = [
 ];
 
 const allowedListenChannels = [
+  'checkpoints:changed',
   'collect-resource-info',
   'menu-new-project',
   'menu-open-project',

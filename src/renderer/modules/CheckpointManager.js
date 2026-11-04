@@ -1,19 +1,23 @@
 /**
  * CheckpointManager - Manages system state checkpoints for rollback functionality
  * Handles creation, storage, restoration, and management of application checkpoints
+ *
+ * Checkpoints belong to the loaded genome file. The main-process checkpoint store owns them
+ * (src/main/checkpoint-store.js), so every genome view with the same file open shares one list,
+ * and views of other files never see it. `this.checkpoints` mirrors the store's list for
+ * `this.genomePath`.
  */
 class CheckpointManager {
-  constructor(genomeBrowser) {
+  static LEGACY_STORAGE_KEY = 'genomeai_checkpoints';
+
+  constructor(genomeBrowser, { storeApi = null } = {}) {
     this.genomeBrowser = genomeBrowser;
+    // IPC bridge to the checkpoint store (window.electronAPI; injectable for tests)
+    this.storeApi = storeApi || (typeof window !== 'undefined' ? window.electronAPI : null) || null;
     this.checkpoints = [];
-    this.nextCheckpointId = 1;
-    this.maxCheckpoints = 50; // Maximum number of checkpoints to keep
+    this.genomePath = null; // Genome whose store list `this.checkpoints` currently mirrors
     this.autoSaveInterval = 300000; // Auto-save every 5 minutes
     this.autoSaveTimer = null;
-    // Upper bound for the serialized 'genomeai_checkpoints' value. localStorage is shared by every
-    // genome view, and each write is broadcast (old + new value) to all of their renderers, so an
-    // unbounded value exhausts renderer memory in background views.
-    this.maxStorageChars = 2 * 1024 * 1024;
 
     // Checkpoint types
     this.CHECKPOINT_TYPES = {
@@ -24,10 +28,84 @@ class CheckpointManager {
     };
 
     this.initializeEventListeners();
-    this.loadCheckpointsFromStorage();
+    this.listenForStoreChanges();
     this.startAutoSave();
+    // Resolves once legacy checkpoints are imported and the current genome's list is loaded.
+    this.ready = this.importLegacyCheckpoints().then(() => this.refresh());
 
     console.log('✅ CheckpointManager initialized');
+  }
+
+  /**
+   * Genome file the checkpoints belong to: the FASTA/GenBank source of this view
+   */
+  getCurrentGenomePath() {
+    return this.genomeBrowser.loadedGenomePath || null;
+  }
+
+  /**
+   * Call the main-process checkpoint store
+   */
+  async invokeStore(channel, params) {
+    if (!this.storeApi?.invoke) throw new Error('Checkpoints require the desktop application');
+
+    const result = await this.storeApi.invoke(channel, params);
+    if (!result?.success) throw new Error(result?.error || `Checkpoint store request failed: ${channel}`);
+    return result;
+  }
+
+  /**
+   * Adopt a list returned by the store, unless this view has since switched genomes
+   */
+  applyStoreList(genomePath, checkpoints) {
+    if (genomePath !== this.getCurrentGenomePath()) return false;
+
+    this.genomePath = genomePath;
+    this.checkpoints = (checkpoints || []).map(cp => ({ ...cp, timestamp: new Date(cp.timestamp) }));
+    this.updateCheckpointListUI();
+    return true;
+  }
+
+  /**
+   * Reload the current genome's checkpoints from the store
+   */
+  async refresh() {
+    const genomePath = this.getCurrentGenomePath();
+    if (!genomePath) {
+      this.genomePath = null;
+      this.checkpoints = [];
+      this.updateCheckpointListUI();
+      return;
+    }
+
+    try {
+      const result = await this.invokeStore('checkpoints:list', { genomePath });
+      this.applyStoreList(genomePath, result.checkpoints);
+    } catch (error) {
+      console.error('❌ Error loading checkpoints:', error);
+    }
+  }
+
+  /**
+   * Make sure `this.checkpoints` belongs to the genome that is loaded now
+   */
+  async syncWithCurrentGenome() {
+    if (this.genomePath !== this.getCurrentGenomePath()) {
+      await this.refresh();
+    }
+  }
+
+  /**
+   * Reload when another genome view changes this genome's checkpoints
+   */
+  listenForStoreChanges() {
+    if (!this.storeApi?.on) return;
+
+    this.storeApi.on('checkpoints:changed', payload => {
+      if (payload?.genomePath && payload.genomePath === this.getCurrentGenomePath()) {
+        this.refresh();
+      }
+    });
   }
 
   /**
@@ -70,6 +148,11 @@ class CheckpointManager {
    * Create a manual checkpoint with user-provided name
    */
   async createManualCheckpoint() {
+    if (!this.getCurrentGenomePath()) {
+      this.genomeBrowser.showNotification('Load a genome before creating a checkpoint', 'warning');
+      return null;
+    }
+
     try {
       const name = await this.promptForCheckpointName();
       if (!name) return null;
@@ -96,6 +179,11 @@ class CheckpointManager {
       return;
     }
 
+    if (!this.getCurrentGenomePath()) {
+      this.genomeBrowser.showNotification('Load a genome before creating a checkpoint', 'warning');
+      return;
+    }
+
     try {
       const checkpointId = await this.createCheckpoint(name, this.CHECKPOINT_TYPES.MANUAL);
       this.genomeBrowser.showNotification(`Checkpoint "${name}" created successfully`, 'success');
@@ -118,34 +206,34 @@ class CheckpointManager {
         name = this.generateCheckpointName(type);
       }
 
+      const genomePath = this.getCurrentGenomePath();
+      if (!genomePath) {
+        throw new Error('Load a genome before creating a checkpoint');
+      }
+
       // Capture current system state (auto checkpoints pass the state they already compared)
       const state = capturedState || (await this.captureSystemState());
 
-      // Create checkpoint object
+      // Create checkpoint object; the store assigns its id and applies the limits
       const checkpoint = {
-        id: this.nextCheckpointId++,
         name: name,
         type: type,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         state: state,
         metadata: metadata,
         size: this.calculateStateSize(state),
       };
 
-      // Add to checkpoints array
-      this.checkpoints.push(checkpoint);
+      const result = await this.invokeStore('checkpoints:add', { genomePath, checkpoints: [checkpoint] });
+      if (result.rejected?.length) {
+        throw new Error(`Checkpoint "${name}" is too large to save`);
+      }
 
-      // Maintain maximum checkpoint limit
-      this.enforceCheckpointLimit();
+      this.applyStoreList(genomePath, result.checkpoints);
 
-      // Save to storage
-      await this.saveCheckpointsToStorage();
-
-      // Update UI
-      this.updateCheckpointListUI();
-
-      console.log(`✅ Checkpoint created: ${name} (ID: ${checkpoint.id})`);
-      return checkpoint.id;
+      const checkpointId = result.added[0];
+      console.log(`✅ Checkpoint created: ${name} (ID: ${checkpointId})`);
+      return checkpointId;
     } catch (error) {
       console.error('❌ Error creating checkpoint:', error);
       throw error;
@@ -477,6 +565,7 @@ class CheckpointManager {
    */
   showCheckpointList() {
     this.updateCheckpointListUI();
+    this.refresh();
 
     // Show the action list modal which contains checkpoint management
     const modal = document.getElementById('actionListModal');
@@ -608,9 +697,9 @@ class CheckpointManager {
       const confirmed = await this.showDeleteConfirmModal(checkpoint.name);
       if (!confirmed) return;
 
-      this.checkpoints = this.checkpoints.filter(cp => cp.id !== checkpointId);
-      await this.saveCheckpointsToStorage();
-      this.updateCheckpointListUI();
+      const genomePath = this.genomePath;
+      const result = await this.invokeStore('checkpoints:remove', { genomePath, ids: [checkpointId] });
+      this.applyStoreList(genomePath, result.checkpoints);
 
       this.genomeBrowser.showNotification(`Checkpoint "${checkpoint.name}" deleted`, 'success');
     } catch (error) {
@@ -721,34 +810,6 @@ class CheckpointManager {
       return new Blob([JSON.stringify(state)]).size;
     } catch (error) {
       return 0;
-    }
-  }
-
-  /**
-   * Enforce checkpoint limit
-   */
-  enforceCheckpointLimit() {
-    if (this.checkpoints.length > this.maxCheckpoints) {
-      // Remove oldest auto checkpoints first
-      const autoCheckpoints = this.checkpoints
-        .filter(cp => cp.type === this.CHECKPOINT_TYPES.AUTO)
-        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-      const toRemove = this.checkpoints.length - this.maxCheckpoints;
-      const removed = autoCheckpoints.slice(0, Math.min(toRemove, autoCheckpoints.length));
-
-      removed.forEach(cp => {
-        const index = this.checkpoints.findIndex(checkpoint => checkpoint.id === cp.id);
-        if (index > -1) {
-          this.checkpoints.splice(index, 1);
-        }
-      });
-
-      // If still over limit, remove oldest checkpoints
-      if (this.checkpoints.length > this.maxCheckpoints) {
-        this.checkpoints.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        this.checkpoints = this.checkpoints.slice(this.checkpoints.length - this.maxCheckpoints);
-      }
     }
   }
 
@@ -944,6 +1005,9 @@ class CheckpointManager {
    */
   async createAutoCheckpoint() {
     try {
+      if (!this.getCurrentGenomePath()) return;
+      await this.syncWithCurrentGenome();
+
       // Only create auto checkpoint if there are significant changes
       const state = await this.captureSystemState();
       if (this.shouldCreateAutoCheckpoint(state)) {
@@ -964,10 +1028,14 @@ class CheckpointManager {
    * Check if auto checkpoint should be created
    */
   shouldCreateAutoCheckpoint(state = null) {
+    // Checkpoints belong to a genome file
+    if (!this.getCurrentGenomePath()) return false;
+
     // Don't create if no checkpoints exist
     if (this.checkpoints.length === 0) return true;
 
-    // Don't create if last checkpoint was recent (less than 4 minutes ago)
+    // Don't create if last checkpoint was recent (less than 4 minutes ago). The list is shared by
+    // every view of this genome, so one view's checkpoint also covers the others.
     const lastCheckpoint = this.checkpoints[this.checkpoints.length - 1];
     const timeSinceLastCheckpoint = Date.now() - new Date(lastCheckpoint.timestamp).getTime();
     if (timeSinceLastCheckpoint < 240000) return false; // 4 minutes
@@ -985,134 +1053,64 @@ class CheckpointManager {
   }
 
   /**
-   * Save checkpoints to localStorage
+   * Older versions kept every view's checkpoints in one localStorage key. Move them into the
+   * per-genome store once, grouped by the genome each checkpoint was taken on, then drop the key.
    */
-  async saveCheckpointsToStorage() {
+  async importLegacyCheckpoints() {
+    let stored = null;
     try {
-      const checkpoints = this.selectCheckpointsForStorage();
-      const data = {
-        checkpoints,
-        nextCheckpointId: this.nextCheckpointId,
-        lastSaved: new Date().toISOString(),
-      };
-
-      localStorage.setItem('genomeai_checkpoints', JSON.stringify(data));
-      console.log(`💾 Saved ${checkpoints.length} checkpoints to storage`);
+      stored = localStorage.getItem(CheckpointManager.LEGACY_STORAGE_KEY);
     } catch (error) {
-      console.error('❌ Error saving checkpoints to storage:', error);
+      return;
     }
-  }
+    if (!stored) return;
 
-  /**
-   * Pick the checkpoints that fit in the storage budget. Checkpoints that alone exceed the budget
-   * stay in memory for this session only; otherwise the oldest auto checkpoints, then the oldest of
-   * any type, are dropped until the rest fit.
-   */
-  selectCheckpointsForStorage() {
-    const entries = this.checkpoints.map(checkpoint => ({
-      checkpoint,
-      length: JSON.stringify(checkpoint).length,
-    }));
-
-    const persisted = entries.filter(entry => {
-      if (entry.length <= this.maxStorageChars) return true;
-      console.warn(
-        `⚠️ Checkpoint "${entry.checkpoint.name}" (${entry.length} chars) exceeds the storage budget; keeping it in memory only`
-      );
-      return false;
-    });
-
-    let total = persisted.reduce((sum, entry) => sum + entry.length, 0);
-    if (total <= this.maxStorageChars) {
-      return persisted.map(entry => entry.checkpoint);
-    }
-
-    const byAge = (a, b) => new Date(a.checkpoint.timestamp) - new Date(b.checkpoint.timestamp);
-    const isAuto = entry => entry.checkpoint.type === this.CHECKPOINT_TYPES.AUTO;
-    const evictionOrder = [
-      ...persisted.filter(isAuto).sort(byAge),
-      ...persisted.filter(entry => !isAuto(entry)).sort(byAge),
-    ];
-
-    const evicted = new Set();
-    for (const entry of evictionOrder) {
-      if (total <= this.maxStorageChars) break;
-      evicted.add(entry.checkpoint);
-      total -= entry.length;
-    }
-
-    this.checkpoints = this.checkpoints.filter(checkpoint => !evicted.has(checkpoint));
-    console.warn(`⚠️ Removed ${evicted.size} oldest checkpoints to stay within the storage budget`);
-
-    return persisted.filter(entry => !evicted.has(entry.checkpoint)).map(entry => entry.checkpoint);
-  }
-
-  /**
-   * Shrink checkpoints written by older versions: strip embedded file data and collapse runs of
-   * identical auto checkpoints. Returns true when anything changed.
-   */
-  migrateLoadedCheckpoints() {
-    let changed = false;
-    const kept = [];
-    let previousAutoSignature = null;
-
-    for (const checkpoint of this.checkpoints) {
-      const genomeBrowserState = checkpoint.state?.genomeBrowser;
-      if (genomeBrowserState?.currentFile && typeof genomeBrowserState.currentFile === 'object') {
-        const summary = this.summarizeCurrentFile(genomeBrowserState.currentFile);
-        if (JSON.stringify(summary) !== JSON.stringify(genomeBrowserState.currentFile)) {
-          genomeBrowserState.currentFile = summary;
-          checkpoint.size = this.calculateStateSize(checkpoint.state);
-          changed = true;
-        }
+    try {
+      const data = JSON.parse(stored);
+      const groups = this.groupLegacyCheckpoints(Array.isArray(data?.checkpoints) ? data.checkpoints : []);
+      const result = await this.invokeStore('checkpoints:import-legacy', { groups });
+      localStorage.removeItem(CheckpointManager.LEGACY_STORAGE_KEY);
+      if (!result.alreadyImported) {
+        console.log(`📂 Imported ${result.imported} legacy checkpoints into the per-genome store`);
       }
+    } catch (error) {
+      console.error('❌ Error importing legacy checkpoints:', error);
+    }
+  }
 
-      if (checkpoint.type === this.CHECKPOINT_TYPES.AUTO) {
-        const signature = this.getStateSignature(checkpoint.state);
-        if (signature === previousAutoSignature) {
-          changed = true;
-          continue;
-        }
-        previousAutoSignature = signature;
+  /**
+   * Group legacy checkpoints by genome file. Each one records the files that were loaded; the last
+   * FASTA/GenBank among them was the genome. Embedded file data is stripped and runs of identical
+   * auto checkpoints are collapsed; checkpoints with no genome are dropped.
+   */
+  groupLegacyCheckpoints(checkpoints) {
+    const groups = new Map();
+    const previousAutoSignatures = new Map();
+
+    for (const checkpoint of checkpoints) {
+      const genomeBrowserState = checkpoint?.state?.genomeBrowser;
+      const genomeFile = (genomeBrowserState?.loadedFiles || [])
+        .filter(file => file && (file.type === 'GenBank' || file.type === 'FASTA') && file.path)
+        .pop();
+      if (!genomeFile) continue;
+
+      genomeBrowserState.currentFile = this.summarizeCurrentFile(genomeBrowserState.currentFile);
+      // The store assigns a fresh id
+      const legacyCheckpoint = { ...checkpoint, size: this.calculateStateSize(checkpoint.state) };
+
+      if (legacyCheckpoint.type === this.CHECKPOINT_TYPES.AUTO) {
+        const signature = this.getStateSignature(legacyCheckpoint.state);
+        if (previousAutoSignatures.get(genomeFile.path) === signature) continue;
+        previousAutoSignatures.set(genomeFile.path, signature);
       } else {
-        previousAutoSignature = null;
+        previousAutoSignatures.delete(genomeFile.path);
       }
 
-      kept.push(checkpoint);
+      if (!groups.has(genomeFile.path)) groups.set(genomeFile.path, []);
+      groups.get(genomeFile.path).push(legacyCheckpoint);
     }
 
-    this.checkpoints = kept;
-    return changed;
-  }
-
-  /**
-   * Load checkpoints from localStorage
-   */
-  loadCheckpointsFromStorage() {
-    try {
-      const stored = localStorage.getItem('genomeai_checkpoints');
-      if (stored) {
-        const data = JSON.parse(stored);
-
-        // Restore checkpoints with proper date objects
-        this.checkpoints = data.checkpoints.map(cp => ({
-          ...cp,
-          timestamp: new Date(cp.timestamp),
-        }));
-
-        this.nextCheckpointId = data.nextCheckpointId || 1;
-
-        console.log(`📂 Loaded ${this.checkpoints.length} checkpoints from storage`);
-
-        if (this.migrateLoadedCheckpoints() || stored.length > this.maxStorageChars) {
-          this.saveCheckpointsToStorage();
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error loading checkpoints from storage:', error);
-      this.checkpoints = [];
-      this.nextCheckpointId = 1;
-    }
+    return Array.from(groups, ([genomePath, groupCheckpoints]) => ({ genomePath, checkpoints: groupCheckpoints }));
   }
 
   /**
@@ -1160,20 +1158,16 @@ class CheckpointManager {
         throw new Error('Invalid checkpoint file format');
       }
 
-      // Restore checkpoints
-      const importedCheckpoints = data.checkpoints.map(cp => ({
-        ...cp,
-        id: this.nextCheckpointId++, // Assign new IDs
-        timestamp: new Date(cp.timestamp),
-      }));
+      const genomePath = this.getCurrentGenomePath();
+      if (!genomePath) {
+        throw new Error('Load a genome before importing checkpoints');
+      }
 
-      this.checkpoints.push(...importedCheckpoints);
-      this.enforceCheckpointLimit();
+      // The store assigns new ids to the imported checkpoints
+      const result = await this.invokeStore('checkpoints:add', { genomePath, checkpoints: data.checkpoints });
+      this.applyStoreList(genomePath, result.checkpoints);
 
-      await this.saveCheckpointsToStorage();
-      this.updateCheckpointListUI();
-
-      this.genomeBrowser.showNotification(`Imported ${importedCheckpoints.length} checkpoints`, 'success');
+      this.genomeBrowser.showNotification(`Imported ${result.added.length} checkpoints`, 'success');
     } catch (error) {
       console.error('❌ Error importing checkpoints:', error);
       this.genomeBrowser.showNotification('Failed to import checkpoints', 'error');
@@ -1187,11 +1181,18 @@ class CheckpointManager {
     const confirmed = await this.showClearAllConfirmModal();
     if (!confirmed) return;
 
-    this.checkpoints = [];
-    await this.saveCheckpointsToStorage();
-    this.updateCheckpointListUI();
+    try {
+      const genomePath = this.genomePath;
+      if (genomePath) {
+        const result = await this.invokeStore('checkpoints:remove', { genomePath, all: true });
+        this.applyStoreList(genomePath, result.checkpoints);
+      }
 
-    this.genomeBrowser.showNotification('All checkpoints cleared', 'success');
+      this.genomeBrowser.showNotification('All checkpoints cleared', 'success');
+    } catch (error) {
+      console.error('❌ Error clearing checkpoints:', error);
+      this.genomeBrowser.showNotification('Failed to clear checkpoints', 'error');
+    }
   }
 
   /**

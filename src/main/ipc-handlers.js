@@ -641,6 +641,7 @@ function registerIpcHandlers(deps) {
   };
 
   require('./evo2-service').registerEvo2Ipc({ ipcMain, app, isRegisteredGenomeSender });
+  require('./checkpoint-store').registerCheckpointIpc({ ipcMain, app, isRegisteredGenomeSender });
 
   const getOwnedBamReader = (event, readerId) => {
     const entry = bamReaders.get(readerId);

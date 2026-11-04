@@ -933,6 +933,9 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
       sequences[currentSeq] = currentData;
     }
 
+    // Bind the genome source directly, as parseGenBank does: a file opened in a new window can be
+    // parsed before TabManager exists, and onGenomeLoaded is then never called.
+    this.genomeBrowser.loadedGenomePath = this.currentFile?.path || this.currentFile?.info?.path || null;
     this.genomeBrowser.currentSequence = sequences;
     this.genomeBrowser.populateChromosomeSelect();
 
