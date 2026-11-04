@@ -38,12 +38,69 @@ const IUPAC_COMPLEMENT = {
 };
 
 class PrimerDesigner {
+  // ---------------------------------------------------------------------------
+  // Reaction conditions
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Default reaction conditions for every thermodynamic calculation. Monovalent,
+   * Mg2+ and dNTP values are Primer3's defaults, so a reported Tm is directly
+   * comparable with Primer3 / Primer-BLAST / primer3-py. The oligo concentration
+   * keeps the app's historical 250 nM.
+   */
+  static DEFAULT_REACTION_CONDITIONS = Object.freeze({
+    naConcentration: 0.05, // M monovalent cations
+    mgConcentration: 0.0015, // M Mg2+
+    dntpConcentration: 0.0006, // M total dNTP (chelates Mg2+ ~1:1)
+    primerConcentration: 250e-9, // M oligo
+  });
+
+  /** Fill missing or invalid condition values from DEFAULT_REACTION_CONDITIONS. */
+  static resolveConditions(options = {}) {
+    const defaults = this.DEFAULT_REACTION_CONDITIONS;
+    const source = options || {};
+    const nonNegative = (value, fallback) => (Number.isFinite(value) && value >= 0 ? value : fallback);
+    const positive = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
+    const conditions = {
+      naConcentration: nonNegative(source.naConcentration, defaults.naConcentration),
+      mgConcentration: nonNegative(source.mgConcentration, defaults.mgConcentration),
+      dntpConcentration: nonNegative(source.dntpConcentration, defaults.dntpConcentration),
+      primerConcentration: positive(source.primerConcentration, defaults.primerConcentration),
+    };
+    // ln([Na+eq]) must be defined: a cation-free buffer falls back to the default Na+.
+    if (this._sodiumEquivalent(conditions) <= 0) {
+      conditions.naConcentration = defaults.naConcentration;
+    }
+    return conditions;
+  }
+
+  /**
+   * Na+-equivalent concentration (M) of a buffer with Mg2+ and dNTP.
+   * von Ahsen et al. (2001) Clin Chem 47:1956 — the conversion Primer3 applies
+   * before its SantaLucia salt correction. dNTPs bind Mg2+, so only free Mg2+ counts.
+   */
+  static _sodiumEquivalent(conditions) {
+    const freeMgMillimolar = Math.max(0, (conditions.mgConcentration - conditions.dntpConcentration) * 1000);
+    return conditions.naConcentration + (120 * Math.sqrt(freeMgMillimolar)) / 1000;
+  }
+
+  /** Human-readable summary of the conditions a Tm/ΔG was computed under. */
+  static describeConditions(options = {}) {
+    const c = this.resolveConditions(options);
+    const fmt = value => String(Number(value.toPrecision(3)));
+    return (
+      `${fmt(c.naConcentration * 1000)} mM Na⁺ · ${fmt(c.mgConcentration * 1000)} mM Mg²⁺ · ` +
+      `${fmt(c.dntpConcentration * 1000)} mM dNTP · ${fmt(c.primerConcentration * 1e9)} nM oligo`
+    );
+  }
+
   /**
    * Calculate properties of a primer sequence
    * @param {string} sequence - DNA sequence of the primer
-   * @returns {Object} Primer properties including length, GC%, and Tm
+   * @param {Object} [options] - reaction conditions (see DEFAULT_REACTION_CONDITIONS)
+   * @returns {Object} Primer properties including length, GC%, Tm and secondary structure
    */
-  static calculateProperties(sequence) {
+  static calculateProperties(sequence, options = {}) {
     if (!sequence || typeof sequence !== 'string') {
       throw new Error('Valid DNA sequence is required');
     }
@@ -75,16 +132,23 @@ class PrimerDesigner {
     const cCount = (seq.match(/C/g) || []).length;
     const gcContent = ((gCount + cCount) / length) * 100;
 
-    const tm = this.calculateTm(seq);
-
-    const hasHairpinPotential = this._checkHairpinPotential(seq);
+    const conditions = this.resolveConditions(options);
+    const tm = this.calculateTm(seq, conditions);
+    const hairpin = this.calculateHairpin(seq, conditions);
+    const selfDimer = this.calculateDimer(seq, seq, conditions);
+    const threePrimeStability = this.calculateThreePrimeStability(seq);
 
     const result = {
       sequence: seq,
       length: length,
       gcContent: Number(gcContent.toFixed(2)),
       tm: Number(tm.toFixed(2)),
-      hasHairpinPotential: hasHairpinPotential,
+      hasHairpinPotential: Boolean(hairpin?.flagged),
+      hairpin,
+      selfDimer,
+      threePrimeStability,
+      gcClampCount: this._threePrimeGcCount(seq),
+      conditions,
     };
 
     if (warnings.length > 0) {
@@ -101,12 +165,12 @@ class PrimerDesigner {
    * a primer is consistent across calculate_primer_properties, design output, and
    * binding-site prediction.
    *
-   * For very short oligos (<14 nt) the nearest-neighbor model is unreliable, so a
-   * salt-adjusted / Wallace blend (`_calculateTm`) is used as a documented fast
-   * fallback.
+   * The nearest-neighbor parameters were fitted on short oligos, so the model is
+   * used down to MIN_NN_LENGTH nt; only shorter fragments (which are not primers)
+   * fall back to the Wallace blend in `_calculateTm`.
    *
    * @param {string} sequence - primer sequence (5'→3')
-   * @param {Object} [options] - { naConcentration, primerConcentration }
+   * @param {Object} [options] - reaction conditions (see DEFAULT_REACTION_CONDITIONS)
    * @returns {number} Tm in °C
    */
   static calculateTm(sequence, options = {}) {
@@ -115,26 +179,24 @@ class PrimerDesigner {
       .replace(/[^ATCG]/g, '');
     if (seq.length === 0) return 0;
 
-    if (seq.length < 14) {
+    if (seq.length < this.MIN_NN_LENGTH) {
       const gCount = (seq.match(/G/g) || []).length;
       const cCount = (seq.match(/C/g) || []).length;
       const gcContent = ((gCount + cCount) / seq.length) * 100;
       return this._calculateTm(seq, gCount, cCount, gcContent);
     }
 
-    const naConc = Number.isFinite(options.naConcentration) ? options.naConcentration : 0.05;
-    const primerConc = Number.isFinite(options.primerConcentration) ? options.primerConcentration : 250e-9;
     // A perfectly matched duplex: template === primer, so every nearest-neighbor
     // step uses Watson–Crick match parameters.
-    return this._calculateBindingTm(seq, seq, naConc, primerConc).tm;
+    return this._calculateBindingTm(seq, seq, this.resolveConditions(options)).tm;
   }
 
+  /** Shortest oligo the nearest-neighbor Tm model is applied to. */
+  static MIN_NN_LENGTH = 8;
+
   /**
-   * Fast salt-adjusted/Wallace Tm approximation. Used internally for ranking the
-   * many candidate sub-sequences during primer design (where only relative Tm
-   * matters and speed is critical) and as the short-oligo fallback for the
-   * canonical calculateTm(). For the canonical reported Tm, use calculateTm().
-   * For oligos < 14bp, blends Wallace rule with salt-adjusted to avoid discontinuity.
+   * Wallace-rule / basic-GC Tm approximation for fragments shorter than
+   * MIN_NN_LENGTH. Not used for primers; calculateTm() is the reported Tm.
    */
   static _calculateTm(seq, gCount, cCount, gcContent) {
     const length = seq.length;
@@ -171,6 +233,7 @@ class PrimerDesigner {
       throw new Error(`After removing non-ATCG characters, only ${seq.length}bp remain. Need at least 150bp.`);
     }
 
+    const conditions = this.resolveConditions(options);
     const targetTm = Number.isFinite(options.targetTm) ? options.targetTm : 60.0;
     const baseTmTolerance = Number.isFinite(options.tmTolerance) ? options.tmTolerance : 2.0;
     const minLen = Number.isFinite(options.minLen) ? Math.floor(options.minLen) : 18;
@@ -219,17 +282,16 @@ class PrimerDesigner {
         minPropSize,
         maxPropSize,
         strictness,
-        { requiredAmpliconStart, requiredAmpliconEnd }
+        { requiredAmpliconStart, requiredAmpliconEnd, conditions }
       );
       if (pairs && pairs.length > 0) {
         pairs.sort((a, b) => a.designScore - b.designScore);
         const best = pairs[0];
-        // Candidate ranking used the fast Tm approximation for speed; report the
-        // canonical nearest-neighbor Tm for the selected pair so the design output
-        // agrees with calculate_primer_properties and binding-site prediction.
-        best.forward.tm = Number(this.calculateTm(best.forward.sequence).toFixed(2));
-        best.reverse.tm = Number(this.calculateTm(best.reverse.sequence).toFixed(2));
-        best.tmDifference = Number(Math.abs(best.forward.tm - best.reverse.tm).toFixed(2));
+        // Candidates were already filtered on the canonical nearest-neighbor Tm,
+        // so the reported Tm is the one the target was matched against.
+        const heteroDimer = this.calculateDimer(best.forward.sequence, best.reverse.sequence, conditions);
+        if (heteroDimer) best.heteroDimer = heteroDimer;
+        best.conditions = conditions;
         return best;
       }
     }
@@ -282,12 +344,20 @@ class PrimerDesigner {
   ) {
     const pairs = [];
     const { requiredAmpliconStart, requiredAmpliconEnd } = constraints;
+    const conditions = constraints.conditions || this.resolveConditions();
     const hasRequiredStart = Number.isFinite(requiredAmpliconStart);
     const hasRequiredEnd = Number.isFinite(requiredAmpliconEnd);
 
     const searchRegionSize = Math.min(200, Math.floor(seq.length / 2));
     const forwardRegion = seq.substring(0, searchRegionSize);
-    const forwardPrimers = this._findCandidatePrimersEfficient(forwardRegion, minLen, maxLen, targetTm, strictness);
+    const forwardPrimers = this._findCandidatePrimersEfficient(
+      forwardRegion,
+      minLen,
+      maxLen,
+      targetTm,
+      strictness,
+      conditions
+    );
 
     const reverseRegionStart = Math.max(0, seq.length - searchRegionSize);
     const reverseRegion = seq.substring(reverseRegionStart);
@@ -297,7 +367,8 @@ class PrimerDesigner {
       minLen,
       maxLen,
       targetTm,
-      strictness
+      strictness,
+      conditions
     );
 
     const reversePrimers = reverseCandidatesRaw.map(cand => ({
@@ -360,9 +431,12 @@ class PrimerDesigner {
 
   /**
    * Efficient candidate primer finder using sliding window for GC calculation.
-   * Avoids calling calculateProperties() for every subsequence.
+   * Avoids calling calculateProperties() for every subsequence. Tm is the
+   * canonical nearest-neighbor Tm: the target is an absolute temperature, so a
+   * cheaper approximation here would silently shift every designed primer.
    */
-  static _findCandidatePrimersEfficient(seq, minLen, maxLen, targetTm, strictness) {
+  static _findCandidatePrimersEfficient(seq, minLen, maxLen, targetTm, strictness, conditions = null) {
+    const reaction = conditions || this.resolveConditions();
     const { tmTol, gcMin, gcMax, requireGcClamp, avoidHairpin } = strictness;
     const MAX_CANDIDATES = 200;
     const candidates = [];
@@ -385,7 +459,7 @@ class PrimerDesigner {
         if (gcContent < gcMin || gcContent > gcMax) continue;
 
         const subSeq = seq.substring(i, i + len);
-        const tm = this._calculateTm(subSeq, 0, 0, gcContent);
+        const tm = this.calculateTm(subSeq, reaction);
 
         if (Math.abs(tm - targetTm) > tmTol) continue;
 
@@ -394,7 +468,7 @@ class PrimerDesigner {
           if (lastChar !== 'G' && lastChar !== 'C') continue;
         }
 
-        if (avoidHairpin && this._checkHairpinPotential(subSeq)) continue;
+        if (avoidHairpin && this.calculateHairpin(subSeq, reaction)?.flagged) continue;
 
         candidates.push({
           startPos: i,
@@ -513,6 +587,19 @@ class PrimerDesigner {
   };
 
   /**
+   * Look up a single-mismatch stack. The table lists each context once; the same
+   * stack read from the other strand ("XY/AB" rotated 180° is "BA/YX") covers the
+   * mismatch-first orientation.
+   */
+  static _mismatchParams(key) {
+    const direct = this._NN_MISMATCH_PARAMS[key];
+    if (direct) return direct;
+    const [top, bottom] = key.split('/');
+    if (!top || !bottom || top.length !== 2 || bottom.length !== 2) return null;
+    return this._NN_MISMATCH_PARAMS[`${bottom[1]}${bottom[0]}/${top[1]}${top[0]}`] || null;
+  }
+
+  /**
    * Position-dependent mismatch penalty weights (indexed from 3' end, 0-based).
    * A mismatch at the 3' terminal (index 0) is penalized most heavily because
    * DNA polymerase extends from the 3' hydroxyl — a terminal mismatch nearly
@@ -552,6 +639,8 @@ class PrimerDesigner {
    *   @param {string} [options.scoringMode='fast'] - 'fast' (position-weighted Hamming) or
    *                   'thermodynamic' (includes nearest-neighbor Tm calculation)
    *   @param {number} [options.naConcentration=0.05] - Na⁺ concentration in M (default 50 mM)
+   *   @param {number} [options.mgConcentration=0.0015] - Mg²⁺ concentration in M (default 1.5 mM)
+   *   @param {number} [options.dntpConcentration=0.0006] - total dNTP concentration in M (default 0.6 mM)
    *   @param {number} [options.primerConcentration=250e-9] - Total primer concentration in M
    * @returns {Array} Array of binding site objects sorted by bindingScore (descending)
    */
@@ -563,8 +652,7 @@ class PrimerDesigner {
     const max3PrimeMM = Number.isFinite(options.max3PrimeMismatches) ? options.max3PrimeMismatches : 1;
     const minBindingTm = Number.isFinite(options.minBindingTm) ? options.minBindingTm : undefined;
     const scoringMode = options.scoringMode || 'fast';
-    const naConc = Number.isFinite(options.naConcentration) ? options.naConcentration : 0.05;
-    const primerConc = Number.isFinite(options.primerConcentration) ? options.primerConcentration : 250e-9;
+    const conditions = this.resolveConditions(options);
 
     const pSeq = primer.toUpperCase().replace(/[^ATCG]/g, '');
     const tSeq = template.toUpperCase().replace(/[^ATCG]/g, '');
@@ -612,7 +700,7 @@ class PrimerDesigner {
         let bindingDeltaG = null;
 
         if (scoringMode === 'thermodynamic' || minBindingTm !== undefined) {
-          const thermo = this._calculateBindingTm(query, templateWindow, naConc, primerConc);
+          const thermo = this._calculateBindingTm(query, templateWindow, conditions);
           bindingTm = thermo.tm;
           bindingDeltaG = thermo.deltaG;
 
@@ -779,15 +867,23 @@ class PrimerDesigner {
    *
    * References:
    *   - SantaLucia & Hicks (2004) Annu Rev Biophys Biomol Struct 33:415
-   *   - Owczarzy et al. (2004) Biochemistry 43:3537 (salt correction)
+   *   - SantaLucia (1998) PNAS 95:1460 (entropy salt correction)
+   *   - von Ahsen et al. (2001) Clin Chem 47:1956 (Mg2+/dNTP → Na+-equivalent)
+   * This is Primer3's default model, so Tm agrees with primer3 calc_tm.
    *
    * @param {string} primerSeq - Primer sequence (5'→3'), uppercased ATCG only
    * @param {string} templateSeq - Template window (same length), uppercased ATCG only
-   * @param {number} naConc - Na⁺ concentration in M
-   * @param {number} primerConc - Total primer strand concentration in M
+   * @param {Object|number} [conditions] - reaction conditions; a number is read as the
+   *   legacy Na⁺ concentration (M), with `legacyPrimerConc` as the oligo concentration
+   * @param {number} [legacyPrimerConc] - oligo concentration in M (legacy signature only)
    * @returns {{tm: number, deltaG: number, deltaH: number, deltaS: number}}
    */
-  static _calculateBindingTm(primerSeq, templateSeq, naConc = 0.05, primerConc = 250e-9) {
+  static _calculateBindingTm(primerSeq, templateSeq, conditions = null, legacyPrimerConc = undefined) {
+    const reaction =
+      typeof conditions === 'number'
+        ? this.resolveConditions({ naConcentration: conditions, primerConcentration: legacyPrimerConc })
+        : this.resolveConditions(conditions || {});
+    const primerConc = reaction.primerConcentration;
     const R = 1.987; // gas constant in cal/(mol·K)
     const pLen = primerSeq.length;
 
@@ -831,7 +927,7 @@ class PrimerDesigner {
         const actualTemplate1 = complement[templateSeq[j + 1]] || templateSeq[j + 1];
         const templateDinuc = actualTemplate0 + actualTemplate1;
         const mmKey = primerDinuc + '/' + templateDinuc;
-        const mmParams = this._NN_MISMATCH_PARAMS[mmKey];
+        const mmParams = this._mismatchParams(mmKey);
 
         if (mmParams) {
           totalDH += mmParams.dH;
@@ -845,17 +941,20 @@ class PrimerDesigner {
       }
     }
 
-    // Salt correction (Owczarzy et al. 2004)
-    // ΔS_corrected = ΔS + 0.368 × (N-1) × ln([Na⁺])
-    const saltCorrection = 0.368 * (pLen - 1) * Math.log(naConc);
+    // Salt correction (SantaLucia 1998) on the Na+-equivalent of the buffer:
+    // ΔS_corrected = ΔS + 0.368 × (N-1) × ln([Na⁺eq])
+    const saltCorrection = 0.368 * (pLen - 1) * Math.log(this._sodiumEquivalent(reaction));
     const correctedDS = totalDS + saltCorrection;
 
-    // Tm = ΔH / (ΔS + R × ln(C_T/4)) - 273.15
-    // For self-complementary: C_T/4, for non-self-complementary: C_T/4
-    const tm = (totalDH * 1000) / (correctedDS + R * Math.log(primerConc / 4)) - 273.15;
+    // Tm = ΔH / (ΔS + R × ln(C_T/x)) - 273.15, x = 4 for two different strands and
+    // x = 1 (plus a -1.4 e.u. symmetry term) for a self-complementary duplex.
+    const selfComplementary = primerSeq === templateSeq && primerSeq === this.reverseComplement(primerSeq);
+    const symmetryDS = selfComplementary ? -1.4 : 0;
+    const strandFactor = selfComplementary ? 1 : 4;
+    const tm = (totalDH * 1000) / (correctedDS + symmetryDS + R * Math.log(primerConc / strandFactor)) - 273.15;
 
     // ΔG at 37°C
-    const deltaG = totalDH - 310.15 * (correctedDS / 1000);
+    const deltaG = totalDH - 310.15 * ((correctedDS + symmetryDS) / 1000);
 
     return {
       tm: Number.isFinite(tm) ? tm : 0,
@@ -918,8 +1017,8 @@ class PrimerDesigner {
 
   // --- Internal Helpers ---
 
-  static _findCandidatePrimers(seq, minLen, maxLen, targetTm, strictness) {
-    return this._findCandidatePrimersEfficient(seq, minLen, maxLen, targetTm, strictness).map(cand => ({
+  static _findCandidatePrimers(seq, minLen, maxLen, targetTm, strictness, conditions = null) {
+    return this._findCandidatePrimersEfficient(seq, minLen, maxLen, targetTm, strictness, conditions).map(cand => ({
       sequence: cand.sequence,
       startPos: cand.startPos,
       length: cand.length,
@@ -928,18 +1027,461 @@ class PrimerDesigner {
     }));
   }
 
-  static _checkHairpinPotential(seq, motifLen = 4, minLoop = 3) {
-    const minTotalLen = motifLen + minLoop + motifLen;
-    if (seq.length < minTotalLen) return false;
+  // ---------------------------------------------------------------------------
+  // Secondary structure: hairpins, dimers, 3' end
+  // ---------------------------------------------------------------------------
 
-    for (let i = 0; i <= seq.length - minTotalLen; i++) {
-      const motif = seq.substring(i, i + motifLen);
-      const revComp = this.reverseComplement(motif);
-      if (seq.substring(i + motifLen + minLoop).includes(revComp)) {
-        return true;
+  /**
+   * ΔG°37 limits (kcal/mol) past which a structure is flagged. A structure whose
+   * stem includes the primer's 3' terminus can be extended by the polymerase, so
+   * it has the stricter limit. Values follow the common IDT / Premier Biosoft
+   * guidance.
+   */
+  static STRUCTURE_THRESHOLDS = Object.freeze({
+    hairpin3Prime: -2.0,
+    hairpinInternal: -3.0,
+    dimer3Prime: -5.0,
+    dimerInternal: -6.0,
+  });
+
+  /** Hairpin loop initiation ΔG°37 (kcal/mol), SantaLucia & Hicks (2004) Table 4. */
+  static _HAIRPIN_LOOP_DG = {
+    3: 3.5,
+    4: 3.5,
+    5: 3.3,
+    6: 4.0,
+    7: 4.2,
+    8: 4.3,
+    9: 4.5,
+    10: 4.6,
+    12: 5.0,
+    14: 5.1,
+    16: 5.3,
+    18: 5.5,
+    20: 5.7,
+    25: 6.1,
+    30: 6.3,
+  };
+
+  /** Bimolecular duplex initiation ΔG°37 and terminal A·T penalty (SantaLucia & Hicks 2004). */
+  static _DUPLEX_INIT_DG = 1.96;
+  static _TERMINAL_AT_DG = 0.05;
+  /**
+   * Mean stabilisation (kcal/mol) a helix end gains from a neighbouring unpaired
+   * nucleotide (dangling end or terminal mismatch). The per-context tables are not
+   * modelled; this single value was calibrated so the median hairpin/dimer ΔG
+   * matches Primer3's thermodynamic alignment on random 18–30-mers.
+   */
+  static _HELIX_END_DG = -0.8;
+  static _WATSON_CRICK = { A: 'T', T: 'A', G: 'C', C: 'G' };
+
+  static _cleanSequence(sequence) {
+    return String(sequence || '')
+      .toUpperCase()
+      .replace(/[^ATCG]/g, '');
+  }
+
+  /** ΔG°37 of one Watson–Crick stack, with a per-stack entropy salt term. */
+  static _stackDeltaG(dinucleotide, saltEntropyPerStack = 0) {
+    const params = this._NN_MATCH_PARAMS[dinucleotide];
+    if (!params) return 0;
+    return params.dH - 310.15 * ((params.dS + saltEntropyPerStack) / 1000);
+  }
+
+  static _saltEntropyPerStack(conditions) {
+    return 0.368 * Math.log(this._sodiumEquivalent(this.resolveConditions(conditions || {})));
+  }
+
+  static _terminalPenalty(base) {
+    return base === 'A' || base === 'T' ? this._TERMINAL_AT_DG : 0;
+  }
+
+  /** Hairpin loop ΔG°37, extrapolated beyond the table with Jacobson–Stockmayer. */
+  static _hairpinLoopDeltaG(loopLength) {
+    const table = this._HAIRPIN_LOOP_DG;
+    if (table[loopLength] !== undefined) return table[loopLength];
+    const sizes = Object.keys(table)
+      .map(Number)
+      .sort((a, b) => a - b);
+    let reference = sizes[0];
+    for (const size of sizes) {
+      if (size <= loopLength) reference = size;
+    }
+    return table[reference] + 2.44 * 0.0019872 * 310.15 * Math.log(loopLength / reference);
+  }
+
+  /**
+   * Most stable single hairpin (perfect Watson–Crick stem of ≥3 bp closing a loop
+   * of ≥3 nt). ΔG°37 = stem stacks + loop initiation + terminal A·T penalty.
+   *
+   * @returns {null|{deltaG:number, stemLength:number, loopLength:number, start:number,
+   *   end:number, involves3Prime:boolean, flagged:boolean, dotBracket:string}}
+   *   `start`/`end` are 0-based indices of the outer stem pair.
+   */
+  static calculateHairpin(sequence, options = {}) {
+    const seq = this._cleanSequence(sequence);
+    const n = seq.length;
+    const minStem = 3;
+    const minLoop = 3;
+    if (n < 2 * minStem + minLoop || n > 200) return null;
+
+    const wc = this._WATSON_CRICK;
+    const salt = this._saltEntropyPerStack(options);
+    let best = null;
+
+    for (let i = 0; i < n; i++) {
+      for (let j = n - 1; j - i + 1 >= 2 * minStem + minLoop; j--) {
+        if (wc[seq[i]] !== seq[j]) continue;
+        // Only start at an outer pair that cannot extend outward; the inner
+        // sub-stems are visited while the stem grows below.
+        if (i > 0 && j < n - 1 && wc[seq[i - 1]] === seq[j + 1]) continue;
+
+        let stemDeltaG = this._terminalPenalty(seq[i]);
+        for (let pairs = 1; ; pairs++) {
+          const loopLength = j - i - 2 * pairs + 1;
+          if (loopLength < minLoop) break;
+          if (pairs > 1) {
+            stemDeltaG += this._stackDeltaG(seq[i + pairs - 2] + seq[i + pairs - 1], salt);
+          }
+          if (pairs >= minStem) {
+            const outerFlanked = i > 0 || j < n - 1;
+            const deltaG =
+              stemDeltaG +
+              this._hairpinLoopDeltaG(loopLength) +
+              this._HELIX_END_DG + // loop-closing pair always faces the loop
+              (outerFlanked ? this._HELIX_END_DG : 0);
+            if (!best || deltaG < best.deltaG) {
+              best = { deltaG, stemLength: pairs, loopLength, start: i, end: j };
+            }
+          }
+          const nextLoop = j - i - 2 * (pairs + 1) + 1;
+          if (nextLoop < minLoop || wc[seq[i + pairs]] !== seq[j - pairs]) break;
+        }
       }
     }
-    return false;
+
+    if (!best) return null;
+    const involves3Prime = best.end === n - 1;
+    const limit = involves3Prime ? this.STRUCTURE_THRESHOLDS.hairpin3Prime : this.STRUCTURE_THRESHOLDS.hairpinInternal;
+    const dotBracket = Array.from({ length: n }, (_, index) => {
+      if (index >= best.start && index < best.start + best.stemLength) return '(';
+      if (index <= best.end && index > best.end - best.stemLength) return ')';
+      return '.';
+    }).join('');
+    return {
+      deltaG: Number(best.deltaG.toFixed(2)),
+      stemLength: best.stemLength,
+      loopLength: best.loopLength,
+      start: best.start,
+      end: best.end,
+      involves3Prime,
+      flagged: best.deltaG < limit,
+      dotBracket,
+    };
+  }
+
+  /**
+   * Most stable dimer between two oligos (self-dimer when both are the same).
+   * Strands are aligned antiparallel at every offset; each contiguous run of
+   * Watson–Crick pairs is scored as initiation + stacks + terminal A·T penalties.
+   *
+   * @returns {null|{deltaG:number, length:number, involves3Prime:boolean,
+   *   flagged:boolean, alignment:string[]}} `alignment` is three display lines.
+   */
+  static calculateDimer(sequenceA, sequenceB = sequenceA, options = {}) {
+    const a = this._cleanSequence(sequenceA);
+    const b = this._cleanSequence(sequenceB);
+    if (a.length < 2 || b.length < 2 || a.length > 300 || b.length > 300) return null;
+
+    const wc = this._WATSON_CRICK;
+    const salt = this._saltEntropyPerStack(options);
+    const bReversed = b.split('').reverse().join(''); // 3'→5'
+    let best = null;
+
+    // a[i] faces bReversed[i - shift]. Walk each diagonal and score every segment
+    // that starts and ends on a Watson–Crick pair; single internal mismatches are
+    // bridged with the Allawi & SantaLucia mismatch stacks, two in a row end it.
+    const isPair = (i, shift) => wc[a[i]] === bReversed[i - shift];
+    const stepDeltaG = (x, shift) => {
+      const p0 = isPair(x, shift);
+      const p1 = isPair(x + 1, shift);
+      if (p0 && p1) return this._stackDeltaG(a[x] + a[x + 1], salt);
+      if (!p0 && !p1) return null;
+      const params = this._mismatchParams(`${a[x]}${a[x + 1]}/${bReversed[x - shift]}${bReversed[x + 1 - shift]}`);
+      if (!params) return null;
+      return params.dH - 310.15 * ((params.dS + salt) / 1000);
+    };
+
+    for (let shift = -(bReversed.length - 1); shift <= a.length - 1; shift++) {
+      const first = Math.max(0, shift);
+      const last = Math.min(a.length - 1, bReversed.length - 1 + shift);
+      for (let runStart = first; runStart < last; runStart++) {
+        if (!isPair(runStart, shift)) continue;
+        let sum = 0;
+        for (let x = runStart; x < last; x++) {
+          const step = stepDeltaG(x, shift);
+          if (step === null) break;
+          sum += step;
+          const runEnd = x + 1;
+          if (!isPair(runEnd, shift)) continue;
+          const startFlanked = runStart > 0 || runStart - shift > 0;
+          const endFlanked = runEnd < a.length - 1 || runEnd - shift < bReversed.length - 1;
+          const deltaG =
+            this._DUPLEX_INIT_DG +
+            sum +
+            this._terminalPenalty(a[runStart]) +
+            this._terminalPenalty(a[runEnd]) +
+            (startFlanked ? this._HELIX_END_DG : 0) +
+            (endFlanked ? this._HELIX_END_DG : 0);
+          if (!best || deltaG < best.deltaG) best = { deltaG, runStart, runEnd, shift };
+        }
+      }
+    }
+
+    if (!best) return null;
+    const { runStart, runEnd, shift } = best;
+    // a's 3' end is its last base; b's 3' end is bReversed[0].
+    const involves3Prime = runEnd === a.length - 1 || runStart - shift === 0;
+    const limit = involves3Prime ? this.STRUCTURE_THRESHOLDS.dimer3Prime : this.STRUCTURE_THRESHOLDS.dimerInternal;
+
+    const padA = Math.max(0, -shift);
+    const padB = Math.max(0, shift);
+    let bars = ' '.repeat(padA + runStart);
+    for (let i = runStart; i <= runEnd; i++) bars += wc[a[i]] === bReversed[i - shift] ? '|' : ' ';
+    return {
+      deltaG: Number(best.deltaG.toFixed(2)),
+      length: runEnd - runStart + 1,
+      involves3Prime,
+      flagged: best.deltaG < limit,
+      alignment: [`5' ${' '.repeat(padA)}${a} 3'`, `   ${bars}`, `3' ${' '.repeat(padB)}${bReversed} 5'`],
+    };
+  }
+
+  /**
+   * ΔG°37 (1 M Na⁺, Primer3 convention) of the duplex formed by the 3'-terminal
+   * pentamer: how tightly the 3' end holds on its own. Very stable ends tolerate
+   * internal mismatches and so prime off-target.
+   */
+  static calculateThreePrimeStability(sequence, bases = 5) {
+    const seq = this._cleanSequence(sequence);
+    if (seq.length < bases) return null;
+    const end = seq.slice(-bases);
+    let deltaG = this._DUPLEX_INIT_DG + this._terminalPenalty(end[0]) + this._terminalPenalty(end[end.length - 1]);
+    for (let i = 0; i < end.length - 1; i++) deltaG += this._stackDeltaG(end[i] + end[i + 1]);
+    return { deltaG: Number(deltaG.toFixed(2)), sequence: end };
+  }
+
+  /** Number of G/C among the 3'-terminal five bases. */
+  static _threePrimeGcCount(sequence, bases = 5) {
+    const end = this._cleanSequence(sequence).slice(-bases);
+    return (end.match(/[GC]/g) || []).length;
+  }
+
+  /** Longest mononucleotide run and longest dinucleotide repeat (in repeat units). */
+  static findRepeats(sequence) {
+    const seq = this._cleanSequence(sequence);
+    let longestRun = { base: '', length: 0 };
+    for (let i = 0; i < seq.length; ) {
+      let j = i;
+      while (j < seq.length && seq[j] === seq[i]) j++;
+      if (j - i > longestRun.length) longestRun = { base: seq[i], length: j - i };
+      i = j;
+    }
+    let longestDinucleotide = { unit: '', repeats: 0 };
+    for (let i = 0; i + 1 < seq.length; i++) {
+      const unit = seq.slice(i, i + 2);
+      if (unit[0] === unit[1]) continue;
+      let repeats = 1;
+      while (seq.slice(i + repeats * 2, i + repeats * 2 + 2) === unit) repeats++;
+      if (repeats > longestDinucleotide.repeats) longestDinucleotide = { unit, repeats };
+    }
+    return { longestRun, longestDinucleotide };
+  }
+
+  /** Default thresholds for assessPrimerQuality(); override per call with `profile`. */
+  static QUALITY_PROFILE = Object.freeze({
+    tm: { optimal: [55, 65], acceptable: [50, 70] },
+    gcContent: { optimal: [40, 60], acceptable: [30, 70] },
+    length: { optimal: [18, 25], acceptable: [15, 30] },
+    gcClamp: { optimal: [1, 3], acceptable: [1, 3] },
+    maxMononucleotideRun: 4,
+    maxDinucleotideRepeats: 4,
+  });
+
+  /**
+   * One-stop primer QC used by the Primer Details panel. A 5' tail does not anneal
+   * in the first cycles, so Tm, GC%, length and the 3' checks describe the
+   * annealing region; hairpin and dimer checks use the full oligo because the
+   * tail can still fold back or pair.
+   *
+   * @param {string} sequence - full oligo 5'→3' (including any 5' tail)
+   * @param {Object} [options] - { fivePrimeTail, conditions, profile }
+   */
+  static assessPrimerQuality(sequence, options = {}) {
+    const full = this._cleanSequence(sequence);
+    if (!full) return null;
+    const tail = this._cleanSequence(options.fivePrimeTail || '');
+    const tailLength = tail && full.startsWith(tail) && tail.length < full.length ? tail.length : 0;
+    const anneal = full.slice(tailLength);
+    const conditions = this.resolveConditions(options.conditions || {});
+    const profile = { ...this.QUALITY_PROFILE, ...(options.profile || {}) };
+
+    const gcContent = ((anneal.match(/[GC]/g) || []).length / anneal.length) * 100;
+    const tm = this.calculateTm(anneal, conditions);
+    const fullTm = tailLength ? this.calculateTm(full, conditions) : null;
+    const hairpin = this.calculateHairpin(full, conditions);
+    const selfDimer = this.calculateDimer(full, full, conditions);
+    const threePrimeStability = this.calculateThreePrimeStability(anneal);
+    const gcClampCount = this._threePrimeGcCount(anneal);
+    const repeats = this.findRepeats(anneal);
+
+    const grade = (value, range) => {
+      if (value >= range.optimal[0] && value <= range.optimal[1]) return 'good';
+      if (value >= range.acceptable[0] && value <= range.acceptable[1]) return 'acceptable';
+      return 'warning';
+    };
+    const fmtRange = (range, unit) => `${range[0]}–${range[1]}${unit}`;
+    const checks = [];
+
+    const tmStatus = grade(tm, profile.tm);
+    checks.push({
+      id: 'tm',
+      label: tailLength ? 'Tm (annealing)' : 'Tm',
+      value: tm,
+      status: tmStatus,
+      message:
+        tmStatus === 'good'
+          ? `Optimal (${fmtRange(profile.tm.optimal, ' °C')})`
+          : tmStatus === 'acceptable'
+            ? 'Acceptable'
+            : tm < profile.tm.optimal[0]
+              ? 'Low — may not anneal'
+              : 'High — risk of mispriming',
+    });
+
+    const gcStatus = grade(gcContent, profile.gcContent);
+    checks.push({
+      id: 'gc',
+      label: 'GC content',
+      value: gcContent,
+      status: gcStatus,
+      message:
+        gcStatus === 'good'
+          ? `Optimal (${fmtRange(profile.gcContent.optimal, '%')})`
+          : gcStatus === 'acceptable'
+            ? 'Acceptable'
+            : gcContent < profile.gcContent.optimal[0]
+              ? 'AT-rich'
+              : 'GC-rich',
+    });
+
+    const lengthStatus = grade(anneal.length, profile.length);
+    checks.push({
+      id: 'length',
+      label: tailLength ? 'Length (annealing)' : 'Length',
+      value: anneal.length,
+      status: lengthStatus,
+      message:
+        lengthStatus === 'good'
+          ? `Optimal (${fmtRange(profile.length.optimal, ' nt')})`
+          : lengthStatus === 'acceptable'
+            ? 'Acceptable'
+            : anneal.length < profile.length.optimal[0]
+              ? 'Too short'
+              : 'Too long',
+    });
+
+    const clampStatus = grade(gcClampCount, profile.gcClamp);
+    checks.push({
+      id: 'gcClamp',
+      label: "3' GC clamp",
+      value: gcClampCount,
+      status: clampStatus,
+      message:
+        gcClampCount === 0
+          ? "No G/C in the last 5 bases — weak 3' end"
+          : gcClampCount > profile.gcClamp.optimal[1]
+            ? `${gcClampCount} G/C in the last 5 bases — mispriming risk`
+            : `${gcClampCount} G/C in the last 5 bases`,
+    });
+
+    if (threePrimeStability) {
+      checks.push({
+        id: 'threePrimeStability',
+        label: "3' end ΔG",
+        value: threePrimeStability.deltaG,
+        status: 'info',
+        message: `Last 5 bases ${threePrimeStability.sequence}`,
+      });
+    }
+
+    const structureCheck = (id, label, structure, describe) => {
+      if (!structure) {
+        checks.push({ id, label, value: null, status: 'good', message: 'None detected' });
+        return;
+      }
+      checks.push({
+        id,
+        label,
+        value: structure.deltaG,
+        status: structure.flagged ? 'warning' : 'good',
+        message: describe(structure),
+        structure,
+      });
+    };
+    structureCheck('hairpin', 'Hairpin', hairpin, h =>
+      h.flagged
+        ? `${h.stemLength} bp stem, ${h.loopLength} nt loop${h.involves3Prime ? " at the 3' end" : ''}`
+        : 'Weak — not expected to form'
+    );
+    structureCheck('selfDimer', 'Self-dimer', selfDimer, d =>
+      d.flagged ? `${d.length} bp${d.involves3Prime ? " involving the 3' end" : ''}` : 'Weak — not expected to form'
+    );
+
+    const run = repeats.longestRun;
+    const di = repeats.longestDinucleotide;
+    const runBad = run.length > profile.maxMononucleotideRun;
+    const diBad = di.repeats > profile.maxDinucleotideRepeats;
+    checks.push({
+      id: 'repeats',
+      label: 'Runs / repeats',
+      value: Math.max(run.length, di.repeats),
+      status: runBad || diBad ? 'warning' : 'good',
+      message:
+        runBad || diBad
+          ? [runBad ? `${run.base} run of ${run.length}` : '', diBad ? `${di.unit} × ${di.repeats}` : '']
+              .filter(Boolean)
+              .join(', ')
+          : `No run > ${profile.maxMononucleotideRun} nt or repeat > ${profile.maxDinucleotideRepeats}×`,
+    });
+
+    const statuses = checks.map(check => check.status);
+    const overall = statuses.includes('warning') ? 'warning' : statuses.includes('acceptable') ? 'acceptable' : 'good';
+
+    return {
+      sequence: full,
+      annealingSequence: anneal,
+      tailLength,
+      length: full.length,
+      annealingLength: anneal.length,
+      tm: Number(tm.toFixed(2)),
+      fullTm: fullTm === null ? null : Number(fullTm.toFixed(2)),
+      gcContent: Number(gcContent.toFixed(2)),
+      hairpin,
+      selfDimer,
+      threePrimeStability,
+      gcClampCount,
+      repeats,
+      conditions,
+      conditionsLabel: this.describeConditions(conditions),
+      checks,
+      overall,
+    };
+  }
+
+  /** @deprecated Boolean view of calculateHairpin(); kept for older callers. */
+  static _checkHairpinPotential(seq) {
+    return Boolean(this.calculateHairpin(seq)?.flagged);
   }
 }
 

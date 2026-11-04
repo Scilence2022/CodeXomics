@@ -248,12 +248,23 @@ describe('Primer Designer Mismatch Binding Tests', () => {
       expect(PrimerDesigner.calculateTm(primer20)).toBeCloseTo(perfect.bindingTm, 0);
     });
 
-    it('falls back to the fast approximation for very short oligos (<14 nt)', () => {
-      const short = 'ATGCGCTA'; // 8 nt
+    it('falls back to the Wallace approximation only below MIN_NN_LENGTH (<8 nt)', () => {
+      const short = 'ATGCGCT'; // 7 nt
       const gCount = (short.match(/G/g) || []).length;
       const cCount = (short.match(/C/g) || []).length;
       const gc = ((gCount + cCount) / short.length) * 100;
       expect(PrimerDesigner.calculateTm(short)).toBeCloseTo(PrimerDesigner._calculateTm(short, gCount, cCount, gc), 5);
+    });
+
+    it('uses the nearest-neighbor model for 8-13 nt so Tm has no jump at 14 nt', () => {
+      // The old Wallace cut-off at 14 nt made a 13-mer read ~5 °C hotter than the 14-mer.
+      const tm13 = PrimerDesigner.calculateTm('ACGTACGTACGTA');
+      const tm14 = PrimerDesigner.calculateTm('ACGTACGTACGTAC');
+      expect(tm14).toBeGreaterThan(tm13);
+      expect(PrimerDesigner.calculateTm('ATGCGCTA')).toBeCloseTo(
+        PrimerDesigner._calculateBindingTm('ATGCGCTA', 'ATGCGCTA').tm,
+        5
+      );
     });
   });
 });

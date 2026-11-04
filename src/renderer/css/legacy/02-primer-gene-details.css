@@ -247,6 +247,174 @@
   line-height: 1.4;
 }
 
+/* Base colors (shared by the oligo and genome rows) */
+.primer-base-A {
+  color: #16a34a;
+}
+.primer-base-T {
+  color: #dc2626;
+}
+.primer-base-G {
+  color: #d97706;
+}
+.primer-base-C {
+  color: #2563eb;
+}
+.primer-base-N {
+  color: #64748b;
+}
+.primer-base.primer-base-tail,
+.primer-legend-swatch.primer-base-tail {
+  color: #a855f7;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.primer-sequence-pad {
+  color: var(--text-secondary, #cbd5e1);
+  opacity: 0.5;
+  user-select: none;
+}
+
+.primer-sequence-legend {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Primer QC */
+.primer-prop-card.quality-info {
+  border-left: 3px solid #64748b;
+}
+
+.primer-prop-quality i,
+.primer-check-row i {
+  font-size: 10px;
+}
+
+.quality-good > .primer-prop-quality i,
+.primer-check-row.quality-good i {
+  color: #10b981;
+}
+.quality-acceptable > .primer-prop-quality i,
+.primer-check-row.quality-acceptable i {
+  color: #f59e0b;
+}
+.quality-warning > .primer-prop-quality i,
+.primer-check-row.quality-warning i {
+  color: #ef4444;
+}
+.quality-info > .primer-prop-quality i,
+.primer-check-row.quality-info i {
+  color: #64748b;
+}
+
+.primer-qc-overall {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+.primer-qc-overall.quality-good {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+}
+.primer-qc-overall.quality-acceptable {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+.primer-qc-overall.quality-warning {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.primer-qc-conditions {
+  margin: -4px 0 8px;
+  font-size: 10px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.primer-check-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.primer-check-row {
+  display: grid;
+  grid-template-columns: 14px auto auto 1fr;
+  align-items: baseline;
+  column-gap: 6px;
+  font-size: 11px;
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--border-color, #e5e7eb);
+}
+
+.primer-check-label {
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.primer-check-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary, #1f2937);
+}
+
+.primer-check-message {
+  color: var(--text-secondary, #6b7280);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primer-structures {
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+.primer-structures summary {
+  cursor: pointer;
+  color: var(--text-secondary, #6b7280);
+  font-weight: 600;
+}
+
+.primer-structure-label {
+  margin: 6px 0 2px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.primer-structure {
+  margin: 0;
+  padding: 6px 8px;
+  overflow-x: auto;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  line-height: 1.35;
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-primary, #1f2937);
+}
+
+.primer-origin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(100, 116, 139, 0.14);
+  color: var(--text-secondary, #475569);
+}
+.primer-origin-badge.pinned {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+}
+
 /* Primer Info Section */
 .primer-info-section {
   margin-bottom: 12px;
@@ -1528,4 +1696,11 @@ sup {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.primer-prop-unit {
+  margin-left: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
 }

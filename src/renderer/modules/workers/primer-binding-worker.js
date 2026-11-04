@@ -25,6 +25,8 @@ self.onmessage = function (e) {
       minBindingTm: stringency.minBindingTm,
       scoringMode: stringency.scoringMode,
       naConcentration: stringency.naConcentration,
+      mgConcentration: stringency.mgConcentration,
+      dntpConcentration: stringency.dntpConcentration,
       primerConcentration: stringency.primerConcentration,
     });
     self.postMessage({ jobId, ok: true, sites });
