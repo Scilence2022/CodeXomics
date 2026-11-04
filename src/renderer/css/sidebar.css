@@ -660,3 +660,250 @@
     border-top-color: var(--border-color);
   }
 }
+
+/* ===================================================================
+ * Sidebar views and rail
+ * The rail switches between grouped views (Display, Inspect, Explore,
+ * Info). Only the active view is rendered; each section inside a view
+ * can be collapsed to its header.
+ * =================================================================== */
+
+.sidebar-rail {
+  width: 40px;
+  flex: 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  background: var(--bg-tertiary, var(--bg-secondary));
+  border-right: 1px solid var(--border-color);
+  z-index: 2;
+}
+
+/* Nothing to switch between before a genome is loaded */
+body.no-genome-loaded .sidebar-rail {
+  display: none;
+}
+
+.sidebar-rail-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.sidebar-rail-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.sidebar-rail-btn:focus-visible {
+  outline: 2px solid var(--primary-color, #3b82f6);
+  outline-offset: 1px;
+}
+
+.sidebar-rail:not(.sidebar-hidden) .sidebar-rail-btn.active {
+  color: var(--primary-color, #3b82f6);
+  background: var(--bg-secondary);
+}
+
+.sidebar-rail:not(.sidebar-hidden) .sidebar-rail-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--primary-color, #3b82f6);
+}
+
+.sidebar-rail-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary-color, #3b82f6);
+  box-shadow: 0 0 0 2px var(--bg-tertiary, var(--bg-secondary));
+}
+
+.sidebar-rail-badge {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--primary-color, #3b82f6);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 14px;
+  box-shadow: 0 0 0 2px var(--bg-tertiary, var(--bg-secondary));
+  text-align: center;
+}
+
+.sidebar-rail-dot[hidden],
+.sidebar-rail-badge[hidden] {
+  display: none;
+}
+
+/* Views: only the active one is rendered */
+.sidebar-view {
+  display: none;
+}
+
+.sidebar-view.active {
+  display: block;
+}
+
+.sidebar-view-title {
+  padding: 10px 14px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted, var(--text-secondary));
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-view-empty {
+  display: none;
+  padding: 28px 18px 12px;
+  text-align: center;
+  color: var(--text-muted, var(--text-secondary));
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sidebar-view.is-empty .sidebar-view-empty {
+  display: block;
+}
+
+.sidebar-view-empty i {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 22px;
+  opacity: 0.5;
+}
+
+.sidebar-view-empty p {
+  margin: 0;
+}
+
+.sidebar-view-restore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 14px;
+}
+
+.sidebar-view-restore[hidden] {
+  display: none;
+}
+
+.sidebar-view-restore-label {
+  width: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.sidebar-restore-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.sidebar-restore-chip i {
+  font-size: 9px;
+}
+
+.sidebar-restore-chip:hover {
+  border-style: solid;
+  border-color: var(--primary-color, #3b82f6);
+  color: var(--primary-color, #3b82f6);
+}
+
+/* Compact sections with sticky, collapsible headers */
+#sidebar .sidebar-section {
+  padding: 0 14px 12px;
+}
+
+#sidebar .sidebar-section > .section-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 -14px 8px;
+  padding: 10px 14px 6px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+#sidebar .sidebar-section > .section-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Chevron drawn with borders so it follows every theme's text color */
+#sidebar .sidebar-section > .section-header h3::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  opacity: 0.55;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+#sidebar .sidebar-section.section-collapsed {
+  padding-bottom: 0;
+}
+
+#sidebar .sidebar-section.section-collapsed > .section-header {
+  margin-bottom: 0;
+  padding-bottom: 10px;
+}
+
+#sidebar .sidebar-section.section-collapsed > .section-header h3::before {
+  transform: translateX(-1px) rotate(-45deg);
+}
+
+#sidebar .sidebar-section.section-collapsed > :not(.section-header) {
+  display: none !important;
+}

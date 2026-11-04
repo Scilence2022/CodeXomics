@@ -1324,6 +1324,9 @@ class NavigationManager {
     // Show the search results panel
     searchResultsSection.style.display = 'block';
 
+    // Switch the sidebar to the Explore view that holds the results
+    this.genomeBrowser.uiManager.revealSidebarPanel?.('searchResultsSection');
+
     // Ensure sidebar is visible when showing search results
     this.genomeBrowser.uiManager.showSidebarIfHidden();
 
@@ -2400,8 +2403,11 @@ class NavigationManager {
       };
     }
 
-    // Move to the top (first child of sidebar)
-    sidebar.insertBefore(searchResultsSection, sidebar.firstElementChild);
+    // Move to the top of its sidebar view (or of the sidebar when views are absent).
+    // The view title stays first.
+    const container = searchResultsSection.closest('.sidebar-view') || sidebar;
+    const firstSection = container.querySelector(':scope > .sidebar-section');
+    container.insertBefore(searchResultsSection, firstSection || container.firstElementChild);
   }
 
   // Method to restore Search Results panel to its original position

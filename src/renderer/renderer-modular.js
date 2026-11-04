@@ -9372,6 +9372,9 @@ class GenomeBrowser {
   scrollSidebarToSection(sectionElement) {
     if (!sectionElement) return;
 
+    // Switch the sidebar to the view holding this section (Inspect for details panels)
+    this.uiManager?.revealSidebarPanel?.(sectionElement.id);
+
     const sidebar = document.getElementById('sidebar');
     if (!sidebar) return;
 

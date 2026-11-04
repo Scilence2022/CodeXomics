@@ -2997,6 +2997,12 @@ class TabManager {
       }
     }
 
+    // Save which sidebar view (Display / Inspect / Explore / Info) the tab was on
+    const activeSidebarView = this.genomeBrowser?.uiManager?.getActiveSidebarView?.();
+    if (activeSidebarView) {
+      tabState.sidebarActiveView = activeSidebarView;
+    }
+
     console.log(`Saved sidebar panel states for tab: ${tabState.id}`);
   }
 
@@ -3126,6 +3132,11 @@ class TabManager {
     this.genomeBrowser?.trackRenderer?.renderOperonsPanel?.(
       Array.isArray(tabState.operonsInView) ? tabState.operonsInView : []
     );
+
+    // Restore the tab's sidebar view. Tabs saved before views existed keep the current one.
+    if (tabState.sidebarActiveView) {
+      this.genomeBrowser?.uiManager?.setActiveSidebarView?.(tabState.sidebarActiveView, { persist: false });
+    }
 
     // Update sidebar visibility based on panel states
     this.updateSidebarVisibilityForTab(tabState);
