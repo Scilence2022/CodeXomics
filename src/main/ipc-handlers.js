@@ -2056,7 +2056,7 @@ function registerIpcHandlers(deps) {
         mustExist: true,
       });
       // Check file size first
-      const stats = fs.statSync(safeFilePath);
+      const stats = await fs.promises.stat(safeFilePath);
       const fileSizeMB = stats.size / (1024 * 1024);
       const extension = path.extname(safeFilePath).toLowerCase();
 
@@ -2096,12 +2096,12 @@ function registerIpcHandlers(deps) {
         const { promisify } = require('util');
         const gunzip = promisify(zlib.gunzip);
 
-        const compressedData = fs.readFileSync(safeFilePath);
+        const compressedData = await fs.promises.readFile(safeFilePath);
         const decompressedData = await gunzip(compressedData);
         const data = decompressedData.toString('utf8');
         return { success: true, data, isGzipped: true };
       } else {
-        const data = fs.readFileSync(safeFilePath, 'utf8');
+        const data = await fs.promises.readFile(safeFilePath, 'utf8');
         return { success: true, data };
       }
     } catch (error) {

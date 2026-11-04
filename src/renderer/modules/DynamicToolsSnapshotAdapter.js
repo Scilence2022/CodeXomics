@@ -611,13 +611,21 @@ class DynamicToolsSnapshotAdapter {
     return merged;
   }
 
-  scoreTool(tool, query, context = {}) {
+  prepareScoringQuery(query) {
     const text = String(query || '').toLowerCase();
+    const tokens = this.tokenizeSearchText(text);
+    const terms = this.expandSearchTerms(tokens);
+    return { text, terms, normalizedQuery: tokens.join(' ') };
+  }
+
+  scoreTool(tool, query, context = {}) {
+    return this.scorePreparedTool(tool, this.prepareScoringQuery(query), context);
+  }
+
+  scorePreparedTool(tool, { text, terms, normalizedQuery }, context = {}) {
     const fields = [tool.name, tool.description, tool.category, ...(Array.isArray(tool.keywords) ? tool.keywords : [])]
       .join(' ')
       .toLowerCase();
-
-    const terms = this.expandSearchTerms(this.tokenizeSearchText(text));
 
     let score = 0;
     const toolName = String(tool.name || '').toLowerCase();
@@ -666,7 +674,6 @@ class DynamicToolsSnapshotAdapter {
       }
     }
 
-    const normalizedQuery = this.tokenizeSearchText(text).join(' ');
     for (const keyword of tool.keywords || []) {
       const phrase = this.tokenizeSearchText(keyword).join(' ');
       if (phrase && normalizedQuery.includes(phrase)) score += 4;
@@ -704,9 +711,12 @@ class DynamicToolsSnapshotAdapter {
       return true;
     });
     const clauses = this.splitRetrievalClauses(query);
+    const prepared = this.prepareScoringQuery(query);
+    const preparedClauses = clauses.map(clause =>
+      clause.toLowerCase() === prepared.text ? prepared : this.prepareScoringQuery(clause)
+    );
+    const { text: queryText, terms: queryTerms, normalizedQuery } = prepared;
     const hasEvidence = tool => {
-      const queryText = String(query || '').toLowerCase();
-      const queryTerms = this.expandSearchTerms(this.tokenizeSearchText(queryText));
       const fields = this.retrievalIndex?.documents?.get(tool.name) || this.getToolSearchFields(tool);
       const allFieldTokens = new Set(Object.values(fields).flat());
       const matchedTerms = queryTerms.filter(term => allFieldTokens.has(term));
@@ -716,7 +726,7 @@ class DynamicToolsSnapshotAdapter {
         queryText.includes(toolName) || (normalizedName.length > 2 && queryText.includes(normalizedName));
       const keywordPhraseMatch = (tool.keywords || []).some(keyword => {
         const phrase = this.tokenizeSearchText(keyword).join(' ');
-        return phrase.length > 2 && this.tokenizeSearchText(queryText).join(' ').includes(phrase);
+        return phrase.length > 2 && normalizedQuery.includes(phrase);
       });
       const matchedNameTerms = fields.name.filter(term => queryTerms.includes(term));
       return (
@@ -728,8 +738,10 @@ class DynamicToolsSnapshotAdapter {
     };
     const ranked = validTools
       .map(tool => {
-        const globalScore = this.scoreTool(tool, query, context);
-        const clauseScores = clauses.map(clause => this.scoreTool(tool, clause, context));
+        const globalScore = this.scorePreparedTool(tool, prepared, context);
+        const clauseScores = preparedClauses.map(clause =>
+          clause === prepared ? globalScore : this.scorePreparedTool(tool, clause, context)
+        );
         const bestClauseScore = clauseScores.length > 0 ? Math.max(...clauseScores) : 0;
         const matchedClauses = clauseScores.filter(score => score > 0.6).length;
         return {
@@ -1036,8 +1048,9 @@ class DynamicToolsSnapshotAdapter {
   }
 
   getRelevantPluginTools(query, maxTools = 10, context = {}) {
+    const prepared = this.prepareScoringQuery(query);
     return this.collectPluginTools()
-      .map(tool => ({ tool, score: this.scoreTool(tool, query, context) }))
+      .map(tool => ({ tool, score: this.scorePreparedTool(tool, prepared, context) }))
       .filter(entry => entry.score > 0.6)
       .sort((a, b) => b.score - a.score)
       .slice(0, maxTools)
@@ -1367,10 +1380,11 @@ For multiple independent tool calls, respond with one JSON array of canonical to
   }
 
   analyzeBuiltInToolRelevance(query) {
+    const prepared = this.prepareScoringQuery(query);
     return Array.from(this.builtInTools.builtInToolsMap.entries())
       .map(([name, info]) => {
         const registryTool = this.toolsByName.get(name) || info;
-        const confidence = Math.min(1, this.scoreTool({ ...registryTool, isBuiltIn: true }, query, {}) / 8);
+        const confidence = Math.min(1, this.scorePreparedTool({ ...registryTool, isBuiltIn: true }, prepared) / 8);
         return {
           name,
           confidence,
@@ -1416,8 +1430,9 @@ For multiple independent tool calls, respond with one JSON array of canonical to
 
   async searchTools(keywords, limit = 10) {
     const tools = await this.getAllTools();
+    const prepared = this.prepareScoringQuery(keywords);
     return tools
-      .map(tool => ({ tool, score: this.scoreTool(tool, keywords, {}) }))
+      .map(tool => ({ tool, score: this.scorePreparedTool(tool, prepared) }))
       .filter(entry => entry.score > 0.6)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)

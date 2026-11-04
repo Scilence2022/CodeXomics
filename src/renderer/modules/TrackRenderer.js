@@ -668,29 +668,37 @@ class TrackRenderer {
       .join('');
   }
 
-  getFeatureDisplaySegments(feature, viewport, options = {}) {
+  getCircularFeatureViewport(viewport, chromosome = null) {
+    if (!this.isCircularModeEnabled()) return null;
+    const sequenceLength = this.getSequenceLength(chromosome);
+    if (sequenceLength <= 0) return null;
+    return { sequenceLength, segments: this.getViewportSegments(viewport, chromosome) };
+  }
+
+  overlapsLinearViewport(start, end, viewport, includeZeroLength = true) {
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+    return includeZeroLength
+      ? start <= viewport.end && end >= viewport.start
+      : start < viewport.end && end > viewport.start;
+  }
+
+  getFeatureDisplaySegments(feature, viewport, options = {}, circularViewport = undefined) {
     const startKey = options.startKey || 'start';
     const endKey = options.endKey || 'end';
-    const chromosome = options.chromosome || null;
     const includeZeroLength = options.includeZeroLength !== false;
 
     const rawStart = Number(feature?.[startKey]);
     const rawEnd = Number(feature?.[endKey]);
     if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd)) return [];
 
-    const overlapsLinear = includeZeroLength
-      ? rawStart <= viewport.end && rawEnd >= viewport.start
-      : rawStart < viewport.end && rawEnd > viewport.start;
-
-    if (!this.isCircularModeEnabled()) {
-      return overlapsLinear ? [feature] : [];
+    if (circularViewport === undefined) {
+      circularViewport = this.getCircularFeatureViewport(viewport, options.chromosome);
+    }
+    if (!circularViewport) {
+      return this.overlapsLinearViewport(rawStart, rawEnd, viewport, includeZeroLength) ? [feature] : [];
     }
 
-    const sequenceLength = this.getSequenceLength(chromosome);
-    if (sequenceLength <= 0) {
-      return overlapsLinear ? [feature] : [];
-    }
-
+    const { sequenceLength, segments: viewportSegments } = circularViewport;
     const sourceIntervals =
       rawStart <= rawEnd
         ? [{ start: rawStart, end: rawEnd }]
@@ -700,8 +708,6 @@ class TrackRenderer {
           ];
 
     const displaySegments = [];
-    const viewportSegments = this.getViewportSegments(viewport, chromosome);
-
     viewportSegments.forEach(viewportSegment => {
       sourceIntervals.forEach(sourceInterval => {
         const overlapStart = Math.max(sourceInterval.start, viewportSegment.sourceStart);
@@ -979,10 +985,17 @@ class TrackRenderer {
   filterFeaturesByViewport(features, viewport) {
     if (!Array.isArray(features)) return [];
 
-    return features.flatMap(feature => {
-      if (!feature) return [];
-      return this.getFeatureDisplaySegments(feature, viewport);
-    });
+    const circularViewport = this.getCircularFeatureViewport(viewport);
+    if (!circularViewport) {
+      return features.filter(
+        feature => feature && this.overlapsLinearViewport(Number(feature.start), Number(feature.end), viewport)
+      );
+    }
+
+    const options = {};
+    return features.flatMap(feature =>
+      feature ? this.getFeatureDisplaySegments(feature, viewport, options, circularViewport) : []
+    );
   }
 
   // ============================================================================
@@ -2455,19 +2468,15 @@ class TrackRenderer {
     const settings = this.getTrackSettings('genes');
     const isCircular = this.isCircularModeEnabled(settings);
 
-    return annotations
-      .filter(feature => {
-        return (
-          (validTypes.includes(feature.type) || feature.type.includes('RNA')) &&
-          this.genomeBrowser.shouldShowGeneType(feature.type)
-        );
-      })
-      .filter(gene => {
-        if (isCircular) {
-          return this.isFeatureVisibleCircular(gene, viewport);
-        }
-        return this.filterFeaturesByViewport([gene], viewport).length > 0;
-      });
+    return annotations.filter(feature => {
+      const { type } = feature;
+      if (!validTypes.includes(type) && !type.includes('RNA')) return false;
+
+      const visible = isCircular
+        ? this.isFeatureVisibleCircular(feature, viewport)
+        : this.overlapsLinearViewport(Number(feature.start), Number(feature.end), viewport);
+      return visible && this.genomeBrowser.shouldShowGeneType(type);
+    });
   }
 
   /**
@@ -2484,7 +2493,7 @@ class TrackRenderer {
       if (isCircular) {
         return this.isFeatureVisibleCircular(primer, viewport);
       }
-      return this.filterFeaturesByViewport([primer], viewport).length > 0;
+      return this.overlapsLinearViewport(Number(primer.start), Number(primer.end), viewport);
     });
   }
 
@@ -2575,11 +2584,14 @@ class TrackRenderer {
 
     // We can instantiate the CanvasGenesRenderer directly
     // It handles its own canvas creation and lifecycle
-    const rendererGeneRows = this.isCircularModeEnabled(settings)
-      ? geneRows.map(rowGenes =>
-          rowGenes.flatMap(gene => this.getFeatureDisplaySegments(gene, viewport, { includeZeroLength: false }))
-        )
-      : geneRows;
+    let rendererGeneRows = geneRows;
+    if (this.isCircularModeEnabled(settings)) {
+      const circularViewport = this.getCircularFeatureViewport(viewport);
+      const options = { includeZeroLength: false };
+      rendererGeneRows = geneRows.map(rowGenes =>
+        rowGenes.flatMap(gene => this.getFeatureDisplaySegments(gene, viewport, options, circularViewport))
+      );
+    }
 
     const renderer = new CanvasGenesRenderer(
       container,
@@ -4360,10 +4372,16 @@ class TrackRenderer {
         );
 
         // Check mapping quality distribution
-        const mappingQualities = visibleReads.map(read => read.mappingQuality || 0);
-        const minMQ = Math.min(...mappingQualities);
-        const maxMQ = Math.max(...mappingQualities);
-        const avgMQ = mappingQualities.reduce((a, b) => a + b, 0) / mappingQualities.length;
+        let minMQ = Infinity;
+        let maxMQ = -Infinity;
+        let totalMQ = 0;
+        for (const read of visibleReads) {
+          const quality = read.mappingQuality || 0;
+          minMQ = Math.min(minMQ, quality);
+          maxMQ = Math.max(maxMQ, quality);
+          totalMQ += quality;
+        }
+        const avgMQ = totalMQ / visibleReads.length;
 
         console.log(`🎯 [TrackRenderer] Mapping quality stats:`, {
           min: minMQ,
@@ -4410,7 +4428,7 @@ class TrackRenderer {
         }
 
         // Arrange reads into non-overlapping rows
-        const readRows = this.arrangeReadsInRows(visibleReads, viewport.start, viewport.end);
+        const readRows = this.arrangeReadsInRows(visibleReads);
 
         const layout = this.computeReadsTrackLayout(readRows, settings, {
           showCoverage,
@@ -4661,7 +4679,7 @@ class TrackRenderer {
         }
 
         // Arrange sampled reads into rows (use sampledReads for display, reads for coverage above)
-        const readRows = this.arrangeReadsInRows(sampledReads, viewport.start, viewport.end);
+        const readRows = this.arrangeReadsInRows(sampledReads);
 
         const layout = this.computeReadsTrackLayout(readRows, settings, {
           showCoverage,
@@ -4883,7 +4901,7 @@ class TrackRenderer {
         }
 
         // Arrange sampled reads in rows (use sampledReads for display, reads for coverage above)
-        const readRows = this.arrangeReadsInRows(sampledReads, viewport.start, viewport.end);
+        const readRows = this.arrangeReadsInRows(sampledReads);
 
         const layout = this.computeReadsTrackLayout(readRows, settings, {
           showCoverage,
@@ -5471,60 +5489,52 @@ class TrackRenderer {
   }
 
   // New method to arrange reads into non-overlapping rows
-  arrangeReadsInRows(reads, viewStart, viewEnd) {
-    console.log('🔧 [DEBUG] [arrangeReadsInRows] Input:', {
-      readsCount: reads.length,
-      viewStart,
-      viewEnd,
-      firstReadStart: reads[0]?.start,
-      lastReadStart: reads[reads.length - 1]?.start,
-    });
-
-    // Sort reads by start position
+  arrangeReadsInRows(reads) {
     const sortedReads = [...reads].sort((a, b) => a.start - b.start);
     const rows = [];
 
-    console.log('🔧 [DEBUG] [arrangeReadsInRows] After sorting:', {
-      sortedReadsCount: sortedReads.length,
-      firstSortedStart: sortedReads[0]?.start,
-      lastSortedStart: sortedReads[sortedReads.length - 1]?.start,
-    });
-
-    sortedReads.forEach(read => {
-      let placed = false;
-
-      // Try to place read in existing rows
-      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-        const row = rows[rowIndex];
-        let canPlace = true;
-
-        // Check if read overlaps with any read in this row
-        for (const existingRead of row) {
-          if (this.readsOverlap(read, existingRead)) {
-            canPlace = false;
-            break;
-          }
-        }
-
-        if (canPlace) {
-          row.push(read);
-          placed = true;
-          break;
-        }
+    // The tail of a row determines whether a later, well-formed interval fits.
+    // Keep the pairwise overlap check for records with irregular coordinates.
+    if (
+      !sortedReads.every(read => Number.isFinite(read.start) && Number.isFinite(read.end) && read.start <= read.end)
+    ) {
+      for (const read of sortedReads) {
+        const row = rows.find(candidate => candidate.every(existing => !this.readsOverlap(read, existing)));
+        if (row) row.push(read);
+        else rows.push([read]);
       }
+      return rows;
+    }
 
-      // If couldn't place in existing row, create new row
-      if (!placed) {
+    // Each leaf stores a row's last end coordinate. Internal nodes store the
+    // minimum below them, so a left-first descent finds the first available row.
+    let leafStart = 1;
+    while (leafStart < sortedReads.length) leafStart *= 2;
+    const minEnds = new Float64Array(2 * leafStart).fill(Infinity);
+
+    for (const read of sortedReads) {
+      let rowIndex = rows.length;
+      if (minEnds[1] < read.start) {
+        let node = 1;
+        while (node < leafStart) {
+          const left = node * 2;
+          node = minEnds[left] < read.start ? left : left + 1;
+        }
+        rowIndex = node - leafStart;
+        rows[rowIndex].push(read);
+      } else {
         rows.push([read]);
       }
-    });
 
-    console.log('🔧 [DEBUG] [arrangeReadsInRows] Result:', {
-      rowsCount: rows.length,
-      totalReadsArranged: rows.reduce((sum, row) => sum + row.length, 0),
-      firstRowLength: rows[0]?.length || 0,
-      lastRowLength: rows[rows.length - 1]?.length || 0,
-    });
+      let node = leafStart + rowIndex;
+      minEnds[node] = read.end;
+      while (node > 1) {
+        node = Math.floor(node / 2);
+        const nextEnd = Math.min(minEnds[node * 2], minEnds[node * 2 + 1]);
+        if (minEnds[node] === nextEnd) break;
+        minEnds[node] = nextEnd;
+      }
+    }
 
     return rows;
   }
@@ -6910,9 +6920,11 @@ class TrackRenderer {
    * Filter protein annotations (CDS features)
    */
   filterProteinAnnotations(annotations, viewport) {
-    return annotations
-      .filter(feature => feature.type === 'CDS' && this.genomeBrowser.shouldShowGeneType('CDS'))
-      .flatMap(protein => this.filterFeaturesByViewport([protein], viewport));
+    if (!this.genomeBrowser.shouldShowGeneType('CDS')) return [];
+    return this.filterFeaturesByViewport(
+      annotations.filter(feature => feature.type === 'CDS'),
+      viewport
+    );
   }
 
   /**
@@ -7163,10 +7175,41 @@ class TrackRenderer {
       windowStarts.push(lastStart);
     }
 
+    // The plotted windows overlap heavily. For ASCII sequence, update the
+    // composition using only the bases that enter or leave each window.
+    const bases =
+      Number.isInteger(windowSize) && Number.isInteger(stepSize) && !/[^\p{ASCII}]/u.test(sequence)
+        ? sequence.toUpperCase()
+        : null;
+    const counts = new Uint32Array(128);
+    let windowStart = 0;
+    let windowEnd = 0;
+    let gcMin = Infinity;
+    let gcMax = -Infinity;
+    let maxAbsSkew = 0;
     let previousSkipped = true;
     for (const i of windowStarts) {
-      const window = sequence.substring(i, i + windowSize);
-      const analysis = this.analyzeGCWindow(window);
+      let analysis;
+      if (bases !== null) {
+        if (i >= windowEnd) {
+          counts.fill(0);
+          windowEnd = i;
+        } else {
+          for (let j = windowStart; j < i; j++) counts[bases.charCodeAt(j)]--;
+        }
+        for (let j = windowEnd; j < i + windowSize; j++) counts[bases.charCodeAt(j)]++;
+        windowStart = i;
+        windowEnd = i + windowSize;
+        analysis = this.summarizeGCWindow(
+          counts['G'.charCodeAt(0)],
+          counts['C'.charCodeAt(0)],
+          counts['A'.charCodeAt(0)],
+          counts['T'.charCodeAt(0)],
+          counts['N'.charCodeAt(0)]
+        );
+      } else {
+        analysis = this.analyzeGCWindow(sequence.substring(i, i + windowSize));
+      }
 
       // Windows with no A/C/G/T (e.g. runs of N) break the line instead of
       // being bridged by a straight segment.
@@ -7177,6 +7220,9 @@ class TrackRenderer {
       if (previousSkipped) segmentStarts.push(gcData.length);
       previousSkipped = false;
 
+      gcMin = Math.min(gcMin, analysis.gcPercent);
+      gcMax = Math.max(gcMax, analysis.gcPercent);
+      maxAbsSkew = Math.max(maxAbsSkew, Math.abs(analysis.gcSkew));
       gcData.push(analysis.gcPercent);
       skewData.push(analysis.gcSkew);
       positions.push(i + windowSize / 2); // Center position of window
@@ -7192,19 +7238,13 @@ class TrackRenderer {
       return null;
     }
 
-    // Calculate statistics for scaling
-    const gcMin = Math.min(...gcData);
-    const gcMax = Math.max(...gcData);
-    const skewMin = Math.min(...skewData);
-    const skewMax = Math.max(...skewData);
-
     // GC% is scaled to the view's own range (labelled on the plot) with padding.
     const gcRange = gcMax - gcMin;
     const gcPadding = Math.max(1, gcRange * 0.1);
 
     // Skew is scaled symmetrically about zero, so the zero line sits mid-panel
     // and the sign of every window reads directly off the plot.
-    const skewLimit = Math.max(0.01, Math.max(Math.abs(skewMin), Math.abs(skewMax)) * 1.1);
+    const skewLimit = Math.max(0.01, maxAbsSkew * 1.1);
 
     return {
       gcData,
@@ -7230,32 +7270,18 @@ class TrackRenderer {
     const aCount = (bases.match(/A/g) || []).length;
     const tCount = (bases.match(/T/g) || []).length;
     const nCount = (bases.match(/N/g) || []).length;
-    const totalValidBases = gCount + cCount + aCount + tCount;
+    return this.summarizeGCWindow(gCount, cCount, aCount, tCount, nCount);
+  }
+
+  summarizeGCWindow(gCount, cCount, aCount, tCount, nCount) {
+    const gcCount = gCount + cCount;
+    const atCount = aCount + tCount;
+    const totalValidBases = gcCount + atCount;
     const totalBases = totalValidBases + nCount;
-
-    if (totalValidBases === 0) {
-      return {
-        gcPercent: 0,
-        gcSkew: 0,
-        atSkew: 0,
-        gCount,
-        cCount,
-        aCount,
-        tCount,
-        nCount,
-        totalValidBases,
-        totalBases,
-      };
-    }
-
-    const gcPercent = ((gCount + cCount) / totalValidBases) * 100;
-    const gcSkew = gCount + cCount > 0 ? (gCount - cCount) / (gCount + cCount) : 0;
-    const atSkew = aCount + tCount > 0 ? (aCount - tCount) / (aCount + tCount) : 0;
-
     return {
-      gcPercent,
-      gcSkew,
-      atSkew,
+      gcPercent: totalValidBases > 0 ? (gcCount / totalValidBases) * 100 : 0,
+      gcSkew: gcCount > 0 ? (gCount - cCount) / gcCount : 0,
+      atSkew: atCount > 0 ? (aCount - tCount) / atCount : 0,
       gCount,
       cCount,
       aCount,
@@ -8821,9 +8847,12 @@ class TrackRenderer {
       }
 
       // Calculate value range for scaling
-      const values = visibleData.map(point => point.value);
-      const minValue = Math.min(...values);
-      const maxValue = Math.max(...values);
+      let minValue = Infinity;
+      let maxValue = -Infinity;
+      for (const { value } of visibleData) {
+        minValue = Math.min(minValue, value);
+        maxValue = Math.max(maxValue, value);
+      }
 
       // Create track element
       const trackElement = document.createElement('div');
@@ -14933,6 +14962,8 @@ This action cannot be undone.`;
     const numBins = Math.ceil(range / binSize);
     const coverage = new Array(numBins).fill(0);
 
+    // Each read changes the coverage at just two boundaries. A prefix
+    // sum then restores the existing inclusive bin counts.
     reads.forEach(read => {
       const readStart = Math.max(read.start, start);
       const readEnd = Math.min(read.end, end);
@@ -14940,13 +14971,16 @@ This action cannot be undone.`;
       if (readStart <= readEnd) {
         const startBin = Math.floor((readStart - start) / binSize);
         const endBin = Math.min(Math.floor((readEnd - start) / binSize), numBins - 1);
-
-        for (let i = startBin; i <= endBin; i++) {
-          coverage[i]++;
+        if (startBin <= endBin) {
+          coverage[startBin]++;
+          if (endBin + 1 < numBins) coverage[endBin + 1]--;
         }
       }
     });
 
+    for (let bin = 1; bin < numBins; bin++) {
+      coverage[bin] += coverage[bin - 1];
+    }
     return coverage;
   }
 

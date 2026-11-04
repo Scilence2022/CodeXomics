@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createRequire } from 'module';
 import fs from 'fs';
 import os from 'os';
@@ -133,6 +133,37 @@ describe('ToolRegistryService', () => {
       )
     ).toBe(true);
     expect(snapshot.diagnostics.some(diagnostic => diagnostic.message.includes('Skipped non-YAML'))).toBe(true);
+  });
+
+  it('shares concurrent scans and returns an independent snapshot to each caller', async () => {
+    const service = new ToolRegistryService();
+    service.loadSnapshot = vi.fn(async () => ({ tools: [{ name: 'test' }] }));
+
+    const [first, second] = await Promise.all([service.getSnapshot(), service.getSnapshot()]);
+    expect(service.loadSnapshot).toHaveBeenCalledTimes(1);
+    first.tools[0].name = 'edited';
+    expect(second.tools[0].name).toBe('test');
+    expect((await service.getSnapshot()).tools[0].name).toBe('test');
+  });
+
+  it('retains the forced refresh when an older scan finishes later', async () => {
+    const service = new ToolRegistryService();
+    let finishOldScan;
+    service.loadSnapshot = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            finishOldScan = resolve;
+          })
+      )
+      .mockResolvedValueOnce({ registryHash: 'new' });
+
+    const oldScan = service.getSnapshot();
+    expect(await service.reload()).toEqual({ registryHash: 'new' });
+    finishOldScan({ registryHash: 'old' });
+    expect(await oldScan).toEqual({ registryHash: 'old' });
+    expect(await service.getSnapshot()).toEqual({ registryHash: 'new' });
   });
 
   it('returns diagnostics instead of throwing when snapshot generation fails', async () => {

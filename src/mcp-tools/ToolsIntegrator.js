@@ -38,7 +38,25 @@ class ToolsIntegrator {
     this.annotationTools = new AnnotationTools(server);
     this.agentChatTools = new AgentChatTools(server);
 
-    // Combine all tools
+    // Take one schema snapshot per module so dispatch can check membership
+    // without reconstructing the tool definitions for every call.
+    const modules = [
+      this.navigationTools,
+      this.sequenceTools,
+      this.evo2Tools,
+      this.proteinTools,
+      this.databaseTools,
+      this.dataTools,
+      this.pathwayTools,
+      this.actionTools,
+      this.utilityTools,
+      this.fileTools,
+      this.trackSettingsTools,
+      this.primerTools,
+      this.annotationTools,
+      this.agentChatTools,
+    ];
+    this.toolDefinitionsByModule = new Map(modules.map(toolModule => [toolModule, toolModule.getTools()]));
     this.allTools = this.combineAllTools();
 
     // Store the full tool set separately for agent mode reference
@@ -46,25 +64,7 @@ class ToolsIntegrator {
   }
 
   combineAllTools() {
-    return {
-      ...this.navigationTools.getTools(),
-      ...this.sequenceTools.getTools(),
-      ...this.evo2Tools.getTools(),
-      ...this.proteinTools.getTools(),
-      ...this.databaseTools.getTools(),
-      ...this.dataTools.getTools(),
-      ...this.pathwayTools.getTools(),
-      ...this.actionTools.getTools(),
-      ...this.utilityTools.getTools(),
-      ...this.fileTools.getTools(),
-      ...this.trackSettingsTools.getTools(),
-      ...this.primerTools.getTools(),
-      ...this.annotationTools.getTools(),
-      // Agent mode tools - send natural language prompts for autonomous AI execution
-      ...this.agentChatTools.getTools(),
-      // Multi-window management tools (server-side only)
-      ...this.getWindowManagementTools(),
-    };
+    return Object.assign({}, ...this.toolDefinitionsByModule.values(), this.getWindowManagementTools());
   }
 
   /**
@@ -242,16 +242,16 @@ class ToolsIntegrator {
     // Route to appropriate tool module based on tool name
     try {
       // Navigation tools
-      if (this.navigationTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.navigationTools)[toolName]) {
         return await this.navigationTools.executeClientTool(toolName, parameters, clientId);
       }
 
-      if (this.evo2Tools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.evo2Tools)[toolName]) {
         return await this.evo2Tools.executeClientTool(toolName, parameters, clientId);
       }
 
       // Sequence tools
-      if (this.sequenceTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.sequenceTools)[toolName]) {
         // Pure server-side computations
         if (toolName === 'compute_gc') {
           return { gcContent: this.sequenceTools.calculateGCContent(parameters.sequence) };
@@ -293,7 +293,7 @@ class ToolsIntegrator {
       }
 
       // Protein tools - delegate all to client (ChatManager has working implementations)
-      if (this.proteinTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.proteinTools)[toolName]) {
         // All protein structure tools require client-side execution
         // as ChatManager handles PDB/AlphaFold API calls
         return await this.proteinTools.executeClientTool(toolName, parameters, clientId);
@@ -323,7 +323,7 @@ class ToolsIntegrator {
       }
 
       // Data tools
-      if (this.dataTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.dataTools)[toolName]) {
         if (toolName === 'codon_usage_analysis') {
           return await this.dataTools.analyzeCodonUsage(parameters);
         } else {
@@ -332,12 +332,12 @@ class ToolsIntegrator {
       }
 
       // File tools - delegate all to client (ChatManager has file loading implementations)
-      if (this.fileTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.fileTools)[toolName]) {
         return await this.fileTools.executeClientTool(toolName, parameters, clientId);
       }
 
       // Pathway tools
-      if (this.pathwayTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.pathwayTools)[toolName]) {
         switch (toolName) {
           case 'show_metabolic_pathway':
             return this.pathwayTools.generatePathwayVisualization(
@@ -354,7 +354,7 @@ class ToolsIntegrator {
       }
 
       // Action tools
-      if (this.actionTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.actionTools)[toolName]) {
         switch (toolName) {
           case 'copy_sequence':
             return await this.actionTools.copy_sequence(parameters, clientId);
@@ -382,7 +382,7 @@ class ToolsIntegrator {
       }
 
       // Utility tools
-      if (this.utilityTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.utilityTools)[toolName]) {
         switch (toolName) {
           case 'download_internet_file':
             return await this.utilityTools.download_internet_file(parameters, clientId);
@@ -408,7 +408,7 @@ class ToolsIntegrator {
       }
 
       // Track settings tools
-      if (this.trackSettingsTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.trackSettingsTools)[toolName]) {
         switch (toolName) {
           case 'get_track_settings':
             return await this.trackSettingsTools.executeClientTool('getTrackSettings', parameters, clientId);
@@ -431,7 +431,7 @@ class ToolsIntegrator {
       }
 
       // Primer tools
-      if (this.primerTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.primerTools)[toolName]) {
         switch (toolName) {
           case 'calculate_primer_properties':
             return this.primerTools.calculateProperties(parameters.sequence);
@@ -483,12 +483,12 @@ class ToolsIntegrator {
       }
 
       // Annotation tools - delegate all to client
-      if (this.annotationTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.annotationTools)[toolName]) {
         return await this.annotationTools.executeClientTool(toolName, parameters, clientId, executionContext);
       }
 
       // Agent chat tools - delegate to client (CodeXomics App handles the LLM loop)
-      if (this.agentChatTools.getTools()[toolName]) {
+      if (this.toolDefinitionsByModule.get(this.agentChatTools)[toolName]) {
         return await this.agentChatTools.executeClientTool(toolName, parameters, clientId, executionContext);
       }
 
@@ -608,47 +608,47 @@ class ToolsIntegrator {
       navigation: {
         name: 'Navigation & State Management',
         description: 'Tools for genome navigation and browser state management',
-        tools: Object.keys(this.navigationTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.navigationTools)),
       },
       sequence: {
         name: 'Sequence Analysis',
         description: 'Tools for DNA/RNA sequence analysis and manipulation',
-        tools: Object.keys(this.sequenceTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.sequenceTools)),
       },
       protein: {
         name: 'Protein Structure',
         description: 'Tools for protein structure analysis and visualization',
-        tools: Object.keys(this.proteinTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.proteinTools)),
       },
       database: {
         name: 'Database Integration',
         description: 'Tools for accessing biological databases',
-        tools: Object.keys(this.databaseTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.databaseTools)),
       },
       data: {
         name: 'Data Management',
         description: 'Tools for data annotation, export, and analysis',
-        tools: Object.keys(this.dataTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.dataTools)),
       },
       pathway: {
         name: 'Pathway & Search',
         description: 'Tools for metabolic pathway analysis and sequence search',
-        tools: Object.keys(this.pathwayTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.pathwayTools)),
       },
       utility: {
         name: 'Utility Tools',
         description: 'Utility tools for file download and viewing operations',
-        tools: Object.keys(this.utilityTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.utilityTools)),
       },
       annotation: {
         name: 'Annotation Management',
         description: 'Tools for reading, updating, searching, and tracking changes to genome annotations',
-        tools: Object.keys(this.annotationTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.annotationTools)),
       },
       agent: {
         name: 'Agent Mode',
         description: 'Send natural language prompts for autonomous AI agent execution',
-        tools: Object.keys(this.agentChatTools.getTools()),
+        tools: Object.keys(this.toolDefinitionsByModule.get(this.agentChatTools)),
       },
     };
   }
