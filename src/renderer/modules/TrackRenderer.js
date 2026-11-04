@@ -1753,7 +1753,7 @@ class TrackRenderer {
     title.textContent = [
       placement.name,
       `${placement.start.toLocaleString()}–${placement.end.toLocaleString()} (${placement.isReverse ? '−' : '+'}) · ${placement.lengthBp} nt`,
-      placement.isPredicted ? 'Source: predicted (real time)' : 'Source: pinned (manual)',
+      placement.isPredicted ? 'Source: predicted' : 'Source: pinned (manual)',
       placement.clippedLeft || placement.clippedRight ? 'Extends beyond the current view' : '',
       placement.oligoSequence ? `Oligo 5'→3': ${placement.oligoSequence}` : "Oligo 5'→3': not stored",
       genomeSequence ? `Genome window: ${genomeSequence}` : 'Genome window: unavailable',
@@ -1824,7 +1824,7 @@ class TrackRenderer {
 
     const chips = [{ text: `${placements.length} site${placements.length === 1 ? '' : 's'}`, strong: true }];
     if (pinned > 0 && predicted > 0) chips.push({ text: `${pinned} pinned · ${predicted} predicted` });
-    else if (predicted > 0) chips.push({ text: 'predicted in real time' });
+    else if (predicted > 0) chips.push({ text: 'predicted' });
     else chips.push({ text: 'pinned' });
     if (amplicons > 0) chips.push({ text: `${amplicons} amplicon${amplicons === 1 ? '' : 's'}`, swatch: '#64748b' });
     if (mismatched > 0) {
