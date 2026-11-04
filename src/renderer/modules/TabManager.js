@@ -547,10 +547,17 @@ class TabManager {
         readDetailsSection: { visible: false, content: null },
         variantDetailsSection: { visible: false, content: null },
         searchResultsSection: { visible: false, content: null },
+        // Shown by default in the markup, so a new tab keeps whatever the user has now
+        operonsSection: { visible: this.isSidebarSectionShown('operonsSection'), content: null },
       },
 
       // Search results data (independent per tab)
       searchResults: [],
+
+      // "Operons in View" entries (independent per tab). A tab opened at the
+      // current window starts from what is on screen; any other position is
+      // filled in when its gene track renders.
+      operonsInView: specificPosition ? [] : this.getActiveTabOperonsInView(),
 
       // Created timestamp
       createdAt: new Date(),
@@ -2970,6 +2977,17 @@ class TabManager {
       }
     }
 
+    // Save operons panel visibility. Its entries are kept in tabState.operonsInView
+    // (written by TrackRenderer.updateOperonsPanel) and re-rendered on restore,
+    // since saved HTML would lose the click-to-navigate listeners.
+    const operonsPanel = document.getElementById('operonsSection');
+    if (operonsPanel) {
+      tabState.sidebarPanels.operonsSection = {
+        visible: this.isSidebarSectionShown('operonsSection'),
+        content: null,
+      };
+    }
+
     // Save bookmarks panel state
     const bookmarksPanel = document.getElementById('bookmarksSection');
     if (bookmarksPanel && tabState.sidebarPanels.bookmarksSection) {
@@ -3098,6 +3116,17 @@ class TabManager {
       }
     }
 
+    // Restore operons panel: visibility first, then this tab's own entries.
+    // Older tab states have no operonsSection entry; leave the panel as it is then.
+    const operonsPanel = document.getElementById('operonsSection');
+    const operonsState = tabState.sidebarPanels.operonsSection;
+    if (operonsPanel && operonsState) {
+      operonsPanel.style.display = operonsState.visible ? 'block' : 'none';
+    }
+    this.genomeBrowser?.trackRenderer?.renderOperonsPanel?.(
+      Array.isArray(tabState.operonsInView) ? tabState.operonsInView : []
+    );
+
     // Update sidebar visibility based on panel states
     this.updateSidebarVisibilityForTab(tabState);
 
@@ -3110,7 +3139,11 @@ class TabManager {
   updateSidebarVisibilityForTab(tabState) {
     if (!tabState.sidebarPanels) return;
 
-    const hasVisiblePanels = Object.values(tabState.sidebarPanels).some(panel => panel.visible);
+    // The operons panel is a standing section (open by default), not a details
+    // panel; counting it would force a manually collapsed sidebar open on every switch.
+    const hasVisiblePanels = Object.entries(tabState.sidebarPanels).some(
+      ([panelId, panel]) => panelId !== 'operonsSection' && panel?.visible
+    );
 
     if (hasVisiblePanels) {
       // Show sidebar if any panels are visible
@@ -3119,6 +3152,26 @@ class TabManager {
       // Hide sidebar if no panels are visible
       this.genomeBrowser.uiManager.checkAndHideSidebarIfAllPanelsClosed();
     }
+  }
+
+  /**
+   * Store the "Operons in View" entries on the active tab
+   */
+  setCurrentTabOperonsInView(entries) {
+    if (!this.activeTabId) return;
+    const tabState = this.tabStates.get(this.activeTabId);
+    if (!tabState) return;
+    tabState.operonsInView = Array.isArray(entries) ? entries.map(entry => ({ ...entry })) : [];
+  }
+
+  getActiveTabOperonsInView() {
+    const tabState = this.activeTabId ? this.tabStates.get(this.activeTabId) : null;
+    return Array.isArray(tabState?.operonsInView) ? tabState.operonsInView.map(entry => ({ ...entry })) : [];
+  }
+
+  isSidebarSectionShown(panelId) {
+    const panel = typeof document !== 'undefined' ? document.getElementById(panelId) : null;
+    return Boolean(panel) && panel.style.display !== 'none';
   }
 
   /**
