@@ -121,11 +121,25 @@ describe('GC content & skew track rendering', () => {
     expect(firstIds.some(id => secondIds.includes(id))).toBe(false);
   });
 
-  it('labels both panels with the scale they were drawn at', () => {
-    const labels = [...render(renderer()).querySelectorAll('.axis-labels text')].map(t => t.textContent);
+  it('labels both panels with the scale they were drawn at, outside the stretched SVG', () => {
+    const r = renderer();
+    const data = r.calculateDynamicGCData(G_THEN_C, 50, 25);
+    const labels = [...r.createGCAxisLabels(data).querySelectorAll('span')].map(t => t.textContent);
     expect(labels.some(text => text.startsWith('GC '))).toBe(true);
     expect(labels.some(text => text.startsWith('Skew +'))).toBe(true);
     expect(labels).toContain('0');
+
+    // preserveAspectRatio="none" would distort any text drawn inside the plot.
+    expect(render(r).querySelectorAll('text')).toHaveLength(0);
+  });
+
+  it('draws at the height it is given, not the configured one', () => {
+    const r = renderer();
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    r.renderSVGGCVisualization(svg, r.calculateDynamicGCData(G_THEN_C, 50, 25), 400, { height: 140 }, 80);
+    const clipRects = [...svg.querySelectorAll('clipPath rect')];
+    const bottom = Math.max(...clipRects.map(rect => +rect.getAttribute('y') + +rect.getAttribute('height')));
+    expect(bottom).toBe(80);
   });
 
   it('uses the configured plot colours in the legend', () => {
