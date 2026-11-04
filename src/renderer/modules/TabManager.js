@@ -1471,6 +1471,10 @@ class TabManager {
       this.genomeBrowser.selectedGene = tabState.selectedGene;
       this.genomeBrowser.selectedRead = tabState.selectedRead;
 
+      // Sidebar panels live outside #genomeViewer, so the cached DOM does not
+      // carry them; without this the previous tab's panels stay on screen.
+      this.restoreSidebarPanelStates(tabState);
+
       // Update track visibility controls in UI
       this.updateTrackVisibilityControls();
 
@@ -2931,6 +2935,11 @@ class TabManager {
       tabState.sidebarPanels.primerDetailsSection.visible = primerPanel.style.display !== 'none';
       if (tabState.sidebarPanels.primerDetailsSection.visible) {
         tabState.sidebarPanels.primerDetailsSection.content = primerPanel.innerHTML;
+        // The panel is re-rendered from the primer on restore: saved HTML has no
+        // event listeners, so its buttons would be dead.
+        tabState.sidebarPanels.primerDetailsSection.primer = this.genomeBrowser.selectedPrimer || null;
+      } else {
+        tabState.sidebarPanels.primerDetailsSection.primer = null;
       }
     }
 
@@ -3018,8 +3027,11 @@ class TabManager {
     // Restore primer details panel
     const primerPanel = document.getElementById('primerDetailsSection');
     if (primerPanel && tabState.sidebarPanels.primerDetailsSection) {
-      if (tabState.sidebarPanels.primerDetailsSection.visible && tabState.sidebarPanels.primerDetailsSection.content) {
-        primerPanel.innerHTML = tabState.sidebarPanels.primerDetailsSection.content;
+      const primerState = tabState.sidebarPanels.primerDetailsSection;
+      const savedPrimer = primerState.visible ? primerState.primer : null;
+      this.genomeBrowser.selectedPrimer = savedPrimer || null;
+      if (savedPrimer && typeof this.genomeBrowser.populatePrimerDetails === 'function') {
+        this.genomeBrowser.populatePrimerDetails(savedPrimer);
         primerPanel.style.display = 'block';
       } else {
         primerPanel.style.display = 'none';

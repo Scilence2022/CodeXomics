@@ -240,7 +240,9 @@ class PrimerManager {
     const bindingSequence =
       this.normalizeSequence(rawSite.bindingSequence || rawSite.genomeBindingSequence || '') ||
       this.getGenomeBindingSequence(chromosome, normalizedStart, normalizedEnd, strand);
-    const primerSequence = primer.sequence || this.normalizeSequence(rawSite.primerSequence || '') || bindingSequence;
+    const tailLength = this.getTailLength(primer);
+    const primerSequence =
+      this.getAnnealingSequence(primer) || this.normalizeSequence(rawSite.primerSequence || '') || bindingSequence;
     const mismatches = Array.isArray(rawSite.mismatches)
       ? rawSite.mismatches
       : this.calculateMismatches(primerSequence, bindingSequence);
@@ -251,10 +253,10 @@ class PrimerManager {
       start: normalizedStart,
       end: normalizedEnd,
       strand,
-      primerStart: Number.isFinite(rawSite.primerStart) ? rawSite.primerStart : 1,
+      primerStart: Number.isFinite(rawSite.primerStart) ? rawSite.primerStart : tailLength + 1,
       primerEnd: Number.isFinite(rawSite.primerEnd)
         ? rawSite.primerEnd
-        : primerSequence.length || bindingSequence.length,
+        : tailLength + (primerSequence.length || bindingSequence.length),
       bindingSequence,
       mismatches,
       tm: Number.isFinite(rawSite.tm) ? rawSite.tm : rawSite.bindingTm,
@@ -579,8 +581,21 @@ class PrimerManager {
     )}`;
   }
 
+  /** Length of the primer's 5' tail, when the stored oligo actually starts with it. */
+  getTailLength(primer) {
+    const sequence = this.normalizeSequence(primer?.sequence || '');
+    const tail = this.normalizeSequence(primer?.fivePrimeTail || '');
+    return tail && sequence.startsWith(tail) && tail.length < sequence.length ? tail.length : 0;
+  }
+
+  /** The 3' part of the oligo that anneals to the template (oligo minus 5' tail). */
+  getAnnealingSequence(primer) {
+    return this.normalizeSequence(primer?.sequence || '').slice(this.getTailLength(primer));
+  }
+
   toRenderableBindingSite(primer, site) {
     const pair = this.getPairForPrimer(primer.id);
+    const annealingSequence = this.getAnnealingSequence(primer);
     return {
       id: `${primer.id}:${site.id}`,
       primerId: primer.id,
@@ -589,8 +604,15 @@ class PrimerManager {
       type: 'primer_binding',
       origin: site.origin || 'pinned',
       name: primer.name,
+      // `sequence` is the whole oligo; `primerSequence` is the annealing part that
+      // lines up base-for-base with the genomic site.
       sequence: primer.sequence,
-      primerSequence: primer.sequence,
+      primerSequence: annealingSequence,
+      annealingSequence,
+      fivePrimeTail: primer.fivePrimeTail || '',
+      primerStart: site.primerStart,
+      primerEnd: site.primerEnd,
+      deltaG: site.deltaG,
       bindingSequence: site.bindingSequence,
       chromosome: site.chromosome,
       start: site.start,

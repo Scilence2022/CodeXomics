@@ -609,6 +609,8 @@ class PrimerLibraryUI {
         max3PrimeMismatches: Number.isFinite(s.max3PrimeMismatches) ? s.max3PrimeMismatches : 1,
         scoringMode: 'thermodynamic',
         naConcentration: s.naConcentration,
+        mgConcentration: s.mgConcentration,
+        dntpConcentration: s.dntpConcentration,
         primerConcentration: s.primerConcentration,
         maxSites: 200,
       });
@@ -804,11 +806,11 @@ class PrimerLibraryUI {
     let predicted = '';
     const svc = this.manager.bindingService;
     if (svc && primer.sequence && chr) {
-      const summary = svc.getOffTargetSummary({ id: primer.id, sequence: primer.sequence }, chr);
+      const summary = svc.getOffTargetSummary(primer, chr);
       if (summary) {
         predicted = `${summary.total} pred`;
       } else {
-        svc.ensureSites({ id: primer.id, sequence: primer.sequence }, chr);
+        svc.ensureSites(primer, chr);
         predicted = '<span class="primer-lib-scanning">scanning…</span>';
       }
     }

@@ -21,6 +21,8 @@ const DEFAULT_STRINGENCY = {
   minBindingTm: undefined,
   scoringMode: 'fast',
   naConcentration: 0.05,
+  mgConcentration: 0.0015,
+  dntpConcentration: 0.0006,
   primerConcentration: 250e-9,
 };
 
@@ -94,6 +96,22 @@ class PrimerBindingService {
     });
   }
 
+  /**
+   * The part of the oligo that anneals. A 5' tail (cloning overhang, adapter)
+   * does not match the template, so scanning the full oligo would reject every
+   * real site. Sites, mismatches and binding Tm all describe this region.
+   */
+  _annealingTarget(primer) {
+    const clean = value =>
+      String(value || '')
+        .toUpperCase()
+        .replace(/[^ATCG]/g, '');
+    const sequence = clean(primer?.sequence);
+    const tail = clean(primer?.fivePrimeTail);
+    const tailLength = tail && sequence.startsWith(tail) && tail.length < sequence.length ? tail.length : 0;
+    return { id: primer?.id, sequence: sequence.slice(tailLength), tailLength, oligoLength: sequence.length };
+  }
+
   // --- Cache keys / invalidation ------------------------------------------
 
   _chromosomeVersion(chromosome) {
@@ -148,8 +166,9 @@ class PrimerBindingService {
    * available; otherwise triggers a background scan and returns an immediate
    * synchronous preview for sufficiently small viewports.
    */
-  predictForViewport(primer, chromosome, viewport = null) {
-    if (!primer?.sequence || !chromosome) return [];
+  predictForViewport(rawPrimer, chromosome, viewport = null) {
+    const primer = this._annealingTarget(rawPrimer);
+    if (!primer.sequence || !chromosome) return [];
 
     const cached = this.getCachedSites(primer.id, chromosome);
     if (cached) return this._filterToViewport(cached, viewport);
@@ -168,8 +187,9 @@ class PrimerBindingService {
    * Ensure full-chromosome sites for a primer are computed and cached.
    * Coalesces concurrent requests; resolves to the normalized site array.
    */
-  async ensureSites(primer, chromosome) {
-    if (!primer?.sequence || !chromosome) return [];
+  async ensureSites(rawPrimer, chromosome) {
+    const primer = rawPrimer?.tailLength !== undefined ? rawPrimer : this._annealingTarget(rawPrimer);
+    if (!primer.sequence || !chromosome) return [];
     const key = this._cacheKey(primer.id, chromosome);
     const cached = this.cache.get(key);
     if (cached) return cached.sites;
@@ -250,6 +270,8 @@ class PrimerBindingService {
       minBindingTm: this.stringency.minBindingTm,
       scoringMode: this.stringency.scoringMode,
       naConcentration: this.stringency.naConcentration,
+      mgConcentration: this.stringency.mgConcentration,
+      dntpConcentration: this.stringency.dntpConcentration,
       primerConcentration: this.stringency.primerConcentration,
     });
     return raw.map(site => this._normalizeSite(site, offset, chromosome, primer));
@@ -287,16 +309,21 @@ class PrimerBindingService {
         });
       }
     }
+    const tailLength = primer.tailLength || 0;
     return {
       id: `pred_${primer.id}_${chromosome}_${offset + site.start}_${site.strand === '-' ? 'r' : 'f'}`,
       chromosome,
       start: offset + site.start,
       end: offset + site.end - 1,
       strand: site.strand,
+      // 1-based span of the oligo that anneals here (the 5' tail precedes it).
+      primerStart: tailLength + 1,
+      primerEnd: tailLength + primerSeq.length,
       bindingSequence: oriented,
       mismatches,
       bindingScore: site.bindingScore,
       tm: site.bindingTm,
+      deltaG: Number.isFinite(site.bindingDeltaG) ? site.bindingDeltaG : undefined,
       origin: 'predicted',
     };
   }

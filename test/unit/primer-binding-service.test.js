@@ -136,3 +136,66 @@ describe('PrimerManager + real-time prediction', () => {
     expect(renderables[0].origin).toBe('pinned');
   });
 });
+
+describe('5-prime tails', () => {
+  const TAIL = 'GGATCCAAGCTT'; // cloning overhang that does not match the template
+  const TAILED = `${TAIL}${PRIMER_SEQ}`;
+
+  it('scans only the annealing region, so a tailed primer still finds its site', () => {
+    const gb = createGenomeBrowser();
+    const svc = new PrimerBindingService(gb, { useWorker: false, stringency: { maxMismatches: 0 } });
+    const sites = svc.predictForViewport({ id: 'p1', sequence: TAILED, fivePrimeTail: TAIL }, 'chr1', {
+      start: 1,
+      end: TEMPLATE.length,
+    });
+
+    const forward = sites.find(site => site.strand === '+');
+    expect(forward).toBeTruthy();
+    expect(forward.start).toBe(5);
+    expect(forward.end).toBe(14);
+    expect(forward.primerStart).toBe(TAIL.length + 1);
+    expect(forward.primerEnd).toBe(TAILED.length);
+    expect(forward.mismatches).toHaveLength(0);
+  });
+
+  it('caches the annealing scan for summaries keyed by the stored primer', async () => {
+    const gb = createGenomeBrowser();
+    const svc = new PrimerBindingService(gb, { useWorker: false, stringency: { maxMismatches: 0 } });
+    const primer = { id: 'p1', sequence: TAILED, fivePrimeTail: TAIL };
+    await svc.ensureSites(primer, 'chr1');
+    expect(svc.getOffTargetSummary(primer, 'chr1').perfect).toBe(1);
+  });
+
+  it('renders tailed primers with the annealing part aligned to the genome', async () => {
+    const gb = createGenomeBrowser();
+    const manager = new PrimerManager(gb, null, createSidecar());
+    await manager.loadPrimers();
+    manager.setBindingService(new PrimerBindingService(gb, { useWorker: false, stringency: { maxMismatches: 0 } }));
+
+    const primer = await manager.addPrimer({ name: 'F-tail', sequence: TAILED, fivePrimeTail: TAIL });
+    await manager.bindingService.ensureSites(primer, 'chr1');
+    const [site] = manager.getRenderableBindingSites('chr1', { start: 1, end: TEMPLATE.length });
+
+    expect(site.sequence).toBe(TAILED);
+    expect(site.primerSequence).toBe(PRIMER_SEQ);
+    expect(site.annealingSequence).toBe(PRIMER_SEQ);
+    expect(site.fivePrimeTail).toBe(TAIL);
+    expect(site.primerStart).toBe(TAIL.length + 1);
+  });
+
+  it('compares pinned sites against the annealing region', async () => {
+    const gb = createGenomeBrowser();
+    const manager = new PrimerManager(gb, null, createSidecar());
+    await manager.loadPrimers();
+    const primer = await manager.addPrimer({
+      name: 'F-tail-pinned',
+      sequence: TAILED,
+      fivePrimeTail: TAIL,
+      bindingSites: [{ chromosome: 'chr1', start: 5, end: 14, strand: '+' }],
+    });
+    const [pinned] = primer.pinnedSites;
+    expect(pinned.mismatches).toHaveLength(0);
+    expect(pinned.primerStart).toBe(TAIL.length + 1);
+    expect(pinned.primerEnd).toBe(TAILED.length);
+  });
+});
