@@ -208,44 +208,13 @@ class UnifiedSequenceProcessing {
       let statistics;
 
       switch (method) {
-        case 'standard': { // Standard GC calculation
-          const g = (sequenceUpper.match(/G/g) || []).length;
-          const c = (sequenceUpper.match(/C/g) || []).length;
-          const a = (sequenceUpper.match(/A/g) || []).length;
-          const t = (sequenceUpper.match(/T/g) || []).length;
-
-          if (includeAmbiguous) {
-            const n = (sequenceUpper.match(/N/g) || []).length;
-            const r = (sequenceUpper.match(/R/g) || []).length;
-            const y = (sequenceUpper.match(/Y/g) || []).length;
-            const s = (sequenceUpper.match(/S/g) || []).length;
-            const w = (sequenceUpper.match(/W/g) || []).length;
-            const k = (sequenceUpper.match(/K/g) || []).length;
-            const m = (sequenceUpper.match(/M/g) || []).length;
-            const b = (sequenceUpper.match(/B/g) || []).length;
-            const v = (sequenceUpper.match(/V/g) || []).length;
-            const d = (sequenceUpper.match(/D/g) || []).length;
-            const h = (sequenceUpper.match(/H/g) || []).length;
-
-            gcCount = g + c + r * 0.5 + s * 0.5 + k * 0.5 + m * 0.5 + b * 0.33 + v * 0.67 + d * 0.33 + h * 0.33;
-            totalBases = g + c + a + t + n + r + y + s + w + k + m + b + v + d + h;
-          } else {
-            gcCount = g + c;
-            totalBases = g + c + a + t;
+        case 'standard': {
+          const counts = new Uint32Array(128);
+          for (let i = 0; i < sequenceUpper.length; i++) {
+            counts[sequenceUpper.charCodeAt(i)]++;
           }
-
-          gcContent = totalBases === 0 ? 0 : (gcCount / totalBases) * 100;
-
-          statistics = {
-            g: g,
-            c: c,
-            a: a,
-            t: t,
-            gcCount,
-            totalBases,
-            gcContent: gcContent.toFixed(2),
-            method: 'standard',
-          };
+          statistics = this.summarizeStandardGC(counts, includeAmbiguous);
+          gcContent = Number(statistics.gcContent);
           break;
         }
 
@@ -265,28 +234,53 @@ class UnifiedSequenceProcessing {
           break;
         }
 
-        case 'window': { // Sliding window GC calculation
+        case 'window': {
           const windows = [];
+          const rolling = Number.isInteger(windowSize) && windowSize >= 0;
+          const counts = new Uint32Array(128);
+          if (rolling) {
+            for (let i = 0; i < Math.min(windowSize, sequenceUpper.length); i++) {
+              counts[sequenceUpper.charCodeAt(i)]++;
+            }
+          }
+
+          let totalGC = 0;
+          let minGC = Infinity;
+          let maxGC = -Infinity;
           for (let i = 0; i <= sequenceUpper.length - windowSize; i++) {
             const window = sequenceUpper.substring(i, i + windowSize);
-            const windowGC = this.computeGC(window, { includeAmbiguous, validateInput: false, method: 'standard' });
+            let windowGC;
+            if (rolling) {
+              if (i > 0 && windowSize > 0) {
+                counts[sequenceUpper.charCodeAt(i - 1)]--;
+                counts[sequenceUpper.charCodeAt(i + windowSize - 1)]++;
+              }
+              windowGC = Number(this.summarizeStandardGC(counts, includeAmbiguous).gcContent);
+            } else {
+              windowGC = this.computeGC(window, {
+                includeAmbiguous,
+                validateInput: false,
+                method: 'standard',
+              }).gcContent;
+            }
             windows.push({
               position: i + 1,
               end: i + windowSize,
-              gcContent: windowGC.gcContent,
+              gcContent: windowGC,
               sequence: window,
             });
+            totalGC += windowGC;
+            minGC = Math.min(minGC, windowGC);
+            maxGC = Math.max(maxGC, windowGC);
           }
 
-          const avgGC = windows.reduce((sum, w) => sum + parseFloat(w.gcContent), 0) / windows.length;
-          gcContent = avgGC;
-
+          gcContent = totalGC / windows.length;
           statistics = {
             windowSize,
             windows: windows.length,
-            averageGC: avgGC.toFixed(2),
-            minGC: Math.min(...windows.map(w => parseFloat(w.gcContent))).toFixed(2),
-            maxGC: Math.max(...windows.map(w => parseFloat(w.gcContent))).toFixed(2),
+            averageGC: gcContent.toFixed(2),
+            minGC: minGC.toFixed(2),
+            maxGC: maxGC.toFixed(2),
             method: 'window',
             windowData: windows,
           };
@@ -321,6 +315,34 @@ class UnifiedSequenceProcessing {
         },
       };
     }
+  }
+
+  static summarizeStandardGC(counts, includeAmbiguous) {
+    const a = counts['A'.charCodeAt(0)];
+    const c = counts['C'.charCodeAt(0)];
+    const g = counts['G'.charCodeAt(0)];
+    const t = counts['T'.charCodeAt(0)];
+    let gcCount = g + c;
+    let totalBases = g + c + a + t;
+
+    if (includeAmbiguous) {
+      const b = counts['B'.charCodeAt(0)];
+      const d = counts['D'.charCodeAt(0)];
+      const h = counts['H'.charCodeAt(0)];
+      const k = counts['K'.charCodeAt(0)];
+      const m = counts['M'.charCodeAt(0)];
+      const n = counts['N'.charCodeAt(0)];
+      const r = counts['R'.charCodeAt(0)];
+      const s = counts['S'.charCodeAt(0)];
+      const v = counts['V'.charCodeAt(0)];
+      const w = counts['W'.charCodeAt(0)];
+      const y = counts['Y'.charCodeAt(0)];
+      gcCount = g + c + r * 0.5 + s * 0.5 + k * 0.5 + m * 0.5 + b * 0.33 + v * 0.67 + d * 0.33 + h * 0.33;
+      totalBases += n + r + y + s + w + k + m + b + v + d + h;
+    }
+
+    const gcContent = totalBases === 0 ? 0 : (gcCount / totalBases) * 100;
+    return { g, c, a, t, gcCount, totalBases, gcContent: gcContent.toFixed(2), method: 'standard' };
   }
 
   /**
@@ -536,27 +558,24 @@ class UnifiedSequenceProcessing {
    * @returns {number} Levenshtein distance
    */
   static levenshteinDistance(str1, str2) {
-    const matrix = [];
+    if (str1.length > str2.length) [str1, str2] = [str2, str1];
 
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
+    // Keep the previous row in place, saving the diagonal before overwriting it.
+    const distances = new Uint32Array(str1.length + 1);
+    for (let j = 0; j < distances.length; j++) distances[j] = j;
 
     for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
-        }
+      const charCode = str2.charCodeAt(i - 1);
+      let diagonal = distances[0];
+      distances[0] = i;
+      for (let j = 1; j < distances.length; j++) {
+        const above = distances[j];
+        distances[j] = charCode === str1.charCodeAt(j - 1) ? diagonal : 1 + Math.min(diagonal, distances[j - 1], above);
+        diagonal = above;
       }
     }
 
-    return matrix[str2.length][str1.length];
+    return distances[str1.length];
   }
 
   /**

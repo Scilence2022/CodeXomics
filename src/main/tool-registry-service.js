@@ -77,6 +77,7 @@ class ToolRegistryService {
     this.cacheTtlMs = options.cacheTtlMs || DEFAULT_CACHE_TTL_MS;
     this.cachedSnapshot = null;
     this.cachedAt = 0;
+    this.pendingSnapshot = null;
   }
 
   async getSnapshot(options = {}) {
@@ -85,19 +86,25 @@ class ToolRegistryService {
       return cloneSerializable(this.cachedSnapshot);
     }
 
-    let snapshot;
-    try {
-      snapshot = await this.loadSnapshot();
-    } catch (error) {
-      snapshot = this.createEmptySnapshot([
-        createDiagnostic('error', 'Tool registry snapshot generation failed', {
-          source: 'tool_registry_service',
-          error: error.message,
-        }),
-      ]);
+    if (force || !this.pendingSnapshot) {
+      this.pendingSnapshot = this.loadSnapshot().catch(error =>
+        this.createEmptySnapshot([
+          createDiagnostic('error', 'Tool registry snapshot generation failed', {
+            source: 'tool_registry_service',
+            error: error.message,
+          }),
+        ])
+      );
     }
-    this.cachedSnapshot = snapshot;
-    this.cachedAt = Date.now();
+
+    const pending = this.pendingSnapshot;
+    const snapshot = await pending;
+    // A forced refresh may have started while this scan was in progress.
+    if (pending === this.pendingSnapshot) {
+      this.cachedSnapshot = snapshot;
+      this.cachedAt = Date.now();
+      this.pendingSnapshot = null;
+    }
     return cloneSerializable(snapshot);
   }
 
@@ -432,17 +439,19 @@ class ToolRegistryService {
       }
 
       try {
-        const stat = await fs.stat(filePath);
-        if (options.maxBytes && stat.size > options.maxBytes) {
-          diagnostics.push(
-            createDiagnostic('warning', 'Skipped oversized user tool definition', {
-              source,
-              file: relativeFile,
-              bytes: stat.size,
-              maxBytes: options.maxBytes,
-            })
-          );
-          continue;
+        if (options.maxBytes) {
+          const { size } = await fs.stat(filePath);
+          if (size > options.maxBytes) {
+            diagnostics.push(
+              createDiagnostic('warning', 'Skipped oversized user tool definition', {
+                source,
+                file: relativeFile,
+                bytes: size,
+                maxBytes: options.maxBytes,
+              })
+            );
+            continue;
+          }
         }
 
         const content = await fs.readFile(filePath, 'utf8');

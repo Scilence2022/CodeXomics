@@ -669,15 +669,24 @@ class PrimerDesigner {
       { query: pRevComp, label: '-' },
     ];
 
+    const exact = maxMM === 0;
+    const lastStart = tSeq.length - pLen;
+    const threePrimeStart = Math.max(0, pLen - 5);
     for (const { query, label } of strands) {
-      for (let i = 0; i <= tSeq.length - pLen && sites.length < maxSites; i++) {
-        // --- Phase 1: Quick Hamming distance with early exit ---
+      let start = -1;
+      while (sites.length < maxSites) {
+        start = exact ? tSeq.indexOf(query, start + 1) : start + 1;
+        if (start < 0 || start > lastStart) break;
+
+        // Approximate matches can be ruled out sooner by checking the last
+        // five positions first, where the mismatch limit is usually tighter.
         let mismatches = 0;
         let pass = true;
-        for (let j = 0; j < pLen; j++) {
-          if (tSeq[i + j] !== query[j]) {
+        if (!exact) {
+          for (let j = pLen - 1; j >= 0; j--) {
+            if (tSeq[start + j] === query[j]) continue;
             mismatches++;
-            if (mismatches > maxMM) {
+            if (mismatches > maxMM || (j >= threePrimeStart && mismatches > max3PrimeMM)) {
               pass = false;
               break;
             }
@@ -685,15 +694,11 @@ class PrimerDesigner {
         }
         if (!pass) continue;
 
-        const templateWindow = tSeq.substring(i, i + pLen);
-
-        // --- Phase 2: Detailed mismatch quality scoring ---
+        const templateWindow = tSeq.substring(start, start + pLen);
         const quality = this._scoreMismatchQuality(query, templateWindow);
 
-        // Apply 3' end filter
-        if (max3PrimeMM !== undefined && quality.threePrimeMismatches > max3PrimeMM) {
-          continue;
-        }
+        // A negative 3' limit also excludes perfect matches.
+        if (quality.threePrimeMismatches > max3PrimeMM) continue;
 
         // --- Phase 3: Thermodynamic analysis (optional) ---
         let bindingTm = null;
@@ -712,8 +717,8 @@ class PrimerDesigner {
 
         // Assemble enriched result
         const site = {
-          start: i,
-          end: i + pLen,
+          start,
+          end: start + pLen,
           strand: label,
           mismatches: mismatches,
           sequence: templateWindow,

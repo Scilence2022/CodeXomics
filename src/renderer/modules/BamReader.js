@@ -936,7 +936,7 @@ class BamReader {
             console.log(`🔍 [BamReader] Querying reference: ${ref.name}`);
             const records = await this.bamFile.getRecordsForRange(ref.name, start, end);
             console.log(`🔍 [BamReader] Retrieved ${records.length} records from ${ref.name}`);
-            allRecords = allRecords.concat(records);
+            for (const record of records) allRecords.push(record);
 
             // Log sample records for debugging
             if (records.length > 0) {
@@ -1007,9 +1007,13 @@ class BamReader {
         console.log(`🎯 [BamReader] Applying position-aware stratified sampling...`);
 
         // First, analyze position distribution
-        const positions = allRecords.map(r => r.start).sort((a, b) => a - b);
-        const minPos = positions[0];
-        const maxPos = positions[positions.length - 1];
+        let minPos = Infinity;
+        let maxPos = -Infinity;
+        for (const record of allRecords) {
+          const position = record.start;
+          minPos = Math.min(minPos, position);
+          maxPos = Math.max(maxPos, position);
+        }
         const positionRange = maxPos - minPos;
 
         console.log(`📊 [BamReader] Position range: ${minPos}-${maxPos} (span: ${positionRange})`);
@@ -1051,7 +1055,8 @@ class BamReader {
 
         // If we have fewer samples than target, fill with remaining records
         if (sampledRecords.length < EARLY_SAMPLE_SIZE) {
-          const remaining = allRecords.filter(r => !sampledRecords.includes(r));
+          const sampledSet = new Set(sampledRecords);
+          const remaining = allRecords.filter(record => !sampledSet.has(record));
           const needed = EARLY_SAMPLE_SIZE - sampledRecords.length;
 
           // Shuffle remaining records and take what we need
@@ -1073,9 +1078,13 @@ class BamReader {
         allRecords = sampledRecords.slice(0, EARLY_SAMPLE_SIZE);
 
         // Verify position coverage
-        const sampledPositions = allRecords.map(r => r.start).sort((a, b) => a - b);
-        const sampledMinPos = sampledPositions[0];
-        const sampledMaxPos = sampledPositions[sampledPositions.length - 1];
+        let sampledMinPos = Infinity;
+        let sampledMaxPos = -Infinity;
+        for (const record of allRecords) {
+          const position = record.start;
+          sampledMinPos = Math.min(sampledMinPos, position);
+          sampledMaxPos = Math.max(sampledMaxPos, position);
+        }
         const coverageRatio = (sampledMaxPos - sampledMinPos) / positionRange;
 
         console.log(`✅ [BamReader] Stratified sampling complete: ${allRecords.length} records selected`);

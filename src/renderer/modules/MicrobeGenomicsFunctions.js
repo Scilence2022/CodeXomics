@@ -132,7 +132,6 @@ class MicrobeGenomicsFunctions {
   static findORFs(dna, minLength = 30) {
     if (!dna || typeof dna !== 'string') return [];
     const orfs = [];
-    const startCodons = ['ATG'];
     const stopCodons = ['TAA', 'TAG', 'TGA'];
 
     // Check all 6 reading frames (3 forward, 3 reverse)
@@ -140,27 +139,29 @@ class MicrobeGenomicsFunctions {
       const seq = strand === 0 ? dna.toUpperCase() : this.reverseComplement(dna);
 
       for (let frame = 0; frame < 3; frame++) {
+        let nextStop = frame;
         for (let i = frame; i < seq.length - 2; i += 3) {
-          const codon = seq.substr(i, 3);
+          if (seq.substring(i, i + 3) !== 'ATG') continue;
 
-          if (startCodons.includes(codon)) {
-            // Found start codon, look for stop codon
-            for (let j = i + 3; j < seq.length - 2; j += 3) {
-              const stopCodon = seq.substr(j, 3);
-              if (stopCodons.includes(stopCodon)) {
-                const orfLength = (j - i) / 3;
-                if (orfLength >= minLength) {
-                  orfs.push({
-                    start: strand === 0 ? i + 1 : dna.length - j,
-                    end: strand === 0 ? j + 3 : dna.length - i + 1,
-                    frame: strand === 0 ? frame + 1 : -(frame + 1),
-                    length: orfLength,
-                    sequence: seq.substr(i, j - i + 3),
-                  });
-                }
-                break;
-              }
+          // Nested starts share the same in-frame stop. Advance the stop
+          // cursor only when a start is beyond the last stop we found.
+          if (nextStop <= i) {
+            nextStop = i + 3;
+            while (nextStop < seq.length - 2 && !stopCodons.includes(seq.substring(nextStop, nextStop + 3))) {
+              nextStop += 3;
             }
+          }
+          if (nextStop >= seq.length - 2) break;
+
+          const orfLength = (nextStop - i) / 3;
+          if (orfLength >= minLength) {
+            orfs.push({
+              start: strand === 0 ? i + 1 : dna.length - nextStop,
+              end: strand === 0 ? nextStop + 3 : dna.length - i + 1,
+              frame: strand === 0 ? frame + 1 : -(frame + 1),
+              length: orfLength,
+              sequence: seq.substring(i, nextStop + 3),
+            });
           }
         }
       }
@@ -1020,27 +1021,11 @@ class MicrobeGenomicsFunctions {
    * @returns {number} Edit distance
    */
   static levenshteinDistance(str1, str2) {
-    const matrix = [];
-
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
-        }
-      }
-    }
-
-    return matrix[str2.length][str1.length];
+    const processing =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedSequenceProcessing')
+        : window.UnifiedSequenceProcessing;
+    return processing.levenshteinDistance(str1, str2);
   }
 
   /**
