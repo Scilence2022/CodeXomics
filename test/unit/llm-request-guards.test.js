@@ -131,6 +131,24 @@ describe('makeRequestWithRetry', () => {
     expect(result).toBe('response');
   });
 
+  it('cancels retry backoff and releases its timer', async () => {
+    vi.useFakeTimers();
+    const manager = createManager();
+    manager.calculateRetryDelay = () => 5000;
+    const controller = new AbortController();
+    const send = vi.fn(async () => {
+      throw Object.assign(new Error('HTTP 503'), { isRetryable: true, status: 503 });
+    });
+    const pending = manager.makeRequestWithRetry(send, 'Test', value => value, 3, { signal: controller.signal });
+    const assertion = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(vi.getTimerCount()).toBe(1);
+    controller.abort();
+    await assertion;
+    expect(vi.getTimerCount()).toBe(0);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it('does not retry after the user aborts', async () => {
     const manager = createManager();
     manager.calculateRetryDelay = () => 0;

@@ -5495,6 +5495,10 @@ class ChatManager {
               if (ownsStream()) this.resetStreamingResponse();
             },
             signal: requestAbortController.signal,
+            contextTokenBudget: this.getConversationTokenBudget(),
+            onProviderRequest: options.onProviderRequest
+              ? request => options.onProviderRequest({ round: currentRound, ...request })
+              : undefined,
             modelType: this.chatBoxSettingsManager?.getSetting('chatboxModelType', 'auto'),
             providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
             modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
@@ -6187,8 +6191,11 @@ class ChatManager {
 
       let errorMessage;
 
-      // Provide specific error messages based on error type
-      if (error.message.includes('HTTP 503') || error.message.includes('Service Unavailable')) {
+      if (error.code === 'LLM_CONTEXT_BUDGET') {
+        errorMessage = `**Context budget exceeded**\n\n${error.message}`;
+      } else if (error.isTimeout) {
+        errorMessage = `**LLM request timed out**\n\n${error.message}`;
+      } else if (error.message.includes('HTTP 503') || error.message.includes('Service Unavailable')) {
         errorMessage =
           `🚫 **Service Temporarily Unavailable**\n\n` +
           `The LLM service is currently experiencing high load or maintenance. ` +
