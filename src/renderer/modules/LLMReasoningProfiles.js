@@ -47,8 +47,9 @@ class LLMReasoningProfiles {
   }
 
   /**
-   * Parse a Claude model id. Shipped ids use dots ("claude-sonnet-4.6"), the
-   * API uses dashes ("claude-sonnet-4-6"), and older ids carry a date suffix.
+   * Parse a Claude model id. The API uses dashes ("claude-sonnet-4-6"), older
+   * ids carry a date suffix, and saved configurations or OpenRouter slugs may
+   * use dots ("claude-sonnet-4.6").
    * @returns {{family: string, version: number}|null}
    */
   static parseClaudeModel(model) {

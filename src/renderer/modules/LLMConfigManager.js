@@ -64,6 +64,17 @@ const OPENAI_COMPATIBLE_PROVIDERS = {
 };
 
 class LLMConfigManager {
+  /**
+   * The Anthropic API names models with dashes ("claude-sonnet-4-6"). Earlier
+   * releases shipped dotted ids ("claude-sonnet-4.6") that the API does not
+   * know, and those persist in saved configurations. Only that dotted form
+   * is rewritten; any other id passes through unchanged.
+   */
+  static normalizeAnthropicModelId(modelId) {
+    if (typeof modelId !== 'string') return modelId;
+    return modelId.replace(/^(claude-(?:opus|sonnet|haiku)-\d+)\.(\d+)(?=$|-)/, '$1-$2');
+  }
+
   constructor(genomeBrowser, configManager = null) {
     this.genomeBrowser = genomeBrowser;
     this.configManager = configManager;
@@ -90,10 +101,10 @@ class LLMConfigManager {
       anthropic: {
         name: 'Anthropic',
         apiKey: '',
-        model: 'claude-sonnet-4.6', // Latest Claude Sonnet 4.6
+        model: 'claude-sonnet-4-6',
         baseUrl: 'https://api.anthropic.com',
         enabled: false,
-        availableModels: ['claude-opus-4.7', 'claude-sonnet-4.6', 'claude-haiku-4.5'],
+        availableModels: ['claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
       },
       // Google - Direct API access to Gemini models
       google: {
@@ -221,7 +232,7 @@ class LLMConfigManager {
         description: 'For complex reasoning and analysis tasks',
         preferredProviders: ['anthropic', 'openai', 'google', 'deepseek', 'minimax', 'minimax_cn'],
         preferredModels: {
-          anthropic: 'claude-sonnet-4.6',
+          anthropic: 'claude-sonnet-4-6',
           openai: 'gpt-5.5',
           google: 'gemini-3.1-pro',
           deepseek: 'deepseek-v4-pro',
@@ -238,7 +249,7 @@ class LLMConfigManager {
         preferredProviders: ['openai', 'anthropic', 'siliconflow', 'google', 'minimax', 'minimax_cn'],
         preferredModels: {
           openai: 'gpt-5.5',
-          anthropic: 'claude-sonnet-4.6',
+          anthropic: 'claude-sonnet-4-6',
           siliconflow: 'Qwen/Qwen3.5-39B-A17B',
           google: 'gemini-3.5-flash',
           deepseek: 'deepseek-v4-flash',
@@ -256,7 +267,7 @@ class LLMConfigManager {
           siliconflow: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
           deepseek: 'deepseek-v4-flash',
           openai: 'gpt-5.5',
-          anthropic: 'claude-sonnet-4.6',
+          anthropic: 'claude-sonnet-4-6',
           openrouter: 'openai/gpt-5.5',
           local: 'deepseek-r1:70b',
           minimax: 'MiniMax-M2.7',
@@ -291,7 +302,7 @@ class LLMConfigManager {
         preferredModels: {
           openai: 'gpt-5.5',
           google: 'gemini-3.1-pro',
-          anthropic: 'claude-sonnet-4.6',
+          anthropic: 'claude-sonnet-4-6',
         },
       },
       multimodal: {
@@ -302,7 +313,7 @@ class LLMConfigManager {
         preferredModels: {
           google: 'gemini-3.1-pro',
           openai: 'gpt-5.5',
-          anthropic: 'claude-sonnet-4.6',
+          anthropic: 'claude-sonnet-4-6',
         },
       },
     };
@@ -883,8 +894,27 @@ class LLMConfigManager {
     for (const [key, provider] of Object.entries(this.providers)) {
       if (key !== 'local' && provider && !provider.apiKey) provider.enabled = false;
     }
+    this.migrateAnthropicModelIds();
     this.reconcileBuiltInModelLists();
     console.log('=== LLMConfigManager.loadConfiguration Debug End ===');
+  }
+
+  /**
+   * Rewrite dotted Claude ids a saved configuration may still hold: the
+   * Anthropic provider default and every model-type selection or preference
+   * that points at Anthropic.
+   */
+  migrateAnthropicModelIds() {
+    const normalize = LLMConfigManager.normalizeAnthropicModelId;
+    const anthropic = this.providers?.anthropic;
+    if (anthropic && typeof anthropic.model === 'string') anthropic.model = normalize(anthropic.model);
+    for (const config of Object.values(this.modelTypes || {})) {
+      if (!config || typeof config !== 'object') continue;
+      if (config.provider === 'anthropic' && typeof config.model === 'string') config.model = normalize(config.model);
+      if (config.preferredModels && typeof config.preferredModels.anthropic === 'string') {
+        config.preferredModels.anthropic = normalize(config.preferredModels.anthropic);
+      }
+    }
   }
 
   /**
@@ -3400,7 +3430,8 @@ class LLMConfigManager {
   buildAnthropicPayload(provider, conversationHistory, options = {}, extra = {}) {
     const systemMessage = conversationHistory.find(msg => msg.role === 'system');
     const payload = {
-      model: provider.model,
+      // A ChatBox override or custom entry can still carry a dotted id.
+      model: LLMConfigManager.normalizeAnthropicModelId(provider.model),
       max_tokens: this.getMaxTokens(provider),
       temperature: this.getRequestTemperature(options),
       messages: this.toAnthropicMessages(conversationHistory, options),

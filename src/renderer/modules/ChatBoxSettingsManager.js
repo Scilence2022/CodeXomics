@@ -145,6 +145,10 @@ class ChatBoxSettingsManager {
     // Retired: nothing ever read it. Provider requests are bounded by
     // llm.requestTimeoutMs, and the Execution tab's response timeout.
     delete this.settings.chatboxLLMTimeout;
+    // Earlier releases shipped dotted Claude ids the Anthropic API rejects.
+    if (this.settings.chatboxLLMProvider === 'anthropic' && typeof LLMConfigManager !== 'undefined') {
+      this.settings.chatboxLLMModel = LLMConfigManager.normalizeAnthropicModelId(this.settings.chatboxLLMModel);
+    }
     this.settings.enableRepeatedOpenNewTab = this.settings.enableRepeatedOpenNewTab !== false;
     const repeatedTabLimit = Number(this.settings.maxRepeatedOpenNewTabCalls);
     this.settings.maxRepeatedOpenNewTabCalls = Number.isFinite(repeatedTabLimit)
