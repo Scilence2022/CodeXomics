@@ -14,6 +14,41 @@ function loadBenchmarkReportGenerator() {
 }
 
 describe('BenchmarkReportGenerator', () => {
+  it('retains the harness and model in CSV exports', () => {
+    const generator = new (loadBenchmarkReportGenerator())();
+    const results = {
+      testSuiteResults: [
+        {
+          suiteName: 'Fixture',
+          testResults: [
+            {
+              testId: 'fixture',
+              testName: 'Quote "fixture"',
+              success: true,
+              score: 1,
+              maxScore: 1,
+              errors: [],
+              warnings: [],
+              llmInteractionData: { request: { provider: 'local', model: 'fixture-model' } },
+            },
+          ],
+        },
+      ],
+    };
+    const production = generator.generateCSVReport({
+      ...results,
+      harness: { run_id: 'p', harness_mode: 'production-parity' },
+    });
+    const oracle = generator.generateCSVReport({
+      ...results,
+      harness: { run_id: 'o', harness_mode: 'oracle-assisted' },
+    });
+    expect(production).toContain('"Run ID","Harness Mode","Provider","Model"');
+    expect(production).toContain('"p","production-parity","local","fixture-model"');
+    expect(production).toContain('"Quote ""fixture"""');
+    expect(oracle).toContain('"o","oracle-assisted","local","fixture-model"');
+  });
+
   it('generates suite analysis for setup failures with minimal stats', () => {
     const BenchmarkReportGenerator = loadBenchmarkReportGenerator();
     const generator = new BenchmarkReportGenerator();

@@ -44,6 +44,25 @@ describe('conversation token budget', () => {
     expect(history).toEqual(before);
   });
 
+  it('reserves room for advertised schemas and output before trimming', () => {
+    const manager = createManager(4000);
+    const history = [
+      { role: 'system', content: 'system' },
+      { role: 'user', content: 'find things' },
+      ...toolRound('older', 6000),
+      ...toolRound('latest', 100),
+    ];
+    const options = {
+      originalMessage: 'find things',
+      tools: [{ type: 'function', function: { name: 'lookup', description: 'x'.repeat(2000) } }],
+      outputTokens: 2400,
+    };
+    const report = manager.enforceConversationTokenBudget(history, options);
+    expect(report.reserved).toBeGreaterThan(2900);
+    expect(report.after).toBeLessThanOrEqual(4000);
+    expect(history.find(message => message.tool_call_id === 'older').content).toContain('Result omitted');
+  });
+
   it('compacts old tool results before dropping anything', () => {
     const manager = createManager(4000);
     const history = [

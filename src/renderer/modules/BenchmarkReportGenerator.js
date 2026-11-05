@@ -135,6 +135,7 @@ class BenchmarkReportGenerator {
       generatedAt: new Date().toISOString(),
       generatedBy: 'CodeXomics Benchmark Framework',
       version: '1.0.0',
+      harness: benchmarkResults.harness || { harness_mode: 'unknown' },
       benchmarkSession: {
         startTime: new Date(benchmarkResults.startTime).toISOString(),
         endTime: new Date(benchmarkResults.endTime).toISOString(),
@@ -415,6 +416,10 @@ class BenchmarkReportGenerator {
 
     // Header
     csvData.push([
+      'Run ID',
+      'Harness Mode',
+      'Provider',
+      'Model',
       'Test Suite',
       'Test #',
       'Test ID',
@@ -435,7 +440,12 @@ class BenchmarkReportGenerator {
     // Data rows
     for (const suiteResult of benchmarkResults.testSuiteResults) {
       for (const testResult of suiteResult.testResults) {
+        const request = testResult.llmInteractionData?.request || testResult.llmInteractionDataSummary || {};
         csvData.push([
+          benchmarkResults.harness?.run_id || '',
+          benchmarkResults.harness?.harness_mode || request.harnessMode || 'unknown',
+          request.provider || request.requestProvider || '',
+          request.model || request.requestModel || '',
           suiteResult.suiteName,
           testResult.testNumber || '',
           testResult.testId,
@@ -455,7 +465,7 @@ class BenchmarkReportGenerator {
       }
     }
 
-    return csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    return csvData.map(row => row.map(cell => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
   }
 
   /**
@@ -480,6 +490,7 @@ class BenchmarkReportGenerator {
     <div class="report-container">
         <header class="report-header">
             <h1>${report.metadata.reportTitle}</h1>
+            <p>Harness mode: ${['production-parity', 'oracle-assisted'].includes(report.metadata.harness.harness_mode) ? report.metadata.harness.harness_mode : 'unknown'}</p>
             <div class="report-meta">
                 <p>Generated: ${new Date(report.metadata.generatedAt).toLocaleString()}</p>
                 <p>Duration: ${report.metadata.benchmarkSession.duration}</p>

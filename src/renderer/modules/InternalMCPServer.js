@@ -56,6 +56,10 @@ class InternalMCPServer {
       throw new Error('Genome Studio instance not available');
     }
 
+    if (Number.isFinite(executionContext?.requestDeadline) && Date.now() >= executionContext.requestDeadline) {
+      throw new Error('The MCP request deadline elapsed before renderer execution began');
+    }
+
     // Genome-identity guard: if the client asserted which genome it expects
     // (expected_genome), fail loudly when this window has a different genome
     // loaded rather than returning data computed against the wrong genome.
@@ -321,6 +325,7 @@ class InternalMCPServer {
     const result = await chatManager.processAgentPrompt(parameters.prompt, {
       activateMultiAgent: parameters.activate_multi_agent || false,
       context: parameters.context || {},
+      requestDeadline: executionContext?.requestDeadline,
       onProgress,
     });
 

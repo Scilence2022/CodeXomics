@@ -17,7 +17,7 @@ function loadMethod(relativePath, signatures) {
 
 const TIMEOUT_METHODS = [
   'findEarlyReturnSubmission(test, error)',
-  'abortTimedOutConversation(test, error)',
+  'abortTimedOutConversation(test, error, execution)',
   'isTestTimeoutError(error)',
 ];
 
@@ -127,7 +127,7 @@ describe('cancelling the conversation a timed-out test left running', () => {
   // looping over tool calls keeps executing them into the tests that follow.
   const makeChatManager = () => {
     const chatManager = {
-      conversationState: { isProcessing: true, abortController: { abort: () => {} } },
+      conversationState: { isProcessing: true, currentRequestId: 'owned', abortController: { abort: () => {} } },
       aborted: 0,
       abortCurrentConversation() {
         this.aborted++;
@@ -145,11 +145,12 @@ describe('cancelling the conversation a timed-out test left running', () => {
   };
 
   const test = { id: 'protein_auto_complex_02' };
+  const execution = () => ({ controller: new AbortController(), conversation: { requestId: 'owned' } });
 
   it('aborts a conversation still processing after the timeout', () => {
     const chatManager = makeChatManager();
 
-    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout);
+    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout, execution());
 
     expect(chatManager.aborted).toBe(1);
     expect(chatManager.conversationState.isProcessing).toBe(false);
@@ -159,7 +160,7 @@ describe('cancelling the conversation a timed-out test left running', () => {
     const chatManager = makeChatManager();
     chatManager.conversationState.isProcessing = false;
 
-    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout);
+    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout, execution());
 
     expect(chatManager.aborted).toBe(0);
   });
@@ -167,7 +168,7 @@ describe('cancelling the conversation a timed-out test left running', () => {
   it('does not abort on a genuine (non-timeout) error', () => {
     const chatManager = makeChatManager();
 
-    makeFrameworkFor(chatManager).abortTimedOutConversation(test, new Error('BLAST binary not found'));
+    makeFrameworkFor(chatManager).abortTimedOutConversation(test, new Error('BLAST binary not found'), execution());
 
     expect(chatManager.aborted).toBe(0);
   });
@@ -175,16 +176,16 @@ describe('cancelling the conversation a timed-out test left running', () => {
   it('falls back to the abort controller when no abort method exists', () => {
     let aborted = 0;
     const chatManager = {
-      conversationState: { isProcessing: true, abortController: { abort: () => aborted++ } },
+      conversationState: { isProcessing: true, currentRequestId: 'owned', abortController: { abort: () => aborted++ } },
     };
 
-    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout);
+    makeFrameworkFor(chatManager).abortTimedOutConversation(test, timeout, execution());
 
     expect(aborted).toBe(1);
   });
 
   it('is inert without a chat manager', () => {
-    expect(() => makeFrameworkFor(null).abortTimedOutConversation(test, timeout)).not.toThrow();
+    expect(() => makeFrameworkFor(null).abortTimedOutConversation(test, timeout, execution())).not.toThrow();
   });
 });
 
