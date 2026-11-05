@@ -3,9 +3,10 @@ import { describe, expect, it, beforeEach } from 'vitest';
 // Controllable safeStorage stub injected via the module's test seam. encryptString/
 // decryptString implement a trivial reversible transform so we can assert
 // round-trips without a real OS keychain.
-const mockState = { available: true };
+const mockState = { available: true, backend: 'gnome_libsecret' };
 const stubSafeStorage = {
   isEncryptionAvailable: () => mockState.available,
+  getSelectedStorageBackend: () => mockState.backend,
   encryptString: plaintext => Buffer.from(`enc(${plaintext})`, 'utf8'),
   decryptString: buffer => {
     const wrapped = buffer.toString('utf8');
@@ -22,6 +23,7 @@ const {
   encryptSecretsInPlace,
   decryptSecretsInPlace,
   isEncryptedValue,
+  prepareConfigForStorage,
   __setSafeStorageForTesting,
 } = await import('../../src/main/secret-store.js');
 
@@ -30,6 +32,7 @@ __setSafeStorageForTesting(stubSafeStorage);
 describe('secret-store', () => {
   beforeEach(() => {
     mockState.available = true;
+    mockState.backend = 'gnome_libsecret';
   });
 
   it('round-trips a single secret through encrypt/decrypt', () => {
@@ -87,9 +90,34 @@ describe('secret-store', () => {
     expect(config.customProviders[1].apiKey).toBe('k2');
   });
 
-  it('falls back to plaintext when OS encryption is unavailable', () => {
+  it('requires protected storage for new credentials', () => {
     mockState.available = false;
-    expect(encryptSecret('sk-plain')).toBe('sk-plain');
+    expect(() => encryptSecret('sk-plain')).toThrow('OS credential encryption is unavailable');
+    mockState.available = true;
+    mockState.backend = 'basic_text';
+    expect(() => encryptSecret('sk-plain')).toThrow('OS credential encryption is unavailable');
+  });
+
+  it('keeps the encrypted key when an unavailable keyring produces a blank renderer field', () => {
+    const encrypted = encryptSecret('old-key');
+    mockState.available = false;
+    const result = prepareConfigForStorage(
+      { provider: { apiKey: '', model: 'updated' } },
+      { provider: { apiKey: encrypted, model: 'old' } }
+    );
+    expect(result.credentialsPersisted).toBe(false);
+    expect(result.config.provider).toEqual({ apiKey: encrypted, model: 'updated' });
+  });
+
+  it('keeps old keys and new non-secret settings during a keyring outage', () => {
+    const encrypted = encryptSecret('old-key');
+    mockState.available = false;
+    const result = prepareConfigForStorage(
+      { providers: { old: { apiKey: 'replacement' }, new: { apiKey: 'new-key', model: 'model' } } },
+      { providers: { old: { apiKey: encrypted } } }
+    );
+    expect(result.credentialsPersisted).toBe(false);
+    expect(result.config.providers).toEqual({ old: { apiKey: encrypted }, new: { apiKey: '', model: 'model' } });
   });
 
   it('clears a field that cannot be decrypted rather than throwing', () => {

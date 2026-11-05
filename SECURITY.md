@@ -48,6 +48,8 @@ CodeXomics is an Electron desktop application. The current hardening baseline:
   with an executable allowlist — never through a shell.
 - **Secrets at rest:** LLM API keys are encrypted with the OS keychain via
   Electron `safeStorage` before being written to disk (`src/main/secret-store.js`).
+  New keys stay in memory when OS-backed storage is unavailable. Configuration
+  exports omit credentials.
 - **Dependencies:** CI runs `npm audit --omit=dev --audit-level=high` on the lockfile. Review moderate and lower findings through `npm audit --omit=dev`.
 
 ## Known Hardening Follow-ups

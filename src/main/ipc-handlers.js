@@ -19,7 +19,7 @@ const pluginPackageStore = require('./plugin-package-store');
 const { registerPluginVersionIpc } = require('./plugin-version-ipc');
 const { extractPluginArchive } = require('./plugin-archive');
 const VERSION_INFO = require('../version');
-const { encryptSecretsInPlace, decryptSecretsInPlace } = require('./secret-store');
+const { prepareConfigForStorage, decryptSecretsInPlace } = require('./secret-store');
 const workspaceHostManager = require('./workspace-host-manager');
 const {
   createSecureWebPreferences,
@@ -300,7 +300,13 @@ function writeJsonFile(filePath, data) {
       `Configuration section is too large to persist safely: ${(byteLength / 1024 / 1024).toFixed(1)} MB`
     );
   }
-  fs.writeFileSync(filePath, payload, 'utf8');
+  const temporaryPath = `${filePath}.${crypto.randomUUID()}.tmp`;
+  try {
+    fs.writeFileSync(temporaryPath, payload, { encoding: 'utf8', mode: 0o600 });
+    fs.renameSync(temporaryPath, filePath);
+  } finally {
+    fs.rmSync(temporaryPath, { force: true });
+  }
 }
 
 function readGeneralSettingsIfPresent() {
@@ -2733,23 +2739,24 @@ function registerIpcHandlers(deps) {
       const paths = getConfigStoragePaths();
       fs.mkdirSync(dir, { recursive: true });
 
+      const legacyConfig = readConfigFileIfPresent(paths.main);
+      let credentialsPersisted = true;
+      for (const [section, filePath] of Object.entries(paths)) {
+        if (section === 'main' || config[section] === undefined) continue;
+        const previous = readConfigFileIfPresent(filePath) ?? legacyConfig?.[section];
+        const result = prepareConfigForStorage(config[section], previous);
+        writeJsonFile(filePath, result.config);
+        credentialsPersisted = credentialsPersisted && result.credentialsPersisted;
+      }
+
       writeJsonFile(paths.main, {
         version: config.version || VERSION_INFO.fullVersion,
         lastModified: new Date().toISOString(),
       });
 
-      for (const [section, filePath] of Object.entries(paths)) {
-        if (section === 'main') continue;
-        if (config[section] !== undefined) {
-          // Encrypt secret fields (API keys) at rest via the OS keychain before
-          // writing. The incoming config is an IPC structured-clone copy, so
-          // mutating it here does not affect the renderer's in-memory state.
-          writeJsonFile(filePath, encryptSecretsInPlace(config[section]));
-        }
-      }
-
       return {
         success: true,
+        credentialsPersisted,
         configPath: {
           dir,
           ...paths,

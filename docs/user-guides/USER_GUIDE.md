@@ -104,6 +104,10 @@ Options → Configure LLM Providers
 - **Google**: Get key from https://ai.google.dev/
 - **SiliconFlow**: Get key from https://siliconflow.cn/
 
+Provider keys use OS-backed credential storage. If that storage is unavailable,
+newly entered keys are available for the current session and the provider settings
+display a warning. Previously saved keys remain available when the OS store recovers.
+
 **Model Lists Stay Current:**
 
 - Each provider tab fetches its live model list once credentials are saved, so newly released models appear without an app update

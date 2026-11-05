@@ -13,17 +13,17 @@
  *    main process around config:load / config:save.
  *  - Backward compatible: existing plaintext configs load fine and are migrated to
  *    encrypted form on the next save.
- *  - Fail-soft: if encryption is unavailable (e.g. a headless Linux box with no
- *    keyring) values are written in plaintext so the app keeps working, and a
- *    warning is logged. Decryption failures degrade to an empty string for the
- *    affected field rather than aborting the whole config load.
+ *  - Preserve existing credentials during a keyring outage. New credentials
+ *    require an OS-backed provider and are never written as plaintext.
  */
+
+const { CONFIG_CREDENTIAL_FIELDS, mapConfigurationCredentials } = require('../shared/configuration-credentials');
 
 // Marker prefix identifying a safeStorage-encrypted, base64-encoded value.
 const ENCRYPTED_PREFIX = 'sfs:v1:';
 
 // Field names treated as secrets and encrypted at rest (case-insensitive match).
-const DEFAULT_SECRET_KEYS = Object.freeze(['apikey', 'api_key', 'apitoken', 'accesstoken', 'secretkey']);
+const DEFAULT_SECRET_KEYS = CONFIG_CREDENTIAL_FIELDS;
 
 // safeStorage is resolved lazily: requiring 'electron' outside an Electron runtime
 // returns the binary path (a string) rather than the API object, so we guard for
@@ -54,7 +54,9 @@ function __setSafeStorageForTesting(stub) {
 function isEncryptionAvailable() {
   try {
     const safeStorage = getSafeStorage();
-    return !!safeStorage && safeStorage.isEncryptionAvailable();
+    return (
+      !!safeStorage && safeStorage.isEncryptionAvailable() && safeStorage.getSelectedStorageBackend?.() !== 'basic_text'
+    );
   } catch (error) {
     return false;
   }
@@ -64,30 +66,19 @@ function isEncryptedValue(value) {
   return typeof value === 'string' && value.startsWith(ENCRYPTED_PREFIX);
 }
 
-function isSecretKey(key, secretKeys) {
-  return secretKeys.includes(String(key).toLowerCase());
-}
-
-/**
- * Encrypt a plaintext string into the marker-prefixed base64 form.
- * Returns the original value unchanged if it is empty, already encrypted, or if
- * OS encryption is unavailable.
- */
 function encryptSecret(value) {
-  if (typeof value !== 'string' || value.length === 0 || isEncryptedValue(value)) {
-    return value;
+  if (typeof value !== 'string' || value.length === 0 || isEncryptedValue(value)) return value;
+  if (isEncryptionAvailable()) {
+    try {
+      const encrypted = getSafeStorage().encryptString(value);
+      return ENCRYPTED_PREFIX + encrypted.toString('base64');
+    } catch {
+      // Report the storage failure without including the attempted value.
+    }
   }
-  const safeStorage = getSafeStorage();
-  if (!safeStorage || !isEncryptionAvailable()) {
-    return value;
-  }
-  try {
-    const encrypted = safeStorage.encryptString(value);
-    return ENCRYPTED_PREFIX + encrypted.toString('base64');
-  } catch (error) {
-    console.warn('[secret-store] Failed to encrypt secret, storing as-is:', error.message);
-    return value;
-  }
+  const error = new Error('OS credential encryption is unavailable');
+  error.code = 'CREDENTIAL_STORAGE_UNAVAILABLE';
+  throw error;
 }
 
 /**
@@ -99,60 +90,46 @@ function decryptSecret(value) {
     return value;
   }
   const safeStorage = getSafeStorage();
-  if (!safeStorage || !isEncryptionAvailable()) {
-    console.warn('[secret-store] Encrypted secret found but OS encryption is unavailable');
-    return '';
-  }
   try {
+    if (!safeStorage?.isEncryptionAvailable()) return '';
     const buffer = Buffer.from(value.slice(ENCRYPTED_PREFIX.length), 'base64');
     return safeStorage.decryptString(buffer);
-  } catch (error) {
-    console.warn('[secret-store] Failed to decrypt secret, clearing field:', error.message);
+  } catch {
+    console.warn('[secret-store] Could not decrypt a stored credential');
     return '';
   }
 }
 
-function transformSecretsInPlace(node, transform, secretKeys, seen) {
-  if (!node || typeof node !== 'object') {
-    return node;
-  }
-  if (seen.has(node)) {
-    return node;
-  }
-  seen.add(node);
-
-  if (Array.isArray(node)) {
-    for (const item of node) {
-      transformSecretsInPlace(item, transform, secretKeys, seen);
-    }
-    return node;
-  }
-
-  for (const key of Object.keys(node)) {
-    const current = node[key];
-    if (typeof current === 'string' && isSecretKey(key, secretKeys)) {
-      node[key] = transform(current);
-    } else if (current && typeof current === 'object') {
-      transformSecretsInPlace(current, transform, secretKeys, seen);
-    }
-  }
-  return node;
-}
-
-/**
- * Recursively encrypt every secret-named string field within a config object.
- * Mutates and returns the object.
- */
 function encryptSecretsInPlace(config, secretKeys = DEFAULT_SECRET_KEYS) {
-  return transformSecretsInPlace(config, encryptSecret, secretKeys, new WeakSet());
+  return mapConfigurationCredentials(config, encryptSecret, null, secretKeys);
 }
 
-/**
- * Recursively decrypt every secret-named string field within a config object.
- * Mutates and returns the object.
- */
 function decryptSecretsInPlace(config, secretKeys = DEFAULT_SECRET_KEYS) {
-  return transformSecretsInPlace(config, decryptSecret, secretKeys, new WeakSet());
+  return mapConfigurationCredentials(config, decryptSecret, null, secretKeys);
+}
+
+function prepareConfigForStorage(config, stored) {
+  let credentialsPersisted = true;
+  mapConfigurationCredentials(
+    config,
+    (value, previous) => {
+      // The renderer sees a blank field when a previously stored secret cannot be
+      // decrypted. A background settings save must preserve the opaque value.
+      if (!value && isEncryptedValue(previous) && !decryptSecret(previous)) {
+        credentialsPersisted = false;
+        return previous;
+      }
+      try {
+        return encryptSecret(value);
+      } catch (error) {
+        if (error.code !== 'CREDENTIAL_STORAGE_UNAVAILABLE') throw error;
+        if (value !== previous) credentialsPersisted = false;
+        return typeof previous === 'string' ? previous : '';
+      }
+    },
+    stored
+  );
+  return { config, credentialsPersisted };
 }
 
 module.exports = {
@@ -160,6 +137,7 @@ module.exports = {
   DEFAULT_SECRET_KEYS,
   __setSafeStorageForTesting,
   isEncryptionAvailable,
+  prepareConfigForStorage,
   isEncryptedValue,
   encryptSecret,
   decryptSecret,

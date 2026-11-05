@@ -819,7 +819,6 @@ class LLMConfigManager {
         console.log('Using ConfigManager for loading LLM configuration');
         // Use ConfigManager if available
         const llmConfig = this.configManager.get('llm');
-        console.log('Retrieved LLM config from ConfigManager:', llmConfig);
 
         if (llmConfig && llmConfig.providers) {
           console.log('LLM config has providers, merging...');
@@ -847,19 +846,8 @@ class LLMConfigManager {
           console.log('No LLM providers found in ConfigManager config');
         }
 
-        // Restore saved local configs from ConfigManager (file-based storage)
-        // so they survive Electron restarts. Only migrate if localStorage is empty
-        // to avoid overwriting newer localStorage data.
         const savedLocalConfigs = this.configManager.get('llm.localCustomConfigs');
-        if (savedLocalConfigs && Object.keys(savedLocalConfigs).length > 0) {
-          const existingLocalConfigs = this.getLocalSavedConfigs();
-          if (Object.keys(existingLocalConfigs).length === 0) {
-            console.log('Restoring localCustomConfigs from ConfigManager:', Object.keys(savedLocalConfigs));
-            this.persistLocalSavedConfigs(savedLocalConfigs);
-          } else {
-            console.log('localCustomConfigs already in localStorage, skipping ConfigManager restore');
-          }
-        }
+        this.localSavedConfigs = savedLocalConfigs ?? this.getLocalSavedConfigs();
       } else {
         console.log('No ConfigManager available, using localStorage fallback');
         // Fallback to localStorage
@@ -879,6 +867,9 @@ class LLMConfigManager {
       }
     } catch (error) {
       console.error('Error loading LLM configuration:', error);
+    }
+    for (const [key, provider] of Object.entries(this.providers)) {
+      if (key !== 'local' && provider && !provider.apiKey) provider.enabled = false;
     }
     this.reconcileBuiltInModelLists();
     console.log('=== LLMConfigManager.loadConfiguration Debug End ===');
@@ -967,27 +958,8 @@ class LLMConfigManager {
       // unsaved form changes with stale in-memory values.
       this.syncAllProvidersFromForm();
 
-      // Save to ConfigManager or localStorage
-      if (this.configManager) {
-        await this.configManager.set('llm.providers', this.providers);
-        await this.configManager.set('llm.modelTypes', this.modelTypes);
-        // Also persist localCustomConfigs to ConfigManager so saved endpoint
-        // configurations survive across Electron restarts (file-based storage)
-        const localCustomConfigs = this.getLocalSavedConfigs();
-        await this.configManager.set('llm.localCustomConfigs', localCustomConfigs);
-        await this.configManager.saveConfig();
-      } else {
-        localStorage.setItem(
-          'llmConfiguration',
-          JSON.stringify({
-            providers: this.providers,
-            modelTypes: this.modelTypes,
-          })
-        );
-      }
-
-      this.showNotification(`${provider.name} configuration saved successfully!`, 'success');
-      console.log(`${provider.name} configuration saved:`, provider);
+      const result = await this.persistProviderConfiguration();
+      this.notifyConfigurationSave(result, `${provider.name} configuration saved successfully!`);
 
       // New credentials mean a different model list — fetch it right away
       // instead of waiting for the cache to expire.
@@ -1143,34 +1115,33 @@ class LLMConfigManager {
       // Save model type selection
       this.saveModelTypeSelection();
 
-      if (this.configManager) {
-        // Use ConfigManager if available (now with async support)
-        await this.configManager.set('llm.providers', this.providers);
-        await this.configManager.set('llm.modelTypes', this.modelTypes);
-        // Also persist localCustomConfigs so saved endpoint configurations
-        // survive across Electron restarts (file-based storage)
-        const localCustomConfigs = this.getLocalSavedConfigs();
-        await this.configManager.set('llm.localCustomConfigs', localCustomConfigs);
-        await this.configManager.saveConfig();
-        console.log('Configuration saved via ConfigManager');
-      } else {
-        // Fallback to localStorage
-        const config = {
-          providers: this.providers,
-          modelTypes: this.modelTypes,
-        };
-        localStorage.setItem('llmConfiguration', JSON.stringify(config));
-        console.log('Configuration saved to localStorage');
-      }
-
+      const result = await this.persistProviderConfiguration();
       this.updateUI();
       this.hideConfigModal();
-
-      // Show success message
-      this.showNotification('Configuration saved successfully!', 'success');
+      this.notifyConfigurationSave(result, 'Configuration saved successfully!');
     } catch (error) {
       console.error('Error saving LLM configuration:', error);
       this.showNotification('Error saving configuration: ' + error.message, 'error');
+    }
+  }
+
+  saveBrowserProviderConfiguration() {
+    return window.configurationCredentials.saveFallbackConfiguration(localStorage, 'llmConfiguration', {
+      providers: this.providers,
+      modelTypes: this.modelTypes,
+    });
+  }
+
+  notifyConfigurationSave(result, message) {
+    if (result?.success === false) {
+      this.showNotification('Unable to save configuration. Changes are available for this session.', 'error');
+    } else if (result?.credentialsPersisted === false) {
+      this.showNotification(
+        'Credential storage is unavailable. Changed credentials are available for this session.',
+        'warning'
+      );
+    } else {
+      this.showNotification(message, 'success');
     }
   }
 
@@ -1197,9 +1168,7 @@ class LLMConfigManager {
             event.preventDefault();
             event.stopPropagation();
             const pasteData = (event.clipboardData || window.clipboardData).getData('text');
-            console.log(`Pasted data for ${apiKeyField.id}: ${pasteData}`);
             apiKeyField.value = pasteData;
-            console.log(`Set ${apiKeyField.id} value to: ${apiKeyField.value}`);
           });
           apiKeyField.dataset.pasteListenerAttached = 'true';
           console.log(`Paste listener added to ${apiKeyField.id}`);
@@ -2037,13 +2006,7 @@ class LLMConfigManager {
         await this.configManager.set('llm.providers', this.providers);
         await this.configManager.saveConfig();
       } else {
-        localStorage.setItem(
-          'llmConfiguration',
-          JSON.stringify({
-            providers: this.providers,
-            modelTypes: this.modelTypes,
-          })
-        );
+        this.saveBrowserProviderConfiguration();
       }
     } catch (error) {
       console.error('Error persisting refreshed model lists:', error);
@@ -4430,6 +4393,7 @@ Current context summary:
    * { baseUrl, model, apiKey, streamingSupport, savedAt }
    */
   getLocalSavedConfigs() {
+    if (this.localSavedConfigs) return this.localSavedConfigs;
     try {
       const data = localStorage.getItem('localCustomConfigs');
       return data ? JSON.parse(data) : {};
@@ -4439,16 +4403,8 @@ Current context summary:
     }
   }
 
-  /**
-   * Persist saved configurations to localStorage
-   */
   persistLocalSavedConfigs(configs) {
-    try {
-      localStorage.setItem('localCustomConfigs', JSON.stringify(configs));
-    } catch (e) {
-      console.error('Error saving local configs:', e);
-      this.showNotification('Error saving configuration: ' + e.message, 'error');
-    }
+    this.localSavedConfigs = configs;
   }
 
   /**
@@ -4566,7 +4522,7 @@ Current context summary:
   /**
    * Save current Custom Endpoint settings as a named configuration
    */
-  saveLocalConfig() {
+  async saveLocalConfig() {
     const config = this.collectLocalConfig();
 
     if (!config.model) {
@@ -4607,9 +4563,8 @@ Current context summary:
     this.providers.local.enabled = !!this.providers.local.model;
 
     // Persist active provider and saved configs to ConfigManager
-    this.persistLocalConfigToConfigManager();
-
-    this.showNotification(`Configuration "${name}" saved`, 'success');
+    const result = await this.persistProviderConfiguration();
+    this.notifyConfigurationSave(result, `Configuration "${name}" saved`);
   }
 
   /**
@@ -4679,7 +4634,7 @@ Current context summary:
   /**
    * Delete a selected configuration from the saved list
    */
-  deleteLocalConfig() {
+  async deleteLocalConfig() {
     const listSelect = document.getElementById('localSavedConfigsList');
     if (!listSelect || !listSelect.value) {
       this.showNotification('Please select a configuration to delete', 'warning');
@@ -4697,34 +4652,38 @@ Current context summary:
     this.refreshLocalSavedConfigs();
 
     // Sync deletion to ConfigManager
-    this.persistLocalConfigToConfigManager();
-
-    this.showNotification(`Configuration "${configName}" deleted`, 'success');
+    const result = await this.persistProviderConfiguration();
+    this.notifyConfigurationSave(result, `Configuration "${configName}" deleted`);
   }
 
-  /**
-   * Persist the active local provider and saved local configs to ConfigManager
-   * so they survive across Electron restarts (file-based storage).
-   * Falls back to localStorage when ConfigManager is unavailable.
-   */
-  async persistLocalConfigToConfigManager() {
+  async persistProviderConfiguration() {
     try {
       const localCustomConfigs = this.getLocalSavedConfigs();
       if (this.configManager) {
         await this.configManager.set('llm.providers', this.providers);
+        await this.configManager.set('llm.modelTypes', this.modelTypes);
         await this.configManager.set('llm.localCustomConfigs', localCustomConfigs);
-        await this.configManager.saveConfig();
-      } else {
-        localStorage.setItem(
-          'llmConfiguration',
-          JSON.stringify({
-            providers: this.providers,
-            modelTypes: this.modelTypes,
-          })
-        );
+        const result = await this.configManager.saveConfig();
+        if (result?.credentialsPersisted && result.configPath) {
+          window.configurationCredentials.clearMigratedFallbackConfiguration(
+            localStorage,
+            'localCustomConfigs',
+            localCustomConfigs
+          );
+        }
+        return result;
       }
+
+      const providers = this.saveBrowserProviderConfiguration();
+      const saved = window.configurationCredentials.saveFallbackConfiguration(
+        localStorage,
+        'localCustomConfigs',
+        localCustomConfigs
+      );
+      return { success: true, credentialsPersisted: providers.credentialsPersisted && saved.credentialsPersisted };
     } catch (error) {
-      console.error('Error persisting local config to ConfigManager:', error);
+      console.error('Error persisting provider configuration:', error);
+      return { success: false, credentialsPersisted: false };
     }
   }
 }
