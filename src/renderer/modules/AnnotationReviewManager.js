@@ -801,7 +801,8 @@ class AnnotationReviewManager {
         this._notify('Research report is not available for this ChangeSet.', 'error');
         return;
       }
-      reader(this.app?.loadedGenomePath || '', taskId)
+      const digest = this.app?.loadedGenomeSourceSha256;
+      reader(this.app?.loadedGenomePath || '', taskId, ...(digest ? [digest] : []))
         .then(result => {
           if (result?.success && result.reportMarkdown) this._showResearchReportModal(result);
           else this._notify(result?.error || 'Research report is not available for this ChangeSet.', 'error');

@@ -42,6 +42,7 @@ const { SkillRegistryService } = require('./skill-registry-service');
 const { proxyDgrMcpRequest, uploadDgrResearchDocument, MAX_DOCUMENT_BYTES } = require('./dgr-mcp-proxy');
 const { archiveDgrTaskResult, readDgrArtifact } = require('./dgr-artifact-storage');
 const { resolveCaptureRect } = require('./screenshot-rect');
+const { isGenomeSource, readGenomeSource, genomeSourceChanged } = require('./genome-source');
 const {
   assertSidecarContentSize,
   assertSidecarValueSize,
@@ -769,6 +770,29 @@ function registerIpcHandlers(deps) {
     }
   };
 
+  const withGenomeSidecar = async (genomePath, expectedSha256, operation) => {
+    const paths = resolveSidecarPaths(genomePath);
+    return withSidecarWriteLock(paths.safeGenomePath, async () => {
+      const gzip = /\.gz$/i.test(paths.authorizedGenomePath);
+      const source = await readGenomeSource(paths.safeGenomePath, { gzip });
+      if (
+        (expectedSha256 && expectedSha256 !== source.sha256) ||
+        (await fs.promises.realpath(paths.authorizedGenomePath)) !== paths.safeGenomePath
+      ) {
+        throw genomeSourceChanged();
+      }
+      const prefix = `${paths.sourcePathHash}.`;
+      const filename = `${prefix}${source.sha256}.CodeXomics`;
+      return operation({
+        ...paths,
+        source,
+        boundSidecarPath: path.join(paths.sidecarDir, filename),
+        boundFallbackPath: path.join(paths.fallbackDir, filename),
+        boundPrefix: prefix,
+      });
+    });
+  };
+
   const readNewestSidecarCandidate = async (paths, options = {}) => {
     const existingPaths = paths.filter(candidatePath => candidatePath && fs.existsSync(candidatePath));
     if (existingPaths.length === 0) return null;
@@ -788,8 +812,6 @@ function registerIpcHandlers(deps) {
           throw new Error('sidecar root must be a JSON object');
         }
         const isLegacyAdjacent = candidatePath === options.legacyAdjacentPath;
-        const isLegacyFallback = options.legacyFallbackPaths?.includes(candidatePath) || false;
-        const isLegacy = isLegacyAdjacent || isLegacyFallback;
         if (isLegacyAdjacent && !data._sourceGenomePathSha256 && !data._originalPath) {
           // Legacy adjacent files without a path binding can be adopted only
           // when their recorded source agrees and there is no competing stem.
@@ -813,6 +835,12 @@ function registerIpcHandlers(deps) {
             throw error;
           }
         }
+        if (data._sourceGenomeSha256 !== options.source.sha256) {
+          if (options.requireContentBinding) {
+            throw new Error('Companion file content binding does not match the genome');
+          }
+          if (data._sourceGenomeSha256) continue;
+        }
         const storageRevision =
           Number.isInteger(data._storageRevision) && data._storageRevision >= 0 ? data._storageRevision : 0;
         validCandidates.push({
@@ -822,7 +850,6 @@ function registerIpcHandlers(deps) {
           // File mtime is controlled by the storage layer. Never let a
           // caller-supplied future lastModified value win candidate selection.
           modifiedAt: stats.mtimeMs || 0,
-          isLegacy,
         });
       } catch (error) {
         errors.push(`${candidatePath}: ${error.message}`);
@@ -852,11 +879,38 @@ function registerIpcHandlers(deps) {
   };
 
   const findSidecarCandidate = async paths => {
-    const primary = (await isSidecarDirectoryUsable(paths.sidecarDir)) ? paths.sidecarPath : null;
-    return (
-      (await readNewestSidecarCandidate([primary, paths.fallbackPath], paths)) ||
-      readNewestSidecarCandidate([paths.legacyAdjacentPath, ...paths.legacyFallbackPaths], paths)
+    const adjacent = await isSidecarDirectoryUsable(paths.sidecarDir);
+    const bound = await readNewestSidecarCandidate(
+      [adjacent ? paths.boundSidecarPath : null, paths.boundFallbackPath],
+      { ...paths, requireContentBinding: true }
     );
+    if (bound) return { selected: bound };
+
+    const legacy =
+      (await readNewestSidecarCandidate([adjacent ? paths.sidecarPath : null, paths.fallbackPath], paths)) ||
+      (await readNewestSidecarCandidate([paths.legacyAdjacentPath, ...paths.legacyFallbackPaths], paths));
+    if (!legacy) return { selected: null };
+
+    // An older path-only companion has no proof of the original bytes. Leave
+    // it intact when the source changed after its last write or another
+    // assembly at this path has already established a content binding.
+    if (legacy.modifiedAt < paths.source.changedAtMs) return { selected: null, legacySkipped: true };
+    for (const directory of [adjacent ? paths.sidecarDir : null, paths.fallbackDir].filter(Boolean)) {
+      const names = await fs.promises.readdir(directory).catch(error => {
+        if (error.code === 'ENOENT') return [];
+        throw error;
+      });
+      if (
+        names.some(
+          name =>
+            name.startsWith(paths.boundPrefix) &&
+            /^[a-f0-9]{64}\.CodeXomics$/.test(name.slice(paths.boundPrefix.length))
+        )
+      ) {
+        return { selected: null, legacySkipped: true };
+      }
+    }
+    return { selected: legacy };
   };
 
   const sanitizeScreenshotFormat = format => {
@@ -1442,15 +1496,14 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('read-dgr-report-attachment', async (event, genomePath, taskId) => {
+  ipcMain.handle('read-dgr-report-attachment', async (event, genomePath, taskId, sourceSha256) => {
     try {
       if (!isMainFrameAtFile(event, genomePage) || !isRegisteredGenomeSender(event)) {
         return { success: false, error: 'DGR reports are limited to registered genome windows' };
       }
       const task = String(taskId || '').trim();
       if (!task) return { success: false, error: 'Missing DGR task id' };
-      const paths = resolveSidecarPaths(genomePath);
-      const selected = await withSidecarWriteLock(paths.safeGenomePath, () => findSidecarCandidate(paths));
+      const { selected } = await withGenomeSidecar(genomePath, sourceSha256, findSidecarCandidate);
       if (!selected) return { success: false, error: 'Genome sidecar not found' };
       const sidecar = selected.data;
       const attachments = Object.values(sidecar.geneAttachments || {})
@@ -1487,56 +1540,63 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('load-sidecar-file', async (event, genomePath) => {
+  ipcMain.handle('load-sidecar-file', async (event, genomePath, sourceSha256) => {
     try {
-      const paths = resolveSidecarPaths(genomePath);
-      const { safeGenomePath, fallbackDir, fallbackPath, sourcePathHash } = paths;
-      return await withSidecarWriteLock(safeGenomePath, async () => {
-        let selected = await findSidecarCandidate(paths);
-
+      return await withGenomeSidecar(genomePath, sourceSha256, async paths => {
+        const { safeGenomePath, fallbackDir, boundFallbackPath, sourcePathHash, source } = paths;
+        const { selected, legacySkipped } = await findSidecarCandidate(paths);
         if (!selected) {
-          return { success: true, exists: false, data: null };
+          return { success: true, exists: false, data: null, sourceSha256: source.sha256, legacySkipped };
         }
 
-        if (selected.isLegacy) {
-          const migratedData = createMigratedSidecarData(selected.data, safeGenomePath, sourcePathHash);
-          await fs.promises.mkdir(fallbackDir, { recursive: true });
-          assertSidecarValueSize(migratedData);
-          const migratedContent = JSON.stringify(migratedData, null, 2);
-          assertSidecarContentSize(migratedContent);
-          await writeFileAtomically(fallbackPath, migratedContent);
-          selected = {
-            ...selected,
-            path: fallbackPath,
-            data: migratedData,
-            isLegacy: false,
+        let { path: selectedPath, data } = selected;
+        if (data._sourceGenomeSha256 !== source.sha256) {
+          data = {
+            ...createMigratedSidecarData(data, safeGenomePath, sourcePathHash),
+            _sourceGenomeSha256: source.sha256,
           };
+          await fs.promises.mkdir(fallbackDir, { recursive: true });
+          assertSidecarValueSize(data);
+          const content = JSON.stringify(data, null, 2);
+          assertSidecarContentSize(content);
+          await writeFileAtomically(boundFallbackPath, content);
+          selectedPath = boundFallbackPath;
         }
 
         return {
           success: true,
           exists: true,
-          path: selected.path,
-          data: selected.data,
+          path: selectedPath,
+          data,
           storageRevision: selected.storageRevision,
           sourceFile: path.basename(safeGenomePath),
+          sourceSha256: source.sha256,
         };
       });
     } catch (error) {
-      return { success: false, exists: false, error: error.message };
+      return { success: false, exists: false, error: error.message, code: error.code };
     }
   });
 
-  ipcMain.handle('save-sidecar-file', async (event, genomePath, data) => {
+  ipcMain.handle('save-sidecar-file', async (event, genomePath, data, sourceSha256) => {
     try {
       if (data !== undefined && (!data || typeof data !== 'object' || Array.isArray(data))) {
         throw new Error('Sidecar data must be a JSON object');
       }
       assertSidecarValueSize(data || {});
-      const paths = resolveSidecarPaths(genomePath);
-      const { safeGenomePath, sidecarPath, sidecarDir, fallbackDir, fallbackPath, sourcePathHash } = paths;
-      return await withSidecarWriteLock(safeGenomePath, async () => {
-        const current = await findSidecarCandidate(paths);
+      return await withGenomeSidecar(genomePath, sourceSha256 || data?._sourceGenomeSha256, async paths => {
+        const {
+          safeGenomePath,
+          boundSidecarPath: sidecarPath,
+          sidecarDir,
+          fallbackDir,
+          boundFallbackPath: fallbackPath,
+          sourcePathHash,
+          source,
+        } = paths;
+        if (data?._sourceGenomeSha256 && data._sourceGenomeSha256 !== source.sha256) throw genomeSourceChanged();
+
+        const { selected: current } = await findSidecarCandidate(paths);
         const expectedRevision =
           Number.isInteger(data?._storageRevision) && data._storageRevision >= 0 ? data._storageRevision : 0;
         const currentRevision = current?.storageRevision || 0;
@@ -1555,6 +1615,7 @@ function registerIpcHandlers(deps) {
           ...(data || {}),
           _storageRevision: storageRevision,
           _sourceGenomePathSha256: sourcePathHash,
+          _sourceGenomeSha256: source.sha256,
           _originalPath: safeGenomePath,
           sourceFile: path.basename(safeGenomePath),
           lastModified: data?.lastModified || new Date().toISOString(),
@@ -1568,7 +1629,13 @@ function registerIpcHandlers(deps) {
             await fs.promises.mkdir(sidecarDir, { recursive: true });
             if (await isSidecarDirectoryUsable(sidecarDir)) {
               await writeFileAtomically(sidecarPath, content);
-              return { success: true, path: sidecarPath, fallback: false, storageRevision };
+              return {
+                success: true,
+                path: sidecarPath,
+                fallback: false,
+                storageRevision,
+                sourceSha256: source.sha256,
+              };
             }
           }
         } catch (writeError) {
@@ -1577,23 +1644,19 @@ function registerIpcHandlers(deps) {
 
         await fs.promises.mkdir(fallbackDir, { recursive: true });
         await writeFileAtomically(fallbackPath, content);
-        return { success: true, path: fallbackPath, fallback: true, storageRevision };
+        return { success: true, path: fallbackPath, fallback: true, storageRevision, sourceSha256: source.sha256 };
       });
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error.message, code: error.code };
     }
   });
 
-  ipcMain.handle('check-sidecar-file', async (event, genomePath) => {
+  ipcMain.handle('check-sidecar-file', async (event, genomePath, sourceSha256) => {
     try {
-      const paths = resolveSidecarPaths(genomePath);
-      const selected = await withSidecarWriteLock(paths.safeGenomePath, () => findSidecarCandidate(paths));
-      return {
-        success: true,
-        exists: Boolean(selected),
-      };
+      const { selected } = await withGenomeSidecar(genomePath, sourceSha256, findSidecarCandidate);
+      return { success: true, exists: Boolean(selected) };
     } catch (error) {
-      return { success: false, exists: false, error: error.message };
+      return { success: false, exists: false, error: error.message, code: error.code };
     }
   });
 
@@ -2110,6 +2173,11 @@ function registerIpcHandlers(deps) {
 
       // Check if this is a gzip compressed file
       const isGzipped = extension === '.gz';
+
+      if (isGenomeSource(safeFilePath)) {
+        const source = await readGenomeSource(safeFilePath, { includeText: true });
+        return { success: true, data: source.text, sourceSha256: source.sha256, isGzipped };
+      }
 
       if (isGzipped) {
         const { pipeline } = require('node:stream/promises');

@@ -120,7 +120,7 @@ describe('file operation IPC hardening', () => {
     );
     expect(source).toContain("code: 'SIDECAR_CONFLICT'");
     expect(source).toContain('expectedRevision !== currentRevision');
-    expect(source).toContain('withSidecarWriteLock(safeGenomePath');
+    expect(source).toContain('withSidecarWriteLock(paths.safeGenomePath');
   });
 
   it('isolates fallback sidecars with SHA-256 and treats the legacy hash only as a migration candidate', () => {
@@ -144,11 +144,9 @@ describe('file operation IPC hardening', () => {
     expect(storageSource).toMatch(/crypto\s*\.createHash\('sha256'\)/);
     expect(source).toContain('buildFallbackPaths(');
     expect(source).toContain('[paths.legacyAdjacentPath, ...paths.legacyFallbackPaths]');
-    expect(source).toContain('if (selected.isLegacy)');
+    expect(source).toContain('await writeFileAtomically(boundFallbackPath, content)');
     expect(source).toContain('_sourceGenomePathSha256: sourcePathHash');
     expect(storageSource).toContain('fallback sidecar has no verifiable genome-path binding');
-    expect(source).toContain('assertSidecarContentSize(migratedContent)');
-    expect(source).toContain('await writeFileAtomically(fallbackPath, migratedContent)');
     expect(source).toContain('assertSidecarContentSize(stats.size)');
     expect(source).toContain('assertSidecarContentSize(content)');
     expect(source).not.toContain('writeFileAtomically(legacyFallbackPath');

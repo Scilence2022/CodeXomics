@@ -14,6 +14,7 @@ function createImportFixture(ipc) {
   });
   const browser = {
     loadedGenomePath: '/previous.gbk',
+    loadedGenomeSourceSha256: 'old-digest',
     currentSequence: { previous: 'ACGT' },
     currentAnnotations: { previous: [{ type: 'gene' }] },
     loadedOperons: [{ name: 'operon' }],
@@ -63,7 +64,11 @@ describe('file import outcomes', () => {
       if (channel === 'get-file-info') {
         return { success: true, info: { name: 'new.gbk', extension: '.gbk', size: 100 } };
       }
-      return { success: true, data: 'LOCUS       new 4 bp DNA linear\nORIGIN\n        1 tgca\n//\n' };
+      return {
+        success: true,
+        data: 'LOCUS       new 4 bp DNA linear\nORIGIN\n        1 tgca\n//\n',
+        sourceSha256: 'new-digest',
+      };
     });
     browser.chatManager = {
       services: {
@@ -83,6 +88,7 @@ describe('file import outcomes', () => {
     expect(manager.currentFile.path).toBe('/previous.gbk');
     expect(browser.currentSequence).toEqual({ previous: 'ACGT' });
     expect(browser.loadedGenomePath).toBe('/previous.gbk');
+    expect(browser.loadedGenomeSourceSha256).toBe('old-digest');
     expect(browser.populateChromosomeSelect).not.toHaveBeenCalled();
   });
 

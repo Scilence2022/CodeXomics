@@ -215,7 +215,14 @@ class GenomeBrowser {
     this.configManager = new ConfigManager();
 
     // Initialize SidecarManager for per-file metadata (notes, attachments)
-    this.sidecarManager = typeof SidecarManager !== 'undefined' ? new SidecarManager() : null;
+    this.sidecarManager =
+      typeof SidecarManager !== 'undefined'
+        ? new SidecarManager({
+            getSourceSha256: genomePath =>
+              genomePath === this.loadedGenomePath ? this.loadedGenomeSourceSha256 : null,
+            isImportingGenome: () => this.fileManager?.isLoadingGenome === true,
+          })
+        : null;
     if (this.sidecarManager) {
       console.log('✅ SidecarManager initialized');
     }
