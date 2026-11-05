@@ -2728,6 +2728,35 @@ describe('AnnotationChangeSetService', () => {
     await expect(reopenedService.restoreCommittedAnnotationOverlay()).rejects.toThrow('unique and contiguous');
   });
 
+  it('replays a historical translation-bound receipt onto the full GenBank translation', async () => {
+    const legacyTranslation = 'M' + 'A'.repeat(99) + '...';
+    const fullTranslation = 'M' + 'A'.repeat(140);
+    annotation.qualifiers.translation = legacyTranslation;
+    const before = JSON.parse(JSON.stringify(annotation));
+    const created = await annotationService.createAnnotationChangeset({
+      identifier: 'b0001',
+      operations: [{ op: 'addQualifier', field: 'note', value: 'historical receipt' }],
+      __executionContext: agentContext,
+    });
+    const approval = await annotationService.requestAnnotationApproval({
+      changeSetId: created.changeSet.id,
+      __executionContext: curatorContext,
+    });
+    await annotationService.applyAnnotationChangeset({
+      changeSetId: created.changeSet.id,
+      approvalToken: approval.approvalToken,
+      __executionContext: curatorContext,
+    });
+
+    before.genbankLegacyTranslation = legacyTranslation;
+    before.qualifiers.translation = fullTranslation;
+    annotationService.app.currentAnnotations['NC_000913.3'] = [before];
+    const reopened = new (loadServices().AnnotationService)(annotationService.app, annotationService.chatManager);
+    await expect(reopened.restoreCommittedAnnotationOverlay()).resolves.toMatchObject({ revision: 1 });
+    expect(before.qualifiers).toMatchObject({ translation: fullTranslation, note: 'historical receipt' });
+    await expect(reopened.restoreCommittedAnnotationOverlay()).resolves.toMatchObject({ revision: 1 });
+  });
+
   it('rejects a committed overlay when a different assembly replaces the genome at the same path', async () => {
     annotationService.app.loadedGenomePath = '/tmp/same-path.gbk';
     annotationService.app.currentSequence = { 'NC_000913.3': 'ATGAAATAG' };

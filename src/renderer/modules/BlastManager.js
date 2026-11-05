@@ -1800,12 +1800,7 @@ class BlastManager {
               if (!processedFeatures.has(featureId)) {
                 processedFeatures.add(featureId);
 
-                const cdsSequence = this.app.exportManager.extractFeatureSequence(sequence, feature);
-                // ExtractFeatureSequence already handles reverse complement, so translate directly
-                const proteinSequence = this.app.exportManager.translateDNA(cdsSequence);
-
-                // Remove trailing asterisks (stop codons) from protein sequence
-                const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
+                const cleanProteinSequence = this.app.exportManager.extractFeatureProtein(sequence, feature);
 
                 const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
 

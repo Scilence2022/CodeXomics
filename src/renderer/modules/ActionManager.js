@@ -472,7 +472,9 @@ class ActionManager {
     const adjustedFeatures = [];
     const removeContainedForReplace = modification.type === 'replace';
     for (const feature of currentFeatures) {
-      if (removeContainedForReplace && feature.start >= modification.start && feature.end <= modification.end) {
+      const [start, end] = feature.genbankLocationSpan || [feature.start, feature.end];
+      const offset = feature.genbankLocationSpan ? feature.start - feature.genbankLocationBounds[0] : 0;
+      if (removeContainedForReplace && start + offset >= modification.start && end + offset <= modification.end) {
         continue;
       }
 
@@ -4817,11 +4819,22 @@ class ActionManager {
     let adjustedStart = feature.start;
     let adjustedEnd = feature.end;
     let isValid = true;
+    let sequenceChanged = false;
 
     // Apply each modification's position offset
     for (const mod of sortedModifications) {
       const modPosition = mod.position || mod.start || 0;
       const modEnd = mod.end || modPosition;
+      const offset = adjustedStart - (feature.genbankLocationBounds?.[0] ?? feature.start);
+      const editStart = feature.genbankLocationSpan ? feature.genbankLocationSpan[0] + offset : adjustedStart;
+      const editEnd = feature.genbankLocationSpan ? feature.genbankLocationSpan[1] + offset : adjustedEnd;
+      if (
+        ['insert', 'delete', 'replace'].includes(mod.type) &&
+        modPosition <= editEnd &&
+        (mod.type === 'insert' ? modPosition > editStart : modEnd >= editStart)
+      ) {
+        sequenceChanged = true;
+      }
 
       switch (mod.type) {
         case 'delete': {
@@ -4933,6 +4946,15 @@ class ActionManager {
       start: adjustedStart,
       end: adjustedEnd,
     };
+
+    if (sequenceChanged) {
+      adjustedFeature.genbankLocationEdited = true;
+      if (Object.hasOwn(adjustedFeature.qualifiers || {}, 'translation')) {
+        adjustedFeature.qualifiers = { ...adjustedFeature.qualifiers };
+        delete adjustedFeature.qualifiers.translation;
+        delete adjustedFeature.genbankLegacyTranslation;
+      }
+    }
 
     // Add a note about position adjustment if positions changed
     if (adjustedStart !== feature.start || adjustedEnd !== feature.end) {

@@ -64,215 +64,33 @@ class ExportManager {
       return;
     }
 
-    const chromosomes = Object.keys(this.genomeBrowser.currentSequence);
-    let genbankContent = '';
-
-    chromosomes.forEach(chr => {
-      const sequence = this.genomeBrowser.currentSequence[chr];
-      const features = this.getExportableFeatures(chr);
-
-      // GenBank header
-      genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10).replace(/-/g, '-')}\n`;
-      genbankContent += `DEFINITION  ${chr}\n`;
-      genbankContent += `ACCESSION   ${chr}\n`;
-      genbankContent += `VERSION     ${chr}\n`;
-      genbankContent += `KEYWORDS    .\n`;
-      genbankContent += `SOURCE      .\n`;
-      genbankContent += `  ORGANISM  .\n`;
-      genbankContent += `FEATURES             Location/Qualifiers\n`;
-      genbankContent += `     source          1..${sequence.length}\n`;
-
-      // Add features with comprehensive qualifier support
-      features.forEach(feature => {
-        const location =
-          feature.strand === '-' ? `complement(${feature.start}..${feature.end})` : `${feature.start}..${feature.end}`;
-
-        genbankContent += `     ${feature.type.padEnd(15)} ${location}\n`;
-
-        // Export all qualifiers using the comprehensive method
-        genbankContent += this.exportFeatureQualifiers(feature);
-      });
-
-      genbankContent += `ORIGIN\n`;
-
-      // Add sequence in GenBank format (60 chars per line, numbered)
-      for (let i = 0; i < sequence.length; i += 60) {
-        const lineNum = (i + 1).toString().padStart(9);
-        const seqLine = sequence.substring(i, i + 60).toLowerCase();
-        const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
-        genbankContent += `${lineNum} ${formattedSeq}\n`;
-      }
-
-      genbankContent += `//\n\n`;
-    });
-
-    this.downloadFile(genbankContent, 'genome.gbk', 'text/plain');
-  }
-
-  // Comprehensive qualifier export method
-  exportFeatureQualifiers(feature) {
-    let qualifierContent = '';
-    const qualifiers = feature.qualifiers || {};
-
-    // Standard qualifier order for GenBank format
-    const standardOrder = [
-      'gene',
-      'locus_tag',
-      'product',
-      'note',
-      'protein_id',
-      'translation',
-      'codon_start',
-      'transl_table',
-      'EC_number',
-      'go_process',
-      'go_function',
-      'go_component',
-      'db_xref',
-      'inference',
-    ];
-
-    // Export standard qualifiers first in proper order
-    standardOrder.forEach(key => {
-      if (qualifiers[key]) {
-        const values = this.genomeBrowser.getAllQualifierValues(qualifiers, key);
-        values.forEach(value => {
-          if (value === true) {
-            qualifierContent += `                     /${key}\n`;
-          } else if (value && value !== '' && value !== 'Unknown') {
-            // Handle special cases
-            let cleanValue = String(value);
-
-            // Handle translation sequences properly
-            if (key === 'translation') {
-              if (this.exportConfig.includeProteinSequences) {
-                // Use the correct protein sequence from the existing algorithm
-                cleanValue = this.getCorrectProteinSequence(feature);
-              } else {
-                // Skip translation export if not configured
-                return;
-              }
-            }
-
-            // Format multi-line qualifiers properly
-            if (cleanValue.length > 60) {
-              const lines = this.wrapQualifierValue(cleanValue, 60);
-              lines.forEach((line, index) => {
-                if (index === 0) {
-                  qualifierContent += `                     /${key}="${line}"\n`;
-                } else {
-                  qualifierContent += `                     "${line}"\n`;
-                }
-              });
-            } else {
-              qualifierContent += `                     /${key}="${cleanValue}"\n`;
-            }
-          }
-        });
-      }
-    });
-
-    // Export any remaining qualifiers not in standard order
-    Object.keys(qualifiers).forEach(key => {
-      if (!standardOrder.includes(key)) {
-        const values = this.genomeBrowser.getAllQualifierValues(qualifiers, key);
-        values.forEach(value => {
-          if (value === true) {
-            qualifierContent += `                     /${key}\n`;
-          } else if (value && value !== '' && value !== 'Unknown') {
-            const cleanValue = String(value);
-
-            // Format multi-line qualifiers properly
-            if (cleanValue.length > 60) {
-              const lines = this.wrapQualifierValue(cleanValue, 60);
-              lines.forEach((line, index) => {
-                if (index === 0) {
-                  qualifierContent += `                     /${key}="${line}"\n`;
-                } else {
-                  qualifierContent += `                     "${line}"\n`;
-                }
-              });
-            } else {
-              qualifierContent += `                     /${key}="${cleanValue}"\n`;
-            }
-          }
-        });
-      }
-    });
-
-    // Fallback to basic feature properties if no qualifiers
-    if (!qualifierContent) {
-      if (feature.name) {
-        qualifierContent += `                     /gene="${feature.name}"\n`;
-      }
-      if (feature.product) {
-        qualifierContent += `                     /product="${feature.product}"\n`;
-      }
-      if (feature.note) {
-        qualifierContent += `                     /note="${feature.note}"\n`;
-      }
-    }
-
-    return qualifierContent;
-  }
-
-  // Get correct protein sequence using the same algorithm as Protein FASTA export
-  getCorrectProteinSequence(feature) {
     try {
-      // Find the chromosome sequence this feature belongs to.
-      let sequence = null;
-
-      for (const [chr, chrSequence] of Object.entries(this.genomeBrowser.currentSequence)) {
-        const features = this.genomeBrowser.currentAnnotations[chr] || [];
-        if (features.includes(feature)) {
-          sequence = chrSequence;
-          break;
-        }
-      }
-
-      if (!sequence) {
-        console.warn('Could not find chromosome for feature, using stored translation');
-        return this.genomeBrowser.getQualifierValue(feature.qualifiers, 'translation') || '';
-      }
-
-      // Use the same algorithm as exportProteinAsFasta
-      const cdsSequence = this.extractFeatureSequence(sequence, feature);
-      const proteinSequence = this.translateDNA(cdsSequence);
-
-      // Remove trailing asterisks (stop codons) from protein sequence
-      const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
-
-      return cleanProteinSequence;
+      const { content } = this.buildGenBankExport({
+        includeProteinSequences: this.exportConfig.includeProteinSequences,
+      });
+      this.downloadFile(content, 'genome.gbk', 'text/plain');
     } catch (error) {
-      console.warn('Error generating protein sequence:', error);
-      // Fallback to stored translation
-      const storedTranslation = this.genomeBrowser.getQualifierValue(feature.qualifiers, 'translation');
-      return storedTranslation ? storedTranslation.replace(/\*+$/, '') : '';
+      alert(`Failed to export GenBank: ${error.message}`);
     }
   }
 
-  // Helper method to wrap long qualifier values
-  wrapQualifierValue(value, maxLength) {
-    const words = value.split(' ');
-    const lines = [];
-    let currentLine = '';
-
-    words.forEach(word => {
-      if ((currentLine + ' ' + word).length <= maxLength) {
-        currentLine += (currentLine ? ' ' : '') + word;
-      } else {
-        if (currentLine) {
-          lines.push(currentLine);
-        }
-        currentLine = word;
-      }
+  buildGenBankExport(options = {}) {
+    const chromosomes = Object.keys(this.genomeBrowser.currentSequence);
+    const Exporter = this.getGenBankExporter();
+    let totalFeatures = 0;
+    const content = new Exporter(this.genomeBrowser).exportGenBank({
+      chromosomes,
+      getSequence: chromosome => this.genomeBrowser.currentSequence[chromosome],
+      getFeatures: chromosome => {
+        const features = this.getExportableFeatures(chromosome);
+        const selected =
+          options.includeFeatures === false ? features.filter(feature => feature.type === 'source') : features;
+        totalFeatures += options.includeFeatures === false ? 0 : selected.length;
+        return selected;
+      },
+      options,
     });
-
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-
-    return lines.length > 0 ? lines : [value];
+    return { content, chromosomes, totalFeatures };
   }
 
   // Show export configuration dialog
@@ -594,43 +412,47 @@ class ExportManager {
       return;
     }
 
-    let cdsContent = '';
-    const chromosomes = Object.keys(this.genomeBrowser.currentAnnotations);
-    const processedFeatures = new Set(); // Track processed features to avoid duplicates
+    try {
+      let cdsContent = '';
+      const chromosomes = Object.keys(this.genomeBrowser.currentAnnotations);
+      const processedFeatures = new Set(); // Track processed features to avoid duplicates
 
-    chromosomes.forEach(chr => {
-      const sequence = this.genomeBrowser.currentSequence[chr];
-      const features = this.genomeBrowser.currentAnnotations[chr] || [];
+      chromosomes.forEach(chr => {
+        const sequence = this.genomeBrowser.currentSequence[chr];
+        const features = this.genomeBrowser.currentAnnotations[chr] || [];
 
-      features.forEach(feature => {
-        // Only process CDS features to avoid duplicates with gene features
-        if (feature.type === 'CDS') {
-          // Create unique identifier to avoid duplicates
-          const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
+        features.forEach(feature => {
+          // Only process CDS features to avoid duplicates with gene features
+          if (feature.type === 'CDS') {
+            // Create unique identifier to avoid duplicates
+            const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
 
-          if (!processedFeatures.has(featureId)) {
-            processedFeatures.add(featureId);
+            if (!processedFeatures.has(featureId)) {
+              processedFeatures.add(featureId);
 
-            const cdsSequence = this.extractFeatureSequence(sequence, feature);
-            const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+              const cdsSequence = this.extractFeatureSequence(sequence, feature);
+              const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
 
-            cdsContent += `>${header}\n`;
+              cdsContent += `>${header}\n`;
 
-            // Split sequence into lines of 80 characters
-            for (let i = 0; i < cdsSequence.length; i += 80) {
-              cdsContent += cdsSequence.substring(i, i + 80) + '\n';
+              // Split sequence into lines of 80 characters
+              for (let i = 0; i < cdsSequence.length; i += 80) {
+                cdsContent += cdsSequence.substring(i, i + 80) + '\n';
+              }
             }
           }
-        }
+        });
       });
-    });
 
-    if (!cdsContent) {
-      alert('No CDS features found to export.');
-      return;
+      if (!cdsContent) {
+        alert('No CDS features found to export.');
+        return;
+      }
+
+      this.downloadFile(cdsContent, 'cds_sequences.fasta', 'text/plain');
+    } catch (error) {
+      alert(`Failed to export CDS FASTA: ${error.message}`);
     }
-
-    this.downloadFile(cdsContent, 'cds_sequences.fasta', 'text/plain');
   }
 
   // Export protein sequences as FASTA
@@ -640,49 +462,48 @@ class ExportManager {
       return;
     }
 
-    let proteinContent = '';
-    const chromosomes = Object.keys(this.genomeBrowser.currentAnnotations);
-    const processedFeatures = new Set(); // Track processed features to avoid duplicates
+    try {
+      let proteinContent = '';
+      const chromosomes = Object.keys(this.genomeBrowser.currentAnnotations);
+      const processedFeatures = new Set(); // Track processed features to avoid duplicates
 
-    chromosomes.forEach(chr => {
-      const sequence = this.genomeBrowser.currentSequence[chr];
-      const features = this.genomeBrowser.currentAnnotations[chr] || [];
+      chromosomes.forEach(chr => {
+        const sequence = this.genomeBrowser.currentSequence[chr];
+        const features = this.genomeBrowser.currentAnnotations[chr] || [];
 
-      features.forEach(feature => {
-        // Only process CDS features, skip gene features to avoid duplication
-        if (feature.type === 'CDS') {
-          // Create unique identifier to avoid duplicates
-          const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
+        features.forEach(feature => {
+          // Only process CDS features, skip gene features to avoid duplication
+          if (feature.type === 'CDS') {
+            // Create unique identifier to avoid duplicates
+            const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
 
-          if (!processedFeatures.has(featureId)) {
-            processedFeatures.add(featureId);
+            if (!processedFeatures.has(featureId)) {
+              processedFeatures.add(featureId);
 
-            const cdsSequence = this.extractFeatureSequence(sequence, feature);
-            // ExtractFeatureSequence already handles reverse complement, so translate directly
-            const proteinSequence = this.translateDNA(cdsSequence);
+              const cleanProteinSequence = this.extractFeatureProtein(sequence, feature);
 
-            // Remove trailing asterisks (stop codons) from protein sequence
-            const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
+              const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
 
-            const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
+              proteinContent += `>${header}\n`;
 
-            proteinContent += `>${header}\n`;
-
-            // Split sequence into lines of 80 characters
-            for (let i = 0; i < cleanProteinSequence.length; i += 80) {
-              proteinContent += cleanProteinSequence.substring(i, i + 80) + '\n';
+              // Split sequence into lines of 80 characters
+              for (let i = 0; i < cleanProteinSequence.length; i += 80) {
+                proteinContent += cleanProteinSequence.substring(i, i + 80) + '\n';
+              }
             }
           }
-        }
+        });
       });
-    });
 
-    if (!proteinContent) {
-      alert('No protein-coding features found to export.');
-      return;
+      if (!proteinContent) {
+        alert('No protein-coding features found to export.');
+        return;
+      }
+
+      this.downloadFile(proteinContent, 'protein_sequences.fasta', 'text/plain');
+    } catch (error) {
+      alert(`Failed to export protein FASTA: ${error.message}`);
     }
-
-    this.downloadFile(proteinContent, 'protein_sequences.fasta', 'text/plain');
   }
 
   // Export features as GFF format
@@ -779,17 +600,43 @@ class ExportManager {
     this.downloadFile(fastaContent, `${currentChr}_${start}-${end}.fasta`, 'text/plain');
   }
 
-  // Helper method to extract feature sequence
+  getGenBankExporter() {
+    return typeof module !== 'undefined' && module.exports
+      ? require('./export/GenBankExporter')
+      : window.GenBankExporter;
+  }
+
   extractFeatureSequence(sequence, feature) {
-    let featureSeq = sequence.substring(feature.start - 1, feature.end);
+    const Exporter = this.getGenBankExporter();
+    return new Exporter(this.genomeBrowser).extractLocationSequence(sequence, feature, value =>
+      this.reverseComplement(value)
+    );
+  }
 
-    // Reverse complement if on negative strand
-    // Handle both string ('-') and numeric (-1) strand values
-    if (feature.strand === '-' || feature.strand === -1) {
-      featureSeq = this.reverseComplement(featureSeq);
+  extractFeatureProtein(sequence, feature, requestedTable) {
+    const first = value => (Array.isArray(value) ? value[0] : value);
+    const qualifiers = feature.qualifiers || {};
+    const featureTable = Number(first(qualifiers.transl_table) || 1);
+    const table = requestedTable === undefined ? featureTable : Number(requestedTable);
+    const annotated = String(first(qualifiers.translation) || '').replace(/\s+/g, '');
+    if (table === featureTable && /^[A-Z*]+$/i.test(annotated)) return annotated.replace(/\*+$/, '');
+    if (table !== 1 || qualifiers.transl_except) {
+      throw new Error(`No supported translation is available for ${feature.name || feature.type} (table ${table})`);
     }
-
-    return featureSeq;
+    const startCodon = Number(first(qualifiers.codon_start) || 1);
+    if (![1, 2, 3].includes(startCodon)) throw new Error(`Invalid codon_start: ${startCodon}`);
+    const bases = this.extractFeatureSequence(sequence, feature).slice(startCodon - 1);
+    const translator =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedDNATranslation')
+        : window.UnifiedDNATranslation;
+    const result = translator.translateDNA({
+      sequence: bases,
+      geneticCode: 'standard',
+      includeStops: true,
+    });
+    if (!result.success) throw new Error(result.error);
+    return result.protein.replace(/\*+$/, '');
   }
 
   // Helper method to reverse complement DNA sequence
@@ -799,95 +646,6 @@ class ExportManager {
         ? require('./UnifiedSequenceProcessing')
         : window.UnifiedSequenceProcessing;
     return processing.reverseComplement(sequence, { caseSensitive: false, validateInput: false }).sequence;
-  }
-
-  // Helper method to translate DNA to protein
-  translateDNA(dnaSequence, strand = null) {
-    // Use unified translation implementation
-    if (window.UnifiedDNATranslation) {
-      const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(dnaSequence, strand || 1);
-      return result;
-    }
-
-    // Fallback to original implementation if unified module not available
-    const codonTable = {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: '*',
-      TGG: 'W',
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'I',
-      ATG: 'M',
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: 'R',
-      AGG: 'R',
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
-
-    const sequence = dnaSequence.toUpperCase();
-
-    let protein = '';
-    for (let i = 0; i < sequence.length - 2; i += 3) {
-      const codon = sequence.substring(i, i + 3);
-      if (codon.length === 3) {
-        protein += codonTable[codon] || 'X';
-      }
-    }
-
-    return protein;
   }
 
   // Helper method to download file

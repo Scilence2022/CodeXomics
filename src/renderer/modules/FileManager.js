@@ -939,12 +939,15 @@ class FileManager {
 
     const sequences = {};
     const annotations = {};
+    const topology = {};
     let currentSeq = null;
     let currentData = '';
     let inOrigin = false;
     let features = [];
     let currentFeature = null;
     let currentQualifierKey = null;
+    let readingLocation = false;
+    let translationParts = [];
 
     // Progress tracking for large files
     const totalLines = lines.length;
@@ -973,6 +976,7 @@ class FileManager {
       if (line.startsWith('LOCUS')) {
         const parts = line.split(/\s+/);
         currentSeq = parts[1];
+        topology[currentSeq] = parts.some(part => part.toLowerCase() === 'circular') ? 'circular' : 'linear';
         console.log(`Found LOCUS: ${currentSeq}`);
         sequences[currentSeq] = '';
         annotations[currentSeq] = [];
@@ -996,7 +1000,7 @@ class FileManager {
 
           // Save previous feature if it exists
           if (currentFeature) {
-            this.finalizeFeature(currentFeature);
+            this.finalizeFeature(currentFeature, translationParts);
           }
 
           currentFeature = {
@@ -1012,16 +1016,24 @@ class FileManager {
           };
 
           currentQualifierKey = null;
+          readingLocation = true;
+          translationParts = [];
 
           // Parse location
           this.parseGenBankLocation(currentFeature, location);
+          currentFeature.genbankLocationBounds = [currentFeature.start, currentFeature.end, currentFeature.strand];
           features.push(currentFeature);
         }
         continue;
       }
 
-      // Parse qualifiers - improved pattern matching
+      if (!inOrigin && currentFeature && readingLocation && /^ {21}[^/\s]/.test(line)) {
+        currentFeature.genbankLocation = (currentFeature.genbankLocation || currentFeature.location) + trimmed;
+        continue;
+      }
+
       if (line.match(/^\s{21}\//) && currentFeature) {
+        readingLocation = false;
         const qualMatch = line.match(/^\s{21}\/(\w+)(?:=(.*))?$/);
         if (qualMatch) {
           const [, key, value] = qualMatch;
@@ -1031,10 +1043,11 @@ class FileManager {
             // Handle quoted values and start of multi-line values
             let cleanValue = value.replace(/^"/, '').replace(/"$/, '');
 
-            // For very long qualifiers like translation, limit initial storage
-            if (key === 'translation' && cleanValue.length > 1000) {
-              // Store only first part for memory efficiency
-              cleanValue = cleanValue.substring(0, 100) + '...';
+            if (key === 'translation') {
+              translationParts.push(cleanValue.replace(/\s+/g, ''));
+              // Keep the historical parse view until the feature is finalized.
+              // Older committed receipts bind that view, including its truncation.
+              if (cleanValue.length > 1000) cleanValue = cleanValue.substring(0, 100) + '...';
             }
 
             // Support multiple values for the same qualifier key
@@ -1067,66 +1080,26 @@ class FileManager {
         continue;
       }
 
-      // Handle multi-line qualifier values - improved efficiency
       if (line.match(/^\s{21}[^/]/) && currentFeature && currentQualifierKey) {
-        const continuationValue = line.trim().replace(/^"/, '').replace(/"$/, '');
-
-        // Get the current qualifier value (handle both single values and arrays)
-        let currentValue = currentFeature.qualifiers[currentQualifierKey];
-
-        // If it's an array, work with the last element
-        if (Array.isArray(currentValue)) {
-          const lastIndex = currentValue.length - 1;
-          currentValue = currentValue[lastIndex];
-
-          // For translation qualifiers, skip most of the content to save memory
-          if (currentQualifierKey === 'translation') {
-            // Only keep the first part, ignore the rest
-            if (!currentValue.includes('...')) {
-              currentValue += continuationValue.substring(0, 50);
-              if (currentValue.length > 100) {
-                currentValue = currentValue.substring(0, 100) + '...';
-              }
-              currentFeature.qualifiers[currentQualifierKey][lastIndex] = currentValue;
-            }
-          } else {
-            // For other qualifiers, keep the full content (no artificial limits)
-            // Only apply reasonable limits to extremely large qualifiers (>50KB) to prevent memory issues
-            if (currentValue.length < 50000) {
-              currentFeature.qualifiers[currentQualifierKey][lastIndex] = currentValue + ' ' + continuationValue;
-            } else {
-              // For extremely large qualifiers, add truncation indicator
-              if (!currentValue.includes('[TRUNCATED]')) {
-                currentFeature.qualifiers[currentQualifierKey][lastIndex] =
-                  currentValue + ' [TRUNCATED - Content too large]';
-              }
-            }
+        const fragment = trimmed.replace(/^"/, '').replace(/"$/, '');
+        const previous = currentFeature.qualifiers[currentQualifierKey];
+        const repeated = Array.isArray(previous);
+        const index = repeated ? previous.length - 1 : 0;
+        const currentValue = repeated ? previous[index] : previous;
+        let next = currentValue;
+        if (currentQualifierKey === 'translation') {
+          translationParts[translationParts.length - 1] += fragment.replace(/\s+/g, '');
+          if (!currentValue.includes('...')) {
+            next = currentValue + fragment.substring(0, 50);
+            if (next.length > 100) next = next.substring(0, 100) + '...';
           }
-        } else {
-          // Single value case
-          // For translation qualifiers, skip most of the content to save memory
-          if (currentQualifierKey === 'translation') {
-            // Only keep the first part, ignore the rest
-            if (!currentValue.includes('...')) {
-              currentValue += continuationValue.substring(0, 50);
-              if (currentValue.length > 100) {
-                currentValue = currentValue.substring(0, 100) + '...';
-              }
-              currentFeature.qualifiers[currentQualifierKey] = currentValue;
-            }
-          } else {
-            // For other qualifiers, keep the full content (no artificial limits)
-            // Only apply reasonable limits to extremely large qualifiers (>50KB) to prevent memory issues
-            if (currentValue.length < 50000) {
-              currentFeature.qualifiers[currentQualifierKey] = currentValue + ' ' + continuationValue;
-            } else {
-              // For extremely large qualifiers, add truncation indicator
-              if (!currentValue.includes('[TRUNCATED]')) {
-                currentFeature.qualifiers[currentQualifierKey] = currentValue + ' [TRUNCATED - Content too large]';
-              }
-            }
-          }
+        } else if (currentValue.length < 50000) {
+          next = currentValue + ' ' + fragment;
+        } else if (!currentValue.includes('[TRUNCATED]')) {
+          next = currentValue + ' [TRUNCATED - Content too large]';
         }
+        if (repeated) previous[index] = next;
+        else currentFeature.qualifiers[currentQualifierKey] = next;
         continue;
       }
 
@@ -1137,7 +1110,7 @@ class FileManager {
 
         // Process the last feature
         if (currentFeature) {
-          this.finalizeFeature(currentFeature);
+          this.finalizeFeature(currentFeature, translationParts);
         }
 
         annotations[currentSeq] = features;
@@ -1175,6 +1148,10 @@ class FileManager {
 
     // Extract and store source feature information separately for metadata
     this.extractSourceFeatures(annotations);
+    for (const [chromosome, value] of Object.entries(topology)) {
+      this.genomeBrowser.sourceFeatures[chromosome] ||= {};
+      this.genomeBrowser.sourceFeatures[chromosome].topology = value;
+    }
 
     // Bind sidecars and autonomous-annotation replay to the genome source
     // being parsed before any asynchronous overlay read begins. Waiting for
@@ -1244,7 +1221,24 @@ class FileManager {
     return [value];
   }
 
-  finalizeFeature(feature) {
+  finalizeFeature(feature, translations = []) {
+    if (feature.genbankLocation) {
+      // Keep the existing feature identity for sidecars, and use the complete span
+      // when deciding if a sequence edit could invalidate the location or translation.
+      const full = {};
+      this.parseGenBankLocation(full, feature.genbankLocation);
+      if (full.start != null && (full.start !== feature.start || full.end !== feature.end)) {
+        feature.genbankLocationSpan = [full.start, full.end];
+      }
+    }
+    if (translations.length) {
+      const full = translations.length === 1 ? translations[0] : translations;
+      const previous = feature.qualifiers.translation;
+      if (JSON.stringify(full) !== JSON.stringify(previous)) {
+        feature.genbankLegacyTranslation = previous;
+        feature.qualifiers.translation = full;
+      }
+    }
     // Add name from qualifiers if available
     const geneName = this.getQualifierValue(feature.qualifiers, 'gene');
     const locusTag = this.getQualifierValue(feature.qualifiers, 'locus_tag');

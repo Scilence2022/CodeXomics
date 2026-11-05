@@ -73,7 +73,7 @@ class GenBankExporter {
    * @returns {string} GenBank formatted content for chromosome
    */
   generateChromosomeContent(params) {
-    const { chromosome, sequence, features, actions, executionId } = params;
+    const { chromosome, sequence, features, actions, executionId, options = {} } = params;
 
     if (!sequence) {
       throw new Error(`No sequence provided for chromosome ${chromosome}`);
@@ -108,10 +108,10 @@ class GenBankExporter {
     content += this.generateSource(sourceFeatures, originalAnnotations);
 
     // FEATURES section
-    content += this.generateFeatures(chromosome, sequence, features, sourceFeatures);
+    content += this.generateFeatures(chromosome, sequence, features, sourceFeatures, options);
 
     // ORIGIN section (sequence data)
-    content += this.generateOrigin(sequence);
+    if (options.includeSequence !== false) content += this.generateOrigin(sequence);
 
     // End marker
     content += '//\n';
@@ -124,14 +124,18 @@ class GenBankExporter {
    */
   generateLocus(chromosome, sequence, sourceFeatures, originalAnnotations) {
     const isCircular =
+      sourceFeatures.topology === 'circular' ||
       sourceFeatures.mol_type?.includes('circular') ||
       originalAnnotations.find(f => f.type === 'source' && f.qualifiers?.mol_type?.includes('circular')) ||
       false;
-    const topology = isCircular ? 'circular' : 'linear';
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const locusName = chromosome.length > 16 ? chromosome.substring(0, 16) : chromosome.padEnd(16);
+    const topology = (isCircular ? 'circular' : 'linear').padEnd(8);
+    const [year, month, day] = new Date().toISOString().slice(0, 10).split('-');
+    const monthName = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][
+      Number(month) - 1
+    ];
+    const nameAndLength = chromosome.padEnd(Math.max(chromosome.length, 27 - String(sequence.length).length));
 
-    return `LOCUS       ${locusName} ${sequence.length} bp    DNA     ${topology}   UNK ${dateStr}\n`;
+    return `LOCUS       ${nameAndLength} ${sequence.length} bp    DNA     ${topology} UNK ${day}-${monthName}-${year}\n`;
   }
 
   /**
@@ -266,74 +270,126 @@ class GenBankExporter {
   /**
    * Generate FEATURES section
    */
-  generateFeatures(chromosome, sequence, features, sourceFeatures) {
-    const organism = sourceFeatures.organism || 'Unknown organism';
-    const strain = sourceFeatures.strain || '';
-
+  generateFeatures(_chromosome, sequence, features, sourceFeatures, options = {}) {
+    const list = features || [];
+    const source = {
+      type: 'source',
+      start: 1,
+      end: sequence.length,
+      qualifiers: {
+        organism: sourceFeatures.organism || 'Unknown organism',
+        mol_type: sourceFeatures.mol_type || 'genomic DNA',
+        strain: sourceFeatures.strain,
+        host: sourceFeatures.host,
+        country: sourceFeatures.country,
+        collection_date: sourceFeatures.collection_date,
+        isolation_source: sourceFeatures.isolation_source,
+      },
+    };
     let content = 'FEATURES             Location/Qualifiers\n';
-
-    // Source feature first
-    content += `     source          1..${sequence.length}\n`;
-    content += `                     /organism="${organism}"\n`;
-    content += '                     /mol_type="genomic DNA"\n';
-    if (strain) content += `                     /strain="${strain}"\n`;
-    if (sourceFeatures.host) content += `                     /host="${sourceFeatures.host}"\n`;
-    if (sourceFeatures.country) content += `                     /country="${sourceFeatures.country}"\n`;
-    if (sourceFeatures.collection_date) {
-      content += `                     /collection_date="${sourceFeatures.collection_date}"\n`;
-    }
-    if (sourceFeatures.isolation_source) {
-      content += `                     /isolation_source="${sourceFeatures.isolation_source}"\n`;
-    }
-
-    // All other features
-    if (features && features.length > 0) {
-      features.forEach(feature => {
-        if (feature.type === 'source') return;
-        // Primers are managed separately by PrimerManager (sidecar) and must never
-        // be written into an exported genome file.
-        const ftype = String(feature.type || '').toLowerCase();
-        if (ftype === 'primer' || ftype === 'primer_bind') return;
-
-        const location = this.formatLocation(feature);
-        content += `     ${feature.type.padEnd(16)} ${location}\n`;
-
-        if (feature.qualifiers) {
-          Object.entries(feature.qualifiers).forEach(([key, value]) => {
-            if (value === true) {
-              content += `                     /${key}\n`;
-            } else if (value && value !== '') {
-              const valueStr = String(value);
-              if (valueStr.length > 60) {
-                const lines = this.wrapQualifierValue(valueStr, 60);
-                lines.forEach((line, index) => {
-                  if (index === 0) {
-                    content += `                     /${key}="${line}"\n`;
-                  } else {
-                    content += `                     "${line}"\n`;
-                  }
-                });
-              } else {
-                content += `                     /${key}="${valueStr}"\n`;
-              }
-            }
-          });
+    const exportFeatures = list.filter(feature => !['primer', 'primer_bind'].includes(feature.type?.toLowerCase()));
+    if (!exportFeatures.some(feature => feature.type?.toLowerCase() === 'source')) exportFeatures.unshift(source);
+    for (const feature of exportFeatures) {
+      const location = this.formatLocation(feature);
+      const locationLines = [];
+      let line = '';
+      for (const part of location.match(/[^,]+,?/g) || [location]) {
+        if (line && line.length + part.length > 59) {
+          locationLines.push(line);
+          line = '';
         }
-      });
+        line += part;
+      }
+      locationLines.push(line);
+      content += `     ${feature.type.padEnd(15)} ${locationLines.join('\n                     ')}\n`;
+      const qualifiers = feature.qualifiers || { gene: feature.name, product: feature.product, note: feature.note };
+      for (const [key, raw] of Object.entries(qualifiers)) {
+        if (key === 'translation' && options.includeProteinSequences === false) continue;
+        for (const value of Array.isArray(raw) ? raw : [raw]) {
+          content += this.formatQualifier(key, value);
+        }
+      }
     }
-
     return content;
   }
 
-  /**
-   * Format feature location (handles strand orientation)
-   */
+  formatQualifier(key, value) {
+    const indent = '                     ';
+    if (value === true) return `${indent}/${key}\n`;
+    if (value == null || value === false) return '';
+    const text = String(value)
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/"+/g, quotes => (quotes.length % 2 ? quotes + '"' : quotes));
+    const lines = key === 'translation' ? text.match(/.{1,58}/g) || [''] : this.wrapQualifierValue(text, 58);
+    return `${indent}/${key}="${lines.join(`\n${indent}`)}"\n`;
+  }
+
   formatLocation(feature) {
-    if (feature.strand === -1 || feature.strand === '-') {
-      return `complement(${feature.start}..${feature.end})`;
-    } else {
-      return `${feature.start}..${feature.end}`;
+    const negative = feature.strand === -1 || feature.strand === '-';
+    const original = feature.genbankLocation || feature.location;
+    const bounds = feature.genbankLocationBounds;
+    const compound = typeof original === 'string' && /\b(?:join|order)\(|[:^]/i.test(original);
+    if (typeof original === 'string' && Array.isArray(bounds)) {
+      const [start, end, strand] = bounds;
+      const shift = feature.start - start;
+      const sameStrand = negative === (strand === -1 || strand === '-');
+      if (sameStrand && shift === 0 && feature.end === end && !feature.genbankLocationEdited) {
+        return original.replace(/\s+/g, '');
+      }
+      if (
+        sameStrand &&
+        Number.isSafeInteger(shift) &&
+        feature.end - end === shift &&
+        !feature.genbankLocationEdited &&
+        !original.includes(':')
+      ) {
+        return original.replace(/\s+/g, '').replace(/\d+/g, value => String(Number(value) + shift));
+      }
+      if (compound) {
+        throw new Error(`Cannot export edited compound location for ${feature.name || feature.type}: ${original}`);
+      }
     }
+    const formatSpan = (start, end) => (start === end ? String(start) : `${start}..${end}`);
+    const span =
+      Array.isArray(feature.segments) && feature.segments.length > 1
+        ? `join(${feature.segments.map(segment => formatSpan(segment.start, segment.end)).join(',')})`
+        : formatSpan(feature.start, feature.end);
+    return negative ? `complement(${span})` : span;
+  }
+
+  extractLocationSequence(sequence, feature, reverseComplement) {
+    const location = this.formatLocation(feature);
+    const extract = (expression, depth = 0) => {
+      if (depth > 32) throw new Error('GenBank location nesting exceeds the supported limit');
+      const simple = /^[<>]?(\d+)(?:\.\.[<>]?(\d+))?$/.exec(expression);
+      if (simple) {
+        const start = Number(simple[1]);
+        const end = Number(simple[2] || simple[1]);
+        if (start < 1 || end < start || end > sequence.length) throw new Error(`Out-of-range location: ${expression}`);
+        return sequence.slice(start - 1, end);
+      }
+
+      const operator = /^(join|complement)\((.+)\)$/i.exec(expression);
+      if (!operator) throw new Error(`Cannot extract local sequence for location: ${expression}`);
+      const [, type, body] = operator;
+      if (type.toLowerCase() === 'complement') return reverseComplement(extract(body, depth + 1));
+
+      const parts = [];
+      let nesting = 0;
+      let start = 0;
+      for (let index = 0; index < body.length; index++) {
+        if (body[index] === '(') nesting++;
+        if (body[index] === ')') nesting--;
+        if (body[index] === ',' && nesting === 0) {
+          parts.push(body.slice(start, index));
+          start = index + 1;
+        }
+      }
+      if (nesting !== 0) throw new Error(`Invalid GenBank location: ${expression}`);
+      parts.push(body.slice(start));
+      return parts.map(part => extract(part, depth + 1)).join('');
+    };
+    return extract(location);
   }
 
   /**
