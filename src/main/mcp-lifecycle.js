@@ -6,8 +6,18 @@ const path = require('path');
 const fs = require('fs');
 const { createSecureWebPreferences } = require('./security-utils');
 const net = require('net');
-const UnifiedMCPServer = require('../mcp-server');
 const { getMcpAuthConfig } = require('./mcp-auth-config');
+
+// The MCP server pulls in express, ws and the MCP SDK (~80 ms of module
+// loading). It is only needed once a server is actually started, so it is
+// required on first use instead of on the app's startup critical path.
+let UnifiedMCPServer = null;
+function loadUnifiedMCPServer() {
+  if (!UnifiedMCPServer) {
+    UnifiedMCPServer = require('../mcp-server');
+  }
+  return UnifiedMCPServer;
+}
 
 // External references (set by main module via setMCPDependencies)
 let mainWindow;
@@ -88,7 +98,8 @@ async function startUnifiedMCPServer() {
 
     // Local bypass is opt-in. External agents must use a configured bearer key
     // so their principal can later be scoped to read/propose/commit actions.
-    const server = new UnifiedMCPServer(settings.httpPort, settings.wsPort, getMainGenomeTarget(), getMcpAuthConfig());
+    const MCPServer = loadUnifiedMCPServer();
+    const server = new MCPServer(settings.httpPort, settings.wsPort, getMainGenomeTarget(), getMcpAuthConfig());
     setUnifiedMCPServer(server);
 
     // Forward server log events to the Manager window

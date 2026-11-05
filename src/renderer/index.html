@@ -5441,177 +5441,180 @@ Supported formats:
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="../../node_modules/d3/dist/d3.min.js"></script>
+    <!-- Scripts. Every tag here must carry `defer`: Chromium does not preload
+         file:// resources, so parser-blocking tags are fetched one at a time.
+         Deferred scripts are all requested up front and still run in order,
+         before DOMContentLoaded. -->
+    <script defer src="../../node_modules/d3/dist/d3.min.js"></script>
     <!-- Markdown parser for enhanced ChatBox rendering -->
-    <script src="../../node_modules/marked/marked.min.js"></script>
+    <script defer src="../../node_modules/marked/marked.min.js"></script>
     <!-- Security: DOMPurify for HTML sanitization (loaded before app modules) -->
-    <script src="../../node_modules/dompurify/dist/purify.min.js"></script>
-    <script src="modules/security/SanitizeService.js"></script>
+    <script defer src="../../node_modules/dompurify/dist/purify.min.js"></script>
+    <script defer src="modules/security/SanitizeService.js"></script>
     <!-- Core infrastructure modules (DI container, error handling, notifications) -->
-    <script src="modules/core/ServiceContainer.js"></script>
-    <script src="modules/core/NotificationService.js"></script>
-    <script src="modules/core/ErrorHandler.js"></script>
+    <script defer src="modules/core/ServiceContainer.js"></script>
+    <script defer src="modules/core/NotificationService.js"></script>
+    <script defer src="modules/core/ErrorHandler.js"></script>
     <!-- Application modules -->
-    <script src="../shared/configuration-credentials.js"></script>
-    <script src="modules/ConfigManager.js"></script>
-    <script src="modules/I18nManager.js"></script>
-    <script src="modules/MultiFileManager.js"></script>
-    <script src="modules/LoadedResourceSnapshot.js"></script>
-    <script src="modules/FileManager.js"></script>
+    <script defer src="../shared/configuration-credentials.js"></script>
+    <script defer src="modules/ConfigManager.js"></script>
+    <script defer src="modules/I18nManager.js"></script>
+    <script defer src="modules/MultiFileManager.js"></script>
+    <script defer src="modules/LoadedResourceSnapshot.js"></script>
+    <script defer src="modules/FileManager.js"></script>
     <!-- Canvas renderer base (eliminates duplicated boilerplate across 3 renderers) -->
-    <script src="modules/tracks/CanvasRendererBase.js"></script>
-    <script src="modules/CanvasSequenceRenderer.js"></script>
-    <script src="modules/CanvasReadsRenderer.js"></script>
-    <script src="modules/OperonLookupIndex.js"></script>
-    <script src="modules/CanvasGenesRenderer.js"></script>
-    <script src="modules/AlignmentCoverageRenderer.js"></script>
-    <script src="modules/TrackRenderer.js"></script>
-    <script src="modules/tracks/GeneShapeCreators.js"></script>
-    <script src="modules/tracks/FeatureGlyphLegend.js"></script>
-    <script src="modules/tracks/PrimerTrackSettingsPanel.js"></script>
-    <script src="modules/VariantAnalyzer.js"></script>
-    <script src="modules/NavigationManager.js"></script>
-    <script src="modules/AdvancedSearchManager.js"></script>
-    <script src="modules/GenomeNavigationBar.js"></script>
-    <script src="modules/UIManager.js"></script>
+    <script defer src="modules/tracks/CanvasRendererBase.js"></script>
+    <script defer src="modules/CanvasSequenceRenderer.js"></script>
+    <script defer src="modules/CanvasReadsRenderer.js"></script>
+    <script defer src="modules/OperonLookupIndex.js"></script>
+    <script defer src="modules/CanvasGenesRenderer.js"></script>
+    <script defer src="modules/AlignmentCoverageRenderer.js"></script>
+    <script defer src="modules/TrackRenderer.js"></script>
+    <script defer src="modules/tracks/GeneShapeCreators.js"></script>
+    <script defer src="modules/tracks/FeatureGlyphLegend.js"></script>
+    <script defer src="modules/tracks/PrimerTrackSettingsPanel.js"></script>
+    <script defer src="modules/VariantAnalyzer.js"></script>
+    <script defer src="modules/NavigationManager.js"></script>
+    <script defer src="modules/AdvancedSearchManager.js"></script>
+    <script defer src="modules/GenomeNavigationBar.js"></script>
+    <script defer src="modules/UIManager.js"></script>
     <!-- VSCodeSequenceEditor.js and SequenceEditor.js removed - only using view mode -->
-    <script src="modules/ParameterUtils.js"></script>
-    <script src="modules/UnifiedSequenceProcessing.js"></script>
-    <script src="modules/SequenceUtils.js"></script>
-    <script src="modules/ExportManager.js"></script>
-    <script src="modules/ScreenshotManager.js"></script>
-    <script src="modules/LLMStreamClient.js"></script>
-    <script src="modules/LLMConfigManager.js"></script>
-    <script src="modules/MultiAgentSettingsManager.js"></script>
-    <script src="modules/SkillsSettingsManager.js"></script>
-    <script src="modules/ChatModelSelector.js"></script>
-    <script src="modules/ThemeManager.js"></script>
-    <script src="modules/GeneralSettingsManager.js"></script>
-    <script src="modules/SidecarManager.js"></script>
-    <script src="modules/GeneAttachmentsManager.js"></script>
-    <script src="modules/GeneNotesManager.js"></script>
-    <script src="modules/AnnotationReviewManager.js"></script>
-    <script src="modules/PrimerDesigner.js"></script>
-    <script src="modules/PrimerBindingService.js"></script>
-    <script src="modules/PrimerManager.js"></script>
-    <script src="modules/PrimerLibraryUI.js"></script>
-    <script src="modules/PrimerDetailsPanel.js"></script>
-    <script src="modules/HighlightManager.js"></script>
-    <script src="modules/HighlightRegionsUI.js"></script>
-    <script src="modules/BookmarkPanelUI.js"></script>
-    <script src="modules/ExternalToolsManager.js"></script>
-    <script src="modules/MCPServerManager.js"></script>
+    <script defer src="modules/ParameterUtils.js"></script>
+    <script defer src="modules/UnifiedSequenceProcessing.js"></script>
+    <script defer src="modules/SequenceUtils.js"></script>
+    <script defer src="modules/ExportManager.js"></script>
+    <script defer src="modules/ScreenshotManager.js"></script>
+    <script defer src="modules/LLMStreamClient.js"></script>
+    <script defer src="modules/LLMConfigManager.js"></script>
+    <script defer src="modules/MultiAgentSettingsManager.js"></script>
+    <script defer src="modules/SkillsSettingsManager.js"></script>
+    <script defer src="modules/ChatModelSelector.js"></script>
+    <script defer src="modules/ThemeManager.js"></script>
+    <script defer src="modules/GeneralSettingsManager.js"></script>
+    <script defer src="modules/SidecarManager.js"></script>
+    <script defer src="modules/GeneAttachmentsManager.js"></script>
+    <script defer src="modules/GeneNotesManager.js"></script>
+    <script defer src="modules/AnnotationReviewManager.js"></script>
+    <script defer src="modules/PrimerDesigner.js"></script>
+    <script defer src="modules/PrimerBindingService.js"></script>
+    <script defer src="modules/PrimerManager.js"></script>
+    <script defer src="modules/PrimerLibraryUI.js"></script>
+    <script defer src="modules/PrimerDetailsPanel.js"></script>
+    <script defer src="modules/HighlightManager.js"></script>
+    <script defer src="modules/HighlightRegionsUI.js"></script>
+    <script defer src="modules/BookmarkPanelUI.js"></script>
+    <script defer src="modules/ExternalToolsManager.js"></script>
+    <script defer src="modules/MCPServerManager.js"></script>
 
 
     <!-- Modern Plugin System V2 - MUST load before ChatManager -->
-    <script src="modules/PluginPathResolver.js"></script>
-    <script src="modules/PluginAPI.js"></script>
-    <script src="modules/PluginResourceManager.js"></script>
-    <script src="modules/PluginVersionUtils.js"></script>
-    <script src="modules/PluginDependencyResolver.js"></script>
-    <script src="modules/PluginSecurityValidator.js"></script>
-    <script src="modules/PluginUpdateManager.js"></script>
-    <script src="modules/PluginMarketplace.js"></script>
-    <script src="modules/PluginManagerV2.js"></script>
-    <script src="modules/PluginMarketplaceConfig.js"></script>
-    <script src="modules/PluginSubmissionUI.js"></script>
-    <script src="modules/PluginMarketplaceUI.js"></script>
-    <script src="modules/PluginManagementUI.js"></script>
-    <script src="modules/PluginSystemBootstrap.js"></script>
+    <script defer src="modules/PluginPathResolver.js"></script>
+    <script defer src="modules/PluginAPI.js"></script>
+    <script defer src="modules/PluginResourceManager.js"></script>
+    <script defer src="modules/PluginVersionUtils.js"></script>
+    <script defer src="modules/PluginDependencyResolver.js"></script>
+    <script defer src="modules/PluginSecurityValidator.js"></script>
+    <script defer src="modules/PluginUpdateManager.js"></script>
+    <script defer src="modules/PluginMarketplace.js"></script>
+    <script defer src="modules/PluginManagerV2.js"></script>
+    <script defer src="modules/PluginMarketplaceConfig.js"></script>
+    <script defer src="modules/PluginSubmissionUI.js"></script>
+    <script defer src="modules/PluginMarketplaceUI.js"></script>
+    <script defer src="modules/PluginManagementUI.js"></script>
+    <script defer src="modules/PluginSystemBootstrap.js"></script>
 
     <!-- Annotation Change Tracking (Phase 1 - OpenClaw integration) -->
-    <script src="modules/AnnotationChangeTracker.js"></script>
+    <script defer src="modules/AnnotationChangeTracker.js"></script>
 
     <!-- ChatManager Services (Modularized) -->
-    <script src="modules/chat/constants/ToolNames.js"></script>
-    <script src="modules/chat/constants/DefaultSettings.js"></script>
-    <script src="modules/chat/services/AnnotationChangeSetService.js"></script>
-    <script src="modules/chat/services/AnnotationService.js"></script>
-    <script src="modules/chat/services/AnnotationResearchWorkflowService.js"></script>
-    <script src="modules/chat/services/Evo2Service.js"></script>
-    <script src="modules/Evo2UI.js"></script>
-    <script src="modules/chat/services/BlastService.js"></script>
-    <script src="modules/chat/services/FileOperationService.js"></script>
-    <script src="modules/chat/services/GenomeAnalysisService.js"></script>
-    <script src="modules/chat/services/ProteinService.js"></script>
-    <script src="modules/chat/services/RestrictionEnzymeDatabase.js"></script>
-    <script src="modules/chat/services/DNAMarkerDatabase.js"></script>
-    <script src="modules/chat/services/RestrictionDigestService.js"></script>
-    <script src="modules/chat/services/GelElectrophoresisService.js"></script>
-    <script src="modules/chat/services/GelRenderer.js"></script>
-    <script src="modules/chat/services/ToolExecutionService.js"></script>
-    <script src="modules/chat/services/IntentParserService.js"></script>
-    <script src="modules/chat/services/ToolCapabilityPolicy.js"></script>
-    <script src="modules/chat/services/ToolExecutionPolicy.js"></script>
-    <script src="modules/chat/services/LLMContextService.js"></script>
-    <script src="modules/chat/services/UIService.js"></script>
-    <script src="modules/chat/services/TaskService.js"></script>
-    <script src="modules/chat/services/ResearchProgressService.js"></script>
-    <script src="modules/chat/services/SkillService.js"></script>
-    <script src="modules/chat/services/ConversationTranscriptService.js"></script>
+    <script defer src="modules/chat/constants/ToolNames.js"></script>
+    <script defer src="modules/chat/constants/DefaultSettings.js"></script>
+    <script defer src="modules/chat/services/AnnotationChangeSetService.js"></script>
+    <script defer src="modules/chat/services/AnnotationService.js"></script>
+    <script defer src="modules/chat/services/AnnotationResearchWorkflowService.js"></script>
+    <script defer src="modules/chat/services/Evo2Service.js"></script>
+    <script defer src="modules/Evo2UI.js"></script>
+    <script defer src="modules/chat/services/BlastService.js"></script>
+    <script defer src="modules/chat/services/FileOperationService.js"></script>
+    <script defer src="modules/chat/services/GenomeAnalysisService.js"></script>
+    <script defer src="modules/chat/services/ProteinService.js"></script>
+    <script defer src="modules/chat/services/RestrictionEnzymeDatabase.js"></script>
+    <script defer src="modules/chat/services/DNAMarkerDatabase.js"></script>
+    <script defer src="modules/chat/services/RestrictionDigestService.js"></script>
+    <script defer src="modules/chat/services/GelElectrophoresisService.js"></script>
+    <script defer src="modules/chat/services/GelRenderer.js"></script>
+    <script defer src="modules/chat/services/ToolExecutionService.js"></script>
+    <script defer src="modules/chat/services/IntentParserService.js"></script>
+    <script defer src="modules/chat/services/ToolCapabilityPolicy.js"></script>
+    <script defer src="modules/chat/services/ToolExecutionPolicy.js"></script>
+    <script defer src="modules/chat/services/LLMContextService.js"></script>
+    <script defer src="modules/chat/services/UIService.js"></script>
+    <script defer src="modules/chat/services/TaskService.js"></script>
+    <script defer src="modules/chat/services/ResearchProgressService.js"></script>
+    <script defer src="modules/chat/services/SkillService.js"></script>
+    <script defer src="modules/chat/services/ConversationTranscriptService.js"></script>
 
     <!-- Gel Electrophoresis Visualization -->
-    <script src="modules/GelElectrophoresisRenderer.js"></script>
+    <script defer src="modules/GelElectrophoresisRenderer.js"></script>
 
     <!-- ChatManager - loads AFTER plugin system -->
-    <script src="modules/DynamicToolsSnapshotAdapter.js"></script>
-    <script src="modules/ChatManager.js"></script>
+    <script defer src="modules/DynamicToolsSnapshotAdapter.js"></script>
+    <script defer src="modules/ChatManager.js"></script>
 
     <!-- CrewAI Multi-Agent System - Removed -->
 
     <!-- Legacy Multi-Agent System (for compatibility) -->
-    <script src="modules/Agents/AgentBase.js"></script>
-    <script src="modules/Agents/NavigationAgent.js"></script>
-    <script src="modules/Agents/AnalysisAgent.js"></script>
-    <script src="modules/Agents/DataAgent.js"></script>
-    <script src="modules/Agents/ExternalAgent.js"></script>
-    <script src="modules/Agents/PluginAgent.js"></script>
-    <script src="modules/Agents/DeepResearchAgent.js"></script>
-    <script src="modules/Agents/CoordinatorAgent.js"></script>
-    <script src="modules/MultiAgentSystem.js"></script>
+    <script defer src="modules/Agents/AgentBase.js"></script>
+    <script defer src="modules/Agents/NavigationAgent.js"></script>
+    <script defer src="modules/Agents/AnalysisAgent.js"></script>
+    <script defer src="modules/Agents/DataAgent.js"></script>
+    <script defer src="modules/Agents/ExternalAgent.js"></script>
+    <script defer src="modules/Agents/PluginAgent.js"></script>
+    <script defer src="modules/Agents/DeepResearchAgent.js"></script>
+    <script defer src="modules/Agents/CoordinatorAgent.js"></script>
+    <script defer src="modules/MultiAgentSystem.js"></script>
 
-    <script src="../shared/alignment-depth.js"></script>
-    <script src="modules/ReadsManager.js"></script>
-    <script src="modules/BaseCompositionAnalyzer.js"></script>
-    <script src="modules/ProteinStructureViewer.js"></script>
-    <script src="modules/BlastManager.js"></script>
-    <script src="modules/BlastFunctionTools.js"></script>
-    <script src="modules/BlastChatManagerIntegration.js"></script>
-    <script src="modules/UnifiedDNATranslation.js"></script>
-    <script src="modules/MicrobeGenomicsFunctions.js"></script>
+    <script defer src="../shared/alignment-depth.js"></script>
+    <script defer src="modules/ReadsManager.js"></script>
+    <script defer src="modules/BaseCompositionAnalyzer.js"></script>
+    <script defer src="modules/ProteinStructureViewer.js"></script>
+    <script defer src="modules/BlastManager.js"></script>
+    <script defer src="modules/BlastFunctionTools.js"></script>
+    <script defer src="modules/BlastChatManagerIntegration.js"></script>
+    <script defer src="modules/UnifiedDNATranslation.js"></script>
+    <script defer src="modules/MicrobeGenomicsFunctions.js"></script>
 
     <!-- Plugin System Support -->
-    <script src="modules/ModalDragManager.js"></script>
-    <script src="modules/ResizableModalManager.js"></script>
-    <script src="modules/FunctionCallsOrganizer.js"></script>
-    <script src="modules/PluginFunctionCallsIntegrator.js"></script>
-    <script src="modules/SmartExecutor.js"></script>
-    <script src="modules/PluginUtils.js"></script>
-    <script src="modules/PluginVisualization.js"></script>
-    <script src="modules/PluginImplementations.js"></script>
+    <script defer src="modules/ModalDragManager.js"></script>
+    <script defer src="modules/ResizableModalManager.js"></script>
+    <script defer src="modules/FunctionCallsOrganizer.js"></script>
+    <script defer src="modules/PluginFunctionCallsIntegrator.js"></script>
+    <script defer src="modules/SmartExecutor.js"></script>
+    <script defer src="modules/PluginUtils.js"></script>
+    <script defer src="modules/PluginVisualization.js"></script>
+    <script defer src="modules/PluginImplementations.js"></script>
 
 
     <!-- Action Management System -->
-    <script src="modules/GenomeDataProxy.js"></script>
-    <script src="modules/export/GenBankExporter.js"></script>
-    <script src="modules/ActionManager.js"></script>
-    <script src="modules/CheckpointManager.js"></script>
+    <script defer src="modules/GenomeDataProxy.js"></script>
+    <script defer src="modules/export/GenBankExporter.js"></script>
+    <script defer src="modules/ActionManager.js"></script>
+    <script defer src="modules/CheckpointManager.js"></script>
 
     <!-- Tab Management System -->
-    <script src="modules/TabManager.js"></script>
-    <script src="modules/WindowTabManager.js"></script>
+    <script defer src="modules/TabManager.js"></script>
+    <script defer src="modules/WindowTabManager.js"></script>
 
     <!-- Literature Settings and Enhanced Citation Display -->
-    <script src="modules/LiteratureSettings.js"></script>
-    <script src="modules/LiteratureAPIService.js"></script>
-    <script src="modules/EnhancedCitationDisplay.js"></script>
+    <script defer src="modules/LiteratureSettings.js"></script>
+    <script defer src="modules/LiteratureAPIService.js"></script>
+    <script defer src="modules/EnhancedCitationDisplay.js"></script>
 
     <!-- Version Management -->
-    <script src="../version.js"></script>
+    <script defer src="../version.js"></script>
 
     <!-- Main application -->
-    <script src="renderer-modular.js"></script>
+    <script defer src="renderer-modular.js"></script>
 </body>
 
 </html>
