@@ -1751,6 +1751,7 @@ class LLMBenchmarkFramework {
         availableTools: [], // Available function tools
         requestId: this.generateRequestId(),
         harnessMode: this.getActiveHarnessProfile().harness_mode,
+        providerRequests: [],
       },
 
       // Response details
@@ -1974,10 +1975,12 @@ class LLMBenchmarkFramework {
           };
           return this.strictAutomaticEvaluator.evaluate(options.testInfo, partialResult).success === true;
         };
-        response = await this.chatManager.sendToLLM(
-          instruction,
-          harnessProfile.oracleEarlyStop ? { shouldStopAfterRound } : {}
-        );
+        response = await this.chatManager.sendToLLM(instruction, {
+          ...(harnessProfile.oracleEarlyStop ? { shouldStopAfterRound } : {}),
+          onProviderRequest: request => {
+            if (!signal.aborted) interactionData.request.providerRequests.push(request);
+          },
+        });
         signal.throwIfAborted();
         console.log(
           `[Benchmark][request] test ${options.testInfo?.id || 'unknown'} LLM returned in ${Date.now() - requestSentAt}ms at ${new Date().toISOString()}`

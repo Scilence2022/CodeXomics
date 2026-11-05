@@ -23,7 +23,9 @@ Two harnesses produce numbers. The **in-app** harness (`LLMBenchmarkFramework`) 
 - **`production-parity`** (default). The test goes through the same pipeline and the user's own settings: ChatBox temperature, streaming, tool-selection limit, Smart Executor and agent routing. The round loop ends on its own, so over-completion is scored as it happened. These are the numbers that reflect what a ChatBox user gets.
 - **`oracle-assisted`**. The legacy controlled run: the test oracle stops the round loop as soon as every expected call has executed, temperature is pinned to 0, streaming is off, exactly 24 candidate tools are advertised, and Smart Executor and agent routing are disabled.
 
-CSV exports include the run ID, harness mode, provider, and model. The HTML report displays the harness mode. Historical results without a recorded mode are labeled unknown.
+CSV exports include the run ID, harness mode, provider, and model. The HTML report displays the harness mode. Historical results without a recorded mode are labeled unknown. In-app JSON interaction records include per-attempt provider evidence
+with the resolved model, stream outcome, request duration, temperature, output token limit, serialized byte count, and tool names.
+The evidence entries contain counts and request settings, with prompts and credentials excluded.
 
 `results.harness.effective_request` lists the temperature, streaming, tool limit and routing that were actually in force. Skills stay out of every benchmark prompt in both modes (see `Agents.md`).
 

@@ -76,6 +76,7 @@ describe('LLMConfigManager streaming integration', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -236,6 +237,80 @@ describe('LLMConfigManager streaming integration', () => {
         signal: controller.signal,
       })
     ).rejects.toThrow(/AbortError/);
+  });
+
+  it.each([false, true])('times out after response headers with streaming=%s', async streaming => {
+    vi.useFakeTimers();
+    manager.getRequestTimeoutMs = () => 50;
+    const fetchMock = vi.fn(async (_url, { signal }) => {
+      const waitForAbort = () =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+        });
+      return streaming
+        ? {
+            ...makeSSEResponse([]),
+            body: { getReader: () => ({ read: waitForAbort, cancel: async () => {} }) },
+          }
+        : { ok: true, json: waitForAbort };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pending = manager.sendOpenAIMessageWithHistory(provider, [{ role: 'user', content: 'hi' }], null, null, {
+      onToken: streaming ? () => {} : undefined,
+    });
+    const assertion = expect(pending).rejects.toMatchObject({ name: 'TimeoutError', isTimeout: true });
+    await vi.advanceTimersByTimeAsync(51);
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('checks the serialized payload and output reserve before dispatch', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const messages = [{ role: 'user', content: '基因'.repeat(2100) }];
+    await expect(
+      manager.sendOpenAIMessageWithHistory(provider, messages, null, null, {
+        contextTokenBudget: 4000,
+        onToken: () => {},
+      })
+    ).rejects.toMatchObject({ code: 'LLM_CONTEXT_BUDGET' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('records sanitized evidence from the serialized attempts when streaming falls back', async () => {
+    const success = makeJSONResponse({ choices: [{ message: { role: 'assistant', content: 'ok' } }] });
+    const fetchMock = vi.fn(async () => success);
+    vi.stubGlobal('fetch', fetchMock);
+    const onProviderRequest = vi.fn();
+    const tool = { type: 'function', function: { name: 'query_gene', parameters: { type: 'object' } } };
+    const messages = [{ role: 'user', content: 'Private prompt' }];
+    await manager.sendOpenAIMessageWithHistory(provider, messages, null, null, {
+      onToken: () => {},
+      onProviderRequest,
+      tools: [tool],
+      nativeFunctionCalling: true,
+    });
+
+    const attempts = onProviderRequest.mock.calls.map(([attempt]) => attempt);
+    expect(attempts.map(({ streaming, outcome }) => [streaming, outcome])).toEqual([
+      [true, 'stream-unavailable'],
+      [false, 'completed'],
+    ]);
+    attempts.forEach((attempt, index) => {
+      const body = fetchMock.mock.calls[index][1].body;
+      const payload = JSON.parse(body);
+      expect(attempt).toMatchObject({
+        provider: 'openai',
+        model: payload.model,
+        temperature: payload.temperature,
+        outputTokens: payload.max_tokens,
+        inputBytes: new TextEncoder().encode(body).length,
+        toolNames: ['query_gene'],
+      });
+      expect(JSON.stringify(attempt)).not.toContain(messages[0].content);
+      expect(JSON.stringify(attempt)).not.toContain(provider.apiKey);
+    });
   });
 
   it('honours the enableStreaming setting being turned off', async () => {

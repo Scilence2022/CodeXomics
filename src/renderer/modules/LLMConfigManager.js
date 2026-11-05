@@ -2390,6 +2390,7 @@ class LLMConfigManager {
    * Check if fallback should be attempted based on error type
    */
   shouldTryFallback(error) {
+    if (error?.isTimeout || error?.name === 'AbortError' || error?.code === 'LLM_CONTEXT_BUDGET') return false;
     // Try fallback for service unavailable errors and rate limits
     return (
       error.message.includes('HTTP 503') ||
@@ -2889,13 +2890,27 @@ class LLMConfigManager {
    * Aborts propagate; anything else discards partial text and falls through.
    */
   handleStreamFailure(error, providerLabel, options) {
-    if (error?.name === 'AbortError' || options?.signal?.aborted) {
+    if (
+      error?.name === 'AbortError' ||
+      error?.isTimeout ||
+      error?.code === 'LLM_CONTEXT_BUDGET' ||
+      options?.signal?.aborted
+    ) {
       throw error;
     }
     console.warn(`[${providerLabel}] Streaming attempt failed, falling back to non-streaming:`, error.message);
     // Partial text may already be on screen; clear it so the retry cannot duplicate it.
     options?.onStreamReset?.();
     return null;
+  }
+
+  buildAnthropicHeaders(provider) {
+    return {
+      'x-api-key': provider.apiKey,
+      'Content-Type': 'application/json',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    };
   }
 
   /** Headers for the Gemini API. The key is a header so it never enters a URL. */
@@ -2918,6 +2933,89 @@ class LLMConfigManager {
     return headers;
   }
 
+  async requestHistoryPayload(url, headers, providerKey, model, payload, options, streaming, consumeResponse) {
+    options.signal?.throwIfAborted();
+    const body = JSON.stringify(payload);
+    const outputTokens =
+      payload.max_tokens ?? payload.max_completion_tokens ?? payload.generationConfig?.maxOutputTokens ?? 0;
+    const budget = options.contextTokenBudget;
+    const collectEvidence = typeof options.onProviderRequest === 'function';
+    const inputBytes = budget > 0 || collectEvidence ? new TextEncoder().encode(body).length : 0;
+    const estimatedInputTokens = Math.ceil(inputBytes / 4);
+    if (budget > 0 && estimatedInputTokens + outputTokens > budget) {
+      const error = new Error(
+        `The request for ${model} needs about ${estimatedInputTokens + outputTokens} context tokens (${outputTokens} reserved for the response). ` +
+          `The configured limit is ${budget}. Shorten the request or adjust llm.maxContextTokens.`
+      );
+      error.code = 'LLM_CONTEXT_BUDGET';
+      throw error;
+    }
+    const startedAt = performance.now();
+    let outcome = 'completed';
+    try {
+      const result = await this.fetchWithGuards(url, { method: 'POST', headers, body }, options, consumeResponse);
+      if (streaming && result === null) outcome = 'stream-unavailable';
+      if (result?.retryWithFallback) outcome = 'model-unavailable';
+      return result;
+    } catch (error) {
+      outcome = error?.isTimeout ? 'timeout' : options.signal?.aborted ? 'cancelled' : 'failed';
+      throw error;
+    } finally {
+      if (collectEvidence) {
+        const tools =
+          payload.tools?.flatMap(
+            tool =>
+              tool.functionDeclarations?.map(declaration => declaration.name) || [tool.function?.name || tool.name]
+          ) || [];
+        try {
+          options.onProviderRequest({
+            provider: providerKey,
+            model,
+            streaming,
+            temperature: payload.temperature ?? payload.generationConfig?.temperature ?? null,
+            outputTokens,
+            inputBytes,
+            estimatedInputTokens,
+            toolNames: tools.filter(Boolean),
+            durationMs: Math.round(performance.now() - startedAt),
+            outcome,
+          });
+        } catch (error) {
+          console.warn('Could not record provider request metadata:', error.message);
+        }
+      }
+    }
+  }
+
+  requestHistoryStream(url, headers, providerKey, model, payload, options, parser) {
+    const client = this.getStreamClient();
+    return this.requestHistoryPayload(
+      url,
+      headers,
+      providerKey,
+      model,
+      payload,
+      options,
+      true,
+      async (response, signal) => {
+        if (!response.ok || !client.isEventStream(response)) {
+          await response.body?.cancel?.();
+          return null;
+        }
+        return client[parser](response, {
+          onToken: options.onToken,
+          onReasoningToken: options.onReasoningToken,
+          signal,
+        });
+      }
+    );
+  }
+
+  async readProviderJson(response) {
+    if (!response.ok) throw await this.createProviderHttpError(response);
+    return response.json();
+  }
+
   /**
    * Streaming fast path for every OpenAI-compatible provider.
    * @returns normalized response, or null to fall back to non-streaming.
@@ -2925,47 +3023,20 @@ class LLMConfigManager {
   async tryStreamChatCompletions(providerKey, provider, conversationHistory, options = {}, normalizeFn = null) {
     if (!this.shouldAttemptStream(options)) return null;
 
-    const streamClient = this.getStreamClient();
     const providerLabel = provider?.name || providerKey;
-
     try {
-      const streamStart = Date.now();
-      console.log(
-        `[LLM][${providerLabel}] streaming request start: url=${provider.baseUrl}/chat/completions, ` +
-          `model=${provider.model}, messages=${conversationHistory.length}, ` +
-          `signal=${options.signal ? 'yes' : 'no'}, at=${new Date().toISOString()}`
+      const data = await this.requestHistoryStream(
+        `${provider.baseUrl}/chat/completions`,
+        this.buildChatCompletionsHeaders(providerKey, provider),
+        providerKey,
+        provider.model,
+        this.buildOpenAICompatiblePayload(provider, conversationHistory, options, { stream: true }),
+        options,
+        'streamOpenAICompatible'
       );
-      const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: this.buildChatCompletionsHeaders(providerKey, provider),
-        body: JSON.stringify(
-          this.buildOpenAICompatiblePayload(provider, conversationHistory, options, { stream: true })
-        ),
-        signal: options.signal || undefined,
-      });
-      console.log(
-        `[LLM][${providerLabel}] streaming response status=${response.status} after ${Date.now() - streamStart}ms`
-      );
-
-      // Let the established non-streaming path own error classification, retry
-      // scheduling, and provider fallback rather than duplicating it here.
-      if (!response.ok || !streamClient.isEventStream(response)) {
-        console.warn(
-          `[${providerLabel}] Streaming unavailable (status ${response.status}) after ${Date.now() - streamStart}ms; using non-streaming request.`
-        );
-        return null;
-      }
-
-      const data = await streamClient.streamOpenAICompatible(response, {
-        onToken: options.onToken,
-        onReasoningToken: options.onReasoningToken,
-        signal: options.signal,
-      });
-
-      console.log(`[LLM][${providerLabel}] streaming completed in ${Date.now() - streamStart}ms`);
+      if (data === null) return null;
       return normalizeFn ? normalizeFn.call(this, data) : this.normalizeOpenAICompatibleResponse(data, providerKey);
     } catch (error) {
-      console.warn(`[LLM][${providerLabel}] streaming request failed:`, error?.message || error);
       return this.handleStreamFailure(error, providerLabel, options);
     }
   }
@@ -2974,7 +3045,6 @@ class LLMConfigManager {
   async tryStreamAnthropic(provider, conversationHistory, options = {}) {
     if (!this.shouldAttemptStream(options)) return null;
 
-    const streamClient = this.getStreamClient();
     const providerLabel = provider?.name || 'Anthropic';
 
     try {
@@ -2993,32 +3063,16 @@ class LLMConfigManager {
         payload.tool_choice = { type: options.toolChoice || 'auto' };
       }
 
-      const response = await fetch(`${provider.baseUrl}/v1/messages`, {
-        method: 'POST',
-        headers: {
-          'x-api-key': provider.apiKey,
-          'Content-Type': 'application/json',
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify(payload),
-        signal: options.signal || undefined,
-      });
-
-      if (!response.ok || !streamClient.isEventStream(response)) {
-        console.warn(
-          `[${providerLabel}] Streaming unavailable (status ${response.status}); using non-streaming request.`
-        );
-        return null;
-      }
-
-      const data = await streamClient.streamAnthropic(response, {
-        onToken: options.onToken,
-        onReasoningToken: options.onReasoningToken,
-        signal: options.signal,
-      });
-
-      return this.normalizeAnthropicResponse(data);
+      const data = await this.requestHistoryStream(
+        `${provider.baseUrl}/v1/messages`,
+        this.buildAnthropicHeaders(provider),
+        'anthropic',
+        provider.model,
+        payload,
+        options,
+        'streamAnthropic'
+      );
+      return data === null ? null : this.normalizeAnthropicResponse(data);
     } catch (error) {
       return this.handleStreamFailure(error, providerLabel, options);
     }
@@ -3028,7 +3082,6 @@ class LLMConfigManager {
   async tryStreamGoogle(provider, conversationHistory, options = {}) {
     if (!this.shouldAttemptStream(options)) return null;
 
-    const streamClient = this.getStreamClient();
     const providerLabel = provider?.name || 'Google';
 
     try {
@@ -3053,27 +3106,16 @@ class LLMConfigManager {
 
       const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:streamGenerateContent?alt=sse`;
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: this.buildGoogleHeaders(provider),
-        body: JSON.stringify(payload),
-        signal: options.signal || undefined,
-      });
-
-      if (!response.ok || !streamClient.isEventStream(response)) {
-        console.warn(
-          `[${providerLabel}] Streaming unavailable (status ${response.status}); using non-streaming request.`
-        );
-        return null;
-      }
-
-      const data = await streamClient.streamGoogle(response, {
-        onToken: options.onToken,
-        onReasoningToken: options.onReasoningToken,
-        signal: options.signal,
-      });
-
-      return this.normalizeGoogleResponse(data);
+      const data = await this.requestHistoryStream(
+        apiUrl,
+        this.buildGoogleHeaders(provider),
+        'google',
+        provider.model,
+        payload,
+        options,
+        'streamGoogle'
+      );
+      return data === null ? null : this.normalizeGoogleResponse(data);
     } catch (error) {
       return this.handleStreamFailure(error, providerLabel, options);
     }
@@ -3122,48 +3164,49 @@ class LLMConfigManager {
       nativeTools: this.getNativeFunctionTools(options).length,
     });
 
-    const requestWithModel = model =>
-      this.fetchWithGuards(
+    const requestWithModel = (model, fallbackModel) =>
+      this.requestHistoryPayload(
         `${provider.baseUrl}/chat/completions`,
-        {
-          method: 'POST',
-          headers: this.buildChatCompletionsHeaders(providerKey, provider),
-          body: JSON.stringify(
-            this.buildOpenAICompatiblePayload(
-              { ...provider, model },
-              conversationHistory,
-              options,
-              spec.payloadExtra || {}
-            )
-          ),
-        },
-        options
+        this.buildChatCompletionsHeaders(providerKey, provider),
+        providerKey,
+        model,
+        this.buildOpenAICompatiblePayload(
+          { ...provider, model },
+          conversationHistory,
+          options,
+          spec.payloadExtra || {}
+        ),
+        options,
+        false,
+        async response => {
+          if (!response.ok && fallbackModel && spec.fallbackModelStatuses.includes(response.status)) {
+            await response.body?.cancel?.();
+            return { retryWithFallback: true };
+          }
+          return { data: await this.readProviderJson(response) };
+        }
       );
 
     return await this.makeRequestWithRetry(
       async () => {
-        let response = await requestWithModel(provider.model);
-
-        if (!response.ok && !options.disableFallback && (spec.fallbackModelStatuses || []).includes(response.status)) {
-          const fallbackModel = this.getOpenRouterFallbackModel(provider.model);
-          if (fallbackModel && fallbackModel !== provider.model) {
-            console.warn(`${label} model unavailable (${provider.model}). Falling back to ${fallbackModel}.`);
-            this.showNotification(
-              `${label} model not available (${provider.model}). Retrying with ${fallbackModel}...`,
-              'error'
-            );
-            response = await requestWithModel(fallbackModel);
-          }
+        const fallbackModel =
+          !options.disableFallback && spec.fallbackModelStatuses
+            ? this.getOpenRouterFallbackModel(provider.model)
+            : null;
+        let result = await requestWithModel(provider.model, fallbackModel !== provider.model ? fallbackModel : null);
+        if (result.retryWithFallback) {
+          console.warn(`${label} model unavailable (${provider.model}). Falling back to ${fallbackModel}.`);
+          this.showNotification(
+            `${label} model not available (${provider.model}). Retrying with ${fallbackModel}...`,
+            'error'
+          );
+          result = await requestWithModel(fallbackModel, null);
         }
-
-        if (!response.ok) throw await this.createProviderHttpError(response);
-        return response;
+        return result.data;
       },
       label,
-      async response => {
-        const data = await response.json();
-        return normalize ? normalize.call(this, data) : this.normalizeOpenAICompatibleResponse(data, providerKey);
-      },
+      async data =>
+        normalize ? normalize.call(this, data) : this.normalizeOpenAICompatibleResponse(data, providerKey),
       3,
       options
     );
@@ -3267,26 +3310,19 @@ class LLMConfigManager {
     // "HTTP 400" hid the provider's own reason, and a 429 failed the whole turn
     // where every other provider would have backed off and retried.
     return await this.makeRequestWithRetry(
-      async () => {
-        const response = await this.fetchWithGuards(
+      () =>
+        this.requestHistoryPayload(
           `${provider.baseUrl}/v1/messages`,
-          {
-            method: 'POST',
-            headers: {
-              'x-api-key': provider.apiKey,
-              'Content-Type': 'application/json',
-              'anthropic-version': '2023-06-01',
-              'anthropic-dangerous-direct-browser-access': 'true',
-            },
-            body: JSON.stringify(payload),
-          },
-          options
-        );
-        if (!response.ok) throw await this.createProviderHttpError(response);
-        return response;
-      },
+          this.buildAnthropicHeaders(provider),
+          'anthropic',
+          provider.model,
+          payload,
+          options,
+          false,
+          response => this.readProviderJson(response)
+        ),
       'Anthropic',
-      async response => this.normalizeAnthropicResponse(await response.json()),
+      async data => this.normalizeAnthropicResponse(data),
       3,
       options
     );
@@ -3380,21 +3416,19 @@ class LLMConfigManager {
     const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent`;
 
     return await this.makeRequestWithRetry(
-      async () => {
-        const response = await this.fetchWithGuards(
+      () =>
+        this.requestHistoryPayload(
           apiUrl,
-          {
-            method: 'POST',
-            headers: this.buildGoogleHeaders(provider),
-            body: JSON.stringify(payload),
-          },
-          options
-        );
-        if (!response.ok) throw await this.createProviderHttpError(response);
-        return response;
-      },
+          this.buildGoogleHeaders(provider),
+          'google',
+          provider.model,
+          payload,
+          options,
+          false,
+          response => this.readProviderJson(response)
+        ),
       'Google',
-      async response => this.normalizeGoogleResponse(await response.json()),
+      async data => this.normalizeGoogleResponse(data),
       3,
       options
     );
@@ -3528,16 +3562,18 @@ class LLMConfigManager {
   }
 
   /**
-   * fetch() for provider requests. Every LLM call must be cancellable and
-   * bounded; only the streaming paths used to be.
+   * Keep the guard alive through response consumption, including SSE and error bodies.
    * @param {string} url
    * @param {RequestInit} init
    * @param {{signal?: AbortSignal}} options request options from the caller
    */
-  async fetchWithGuards(url, init = {}, options = {}) {
+  async fetchWithGuards(url, init = {}, options = {}, consumeResponse = response => response) {
     const guard = this.createRequestGuard(options);
     try {
-      return await fetch(url, { ...init, signal: guard.signal });
+      const response = await fetch(url, { ...init, signal: guard.signal });
+      const result = await consumeResponse(response, guard.signal);
+      guard.signal.throwIfAborted();
+      return result;
     } catch (error) {
       // A timeout aborts the same way a user cancellation does. Re-label it so
       // the caller does not report "aborted by user" for a dead connection.
@@ -3591,6 +3627,24 @@ class LLMConfigManager {
     }
   }
 
+  waitForProviderRetry(delay, signal) {
+    return new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(signal.reason);
+        return;
+      }
+      const cancel = () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener('abort', cancel);
+        resolve();
+      }, delay);
+      signal?.addEventListener('abort', cancel, { once: true });
+    });
+  }
+
   /**
    * Make HTTP request with automatic retry logic for service unavailable errors
    */
@@ -3605,7 +3659,7 @@ class LLMConfigManager {
         lastError = error;
 
         // A cancelled or timed-out request is never retried: the user already
-        // asked for it to stop, and backoff is not abortable.
+        // asked for it to stop, or the provider exceeded its request deadline.
         if (error?.name === 'AbortError' || error?.isTimeout || options?.signal?.aborted) {
           throw error;
         }
@@ -3619,8 +3673,7 @@ class LLMConfigManager {
           );
           this.showRetryNotification(providerName, attempt + 1, maxAttempts, delay);
 
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await this.waitForProviderRetry(delay, options.signal);
         } else {
           // No more retries or non-retryable error
           if (error.isRetryable) {
