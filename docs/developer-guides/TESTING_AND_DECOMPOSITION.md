@@ -52,6 +52,22 @@ are replaced with behavioral tests — aim for 30%+ on actively developed module
 3. Assert on inputs → outputs / state changes.
 4. Delete the string assertions.
 
+### Viewport filtering baseline
+
+Run `node scripts/benchmark-genome-viewport.cjs` after installing the repository dependencies.
+On Linux, launch it with `xvfb-run -a`. The script starts the Electron genome view
+with a temporary profile and emits JSON to standard output.
+
+The fixture measures the first query and 40 subsequent queries for each of
+10,000, 100,000 and 1,000,000 synthetic features. It exercises both linear
+viewports and viewports spanning a circular origin. The JSON includes p50,
+p95, the number of returned features, the runtime, and Electron's current
+and process-lifetime peak working sets where the platform exposes them.
+
+Compare runs on the same machine and runtime. These timings cover feature
+filtering and are separate from file import, data IPC, layout and painting.
+The first-query measurement starts after fixture generation and renderer startup.
+
 ## Module decomposition plan
 
 Several modules have grown well past a maintainable size and concentrate change
