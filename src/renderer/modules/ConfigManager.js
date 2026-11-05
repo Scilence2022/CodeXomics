@@ -546,6 +546,24 @@ class ConfigManager {
       }
     }
 
+    if (!loadedConfig.llm) {
+      try {
+        const legacy = JSON.parse(localStorage.getItem('llmConfiguration'));
+        if (legacy) this.config.llm = this.mergeConfig(this.config.llm, legacy);
+      } catch (error) {
+        console.warn('Could not load legacy provider settings:', error.message);
+      }
+    }
+
+    if (loadedConfig.llm?.localCustomConfigs === undefined) {
+      try {
+        const legacy = JSON.parse(localStorage.getItem('localCustomConfigs'));
+        if (legacy) this.config.llm.localCustomConfigs = legacy;
+      } catch (error) {
+        console.warn('Could not load legacy endpoint configurations:', error.message);
+      }
+    }
+
     this.migrateMarketplaceSettingsFromLocalStorage();
     this.migrateBlastDatabasesFromLocalStorage();
     console.log('Configuration loaded from main-process config IPC');
@@ -568,6 +586,7 @@ class ConfigManager {
         const parsed = JSON.parse(llmConfig);
         this.config.llm.providers = { ...this.config.llm.providers, ...parsed.providers };
         this.config.llm.currentProvider = parsed.currentProvider;
+        if (parsed.modelTypes) this.config.llm.modelTypes = parsed.modelTypes;
         console.log('LLM configuration loaded from localStorage:', {
           currentProvider: this.config.llm.currentProvider,
           providersCount: Object.keys(this.config.llm.providers).length,
@@ -703,43 +722,16 @@ class ConfigManager {
    * Save configuration
    */
   async saveConfig() {
-    console.log('=== saveConfig Debug Start ===');
-    console.log('this.configPath:', this.configPath);
-
     try {
       await this.waitForInitialization();
-
       if (typeof window !== 'undefined' && window.electronAPI?.saveConfigData) {
-        console.log('Saving configuration through main-process config IPC');
         const savedToMain = await this.saveToMainConfig();
-        if (savedToMain === false) {
-          console.warn('File-based configuration save unavailable, falling back to localStorage');
-          this.saveToLocalStorage();
-          console.log('Configuration saved to localStorage fallback');
-        } else {
-          console.log('Configuration saved through main process');
-        }
-      } else {
-        console.log('Saving configuration to LOCALSTORAGE (fallback)');
-        this.saveToLocalStorage();
-        console.log('Configuration saved to localStorage');
+        if (savedToMain) return savedToMain;
       }
-      console.log('Configuration saved successfully');
-      console.log('=== saveConfig Debug End ===');
+      return this.saveToLocalStorage();
     } catch (error) {
       console.error('Error saving configuration:', error);
-      console.error('=== saveConfig Debug End (ERROR) ===');
-
-      // Try fallback to localStorage if file saving fails
-      try {
-        console.warn('Attempting fallback save to localStorage...');
-        this.saveToLocalStorage();
-        console.log('Fallback save to localStorage successful');
-      } catch (fallbackError) {
-        console.error('Fallback save also failed:', fallbackError);
-        // Don't throw error to prevent app crashes
-        console.warn('Configuration save failed completely, but continuing execution');
-      }
+      return { success: false, credentialsPersisted: false };
     }
   }
 
@@ -943,7 +935,14 @@ class ConfigManager {
       if (result.configPath) {
         this.configPath = result.configPath;
       }
-      return true;
+      if (result.credentialsPersisted && cleanConfig.llm?.providers) {
+        window.configurationCredentials.clearMigratedFallbackConfiguration(
+          localStorage,
+          'llmConfiguration',
+          cleanConfig.llm
+        );
+      }
+      return result;
     } catch (error) {
       console.error('Error saving configuration through main process:', error);
       return false;
@@ -1024,71 +1023,31 @@ class ConfigManager {
    * Save configuration to localStorage (fallback)
    */
   saveToLocalStorage() {
-    try {
-      // Save LLM config with validation
-      const llmConfig = {
-        providers: this.config.llm.providers,
-        currentProvider: this.config.llm.currentProvider,
-      };
-      localStorage.setItem('llmConfiguration', this.safeStringify(llmConfig));
-
-      // Save UI preferences with validation
-      localStorage.setItem('uiPreferences', this.safeStringify(this.config.ui));
-
-      // Save chat history with size validation (namespaced per window).
-      const cleanChatHistory = this.validateAndCleanData(this.config.chat).history;
-      localStorage.setItem(this.getChatHistoryKey(), this.safeStringify(cleanChatHistory));
-      this.pruneOrphanChatHistories();
-
-      // Save app settings with validation
-      localStorage.setItem('appSettings', this.safeStringify(this.config.app));
-
-      // Save general settings (UI Style, theme, accent color, etc.)
-      if (this.config.generalSettings) {
-        localStorage.setItem('generalSettings', this.safeStringify(this.config.generalSettings));
-      }
-
-      // Save chatbox settings
-      if (this.config.chatboxSettings && Object.keys(this.config.chatboxSettings).length > 0) {
-        localStorage.setItem('chatboxSettings', this.safeStringify(this.config.chatboxSettings));
-      }
-
-      // Save marketplace settings and installed plugins
-      localStorage.setItem('marketplaceSettings', this.safeStringify(this.config.marketplace));
-
-      console.log('Configuration saved to localStorage with size validation');
-      console.log('Marketplace data saved:', {
-        installed: Object.keys(this.config.marketplace?.installed || {}).length,
-        sources: this.config.marketplace?.sources?.length,
-      });
-    } catch (error) {
-      console.error('Error saving configuration to localStorage:', error);
-
-      // Try to save minimal data if full save fails
-      try {
-        console.warn('Attempting to save minimal configuration to localStorage...');
-        localStorage.setItem(
-          'llmConfiguration',
-          JSON.stringify({
-            providers: this.config.llm.providers || {},
-            currentProvider: this.config.llm.currentProvider || 'openai',
-          })
-        );
-        localStorage.setItem('uiPreferences', JSON.stringify(this.config.ui || {}));
-        localStorage.setItem(this.getChatHistoryKey(), JSON.stringify([])); // Clear chat history
-        localStorage.setItem('appSettings', JSON.stringify(this.config.app || {}));
-        if (this.config.generalSettings) {
-          localStorage.setItem('generalSettings', JSON.stringify(this.config.generalSettings));
-        }
-        if (this.config.chatboxSettings && Object.keys(this.config.chatboxSettings).length > 0) {
-          localStorage.setItem('chatboxSettings', JSON.stringify(this.config.chatboxSettings));
-        }
-        console.log('Minimal configuration saved to localStorage');
-      } catch (minimalError) {
-        console.error('Even minimal localStorage save failed:', minimalError);
-        throw error; // Re-throw original error
-      }
+    let credentialsPersisted = true;
+    const saveSetting = (key, value) => {
+      const result = window.configurationCredentials.saveFallbackConfiguration(localStorage, key, value, data =>
+        this.safeStringify(data)
+      );
+      credentialsPersisted = credentialsPersisted && result.credentialsPersisted;
+    };
+    saveSetting('llmConfiguration', {
+      providers: this.config.llm.providers,
+      modelTypes: this.config.llm.modelTypes,
+      currentProvider: this.config.llm.currentProvider,
+    });
+    if (this.config.llm.localCustomConfigs) saveSetting('localCustomConfigs', this.config.llm.localCustomConfigs);
+    saveSetting('uiPreferences', this.config.ui);
+    saveSetting('appSettings', this.config.app);
+    if (this.config.generalSettings) saveSetting('generalSettings', this.config.generalSettings);
+    if (this.config.chatboxSettings && Object.keys(this.config.chatboxSettings).length > 0) {
+      saveSetting('chatboxSettings', this.config.chatboxSettings);
     }
+    saveSetting('marketplaceSettings', this.config.marketplace);
+
+    const cleanChatHistory = this.validateAndCleanData(this.config.chat).history;
+    localStorage.setItem(this.getChatHistoryKey(), this.safeStringify(cleanChatHistory));
+    this.pruneOrphanChatHistories();
+    return { success: true, credentialsPersisted };
   }
 
   /**
@@ -1330,7 +1289,10 @@ class ConfigManager {
       const exportData = {
         version: this.config.version,
         exported: new Date().toISOString(),
-        config: this.config,
+        config: window.configurationCredentials.mapConfigurationCredentials(
+          structuredClone(this.config),
+          () => undefined
+        ),
       };
 
       if (filePath) {

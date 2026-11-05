@@ -1,14 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { runInNewContext } from 'node:vm';
 
 const CHAT_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/ChatManager.js');
 const RENDERER_PATH = path.join(process.cwd(), 'src/renderer/renderer-modular.js');
 const CONFIG_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/ConfigManager.js');
-const CHATBOX_LAYOUT_PATH = path.join(
-  process.cwd(),
-  'src/renderer/css/legacy/03-gene-annotation-actions.css'
-);
+const CHATBOX_LAYOUT_PATH = path.join(process.cwd(), 'src/renderer/css/legacy/03-gene-annotation-actions.css');
 
 describe('ChatBox visibility startup behavior', () => {
   it('creates the ChatBox in a visible state on startup', () => {
@@ -58,12 +56,19 @@ describe('ChatBox visibility startup behavior', () => {
     expect(content).not.toContain("document.querySelector('.chat-container')");
   });
 
-  it('falls back to localStorage when hardened renderer blocks file config APIs', () => {
+  it('falls back to localStorage when the file configuration save is rejected', async () => {
     const content = fs.readFileSync(CONFIG_MANAGER_PATH, 'utf-8');
+    const ConfigManager = runInNewContext(`${content}\nConfigManager`, {
+      window: { electronAPI: { saveConfigData: async () => ({ success: false, error: 'disk is read-only' }) } },
+      console: { error() {} },
+    });
+    const manager = Object.create(ConfigManager.prototype);
+    manager.waitForInitialization = async () => {};
+    manager.buildPersistableConfig = () => ({ llm: { providers: {} } });
+    manager.validateAndCleanData = data => data;
+    manager.saveToLocalStorage = () => ({ success: true, credentialsPersisted: false });
 
-    expect(content).toContain('File-based configuration unavailable, falling back to localStorage');
-    expect(content).toContain('File-based configuration save unavailable, falling back to localStorage');
-    expect(content).toContain('return false;');
+    await expect(manager.saveConfig()).resolves.toEqual({ success: true, credentialsPersisted: false });
   });
 
   it('keeps only the compact composer controls visible when minimized', () => {
