@@ -2488,89 +2488,12 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('read-file-stream', async (event, filePath, chunkSize = 1024 * 1024) => {
-    try {
-      const safeFilePath = assertAllowedFileAccess(app, filePath, {
-        operation: 'stream file',
-        mustExist: true,
-      });
-      const stats = fs.statSync(safeFilePath);
-      const fileSize = stats.size;
-      let totalRead = 0;
-      let buffer = '';
-      let lineCount = 0;
-
-      console.log(
-        `Starting stream read of ${(fileSize / (1024 * 1024)).toFixed(1)} MB file: ${path.basename(safeFilePath)}`
-      );
-
-      return new Promise((resolve, reject) => {
-        const stream = fs.createReadStream(safeFilePath, {
-          encoding: 'utf8',
-          highWaterMark: chunkSize,
-        });
-
-        stream.on('data', chunk => {
-          try {
-            totalRead += Buffer.byteLength(chunk, 'utf8');
-            buffer += chunk;
-
-            // Process complete lines
-            const lines = buffer.split('\n');
-            buffer = lines.pop(); // Keep incomplete line in buffer
-
-            // Send lines to renderer for processing
-            if (lines.length > 0) {
-              lineCount += lines.length;
-              event.sender.send('file-lines-chunk', { lines, lineCount });
-            }
-
-            // Send progress update
-            const progress = Math.round((totalRead / fileSize) * 100);
-            event.sender.send('file-read-progress', { progress, totalRead, fileSize });
-
-            // Log progress for very large files
-            if (totalRead % (50 * 1024 * 1024) === 0) {
-              // Every 50MB
-              console.log(
-                `Stream progress: ${(totalRead / (1024 * 1024)).toFixed(1)} MB / ${(fileSize / (1024 * 1024)).toFixed(1)} MB`
-              );
-            }
-          } catch (chunkError) {
-            console.error('Error processing chunk:', chunkError);
-            stream.destroy();
-            resolve({ success: false, error: `Error processing data chunk: ${chunkError.message}` });
-          }
-        });
-
-        stream.on('end', () => {
-          try {
-            // Process any remaining data in buffer
-            if (buffer.trim()) {
-              lineCount += 1;
-              event.sender.send('file-lines-chunk', { lines: [buffer], lineCount });
-            }
-
-            console.log(`Stream complete: ${lineCount} lines, ${(totalRead / (1024 * 1024)).toFixed(1)} MB`);
-
-            // Signal completion
-            event.sender.send('file-stream-complete', { totalLines: lineCount, totalBytes: totalRead });
-            resolve({ success: true, totalLines: lineCount, size: totalRead });
-          } catch (endError) {
-            console.error('Error finalizing stream:', endError);
-            resolve({ success: false, error: `Error finalizing stream: ${endError.message}` });
-          }
-        });
-
-        stream.on('error', error => {
-          console.error('Stream error:', error);
-          resolve({ success: false, error: `File read error: ${error.message}` });
-        });
-      });
-    } catch (error) {
-      console.error('Error setting up stream:', error);
-      return { success: false, error: `Failed to set up file stream: ${error.message}` };
-    }
+  ipcMain.handle('sam-reader:get-region', async (event, filePath, chromosome, start, end, settings = {}) => {
+    if (!isMainFrameAtFile(event, genomePage)) throw new Error('Untrusted SAM query sender');
+    const safePath = assertAllowedFileAccess(app, filePath, { operation: 'query SAM file', mustExist: true });
+    if (path.extname(safePath).toLowerCase() !== '.sam') throw new Error('A SAM file is required');
+    const { readSamRegion } = require('./sam-region-reader');
+    return readSamRegion(safePath, chromosome, start, end, settings);
   });
 
   ipcMain.handle('get-file-info', async (event, filePath) => {

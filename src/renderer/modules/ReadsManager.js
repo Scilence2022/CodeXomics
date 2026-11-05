@@ -13,6 +13,7 @@ class ReadsManager {
     this.regionSize = 50000; // Size of each cached region (50kb)
     this.currentFile = null;
     this.isStreaming = false;
+    this.sourceGeneration = 0;
 
     // Statistics
     this.stats = {
@@ -27,8 +28,12 @@ class ReadsManager {
    * Initialize reads manager with SAM file data
    */
   async initializeWithSAMData(fileData, filePath) {
+    this.sourceGeneration++;
     this.rawReadsData = fileData;
     this.currentFile = filePath;
+    this.isStreaming = false;
+    this.isBamMode = false;
+    this.bamReader = null;
     this.cache.clear();
     this.stats.totalReads = 0;
     this.stats.loadedRegions = 0;
@@ -53,21 +58,16 @@ class ReadsManager {
    * Parse SAM file header to extract metadata
    */
   async parseHeader() {
-    const lines = this.rawReadsData.split('\n');
-    let headerLines = 0;
-
-    for (const line of lines) {
-      if (line.startsWith('@')) {
-        headerLines++;
-        // Could extract reference sequences, read groups, etc. here
-      } else {
-        break;
-      }
+    const text = this.rawReadsData;
+    let count = 0;
+    let cursor = 0;
+    while (cursor < text.length) {
+      const newline = text.indexOf('\n', cursor);
+      if (text[cursor] !== '@' && text[cursor] !== '\r' && text[cursor] !== '\n') count++;
+      if (newline === -1) break;
+      cursor = newline + 1;
     }
-
-    // Estimate total reads (rough approximation)
-    const dataLines = lines.length - headerLines;
-    this.stats.totalReads = Math.max(0, dataLines - 10); // Account for empty lines
+    this.stats.totalReads = count;
 
     console.log(`SAM file contains approximately ${this.stats.totalReads} reads`);
   }
@@ -105,9 +105,7 @@ class ReadsManager {
     this.stats.cacheMisses++;
 
     // Use appropriate loading method based on mode
-    const sourceFile = this.currentFile;
-    const sourceReader = this.bamReader;
-    const sourceText = this.rawReadsData;
+    const sourceGeneration = this.sourceGeneration;
     let reads;
     if (this.isBamMode && this.bamReader) {
       // Use BAM reader for binary BAM files - pass sampling settings to BAM loading
@@ -123,9 +121,8 @@ class ReadsManager {
     // Apply sampling if enabled and threshold is exceeded
     const sampledReads = this.applySampling(reads, settings);
 
-    if (this.currentFile === sourceFile && this.bamReader === sourceReader && this.rawReadsData === sourceText) {
-      this.cacheRegion(regionKey, reads);
-    }
+    if (sourceGeneration !== this.sourceGeneration) return [];
+    this.cacheRegion(regionKey, reads);
 
     console.log(
       `🔍 [ReadsManager] Final result: ${sampledReads.length} reads for region ${start}-${end}${sampledReads.length !== reads.length ? ` (sampled from ${reads.length})` : ''}`
@@ -138,7 +135,17 @@ class ReadsManager {
    * Generate a cache key for a region
    */
   getRegionKey(chromosome, start, end, settings = {}) {
-    return JSON.stringify([chromosome, start, end, settings.ignoreChromosome === true]);
+    return JSON.stringify([
+      chromosome,
+      start,
+      end,
+      settings.ignoreChromosome === true,
+      settings.minMappingQuality || 0,
+      settings.showSecondary !== false,
+      settings.showSupplementary !== false,
+      settings.viewportCoordinates === true,
+      settings.depthViewport || null,
+    ]);
   }
 
   /**
@@ -220,6 +227,7 @@ class ReadsManager {
 
     // Store sampling information for statistics
     sampledReads._sourceSamplingInfo = reads._sourceSamplingInfo;
+    sampledReads._alignmentDepth = reads._alignmentDepth;
     sampledReads._samplingInfo = {
       originalCount: reads.length,
       sampledCount: targetCount,
@@ -239,71 +247,32 @@ class ReadsManager {
    * Load reads for a specific region from the raw SAM data
    */
   async loadReadsForRegion(chromosome, start, end, settings = {}) {
-    // Query the exact target region without expansion
-    console.log(`🎯 [ReadsManager] Direct SAM region query - no expansion`);
-
-    const reads = [];
-    const lines = this.rawReadsData.split('\n');
-    let processedLines = 0;
-    const totalLines = lines.length;
-
-    this.genomeBrowser.updateStatus(`Loading reads for region ${chromosome}:${start}-${end}...`);
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmed = line.trim();
-
-      // Skip header lines and empty lines
-      if (trimmed.startsWith('@') || !trimmed) continue;
-
-      const fields = trimmed.split('\t');
-      if (fields.length < 11) continue;
-
-      const [qname, flag, rname, pos, mapq, cigar, , , , seq, qual] = fields;
-
-      // Skip unmapped reads
-      if (rname === '*' || pos === '0') continue;
-
-      // Check chromosome matching - only skip if ignoreChromosome is false and chromosome doesn't match
-      if (!settings.ignoreChromosome && rname !== chromosome) continue;
-
-      const readStart = parseInt(pos); // Keep 1-based coordinates for consistency
-      const readEnd = readStart + seq.length - 1;
-
-      // Check if read overlaps with our target region (direct overlap check)
-      if (readEnd >= start && readStart <= end) {
-        const read = {
-          id: qname,
-          chromosome: rname,
-          start: readStart,
-          end: readEnd,
-          strand: parseInt(flag) & 16 ? '-' : '+',
-          mappingQuality: parseInt(mapq),
-          cigar: cigar,
-          sequence: seq,
-          quality: qual,
-        };
-
-        reads.push(read);
-      }
-
-      processedLines++;
-
-      // Update progress and yield occasionally for large files
-      if (processedLines % 10000 === 0) {
-        const progress = Math.round((processedLines / totalLines) * 100);
-        this.genomeBrowser.updateStatus(`Loading reads... ${progress}% (${reads.length} reads found)`);
-
-        // Yield control to prevent UI blocking
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
+    const { SamRegion } =
+      typeof module !== 'undefined' && module.exports ? require('../../shared/alignment-depth') : window.alignmentDepth;
+    const sourceStart = this.getSamSourceStart(start, settings);
+    const region = new SamRegion(chromosome, sourceStart, end, settings);
+    const text = this.rawReadsData;
+    let cursor = 0;
+    let lines = 0;
+    while (cursor < text.length) {
+      const newline = text.indexOf('\n', cursor);
+      const lineEnd = newline < 0 ? text.length : newline;
+      region.addLine(text.slice(cursor, lineEnd));
+      cursor = lineEnd + 1;
+      if (++lines % 10000 === 0) await new Promise(resolve => setTimeout(resolve, 0));
     }
-
     this.stats.loadedRegions++;
-    console.log(
-      `✅ [ReadsManager] Loaded ${reads.length} reads for target region ${chromosome}:${start}-${end} (ignoreChromosome: ${settings.ignoreChromosome})`
-    );
+    return this.readsFromSamResult(region.summarize());
+  }
 
+  getSamSourceStart(start, settings) {
+    return Math.max(0, settings.viewportCoordinates ? start : start - 1);
+  }
+
+  readsFromSamResult(result) {
+    const reads = result.reads || [];
+    if (result.sourceSamplingInfo) reads._sourceSamplingInfo = result.sourceSamplingInfo;
+    if (result.depth) reads._alignmentDepth = result.depth;
     return reads;
   }
 
@@ -319,8 +288,9 @@ class ReadsManager {
    */
   cacheRegion(regionKey, reads) {
     const bytes = reads.reduce(
-      (sum, read) => sum + 256 + 2 * ((read.sequence?.length || 0) + (read.quality?.length || 0)),
-      0
+      (sum, read) =>
+        sum + 256 + 2 * ((read.sequence?.length || 0) + (read.quality?.length || 0) + (read.cigar?.length || 0)),
+      (reads._alignmentDepth?.alignedBases.length || 0) * 8
     );
     if (bytes > this.maxCacheBytes) return;
 
@@ -386,14 +356,13 @@ class ReadsManager {
    * Handle navigation change - clear distant cache entries
    */
   onNavigationChange(chromosome, start, end) {
-    this.getRegionKey(chromosome, start, end);
     const regionSize = end - start;
     const clearDistance = regionSize * 10; // Clear cache entries more than 10 regions away
 
     const entriesToRemove = [];
 
     for (const [key] of this.cache.entries()) {
-      const [keyChromosome, keyRange] = key.split(':');
+      const [keyChromosome, keyStart] = JSON.parse(key);
 
       // Different chromosome - remove immediately
       if (keyChromosome !== chromosome) {
@@ -401,8 +370,6 @@ class ReadsManager {
         continue;
       }
 
-      // Parse region coordinates
-      const [keyStart] = keyRange.split('-').map(Number);
       const distance = Math.abs(keyStart - start);
 
       // Remove if too far from current position
@@ -427,9 +394,13 @@ class ReadsManager {
    * Dispose of resources
    */
   dispose() {
+    this.sourceGeneration++;
     this.rawReadsData = null;
     this.cache.clear();
     this.currentFile = null;
+    this.isStreaming = false;
+    this.isBamMode = false;
+    this.bamReader = null;
   }
 
   /**
@@ -437,6 +408,7 @@ class ReadsManager {
    * This method processes SAM data in chunks to avoid memory issues
    */
   async initializeWithStreamingSAM(filePath) {
+    this.sourceGeneration++;
     this.currentFile = filePath;
     this.cache.clear();
     this.stats.totalReads = 0;
@@ -445,6 +417,8 @@ class ReadsManager {
     this.stats.cacheMisses = 0;
     this.rawReadsData = null; // Don't store the full data in memory
     this.isStreaming = true;
+    this.isBamMode = false;
+    this.bamReader = null;
 
     console.log('ReadsManager initialized with streaming mode for large SAM files');
   }
@@ -454,6 +428,7 @@ class ReadsManager {
    * This method uses the BamReader to handle binary BAM files efficiently
    */
   async initializeWithBAMReader(bamReader) {
+    this.sourceGeneration++;
     this.bamReader = bamReader;
     this.currentFile = bamReader.filePath;
     this.cache.clear();
@@ -608,104 +583,16 @@ class ReadsManager {
    * Load reads for a specific region using file streaming (for very large files)
    */
   async loadReadsForRegionStream(chromosome, start, end, settings = {}) {
-    console.log(`[ReadsManager] loadReadsForRegionStream called with:`, {
+    if (!this.currentFile) throw new Error('No SAM file loaded for streaming');
+    const result = await window.electronAPI.getSamReadsForRange(
+      this.currentFile,
       chromosome,
-      start,
+      this.getSamSourceStart(start, settings),
       end,
-      currentFile: this.currentFile,
-      isStreaming: this.isStreaming,
-      ignoreChromosome: settings.ignoreChromosome,
-    });
-
-    if (!this.currentFile) {
-      console.error('[ReadsManager] No currentFile set for streaming');
-      throw new Error('No SAM file loaded for streaming');
-    }
-
-    // Query the exact target region without expansion
-    console.log(`🎯 [ReadsManager] Direct streaming region query - no expansion`);
-
-    const reads = [];
-
-    return new Promise((resolve, reject) => {
-      const linesHandler = (event, { lines }) => {
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith('@')) continue;
-
-          const fields = trimmed.split('\t');
-          if (fields.length < 11) continue;
-
-          const [qname, flag, rname, pos, mapq, cigar, , , , seq, qual] = fields;
-
-          // Skip unmapped reads
-          if (rname === '*' || pos === '0') continue;
-
-          // Check chromosome matching - only skip if ignoreChromosome is false and chromosome doesn't match
-          if (!settings.ignoreChromosome && rname !== chromosome) continue;
-
-          const readStart = parseInt(pos); // Keep 1-based coordinates for consistency
-          const readEnd = readStart + seq.length - 1;
-
-          // Check if read overlaps with our target region (direct overlap check)
-          if (readEnd >= start && readStart <= end) {
-            const read = {
-              id: qname,
-              chromosome: rname,
-              start: readStart,
-              end: readEnd,
-              strand: parseInt(flag) & 16 ? '-' : '+',
-              mappingQuality: parseInt(mapq),
-              cigar: cigar,
-              sequence: seq,
-              quality: qual,
-            };
-
-            reads.push(read);
-          }
-        }
-      };
-
-      const completeHandler = (event, { totalLines }) => {
-        if (typeof ipcRenderer !== 'undefined') {
-          ipcRenderer.removeListener('file-lines-chunk', linesHandler);
-          ipcRenderer.removeListener('file-stream-complete', completeHandler);
-        }
-
-        console.log(
-          `✅ [ReadsManager] Loaded ${reads.length} reads for target region ${chromosome}:${start}-${end} from streaming (ignoreChromosome: ${settings.ignoreChromosome})`
-        );
-        resolve(reads);
-      };
-
-      const errorHandler = error => {
-        if (typeof ipcRenderer !== 'undefined') {
-          ipcRenderer.removeListener('file-lines-chunk', linesHandler);
-          ipcRenderer.removeListener('file-stream-complete', completeHandler);
-        }
-        reject(error);
-      };
-
-      // Check if ipcRenderer is available
-      if (typeof ipcRenderer === 'undefined') {
-        reject(new Error('ipcRenderer not available'));
-        return;
-      }
-
-      // Set up event listeners
-      ipcRenderer.on('file-lines-chunk', linesHandler);
-      ipcRenderer.on('file-stream-complete', completeHandler);
-
-      // Start streaming the file for this region
-      ipcRenderer
-        .invoke('read-file-stream', this.currentFile)
-        .then(result => {
-          if (!result.success) {
-            errorHandler(new Error(result.error));
-          }
-        })
-        .catch(errorHandler);
-    });
+      settings
+    );
+    this.stats.loadedRegions++;
+    return this.readsFromSamResult(result);
   }
 }
 

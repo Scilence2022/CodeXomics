@@ -773,7 +773,14 @@ class TrackRenderer {
   }
 
   async getReadsForViewport(chromosome, viewport, settings = {}, bamFile = null) {
+    viewport = { ...viewport, start: Math.floor(viewport.start), end: Math.ceil(viewport.end) };
     const sequenceLength = this.getSequenceLength(chromosome);
+
+    const samSettings = (offset = 0) => ({
+      ...settings,
+      viewportCoordinates: true,
+      depthViewport: settings.depthRequested ? { start: viewport.start, end: viewport.end, offset } : undefined,
+    });
 
     if (!this.isCircularModeEnabled() || sequenceLength <= 0) {
       if (bamFile?.reader) {
@@ -786,11 +793,14 @@ class TrackRenderer {
         chromosome,
         viewport.start,
         viewport.end,
-        settings
+        samSettings()
       );
     }
 
     const reads = [];
+    let samTotalRecords = 0;
+    let samRetainedRecords = 0;
+    let samTruncated = false;
     const segments = this.getViewportSegments(viewport, chromosome);
 
     for (const segment of segments) {
@@ -806,17 +816,43 @@ class TrackRenderer {
           chromosome,
           sourceStart,
           sourceEnd,
-          settings
+          samSettings(segment.displayStart - segment.sourceStart)
         );
       }
 
-      if (segmentReads._sourceSamplingInfo) reads._sourceSamplingInfo = segmentReads._sourceSamplingInfo;
+      const sourceInfo = segmentReads._sourceSamplingInfo;
+      if (bamFile?.reader) {
+        if (sourceInfo) reads._sourceSamplingInfo = sourceInfo;
+      } else {
+        samTotalRecords += sourceInfo?.totalRecords ?? segmentReads.length;
+        samRetainedRecords += sourceInfo?.sampledRecords ?? segmentReads.length;
+        samTruncated ||= sourceInfo?.truncated === true;
+      }
+      if (segmentReads._alignmentDepth) {
+        if (!reads._alignmentDepth) {
+          reads._alignmentDepth = {
+            binSize: segmentReads._alignmentDepth.binSize,
+            alignedBases: segmentReads._alignmentDepth.alignedBases.slice(),
+          };
+        } else {
+          segmentReads._alignmentDepth.alignedBases.forEach((count, index) => {
+            reads._alignmentDepth.alignedBases[index] += count;
+          });
+        }
+      }
       segmentReads.forEach(read => {
         const adjustedRead = this.adjustReadForViewportSegment(read, segment);
         if (adjustedRead) reads.push(adjustedRead);
       });
     }
 
+    if (samTruncated) {
+      reads._sourceSamplingInfo = {
+        totalRecords: samTotalRecords,
+        sampledRecords: samRetainedRecords,
+        truncated: true,
+      };
+    }
     return reads;
   }
 
@@ -4349,6 +4385,7 @@ class TrackRenderer {
       const readsForCoverage = await this.getReadsForViewport(chromosome, viewport, {
         ...settings,
         enableSampling: false,
+        depthRequested: this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage'),
       });
       const visibleReads = this.genomeBrowser.readsManager.applySampling(readsForCoverage, settings);
 
@@ -4419,7 +4456,8 @@ class TrackRenderer {
         });
       }
 
-      if (visibleReads.length === 0) {
+      const depth = readsForCoverage._alignmentDepth;
+      if (visibleReads.length === 0 && !depth?.alignedBases.some(count => count > 0)) {
         const noReadsMsg = document.createElement('div');
         noReadsMsg.className = 'no-reads-message';
         noReadsMsg.textContent = 'No reads in this region';
@@ -4445,7 +4483,7 @@ class TrackRenderer {
 
         if (showCoverage) {
           coverageHeight = parseInt(settings.coverageHeight) || 50;
-          this.createCoverageVisualization(trackContent, readsForCoverage, viewport, coverageHeight, settings);
+          this.createCoverageVisualization(trackContent, readsForCoverage, viewport, coverageHeight, settings, depth);
         }
 
         let referenceHeight = 0;
@@ -4525,6 +4563,10 @@ class TrackRenderer {
 
         // Add sampling information if available and enabled
         if (settings.showSamplingInfo !== false) {
+          const sourceLimit = visibleReads._sourceSamplingInfo;
+          if (sourceLimit?.truncated) {
+            statsText += ` · Display limited to ${sourceLimit.sampledRecords.toLocaleString()} of ${sourceLimit.totalRecords.toLocaleString()} alignments`;
+          }
           if (visibleReads._samplingInfo) {
             // Sampling was applied
             const samplingInfo = visibleReads._samplingInfo;
@@ -4536,8 +4578,7 @@ class TrackRenderer {
             } else {
               statsText += ` [max ${samplingInfo.fixedCount} mode]`;
             }
-          } else {
-            // No sampling applied - show 100%
+          } else if (!sourceLimit?.truncated) {
             statsText += ` | All reads shown (100%)`;
           }
         }

@@ -209,7 +209,7 @@ _The genome browser combines a feature track, GC content and skew, multi-track W
 **Read Alignment Track** 📋
 
 - Visualizes BAM/SAM alignments
-- BAM coverage displays the mean number of aligned bases per reference position in each bin.
+- BAM and SAM coverage display the mean number of aligned bases per reference position in each bin.
   Depth follows the mapping-quality and secondary/supplementary alignment settings and is calculated independently of read display sampling.
   Deletions and skipped reference intervals contribute zero depth.
 - The coverage label identifies views that show read overlaps per bin, including sampled overlaps when only a sample is available.
