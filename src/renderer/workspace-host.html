@@ -302,7 +302,7 @@
         };
 
         function applyWorkspaceTheme(themeData = {}) {
-          const style = themeData.style || themeData.uiStyle || 'default';
+          const style = themeData.style || themeData.uiStyle || 'midnight';
           const fallbackVariables = STYLE_PRESETS[style] || STYLE_PRESETS.default;
           const variables = { ...fallbackVariables, ...(themeData.variables || {}) };
           const root = document.documentElement;

@@ -6,15 +6,16 @@
 class ThemeManager {
   constructor(configManager) {
     this.configManager = configManager;
-    this.currentStyle = 'default'; // 'default' (blue-purple AI look) plus named style presets
+    this.currentStyle = 'midnight'; // Factory default; 'default' (blue-purple AI look) plus named style presets
 
     // The early style application (flash-of-default prevention) is handled by
     // the inline <script> in index.html which reads _uiStyleHint from localStorage
     // and applies CSS custom properties before any external scripts load.
     // Check if the inline script already set a style so we stay in sync.
+    // 'default' here is the AI Dynamic preset id, not the factory default.
     try {
       const hint = localStorage.getItem('_uiStyleHint');
-      if (hint && hint !== 'default') {
+      if (hint) {
         this.currentStyle = hint;
       }
     } catch (_) {}
@@ -804,7 +805,7 @@ class ThemeManager {
   async loadStyle() {
     if (this.configManager) {
       try {
-        const savedStyle = this.configManager.get('generalSettings.uiStyle', 'default');
+        const savedStyle = this.configManager.get('generalSettings.uiStyle', 'midnight');
         if (this.stylePresets[savedStyle]) {
           this.currentStyle = savedStyle;
         }

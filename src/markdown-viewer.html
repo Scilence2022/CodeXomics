@@ -189,7 +189,7 @@
         };
 
         try {
-          var hint = localStorage.getItem('_uiStyleHint') || 'default';
+          var hint = localStorage.getItem('_uiStyleHint') || 'midnight';
           var variables = presets[hint] || presets.default;
           var root = document.documentElement;
           root.setAttribute('data-ui-style', presets[hint] ? hint : 'default');
@@ -197,7 +197,7 @@
             root.style.setProperty(key, variables[key]);
           });
         } catch (_) {
-          var fallback = presets.default;
+          var fallback = presets.midnight || presets.default;
           Object.keys(fallback).forEach(function (key) {
             document.documentElement.style.setProperty(key, fallback[key]);
           });

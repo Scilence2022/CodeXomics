@@ -12,8 +12,8 @@ class GeneralSettingsManager {
     this.defaultSettings = {
       // Appearance
       themeMode: 'light',
-      uiStyle: 'default',
-      accentColor: '#667eea',
+      uiStyle: 'midnight',
+      accentColor: '#0891b2',
       fontSize: 'medium',
       fontFamily: 'system',
       sequenceFont: 'monaco',
@@ -683,7 +683,7 @@ class GeneralSettingsManager {
     // UI Style preset cards
     const stylePresetCards = document.querySelectorAll('.style-preset-card[data-style]');
     stylePresetCards.forEach(card => {
-      card.classList.toggle('active', card.dataset.style === (this.settings.uiStyle || 'default'));
+      card.classList.toggle('active', card.dataset.style === (this.settings.uiStyle || 'midnight'));
     });
 
     // Accent color
@@ -880,7 +880,7 @@ class GeneralSettingsManager {
   applySettings() {
     this.applyTheme('light');
     this.applyAccentColor(this.settings.accentColor);
-    this.applyUIStyle(this.settings.uiStyle || 'default');
+    this.applyUIStyle(this.settings.uiStyle || 'midnight');
     this.applyFontSize(this.settings.fontSize);
     this.applyFontFamily(this.settings.fontFamily);
     this.applySequenceFont(this.settings.sequenceFont);
@@ -946,7 +946,7 @@ class GeneralSettingsManager {
    * by the preset and should not be overridden by the color picker value.
    */
   applyAccentColor(color) {
-    const currentStyle = this.settings.uiStyle || 'default';
+    const currentStyle = this.settings.uiStyle || 'midnight';
     if (currentStyle !== 'default') {
       // Let the UI Style preset control primary colors; skip accent override
       return;

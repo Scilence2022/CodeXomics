@@ -315,8 +315,8 @@ class ConfigManager {
       },
       generalSettings: {
         themeMode: 'light',
-        uiStyle: 'default',
-        accentColor: '#667eea',
+        uiStyle: 'midnight',
+        accentColor: '#0891b2',
         fontSize: 'medium',
         fontFamily: 'system',
         sequenceFont: 'monaco',

@@ -67,7 +67,8 @@
       try {
         var hint = localStorage.getItem('_uiStyleHint');
         localStorage.setItem('_themeHint', 'light');
-        if (!hint || hint === 'default') return;
+        if (hint === 'default') return; // 'default' = AI Dynamic preset, served by the base CSS
+        if (!hint) hint = 'midnight'; // Factory default style on fresh installs
 
         // Condensed preset variables (must stay in sync with ThemeManager.stylePresets)
         var presets = {
