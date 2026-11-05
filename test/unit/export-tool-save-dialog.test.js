@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
+import { createRequire } from 'node:module';
+
+const ExportManager = createRequire(import.meta.url)('../../src/renderer/modules/ExportManager.js');
 
 const FILE_OPERATION_SERVICE = path.join(process.cwd(), 'src/renderer/modules/chat/services/FileOperationService.js');
 
@@ -16,7 +19,7 @@ function createHarness({ benchmark = false, dialogResult = { canceled: true } } 
   const calls = { writeFile: [], showSaveDialog: [] };
   const electronAPI = {
     async writeFile(filePath, content) {
-      calls.writeFile.push({ filePath, length: content.length });
+      calls.writeFile.push({ filePath, content });
       return { success: true, filePath };
     },
     async showSaveDialog(options) {
@@ -27,23 +30,27 @@ function createHarness({ benchmark = false, dialogResult = { canceled: true } } 
 
   const sequence = 'ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGA';
   const features = [
-    { type: 'gene', start: 1, end: 66, strand: '+', attributes: { name: 'thrL' } },
-    { type: 'CDS', start: 1, end: 66, strand: '+', attributes: { name: 'thrL' }, name: 'thrL' },
+    { type: 'gene', start: 1, end: sequence.length, strand: '+', attributes: { name: 'thrL' } },
+    {
+      type: 'CDS',
+      start: 1,
+      end: sequence.length,
+      strand: '+',
+      attributes: { name: 'thrL' },
+      name: 'thrL',
+      qualifiers: { translation: 'MKRISTTITTTITTGNGAG' },
+    },
   ];
   const app = {
     currentSequence: { U00096: sequence },
     currentAnnotations: { U00096: features },
-    exportManager: {
-      extractFeatureSequence: (chromosomeSequence, feature) =>
-        chromosomeSequence.substring(feature.start - 1, feature.end),
-      translateDNA: () => 'MKRISTTITTTITTGNGAG*',
-    },
   };
+  app.exportManager = new ExportManager(app);
   const chatManager = {
     benchmarkAutomationActive: benchmark,
     getCurrentState: () => ({
       currentChromosome: 'U00096',
-      currentPosition: { start: 1, end: 66 },
+      currentPosition: { start: 1, end: sequence.length },
       sequenceLength: sequence.length,
     }),
     showNotification: () => {},
@@ -184,6 +191,19 @@ describe('export tools never block on a save dialog', () => {
     expect(result.file_path).toBe('/tmp/exported_files/region.fasta');
     expect(calls.showSaveDialog).toHaveLength(0);
     expect(calls.writeFile.map(call => call.filePath)).toEqual(['/tmp/exported_files/region.fasta']);
+  });
+
+  it('writes qualifiers and honors GenBank feature and sequence controls', async () => {
+    const { service, calls } = createHarness();
+    const filename = '/tmp/exported_files/genome.gbk';
+    await service.exportGenBankFormat({ filename, include_sequence: false });
+    expect(calls.writeFile[0].content).toContain('/translation="MKRISTTITTTITTGNGAG"');
+    expect(calls.writeFile[0].content).not.toContain('ORIGIN');
+
+    const result = await service.exportGenBankFormat({ filename, include_features: false });
+    expect(result.total_features).toBe(0);
+    expect(calls.writeFile[1].content).toContain('ORIGIN');
+    expect(calls.writeFile[1].content).not.toContain('CDS');
   });
 
   it('still offers the save dialog for an interactive export without a destination', async () => {

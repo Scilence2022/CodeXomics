@@ -305,7 +305,7 @@ class FileOperationService {
   }
 
   async exportProteinFasta(parameters = {}) {
-    const { translationTable = 1 } = parameters;
+    const translationTable = parameters.translationTable ?? parameters.translation_table;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
       throw new Error('No annotation data loaded to export protein sequences');
@@ -324,9 +324,11 @@ class FileOperationService {
             const featureId = `${chr}_${feature.start}_${feature.end}_${feature.strand}`;
             if (!processedFeatures.has(featureId)) {
               processedFeatures.add(featureId);
-              const cdsSequence = this.app.exportManager.extractFeatureSequence(sequence, feature);
-              const proteinSequence = this.app.exportManager.translateDNA(cdsSequence);
-              const cleanProteinSequence = proteinSequence.replace(/\*+$/, '');
+              const cleanProteinSequence = this.app.exportManager.extractFeatureProtein(
+                sequence,
+                feature,
+                translationTable
+              );
               const header = `${feature.name || feature.id || 'unknown'}_${chr}_${feature.start}-${feature.end}`;
               proteinContent += `>${header}\n`;
               for (let i = 0; i < cleanProteinSequence.length; i += 80) {
@@ -360,7 +362,7 @@ class FileOperationService {
         file_path: writeResult?.filePath || outputFilename,
         filePath: writeResult?.filePath || outputFilename,
         total_protein_sequences: proteinCount,
-        translation_table: translationTable,
+        translation_table: translationTable ?? null,
         message: `Successfully exported ${proteinCount} protein sequences`,
         details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
@@ -426,40 +428,16 @@ class FileOperationService {
     }
 
     try {
-      const chromosomes = Object.keys(this.app.currentSequence);
       const includeFeatures = parameters.include_features !== false && parameters.includeFeatures !== false;
       const includeSequence = parameters.include_sequence !== false && parameters.includeSequence !== false;
-      let totalFeatures = 0;
-      let genbankContent = '';
-      chromosomes.forEach(chr => {
-        const sequence = this.app.currentSequence[chr];
-        const features = includeFeatures ? this.app.currentAnnotations?.[chr] || [] : [];
-        totalFeatures += features.length;
-        genbankContent += `LOCUS       ${chr.padEnd(16)} ${sequence.length} bp    DNA     linear   UNK ${new Date().toISOString().slice(0, 10)}\n`;
-        genbankContent += `FEATURES             Location/Qualifiers\n`;
-        genbankContent += `     source          1..${sequence.length}\n`;
-        features.forEach(feature => {
-          const loc =
-            feature.strand === '-'
-              ? `complement(${feature.start}..${feature.end})`
-              : `${feature.start}..${feature.end}`;
-          genbankContent += `     ${feature.type.padEnd(15)} ${loc}\n`;
-        });
-        if (includeSequence) {
-          genbankContent += `ORIGIN\n`;
-          for (let i = 0; i < sequence.length; i += 60) {
-            const lineNum = (i + 1).toString().padStart(9);
-            const seqLine = sequence.substring(i, i + 60).toLowerCase();
-            const formattedSeq = seqLine.match(/.{1,10}/g)?.join(' ') || seqLine;
-            genbankContent += `${lineNum} ${formattedSeq}\n`;
-          }
-        }
-        genbankContent += `//\n\n`;
+      const { content, chromosomes, totalFeatures } = this.app.exportManager.buildGenBankExport({
+        includeFeatures,
+        includeSequence,
       });
 
       const outputFilename = this.getExportFilename(parameters, 'genome.gbk');
       const writeResult = await this.saveExportContent(
-        genbankContent,
+        content,
         outputFilename,
         'GenBank format',
         parameters,
@@ -477,7 +455,7 @@ class FileOperationService {
         total_features: totalFeatures,
         include_features: includeFeatures,
         include_sequence: includeSequence,
-        include_protein_sequences: false,
+        include_protein_sequences: includeFeatures,
         message: `Successfully exported ${chromosomes.length} chromosome(s) in GenBank format`,
         details: `Saved to ${writeResult?.filePath || outputFilename}`,
       };
@@ -497,14 +475,7 @@ class FileOperationService {
         const features = this.app.currentAnnotations?.[chr] || [];
         const cdsFeatures = features.filter(f => f.type === 'CDS');
         cdsFeatures.forEach(feature => {
-          let sequence = this.app.currentSequence[chr].substring(feature.start - 1, feature.end);
-          if (feature.strand === '-') {
-            sequence = sequence
-              .split('')
-              .reverse()
-              .map(base => ({ A: 'T', T: 'A', C: 'G', G: 'C' })[base] || base)
-              .join('');
-          }
+          const sequence = this.app.exportManager.extractFeatureSequence(this.app.currentSequence[chr], feature);
           cdsContent += `>${feature.attributes?.name || feature.attributes?.ID || 'CDS'}_${chr}:${feature.start}-${feature.end}\n`;
           for (let i = 0; i < sequence.length; i += 80) cdsContent += sequence.substring(i, i + 80) + '\n';
           totalCDS++;

@@ -504,8 +504,15 @@ class AnnotationChangeSetService {
     );
   }
 
-  async _legacyFeatureRef(chromosome, annotation, revision) {
+  _qualifiersForHistoricalGenBankReplay(annotation) {
     const qualifiers = annotation?.qualifiers || {};
+    return Object.hasOwn(annotation || {}, 'genbankLegacyTranslation')
+      ? { ...qualifiers, translation: annotation.genbankLegacyTranslation }
+      : qualifiers;
+  }
+
+  async _legacyFeatureRef(chromosome, annotation, revision) {
+    const qualifiers = this._qualifiersForHistoricalGenBankReplay(annotation);
     const locusTag = this._scalar(qualifiers.locus_tag);
     const geneSymbol = this._scalar(qualifiers.gene);
     const proteinId = this._scalar(qualifiers.protein_id);
@@ -1419,12 +1426,22 @@ class AnnotationChangeSetService {
       }
       const liveSnapshot = JSON.stringify(this._canonicalise(found.annotation));
       const workingAnnotation = this._clone(found.annotation);
-      let currentRef = await this._featureRef(found.chromosome, workingAnnotation, ledger, workspace);
+      const getHash = async (historical = false) =>
+        (await this._featureRef(found.chromosome, workingAnnotation, ledger, workspace, historical)).featureHash;
+      const matchesHash = async expected => {
+        if ((await getHash()) === expected) return 'current';
+        if (Object.hasOwn(workingAnnotation, 'genbankLegacyTranslation') && (await getHash(true)) === expected) {
+          return 'historical';
+        }
+        return null;
+      };
+      const currentHash = await getHash();
+      const historicalHash = Object.hasOwn(workingAnnotation, 'genbankLegacyTranslation') ? await getHash(true) : null;
       let replayIndex = -1;
       for (let index = 0; index < chain.length; index += 1) {
         const changeSet = chain[index];
-        if (currentRef.featureHash === changeSet.target.featureHash) replayIndex = index;
-        if (currentRef.featureHash === changeSet.commitReceipt.resultingFeatureHash) {
+        if ([currentHash, historicalHash].includes(changeSet.target.featureHash)) replayIndex = index;
+        if ([currentHash, historicalHash].includes(changeSet.commitReceipt.resultingFeatureHash)) {
           replayIndex = index + 1;
         }
       }
@@ -1437,15 +1454,14 @@ class AnnotationChangeSetService {
       for (let index = replayIndex; index < chain.length; index += 1) {
         const changeSet = chain[index];
         const receipt = changeSet.commitReceipt;
-        currentRef = await this._featureRef(found.chromosome, workingAnnotation, ledger, workspace);
-        if (currentRef.featureHash !== changeSet.target.featureHash) {
+        const hashView = await matchesHash(changeSet.target.featureHash);
+        if (!hashView) {
           throw new Error(`Committed ChangeSet ${changeSet.id} does not form a continuous feature-hash chain`);
         }
         for (const operation of receipt.appliedOperations) {
           this._applyOperation(workingAnnotation, operation);
         }
-        const resultingRef = await this._featureRef(found.chromosome, workingAnnotation, ledger, workspace);
-        if (resultingRef.featureHash !== receipt.resultingFeatureHash) {
+        if ((await getHash(hashView === 'historical')) !== receipt.resultingFeatureHash) {
           throw new Error(`Committed ChangeSet ${changeSet.id} failed deterministic overlay verification`);
         }
       }
@@ -1684,7 +1700,7 @@ class AnnotationChangeSetService {
       .filter(Boolean);
   }
 
-  async _featureRef(chromosome, annotation, ledger, workspace) {
+  async _featureRef(chromosome, annotation, ledger, workspace, historicalGenBank = false) {
     this._assertWorkspace(workspace);
     const qualifiers = annotation.qualifiers || {};
     const locusTag = this._scalar(this._qualifierValue(qualifiers, ['locus_tag', 'locusTag', 'ID', 'gene_id']));
@@ -1705,7 +1721,7 @@ class AnnotationChangeSetService {
     const featureHash = await this._hash({
       ...structuralInput,
       assemblyDigest,
-      qualifiers: annotation.qualifiers || {},
+      qualifiers: historicalGenBank ? this._qualifiersForHistoricalGenBankReplay(annotation) : qualifiers,
     });
     const genomePath = workspace.genomePath;
     const sourceFeature = workspace.sourceFeatures?.[chromosome] || {};
