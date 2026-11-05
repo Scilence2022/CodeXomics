@@ -1872,7 +1872,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="openaiModel">Default Model:</label>
+                                <label for="openaiModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshOpenaiModelsBtn" title="Refresh the model list from OpenAI">
                                     <i class="fas fa-sync"></i> Refresh
@@ -1923,7 +1923,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="anthropicModel">Default Model:</label>
+                                <label for="anthropicModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshAnthropicModelsBtn" title="Refresh the model list from Anthropic">
                                     <i class="fas fa-sync"></i> Refresh
@@ -1971,7 +1971,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="googleModel">Default Model:</label>
+                                <label for="googleModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshGoogleModelsBtn" title="Refresh the model list from Google">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2018,7 +2018,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="deepseekModel">Default Model:</label>
+                                <label for="deepseekModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshDeepseekModelsBtn" title="Refresh the model list from DeepSeek">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2066,7 +2066,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="siliconflowModel">Default Model:</label>
+                                <label for="siliconflowModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshSiliconflowModelsBtn" title="Refresh the model list from SiliconFlow">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2203,7 +2203,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="openrouterModel">Default Model:</label>
+                                <label for="openrouterModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshOpenrouterModelsBtn" title="Refresh the model list from OpenRouter">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2307,7 +2307,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="minimaxModel">Default Model:</label>
+                                <label for="minimaxModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshMinimaxModelsBtn" title="Refresh the model list from MiniMax">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2357,7 +2357,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="minimax_cnModel">Default Model:</label>
+                                <label for="minimax_cnModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshMinimax_cnModelsBtn" title="Refresh the model list from MiniMax CN">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2407,7 +2407,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="zhongkeyuModel">Default Model:</label>
+                                <label for="zhongkeyuModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshZhongkeyuModelsBtn" title="Refresh the model list from Zhongkeyu">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2453,7 +2453,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="localModel">Default Model:</label>
+                                <label for="localModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshLocalModelsBtn" title="Refresh the model list from this endpoint">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2552,7 +2552,7 @@
                     <div id="models-config" class="provider-config">
                         <div class="model-selection-header">
                             <h4><i class="fas fa-brain"></i> Default Model</h4>
-                            <p class="help-text">Used when the ChatBox model selector is set to Auto.</p>
+                            <p class="help-text">Used when the ChatBox model selector is set to Auto. Leave Model on Auto to use the provider default model set on that provider's tab.</p>
                         </div>
                         <div class="form-group">
                             <label for="mainProvider">Provider:</label>
@@ -5007,12 +5007,6 @@ Supported formats:
                                     <label for="chatboxLLMMaxTokens">Max Tokens:</label>
                                     <input type="number" id="chatboxLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
                                     <small class="help-text">Maximum tokens for LLM responses</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="chatboxLLMTimeout">Timeout (seconds):</label>
-                                    <input type="number" id="chatboxLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
-                                    <small class="help-text">Timeout for LLM requests</small>
                                 </div>
                                 
                                 <div class="form-group">

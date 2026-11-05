@@ -405,19 +405,15 @@ class LLMConfigManager {
       return;
     }
 
-    // Populate models based on provider configuration
-    if (provider && provider.models) {
-      Object.entries(provider.models).forEach(([modelId, modelName]) => {
+    // Same catalog, and so the same labels and custom models, as the ChatBox picker
+    if (provider) {
+      const entry = this.getModelCatalog({ includeDisabled: true }).find(
+        candidate => candidate.providerKey === selectedProvider
+      );
+      (entry?.models || []).forEach(model => {
         const option = document.createElement('option');
-        option.value = modelId;
-        option.textContent = modelName;
-        modelSelect.appendChild(option);
-      });
-    } else if (provider && provider.availableModels) {
-      provider.availableModels.forEach(modelId => {
-        const option = document.createElement('option');
-        option.value = modelId;
-        option.textContent = modelId;
+        option.value = model.id;
+        option.textContent = model.source === 'custom' ? `${model.label} (custom)` : model.label;
         modelSelect.appendChild(option);
       });
     }
@@ -2120,6 +2116,122 @@ class LLMConfigManager {
     if (otherGroup) {
       otherGroup.style.display = select.value === 'other' ? 'block' : 'none';
     }
+  }
+
+  /**
+   * Friendly labels for a provider's models, read from the option markup the
+   * app ships in index.html ("Claude Sonnet 4.6 (Balanced - $3/$15 per M)").
+   * The markup is the one place those labels live, so every model list — the
+   * provider tab, the Default Model tab, the ChatBox picker — reads them here
+   * rather than keeping a second copy. Headless callers get an empty map and
+   * fall back to the raw model id.
+   * @param {string} providerKey
+   * @returns {Map<string, string>} model id -> label
+   */
+  getShippedModelLabels(providerKey) {
+    this.shippedModelLabels = this.shippedModelLabels || {};
+    if (this.shippedModelLabels[providerKey]) return this.shippedModelLabels[providerKey];
+
+    const labels = new Map();
+    if (typeof document === 'undefined') return labels;
+    const select = document.getElementById(`${providerKey}Model`);
+    if (!select) return labels;
+
+    // The pristine markup, even if the live select was already rebuilt from a
+    // refreshed list.
+    const template = document.createElement('template');
+    template.innerHTML = this.captureStaticModelOptions(providerKey, select);
+    template.content.querySelectorAll('option').forEach(option => {
+      if (option.value === 'other' || option.closest('#localSavedModelsOptgroup')) return;
+      const label = (option.textContent || '').trim();
+      if (option.value && label) labels.set(option.value, label);
+    });
+    this.shippedModelLabels[providerKey] = labels;
+    return labels;
+  }
+
+  /**
+   * Compact form of a model label for narrow controls: the shipped labels carry
+   * pricing or size notes in a trailing parenthetical.
+   */
+  shortenModelLabel(label, fallback = '') {
+    const text = String(label || '').trim();
+    const short = text.replace(/\s*\([^()]*\)\s*$/, '').trim();
+    return short || text || fallback;
+  }
+
+  /**
+   * The one model catalog every model picker builds from.
+   *
+   * Each provider's list is its refreshed or shipped `availableModels` (or a
+   * legacy `models` map), plus any model the configuration names that the list
+   * does not: the provider's own default — which is how a model entered through
+   * "Other (specify below)" reaches the pickers — and the global default when it
+   * points at this provider. `extraModels` adds caller-specific ids, such as a
+   * ChatBox selection a refresh has since dropped from the list.
+   *
+   * @param {{includeDisabled?: boolean, extraModels?: Object<string, string[]>}} [options]
+   * @returns {Array<{providerKey: string, providerName: string, enabled: boolean,
+   *   defaultModel: string|null, models: Array<{id: string, label: string,
+   *   shortLabel: string, source: 'builtin'|'remote'|'custom'}>}>}
+   */
+  getModelCatalog(options = {}) {
+    const includeDisabled = options.includeDisabled === true;
+    const extraModels = options.extraModels || {};
+    const placeholders = new Set(['auto', 'other', 'custom', 'disabled']);
+    const catalog = [];
+
+    for (const [providerKey, provider] of Object.entries(this.providers || {})) {
+      if (!provider || (!includeDisabled && !provider.enabled)) continue;
+
+      const labels = this.getShippedModelLabels(providerKey);
+      const legacyLabels = provider.models && typeof provider.models === 'object' ? provider.models : null;
+      const seen = new Set();
+      const models = [];
+      const add = (modelId, source) => {
+        if (typeof modelId !== 'string') return;
+        const id = modelId.trim();
+        if (!id || placeholders.has(id) || seen.has(id)) return;
+        seen.add(id);
+        const label = labels.get(id) || legacyLabels?.[id] || id;
+        models.push({ id, label, shortLabel: this.shortenModelLabel(label, id), source });
+      };
+
+      const listed = legacyLabels
+        ? Object.keys(legacyLabels)
+        : Array.isArray(provider.availableModels)
+          ? provider.availableModels
+          : Array.isArray(provider.remoteModels)
+            ? provider.remoteModels
+            : [];
+      const listSource = provider.modelsSource === 'remote' ? 'remote' : 'builtin';
+      listed.forEach(modelId => add(modelId, listSource));
+
+      add(provider.model, 'custom');
+      if (this.modelTypes?.main?.provider === providerKey) add(this.modelTypes.main.model, 'custom');
+      (Array.isArray(extraModels[providerKey]) ? extraModels[providerKey] : []).forEach(modelId =>
+        add(modelId, 'custom')
+      );
+
+      catalog.push({
+        providerKey,
+        providerName: provider.name || providerKey,
+        enabled: Boolean(provider.enabled),
+        defaultModel: typeof provider.model === 'string' && provider.model ? provider.model : null,
+        models,
+      });
+    }
+
+    return catalog;
+  }
+
+  /**
+   * Display form of one model, from the catalog's label source.
+   * @returns {{label: string, shortLabel: string}}
+   */
+  describeModel(providerKey, modelId) {
+    const label = this.getShippedModelLabels(providerKey).get(modelId) || modelId || '';
+    return { label, shortLabel: this.shortenModelLabel(label, modelId || '') };
   }
 
   /**
@@ -4656,35 +4768,54 @@ Current context summary:
     this.notifyConfigurationSave(result, `Configuration "${configName}" deleted`);
   }
 
+  /**
+   * Tell the ChatBox model controls that providers or the default model changed,
+   * so they rebuild without waiting for the user to open them.
+   */
+  notifyConfigurationChanged() {
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+    try {
+      window.dispatchEvent(new CustomEvent('llmConfigurationChanged'));
+    } catch (error) {
+      console.warn('Could not announce the LLM configuration change:', error.message);
+    }
+  }
+
   async persistProviderConfiguration() {
     try {
-      const localCustomConfigs = this.getLocalSavedConfigs();
-      if (this.configManager) {
-        await this.configManager.set('llm.providers', this.providers);
-        await this.configManager.set('llm.modelTypes', this.modelTypes);
-        await this.configManager.set('llm.localCustomConfigs', localCustomConfigs);
-        const result = await this.configManager.saveConfig();
-        if (result?.credentialsPersisted && result.configPath) {
-          window.configurationCredentials.clearMigratedFallbackConfiguration(
-            localStorage,
-            'localCustomConfigs',
-            localCustomConfigs
-          );
-        }
-        return result;
-      }
-
-      const providers = this.saveBrowserProviderConfiguration();
-      const saved = window.configurationCredentials.saveFallbackConfiguration(
-        localStorage,
-        'localCustomConfigs',
-        localCustomConfigs
-      );
-      return { success: true, credentialsPersisted: providers.credentialsPersisted && saved.credentialsPersisted };
+      const result = await this.writeProviderConfiguration();
+      this.notifyConfigurationChanged();
+      return result;
     } catch (error) {
       console.error('Error persisting provider configuration:', error);
       return { success: false, credentialsPersisted: false };
     }
+  }
+
+  async writeProviderConfiguration() {
+    const localCustomConfigs = this.getLocalSavedConfigs();
+    if (this.configManager) {
+      await this.configManager.set('llm.providers', this.providers);
+      await this.configManager.set('llm.modelTypes', this.modelTypes);
+      await this.configManager.set('llm.localCustomConfigs', localCustomConfigs);
+      const result = await this.configManager.saveConfig();
+      if (result?.credentialsPersisted && result.configPath) {
+        window.configurationCredentials.clearMigratedFallbackConfiguration(
+          localStorage,
+          'localCustomConfigs',
+          localCustomConfigs
+        );
+      }
+      return result;
+    }
+
+    const providers = this.saveBrowserProviderConfiguration();
+    const saved = window.configurationCredentials.saveFallbackConfiguration(
+      localStorage,
+      'localCustomConfigs',
+      localCustomConfigs
+    );
+    return { success: true, credentialsPersisted: providers.credentialsPersisted && saved.credentialsPersisted };
   }
 }
 

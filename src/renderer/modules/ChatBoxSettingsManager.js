@@ -97,7 +97,9 @@ class ChatBoxSettingsManager {
       // extraction, not prose. Raise it here for a chattier assistant.
       chatboxLLMTemperature: 0.3,
       chatboxLLMMaxTokens: 4000,
-      chatboxLLMTimeout: 30,
+      // Thinking depth for models that expose one: 'default' (send nothing),
+      // 'off', 'low', 'medium' or 'high'. LLMReasoningProfiles maps it per provider.
+      chatboxReasoningEffort: 'default',
       chatboxLLMUseSystemPrompt: true,
       chatboxLLMEnableFunctionCalling: true,
 
@@ -140,6 +142,9 @@ class ChatBoxSettingsManager {
 
     const savedSettings = this.configManager.get('chatboxSettings', {});
     this.settings = { ...this.settings, ...savedSettings };
+    // Retired: nothing ever read it. Provider requests are bounded by
+    // llm.requestTimeoutMs, and the Execution tab's response timeout.
+    delete this.settings.chatboxLLMTimeout;
     this.settings.enableRepeatedOpenNewTab = this.settings.enableRepeatedOpenNewTab !== false;
     const repeatedTabLimit = Number(this.settings.maxRepeatedOpenNewTabCalls);
     this.settings.maxRepeatedOpenNewTabCalls = Number.isFinite(repeatedTabLimit)
@@ -349,7 +354,9 @@ class ChatBoxSettingsManager {
       // extraction, not prose. Raise it here for a chattier assistant.
       chatboxLLMTemperature: 0.3,
       chatboxLLMMaxTokens: 4000,
-      chatboxLLMTimeout: 30,
+      // Thinking depth for models that expose one: 'default' (send nothing),
+      // 'off', 'low', 'medium' or 'high'. LLMReasoningProfiles maps it per provider.
+      chatboxReasoningEffort: 'default',
       chatboxLLMUseSystemPrompt: true,
       chatboxLLMEnableFunctionCalling: true,
 
@@ -1864,7 +1871,7 @@ class ChatBoxSettingsManager {
       chatboxLLMModel: 'LLM Model Override',
       chatboxLLMTemperature: 'LLM Temperature',
       chatboxLLMMaxTokens: 'LLM Max Tokens',
-      chatboxLLMTimeout: 'LLM Timeout',
+      chatboxReasoningEffort: 'Thinking Level',
       chatboxLLMUseSystemPrompt: 'LLM System Prompt',
       chatboxLLMEnableFunctionCalling: 'LLM Function Calling',
       customSystemPrompt: 'Custom System Prompt',
