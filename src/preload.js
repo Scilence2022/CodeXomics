@@ -225,6 +225,7 @@ const allowedListenChannels = [
   'create-checkpoint',
   'rollback-checkpoint',
   'mcp-tool-call',
+  'mcp-tool-cancel',
   'execute-tool-request',
   'show-notification',
   'request-theme-for-pm',
@@ -405,7 +406,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File save dialog for exports
   showSaveDialog: options => ipcRenderer.invoke('show-save-dialog', options),
-  writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
+  writeFile: (filePath, content, commitNotAfter) => ipcRenderer.invoke('write-file', filePath, content, commitNotAfter),
   captureScreenshot: options => ipcRenderer.invoke('screenshot:capture', options),
   openImageFile: options => ipcRenderer.invoke('open-image-file', options),
 
@@ -484,8 +485,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readDgrReportAttachment: (genomePath, taskId, sourceSha256) =>
     ipcRenderer.invoke('read-dgr-report-attachment', genomePath, taskId, sourceSha256),
   loadSidecarFile: (genomePath, sourceSha256) => ipcRenderer.invoke('load-sidecar-file', genomePath, sourceSha256),
-  saveSidecarFile: (genomePath, data, sourceSha256) =>
-    ipcRenderer.invoke('save-sidecar-file', genomePath, data, sourceSha256),
+  saveSidecarFile: (genomePath, data, sourceSha256, commitNotAfter) =>
+    ipcRenderer.invoke('save-sidecar-file', genomePath, data, sourceSha256, commitNotAfter),
   checkSidecarFile: (genomePath, sourceSha256) => ipcRenderer.invoke('check-sidecar-file', genomePath, sourceSha256),
   deletePhysicalFile: filePath => ipcRenderer.invoke('deletePhysicalFile', filePath),
   updateRecentProjects: recentProjects => ipcRenderer.invoke('updateRecentProjects', recentProjects),

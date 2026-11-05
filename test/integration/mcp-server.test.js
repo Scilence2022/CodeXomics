@@ -678,7 +678,12 @@ describe('MCP Server Structure', () => {
     );
 
     expect(response.error).toBeUndefined();
-    expect(server._withTimeout).toHaveBeenCalledWith(expect.any(Function), 30000, expect.stringContaining('30'));
+    expect(server._withTimeout).toHaveBeenCalledWith(
+      expect.any(Function),
+      30000,
+      expect.stringContaining('30'),
+      expect.objectContaining({ executionContext: expect.any(Object) })
+    );
     const executionContext = server.toolsIntegrator.executeTool.mock.calls[0][3];
     expect(executionContext.commitNotAfter).toBeLessThan(executionContext.requestDeadline);
   });
@@ -723,6 +728,44 @@ describe('MCP Server Structure', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('forwards cancellation only to the renderer request owned by the cancelled call', async () => {
+    const MCPServer = require(MCP_SERVER_PATH);
+    const server = Object.create(MCPServer.prototype);
+    const send = vi.fn();
+    const renderer = { send };
+    server.mode = 'tools';
+    server.pendingRequests = new Map();
+    server.serverLog = () => {};
+    server.resolveElectronTarget = () => ({
+      window: { isDestroyed: () => false, webContents: renderer },
+      windowId: 'window-1',
+      genomeName: 'test-genome',
+    });
+    server._attachRoutingMeta = result => result;
+    const first = new AbortController();
+    const run = signal =>
+      server._withTimeout(
+        () => server.executeViaElectronIPC('search_features', {}, 'session', null),
+        30_000,
+        'request timed out',
+        { signal }
+      );
+    const firstCall = run(first.signal).catch(error => error);
+    const secondCall = run();
+    await Promise.resolve();
+    const [firstId, secondId] = send.mock.calls.map(([, payload]) => payload.requestId);
+    first.abort();
+    expect(await firstCall).toMatchObject({ name: 'AbortError' });
+    expect(send).toHaveBeenLastCalledWith('mcp-tool-cancel', { requestId: firstId });
+    expect(server.pendingRequests.has(secondId)).toBe(true);
+
+    server.handleToolResponse({ requestId: secondId, success: true, result: 'wrong' }, {});
+    expect(server.pendingRequests.has(secondId)).toBe(true);
+    server.handleToolResponse({ requestId: secondId, success: true, result: 'ok' }, renderer);
+    expect(await secondCall).toBe('ok');
+    expect(server.pendingRequests.size).toBe(0);
   });
 
   it('accepts the standard initialized notification without a JSON-RPC response', async () => {
@@ -895,14 +938,12 @@ describe('MCP Server Structure', () => {
       expect(server.sseTransports.size).toBe(2);
 
       await firstLegacyClient.close();
-      await new Promise(resolve => setTimeout(resolve, 10));
-      expect(server.sseTransports.size).toBe(1);
+      await vi.waitFor(() => expect(server.sseTransports.size).toBe(1));
       expect((await secondLegacyClient.listTools()).tools.map(tool => tool.name)).toContain(
         'resolve_annotation_target'
       );
       await secondLegacyClient.close();
-      await new Promise(resolve => setTimeout(resolve, 10));
-      expect(server.sseTransports.size).toBe(0);
+      await vi.waitFor(() => expect(server.sseTransports.size).toBe(0));
       expect(executeToolSpy).toHaveBeenCalledWith(
         'reject_annotation_changeset',
         { changeSetId: 'cs-test', reason: 'integration-test' },
@@ -934,6 +975,65 @@ describe('MCP Server Structure', () => {
       }
     } finally {
       await Promise.all(legacyClients.map(client => client.close().catch(() => undefined)));
+      await server.stop();
+    }
+  });
+
+  it('scopes SDK cancellation to the HTTP client even when clients share an API key and request ID', async () => {
+    const MCPServer = require(MCP_SERVER_PATH);
+    const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+    const { StreamableHTTPClientTransport } = require('@modelcontextprotocol/sdk/client/streamableHttp.js');
+    const credential = 'admin-cancellation-test-secret';
+    const server = new MCPServer(0, 0, null, { requireAuth: true, masterKey: credential });
+    server.serverLog = () => {};
+    const executionSignals = new Map();
+    vi.spyOn(server.toolsIntegrator, 'executeTool').mockImplementation(async (_name, { identifier }) => {
+      const executionSignal = server.toolExecutionScope.getStore().signal;
+      executionSignals.set(identifier, executionSignal);
+      return new Promise((_, reject) => {
+        executionSignal.addEventListener('abort', () => reject(executionSignal.reason), { once: true });
+      });
+    });
+    const clients = ['first', 'second'].map(name => new Client({ name, version: '1.0.0' }));
+    const controllers = clients.map(() => new AbortController());
+    try {
+      try {
+        await server.start();
+      } catch (error) {
+        if (/\b(?:EPERM|EACCES)\b|operation not permitted/i.test(error.message)) return;
+        throw error;
+      }
+      const endpoint = new URL(`http://127.0.0.1:${server.httpServer.address().port}/mcp`);
+      const transports = clients.map(
+        () =>
+          new StreamableHTTPClientTransport(endpoint, {
+            requestInit: { headers: { Authorization: `Bearer ${credential}` } },
+          })
+      );
+      await Promise.all(clients.map((client, index) => client.connect(transports[index])));
+      expect(transports[0].sessionId).toBeTruthy();
+      expect(transports[0].sessionId).not.toBe(transports[1].sessionId);
+      const outcomes = clients.map((client, index) =>
+        client
+          .callTool({ name: 'resolve_annotation_target', arguments: { identifier: String(index) } }, undefined, {
+            signal: controllers[index].signal,
+          })
+          .catch(error => error)
+      );
+      await vi.waitFor(() => expect(executionSignals.size).toBe(2));
+      const requestIds = [...server.httpToolRequests.keys()].map(key => JSON.parse(key)[1]);
+      expect(new Set(requestIds).size).toBe(1);
+
+      controllers[0].abort();
+      expect(await outcomes[0]).toBeInstanceOf(Error);
+      await vi.waitFor(() => expect(executionSignals.get('0').aborted).toBe(true));
+      expect(executionSignals.get('1').aborted).toBe(false);
+
+      controllers[1].abort();
+      expect(await outcomes[1]).toBeInstanceOf(Error);
+      await vi.waitFor(() => expect(server.httpToolRequests.size).toBe(0));
+    } finally {
+      await Promise.all(clients.map(client => client.close().catch(() => undefined)));
       await server.stop();
     }
   });

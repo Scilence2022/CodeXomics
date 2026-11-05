@@ -61,6 +61,25 @@ describe('InternalMCPServer agent chat routing', () => {
     );
   });
 
+  it('delivers cancellation to the tool running under the matching IPC request ID', async () => {
+    const InternalMCPServer = require(modulePath);
+    const server = new InternalMCPServer();
+    const executeToolByName = vi.fn(
+      async (_tool, _params, { signal }) =>
+        new Promise((_, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+        })
+    );
+    server.initialize({ chatManager: { executeToolByName } });
+    const request = server.executeRequest({ requestId: 'tool-1', method: 'searchFeatures', parameters: {} });
+    const cancellationHandler = ipcRenderer.on.mock.calls.find(([name]) => name === 'mcp-tool-cancel')[1];
+    cancellationHandler(null, { requestId: 'different' });
+    expect(server.pendingExecutions.get('tool-1').signal.aborted).toBe(false);
+    cancellationHandler(null, { requestId: 'tool-1' });
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    expect(server.pendingExecutions.size).toBe(0);
+  });
+
   it('preserves the trusted MCP execution context across agent-chat delegation', async () => {
     const AgentChatTools = require('../../src/mcp-tools/utility/AgentChatTools.js');
     const executeToolOnClient = vi.fn(async () => ({ success: true }));

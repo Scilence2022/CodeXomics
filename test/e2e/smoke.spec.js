@@ -111,6 +111,24 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     await fs.writeFile(fixture, original);
     expect(await reopen()).toEqual({ ...originalBinding, status: 'loaded' });
     expect(await fs.readFile(legacyPath, 'utf8')).toBe(legacyData);
+    const expired = await genomeView.evaluate(async destination => {
+      const genome = window.genomeBrowser;
+      const api = window.electronAPI;
+      const source = await api.loadSidecarFile(genome.loadedGenomePath, genome.loadedGenomeSourceSha256);
+      const deadline = Date.now() - 1;
+      return {
+        export: await api.writeFile(destination, 'expired export', deadline),
+        annotation: await api.saveSidecarFile(
+          genome.loadedGenomePath,
+          source.data,
+          genome.loadedGenomeSourceSha256,
+          deadline
+        ),
+      };
+    }, fixture + '.expired-export');
+    expect(expired.export).toMatchObject({ success: false, error: expect.stringMatching(/deadline/) });
+    expect(expired.annotation).toMatchObject({ success: false, error: expect.stringMatching(/deadline/) });
+    await expect(fs.stat(fixture + '.expired-export')).rejects.toMatchObject({ code: 'ENOENT' });
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });

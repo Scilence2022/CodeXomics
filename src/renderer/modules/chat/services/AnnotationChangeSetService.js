@@ -1501,7 +1501,7 @@ class AnnotationChangeSetService {
     return /^user_\d+_[a-z0-9]+$/i.test(String(target?.annotationId || ''));
   }
 
-  async _saveLedger(ledger, workspace) {
+  async _saveLedger(ledger, workspace, beforeWrite) {
     this._assertWorkspace(workspace);
     ledger.updatedAt = new Date().toISOString();
     this._assertLedgerCapacity(ledger);
@@ -1509,8 +1509,9 @@ class AnnotationChangeSetService {
     const sidecar = this.app?.sidecarManager;
     const snapshot = this._clone(ledger);
     if (genomePath && sidecar && typeof sidecar.setAndForceSave === 'function') {
-      await sidecar.setAndForceSave(genomePath, 'annotationCuration', snapshot);
+      await sidecar.setAndForceSave(genomePath, 'annotationCuration', snapshot, ...(beforeWrite ? [beforeWrite] : []));
     } else if (genomePath && sidecar && typeof sidecar.set === 'function') {
+      beforeWrite?.();
       await sidecar.set(genomePath, 'annotationCuration', snapshot);
       if (typeof sidecar.forceSave === 'function') await sidecar.forceSave(genomePath);
     }
@@ -3076,10 +3077,12 @@ class AnnotationChangeSetService {
 
   _assertCommitDeadline(params) {
     const context = this._executionContext(params);
+    context?.signal?.throwIfAborted();
     const commitNotAfter = Number(context?.commitNotAfter ?? context?.requestDeadline);
     if (Number.isFinite(commitNotAfter) && Date.now() >= commitNotAfter) {
       throw new Error('The MCP request deadline elapsed before the durable annotation commit began; retry safely');
     }
+    return Number.isFinite(commitNotAfter) ? commitNotAfter : undefined;
   }
 
   _immutableChangeSetPayload(changeSet) {
@@ -4356,9 +4359,13 @@ class AnnotationChangeSetService {
       receiptId: receipt.id,
     });
 
-    // Persist the commit receipt before changing live renderer state. A disk
-    // failure leaves the reviewed annotation untouched and safe to retry.
-    await this._saveLedger(ledger, workspace);
+    // Recheck after preparation and again after waiting for the sidecar lock.
+    const beforeCommitWrite = () => {
+      this._assertWorkspace(workspace);
+      return this._assertCommitDeadline(params);
+    };
+    beforeCommitWrite();
+    await this._saveLedger(ledger, workspace, this._executionContext(params) ? beforeCommitWrite : undefined);
 
     const liveTargetBeforeSwap = await this._featureRef(found.chromosome, found.annotation, ledger, workspace);
     const liveAlreadyMatchesReceipt = liveTargetBeforeSwap.featureHash === receipt.resultingFeatureHash;

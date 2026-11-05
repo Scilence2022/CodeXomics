@@ -63,6 +63,40 @@ describe('SidecarManager write serialization', () => {
     expect(manager.cache.get(genomePath).annotationCuration).toEqual({ revision: 1 });
   });
 
+  it('checks cancellation again after waiting behind a durable sidecar write', async () => {
+    const genomePath = '/tmp/queued-commit.gbk';
+    let notifyStarted;
+    let release;
+    const started = new Promise(resolve => {
+      notifyStarted = resolve;
+    });
+    const blocked = new Promise(resolve => {
+      release = resolve;
+    });
+    let writes = 0;
+    const SidecarManager = loadSidecarManager({
+      loadSidecarFile: async () => ({ success: true, exists: false }),
+      saveSidecarFile: async () => {
+        writes++;
+        notifyStarted();
+        await blocked;
+        return { success: true };
+      },
+    });
+    const manager = new SidecarManager();
+    const first = manager.set(genomePath, 'geneNotes', { first: true });
+    await started;
+    const controller = new AbortController();
+    const second = manager.setAndForceSave(genomePath, 'annotationCuration', { revision: 1 }, () => {
+      controller.signal.throwIfAborted();
+    });
+    controller.abort();
+    release();
+    await first;
+    await expect(second).rejects.toMatchObject({ name: 'AbortError' });
+    expect(writes).toBe(1);
+  });
+
   it('invalidates a stale verified cache after a main-process CAS conflict', async () => {
     const genomePath = '/tmp/conflict.gbk';
     const SidecarManager = loadSidecarManager({

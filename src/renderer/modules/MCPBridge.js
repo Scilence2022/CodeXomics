@@ -236,6 +236,10 @@ class MCPBridge {
           this.handleToolExecution(message);
           break;
 
+        case 'tool-cancel':
+          this.internalMCPServer?.cancelRequest(message.requestId);
+          break;
+
         case 'error':
           console.error('[MCPBridge] Server error:', message.error);
           if (/internal (?:websocket )?bridge.*disabled/i.test(String(message.error || ''))) {
@@ -256,7 +260,7 @@ class MCPBridge {
    * Handle tool execution request from MCP server
    */
   async handleToolExecution(message) {
-    const { requestId, method, toolName, parameters, executionContext } = message;
+    const { requestId, method, toolName } = message;
 
     console.log(`[MCPBridge] Received tool execution request: ${method} (${toolName})`);
 
@@ -266,8 +270,7 @@ class MCPBridge {
     }
 
     try {
-      // Delegate to InternalMCPServer.executeMethod
-      const result = await this.internalMCPServer.executeMethod(method, parameters, executionContext);
+      const result = await this.internalMCPServer.executeRequest(message);
       this.sendResult(requestId, result, null);
     } catch (error) {
       console.error(`[MCPBridge] Tool execution failed: ${method}`, error);

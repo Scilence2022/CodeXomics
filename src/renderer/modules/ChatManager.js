@@ -773,12 +773,13 @@ class ChatManager {
    * @returns {Object} Execution result with response and mode
    */
   async processAgentPrompt(prompt, options = {}) {
-    const { activateMultiAgent = false, onProgress = null, requestDeadline = null } = options;
+    const { activateMultiAgent = false, onProgress = null, requestDeadline = null, signal } = options;
 
     // Save current agent state
     const previousAgentState = this.agentSystemEnabled;
 
     try {
+      signal?.throwIfAborted();
       // Validate LLM configuration
       if (this.llmConfigManager && this.llmConfigManager.waitForInitialization) {
         await this.llmConfigManager.waitForInitialization();
@@ -817,28 +818,24 @@ class ChatManager {
         };
       }
 
+      signal?.throwIfAborted();
       if (Number.isFinite(requestDeadline) && requestDeadline <= Date.now()) {
         throw new Error('The MCP request expired before the ChatBox turn could start');
       }
       this.startConversation();
       const agentRequestId = this.conversationState.currentRequestId;
+      const cancelAgentRequest = () => {
+        if (this.conversationState.currentRequestId === agentRequestId) this.abortCurrentConversation();
+      };
       const deadlineTimer = Number.isFinite(requestDeadline)
-        ? setTimeout(
-            () => {
-              if (this.conversationState.currentRequestId === agentRequestId) this.abortCurrentConversation();
-            },
-            Math.max(0, requestDeadline - Date.now())
-          )
+        ? setTimeout(cancelAgentRequest, Math.max(0, requestDeadline - Date.now()))
         : null;
-
-      // Add user message to ChatBox with MCP source marker
-      this.addMessageToChat(markedPrompt, 'user');
-
-      // Show thinking process
-      this.showThinkingProcess && this.addThinkingMessage('🔗 MCP Agent request — analyzing...');
-      this.showTypingIndicator();
-
+      signal?.addEventListener('abort', cancelAgentRequest, { once: true });
       try {
+        this.addMessageToChat(markedPrompt, 'user');
+        this.showThinkingProcess && this.addThinkingMessage('🔗 MCP Agent request — analyzing...');
+        this.showTypingIndicator();
+
         // Execute via the main sendToLLM pipeline — same as user typing in ChatBox
         const response = await this.sendToLLM(prompt);
 
@@ -871,6 +868,7 @@ class ChatManager {
         throw llmError;
       } finally {
         clearTimeout(deadlineTimer);
+        signal?.removeEventListener('abort', cancelAgentRequest);
         this.endConversation(agentRequestId);
       }
     } catch (error) {

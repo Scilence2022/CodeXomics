@@ -123,6 +123,21 @@ describe('export tools never block on a save dialog', () => {
     });
   });
 
+  it('leaves the destination untouched if MCP cancels while the save dialog is open', async () => {
+    let closeDialog;
+    const dialogResult = new Promise(resolve => {
+      closeDialog = resolve;
+    });
+    const { service, calls } = createHarness({ dialogResult });
+    const controller = new AbortController();
+    const exportTask = service.exportGenBankFormat({ __executionContext: { signal: controller.signal } });
+    expect(calls.showSaveDialog).toHaveLength(1);
+    controller.abort();
+    closeDialog({ filePath: '/tmp/exported_files/cancelled.gbk' });
+    await expect(exportTask).rejects.toThrow(/abort/i);
+    expect(calls.writeFile).toHaveLength(0);
+  });
+
   it('routes export_data through the same non-interactive export path', async () => {
     const { service, calls } = createHarness();
     const ExportDataSupport = loadExportDataClass();

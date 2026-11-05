@@ -11,12 +11,15 @@ class ToolExecutionService {
 
   async execute(toolName, parameters, options = {}) {
     try {
+      options.signal?.throwIfAborted();
       parameters = parameters && typeof parameters === 'object' ? { ...parameters } : {};
       // Execution identity is an out-of-band runtime property. Never trust a
       // model/tool argument that attempts to supply the reserved field.
       delete parameters.__executionContext;
       if (options.executionContext && typeof options.executionContext === 'object') {
-        parameters.__executionContext = Object.freeze({ ...options.executionContext });
+        const context = { ...options.executionContext };
+        if (options.signal) Object.defineProperty(context, 'signal', { value: options.signal });
+        parameters.__executionContext = Object.freeze(context);
       }
       // --- LEGACY ALIAS RESOLUTION ---
       const legacyAliases = {
