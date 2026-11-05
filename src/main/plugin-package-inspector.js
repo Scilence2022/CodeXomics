@@ -98,4 +98,4 @@ function inspectPluginPackage({ data, manifest, pluginId, version } = {}) {
   };
 }
 
-module.exports = { inspectPluginPackage };
+module.exports = { inspectPluginPackage, MAX_PACKAGE_BYTES };

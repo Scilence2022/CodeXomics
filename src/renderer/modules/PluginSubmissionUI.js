@@ -103,10 +103,10 @@ class PluginSubmissionUI {
                                         <div class="upload-placeholder">
                                             <div class="upload-icon">📁</div>
                                             <p>Click to select files or drag and drop</p>
-                                            <small>Supported: .zip, .tar.gz, .js, .json, .md (Max: 50MB)</small>
+                                            <small>One ZIP archive (max 32 MiB) with a matching plugin manifest</small>
                                         </div>
                                         <input type="file" id="plugin-files" name="files" multiple 
-                                               accept=".zip,.tar.gz,.js,.json,.md" style="display: none;">
+                                               accept=".zip" style="display: none;">
                                     </div>
                                     <div id="uploaded-files-list" class="uploaded-files-list"></div>
                                 </div>
@@ -304,13 +304,13 @@ class PluginSubmissionUI {
 
   addFiles(files, uploadedFiles, uploadedFilesList) {
     files.forEach(file => {
-      if (file.size > 50 * 1024 * 1024) {
-        alert(`File "${file.name}" is too large. Maximum size is 50MB.`);
+      if (file.size > 32 * 1024 * 1024) {
+        alert(`File "${file.name}" is too large. Maximum size is 32 MiB.`);
         return;
       }
 
-      if (uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
-        alert(`File "${file.name}" is already added.`);
+      if (!/\.zip$/i.test(file.name) || uploadedFiles.length > 0) {
+        alert('Please add one ZIP archive. Remove the current file before adding a replacement.');
         return;
       }
 
@@ -327,7 +327,7 @@ class PluginSubmissionUI {
                 <div class="file-info">
                     <div class="file-icon">${this.getFileIcon(file.name)}</div>
                     <div class="file-details">
-                        <div class="file-name">${file.name}</div>
+                        <div class="file-name">${String(file.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
                         <div class="file-size">${this.formatFileSize(file.size)}</div>
                     </div>
                 </div>
@@ -382,7 +382,7 @@ class PluginSubmissionUI {
 
       const uploadedFiles = modal.uploadedFiles || [];
       if (uploadedFiles.length === 0) {
-        alert('Please upload at least one plugin file.');
+        alert('Please upload a ZIP plugin archive.');
         return;
       }
 

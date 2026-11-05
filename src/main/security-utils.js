@@ -2,6 +2,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 
 class ApprovedPathSet extends Set {
   constructor() {
@@ -105,6 +106,51 @@ function createSecureWebPreferences(overrides = {}) {
   preferences.sandbox = true;
 
   return preferences;
+}
+
+function createExternalToolWebPreferences() {
+  const { preload: _preload, ...preferences } = createSecureWebPreferences({
+    partition: 'persist:codexomics-external-tools',
+  });
+  return preferences;
+}
+
+function parseExternalToolURL(value) {
+  if (typeof value !== 'string') return null;
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+function restrictExternalToolContents(contents) {
+  contents.session.setPermissionCheckHandler(() => false);
+  contents.session.setPermissionRequestHandler((_contents, _permission, reply) => reply(false));
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+  const checkNavigation = (event, legacyURL) => {
+    if (event.isMainFrame !== false && !parseExternalToolURL(event.url || legacyURL)) {
+      event.preventDefault();
+    }
+  };
+  contents.on('will-navigate', checkNavigation);
+  contents.on('will-redirect', checkNavigation);
+}
+
+function isMainFrameAtFile(event, filePath) {
+  const frame = event?.senderFrame;
+  if (!frame || frame !== event?.sender?.mainFrame) return false;
+
+  try {
+    const url = new URL(frame.url);
+    url.search = '';
+    url.hash = '';
+    return url.href === pathToFileURL(filePath).href;
+  } catch {
+    return false;
+  }
 }
 
 function rememberApprovedPath(filePath) {
@@ -451,6 +497,10 @@ module.exports = {
   RENDERER_CONTENT_SECURITY_POLICY,
   registerRendererContentSecurityPolicy,
   createSecureWebPreferences,
+  createExternalToolWebPreferences,
+  parseExternalToolURL,
+  restrictExternalToolContents,
+  isMainFrameAtFile,
   rememberApprovedPath,
   rememberApprovedDialogPaths,
   inferCapabilityFromOperation,

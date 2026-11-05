@@ -11,41 +11,52 @@ const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
+const semver = require('semver');
+
+const { inspectPluginPackage, MAX_PACKAGE_BYTES } = require('../../src/main/plugin-package-inspector');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-const PLUGINS_DIR = path.join(__dirname, 'marketplace-data', 'plugins');
-const METADATA_FILE = path.join(__dirname, 'marketplace-data', 'metadata.json');
-const UPLOADS_DIR = path.join(__dirname, 'marketplace-data', 'uploads');
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: function (req, file, cb) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    cb(null, `${timestamp}-${file.originalname}`);
-  },
-});
+const PORT = Number(process.env.PORT || 3001);
+const HOST = process.env.CODEXOMICS_MARKETPLACE_HOST || '127.0.0.1';
+const DATA_DIR = path.resolve(process.env.CODEXOMICS_MARKETPLACE_DATA_DIR || path.join(__dirname, 'marketplace-data'));
+const PLUGINS_DIR = path.join(DATA_DIR, 'plugins');
+const METADATA_FILE = path.join(DATA_DIR, 'metadata.json');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const PACKAGES_DIR = path.join(DATA_DIR, 'packages');
+const ADMIN_TOKEN = process.env.CODEXOMICS_MARKETPLACE_ADMIN_TOKEN;
+const ADMIN_ID = process.env.CODEXOMICS_MARKETPLACE_ADMIN_ID || 'marketplace-admin';
+const SHA256 = /^[a-f0-9]{64}$/;
 
 const upload = multer({
-  storage: storage,
+  storage: multer.diskStorage({
+    destination: UPLOADS_DIR,
+    filename: (_req, _file, callback) => callback(null, `${crypto.randomUUID()}.zip`),
+  }),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-    files: 5,
+    fileSize: MAX_PACKAGE_BYTES,
+    files: 1,
+    fields: 2,
+    fieldSize: 64 * 1024,
   },
-  fileFilter: function (req, file, cb) {
-    // Allow plugin archives and metadata files
-    const allowedTypes = ['.zip', '.tar.gz', '.json', '.js', '.md'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedTypes.includes(ext) || allowedTypes.some(type => file.originalname.toLowerCase().includes(type))) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Allowed: .zip, .tar.gz, .json, .js, .md'));
-    }
-  },
+  fileFilter: (_req, file, callback) => callback(null, path.extname(file.originalname).toLowerCase() === '.zip'),
 });
+
+function sha256(data) {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+function requireAdministrator(req, res, next) {
+  if (!ADMIN_TOKEN) return res.status(503).json({ success: false, error: 'Marketplace administration is disabled' });
+  const provided = req.get('authorization')?.match(/^Bearer ([^\s]+)$/i)?.[1];
+  if (
+    !provided ||
+    !crypto.timingSafeEqual(Buffer.from(sha256(provided), 'hex'), Buffer.from(sha256(ADMIN_TOKEN), 'hex'))
+  ) {
+    res.set('WWW-Authenticate', 'Bearer');
+    return res.status(401).json({ success: false, error: 'Marketplace administrator credentials are required' });
+  }
+  return next();
+}
 
 // Middleware
 app.use(cors());
@@ -74,6 +85,7 @@ async function initializeServer() {
     await fs.mkdir(path.dirname(PLUGINS_DIR), { recursive: true });
     await fs.mkdir(PLUGINS_DIR, { recursive: true });
     await fs.mkdir(UPLOADS_DIR, { recursive: true });
+    await fs.mkdir(PACKAGES_DIR, { recursive: true });
 
     // Load existing metadata
     try {
@@ -81,6 +93,7 @@ async function initializeServer() {
       pluginMetadata = JSON.parse(data);
       console.log(`📦 Loaded ${Object.keys(pluginMetadata.plugins).length} plugins from metadata`);
     } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
       console.log('📝 Creating new plugin metadata');
       await initializeSamplePlugins();
     }
@@ -160,12 +173,52 @@ async function initializeSamplePlugins() {
 /**
  * Save metadata to file
  */
-async function saveMetadata() {
+async function writeAtomically(filePath, content) {
+  const temporary = `${filePath}.${crypto.randomUUID()}.tmp`;
   try {
-    await fs.writeFile(METADATA_FILE, JSON.stringify(pluginMetadata, null, 2));
-  } catch (error) {
-    console.error('❌ Failed to save metadata:', error);
+    await fs.writeFile(temporary, content, { flag: 'wx', mode: 0o600 });
+    await fs.rename(temporary, filePath);
+  } finally {
+    await fs.rm(temporary, { force: true });
   }
+}
+
+function saveMetadata(data = pluginMetadata) {
+  return writeAtomically(METADATA_FILE, JSON.stringify(data, null, 2));
+}
+
+let metadataWrites = Promise.resolve();
+
+function updateMetadata(operation) {
+  const pending = metadataWrites.then(async () => {
+    const next = structuredClone(pluginMetadata);
+    const result = await operation(next);
+    await saveMetadata(next);
+    pluginMetadata = next;
+    return result;
+  });
+  metadataWrites = pending.catch(() => {});
+  return pending;
+}
+
+function trackDownload(id) {
+  return updateMetadata(data => {
+    const plugin = data.plugins[id];
+    plugin.downloads = (plugin.downloads || 0) + 1;
+    data.stats.totalDownloads++;
+  });
+}
+
+async function readPluginUpload(filename) {
+  if (typeof filename !== 'string' || filename !== path.basename(filename) || path.extname(filename) !== '.zip') {
+    throw new Error('Invalid plugin archive filename');
+  }
+  const filePath = path.join(UPLOADS_DIR, filename);
+  const stats = await fs.lstat(filePath);
+  if (!stats.isFile() || stats.size === 0 || stats.size > MAX_PACKAGE_BYTES) {
+    throw new Error('Invalid plugin archive size');
+  }
+  return fs.readFile(filePath);
 }
 
 /**
@@ -183,14 +236,14 @@ function generatePluginId(name) {
  */
 function validatePluginMetadata(metadata) {
   const required = ['name', 'description', 'version', 'author', 'category', 'type'];
-  const missing = required.filter(field => !metadata[field]);
+  const missing = required.filter(field => typeof metadata?.[field] !== 'string' || !metadata[field].trim());
 
   if (missing.length > 0) {
     throw new Error(`Missing required fields: ${missing.join(', ')}`);
   }
 
   // Validate version format
-  if (!/^\d+\.\d+\.\d+/.test(metadata.version)) {
+  if (!semver.valid(metadata.version)) {
     throw new Error('Version must follow semantic versioning (e.g., 1.0.0)');
   }
 
@@ -329,7 +382,7 @@ app.get('/api/v1/plugins', (req, res) => {
 app.get('/api/v1/plugins/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const plugin = pluginMetadata.plugins[id];
+    const plugin = Object.hasOwn(pluginMetadata.plugins, id) ? pluginMetadata.plugins[id] : null;
 
     if (!plugin) {
       return res.status(404).json({
@@ -361,7 +414,7 @@ app.get('/api/v1/plugins/:id', (req, res) => {
 app.get('/api/v1/plugins/:id/:version/download', async (req, res) => {
   try {
     const { id, version } = req.params;
-    const plugin = pluginMetadata.plugins[id];
+    const plugin = Object.hasOwn(pluginMetadata.plugins, id) ? pluginMetadata.plugins[id] : null;
 
     if (!plugin) {
       return res.status(404).json({
@@ -378,13 +431,13 @@ app.get('/api/v1/plugins/:id/:version/download', async (req, res) => {
       });
     }
 
-    // Increment download count
-    plugin.downloads = (plugin.downloads || 0) + 1;
-    pluginMetadata.stats.totalDownloads++;
-    await saveMetadata();
+    await trackDownload(id);
 
-    // For now, serve a mock plugin package
-    // In production, this would serve the actual plugin zip file from PLUGINS_DIR
+    if (SHA256.test(plugin.packageSha256 || '')) {
+      return res.download(path.join(PACKAGES_DIR, `${plugin.packageSha256}.zip`), `${id}-${version}.zip`);
+    }
+
+    // Serve previously bundled packages through the legacy directory layout.
     const pluginPackagePath = path.join(PLUGINS_DIR, id, `${id}.zip`);
 
     // Check if actual plugin file exists
@@ -459,7 +512,7 @@ app.get('/api/v1/plugins/:id/:version/download', async (req, res) => {
 app.post('/api/v1/plugins/:id/download', async (req, res) => {
   try {
     const { id } = req.params;
-    const plugin = pluginMetadata.plugins[id];
+    const plugin = Object.hasOwn(pluginMetadata.plugins, id) ? pluginMetadata.plugins[id] : null;
 
     if (!plugin) {
       return res.status(404).json({
@@ -468,18 +521,13 @@ app.post('/api/v1/plugins/:id/download', async (req, res) => {
       });
     }
 
-    // Increment download count
-    plugin.downloads = (plugin.downloads || 0) + 1;
-    pluginMetadata.stats.totalDownloads++;
-
-    // Save updated metadata
-    await saveMetadata();
+    await trackDownload(id);
 
     // Return download information
     res.json({
       success: true,
       data: {
-        downloadUrl: `${req.protocol}://${req.get('host')}/downloads/${id}/${plugin.version}/${id}.zip`,
+        downloadUrl: `${req.protocol}://${req.get('host')}/api/v1/plugins/${id}/${plugin.version}/download`,
         checksum: plugin.security.checksum,
         size: plugin.size,
         version: plugin.version,
@@ -500,109 +548,66 @@ app.post('/api/v1/plugins/:id/download', async (req, res) => {
  * POST /api/v1/plugins/submit
  * Submit a new plugin
  */
-app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) => {
+app.post('/api/v1/plugins/submit', upload.single('files'), async (req, res) => {
+  const file = req.file;
+  let retained = false;
   try {
-    console.log('📤 Plugin submission received');
-
-    // Parse metadata from form data
-    let metadata;
-    try {
-      metadata = JSON.parse(req.body.metadata);
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid metadata format',
-        message: 'Metadata must be valid JSON',
-      });
-    }
-
-    // Validate metadata
+    const metadata = JSON.parse(req.body.metadata);
     validatePluginMetadata(metadata);
 
-    // Generate plugin ID
     const pluginId = generatePluginId(metadata.name);
+    if (!pluginId) throw new Error('Plugin name must contain letters or digits');
+    if (!file) throw new Error('One ZIP plugin archive is required');
 
-    // Check if plugin already exists
-    if (pluginMetadata.plugins[pluginId]) {
-      return res.status(409).json({
-        success: false,
-        error: 'Plugin already exists',
-        message: `Plugin with ID '${pluginId}' already exists`,
-      });
-    }
-
-    // Process uploaded files
-    const uploadedFiles = req.files || [];
-    const fileInfos = uploadedFiles.map(file => ({
-      originalName: file.originalname,
-      filename: file.filename,
-      size: file.size,
-      mimetype: file.mimetype,
-      path: file.path,
-    }));
-
-    // Create plugin metadata with submission info
+    const bytes = await readPluginUpload(file.filename);
+    inspectPluginPackage({ data: bytes, pluginId, version: metadata.version });
+    const packageSha256 = sha256(bytes);
     const submissionId = crypto.randomUUID();
+    const now = new Date().toISOString();
     const submission = {
       id: pluginId,
       submissionId,
-      ...metadata,
+      name: metadata.name,
+      description: metadata.description,
+      version: metadata.version,
+      author: metadata.author,
+      category: metadata.category,
+      type: metadata.type,
       tags: metadata.tags || [],
       keywords: metadata.keywords || [],
       dependencies: metadata.dependencies || [],
-      files: fileInfos,
-      size: fileInfos.reduce((total, file) => total + file.size, 0),
+      archiveFilename: file.filename,
+      packageSha256,
+      size: bytes.length,
       status: 'pending',
       submittedBy: req.body.submitterEmail || 'anonymous',
-      submittedAt: new Date().toISOString(),
+      submittedAt: now,
       rating: 0,
       downloads: 0,
-      lastUpdated: new Date().toISOString(),
-      security: {
-        checksum: 'pending',
-        signature: 'pending',
-        scanResults: {
-          malware: null,
-          suspicious: null,
-          lastScanned: null,
-        },
-      },
+      lastUpdated: now,
     };
 
-    // Add to pending submissions
-    pluginMetadata.pendingSubmissions[submissionId] = submission;
-    pluginMetadata.stats.totalSubmissions++;
-
-    // Save metadata
-    await saveMetadata();
-
-    console.log(`✅ Plugin submission received: ${pluginId} (${submissionId})`);
-
-    res.status(201).json({
-      success: true,
-      data: {
-        submissionId,
-        pluginId,
-        status: 'pending',
-        message: 'Plugin submitted successfully and is pending review',
-      },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('❌ Plugin submission error:', error);
-
-    // Clean up uploaded files on error
-    if (req.files) {
-      for (const file of req.files) {
-        try {
-          await fs.unlink(file.path);
-        } catch (cleanupError) {
-          console.error('Failed to cleanup file:', cleanupError);
-        }
+    await updateMetadata(data => {
+      if (Object.hasOwn(data.plugins, pluginId)) {
+        throw Object.assign(new Error('Plugin already exists'), { statusCode: 409 });
       }
-    }
+      data.pendingSubmissions[submissionId] = submission;
+      data.stats.totalSubmissions++;
+    }).catch(error => {
+      if (error.statusCode) throw error;
+      console.error('Failed to save marketplace submission:', error);
+      throw Object.assign(new Error('Could not save submission'), { statusCode: 500 });
+    });
+    retained = true;
 
-    res.status(400).json({
+    return res
+      .status(201)
+      .json({ success: true, data: { submissionId, pluginId, status: 'pending', sha256: packageSha256 } });
+  } catch (error) {
+    if (file && !retained) {
+      await fs.rm(file.path, { force: true }).catch(error => console.error('Failed to clean up upload:', error));
+    }
+    return res.status(error.statusCode || 400).json({
       success: false,
       error: 'Plugin submission failed',
       message: error.message,
@@ -614,7 +619,7 @@ app.post('/api/v1/plugins/submit', upload.array('files', 5), async (req, res) =>
  * GET /api/v1/submissions
  * Get pending submissions (admin only for now)
  */
-app.get('/api/v1/submissions', (req, res) => {
+app.get('/api/v1/submissions', requireAdministrator, (req, res) => {
   try {
     const { status } = req.query;
 
@@ -646,57 +651,66 @@ app.get('/api/v1/submissions', (req, res) => {
  * POST /api/v1/submissions/:id/approve
  * Approve a plugin submission (admin only for now)
  */
-app.post('/api/v1/submissions/:id/approve', async (req, res) => {
+app.post('/api/v1/submissions/:id/approve', requireAdministrator, async (req, res) => {
   try {
     const { id } = req.params;
-    const submission = pluginMetadata.pendingSubmissions[id];
-
-    if (!submission) {
-      return res.status(404).json({
-        success: false,
-        error: 'Submission not found',
-      });
+    const expectedDigest = req.body?.sha256;
+    if (typeof expectedDigest !== 'string' || !SHA256.test(expectedDigest)) {
+      return res.status(400).json({ success: false, error: 'The reviewed archive SHA-256 digest is required' });
     }
 
-    // Move from pending to published
-    const plugin = { ...submission };
-    plugin.status = 'published';
-    plugin.approvedAt = new Date().toISOString();
-    plugin.approvedBy = req.body.approverEmail || 'admin';
+    const approval = await updateMetadata(async data => {
+      const submission = Object.hasOwn(data.pendingSubmissions, id) ? data.pendingSubmissions[id] : null;
+      if (!submission) {
+        const published = Object.values(data.plugins).find(plugin => plugin.submissionId === id);
+        if (published?.packageSha256 === expectedDigest) return { plugin: published };
+        throw Object.assign(new Error('Submission not found'), { statusCode: 404 });
+      }
+      if (submission.packageSha256 !== expectedDigest) {
+        throw Object.assign(new Error('Reviewed archive digest does not match the submission'), { statusCode: 409 });
+      }
+      if (Object.hasOwn(data.plugins, submission.id)) {
+        throw Object.assign(new Error('Plugin already exists'), { statusCode: 409 });
+      }
 
-    // Add to main plugins
-    pluginMetadata.plugins[plugin.id] = plugin;
+      let bytes;
+      let evidence;
+      try {
+        bytes = await readPluginUpload(submission.archiveFilename);
+        if (sha256(bytes) !== expectedDigest) throw new Error('Archive digest changed');
+        evidence = inspectPluginPackage({ data: bytes, pluginId: submission.id, version: submission.version });
+      } catch (error) {
+        throw Object.assign(new Error('Submitted archive cannot be verified', { cause: error }), { statusCode: 422 });
+      }
 
-    // Remove from pending
-    delete pluginMetadata.pendingSubmissions[id];
+      await writeAtomically(path.join(PACKAGES_DIR, `${expectedDigest}.zip`), bytes);
+      const { archiveFilename, ...plugin } = submission;
+      plugin.status = 'published';
+      plugin.approvedAt = new Date().toISOString();
+      plugin.approvedBy = ADMIN_ID;
+      plugin.security = { checksum: evidence.sha256, archiveSha256: expectedDigest };
 
-    // Update stats
-    pluginMetadata.stats.totalPlugins++;
-    if (!pluginMetadata.stats.categories[plugin.category]) {
-      pluginMetadata.stats.categories[plugin.category] = 0;
+      data.plugins[plugin.id] = plugin;
+      delete data.pendingSubmissions[id];
+      data.stats.totalPlugins++;
+      data.stats.categories[plugin.category] = (data.stats.categories[plugin.category] || 0) + 1;
+      return { plugin, archiveFilename };
+    });
+
+    if (approval.archiveFilename) {
+      await fs
+        .rm(path.join(UPLOADS_DIR, approval.archiveFilename), { force: true })
+        .catch(error => console.error('Failed to clean up approved upload:', error));
     }
-    pluginMetadata.stats.categories[plugin.category]++;
-
-    // Save metadata
-    await saveMetadata();
-
-    console.log(`✅ Plugin approved: ${plugin.id}`);
-
-    res.json({
+    return res.json({
       success: true,
-      data: {
-        pluginId: plugin.id,
-        status: 'approved',
-        message: 'Plugin approved and published successfully',
-      },
-      timestamp: new Date().toISOString(),
+      data: { pluginId: approval.plugin.id, status: 'approved', sha256: approval.plugin.packageSha256 },
     });
   } catch (error) {
-    console.error('❌ Approve submission error:', error);
-    res.status(500).json({
+    if (!error.statusCode) console.error('Failed to publish marketplace package:', error);
+    return res.status(error.statusCode || 500).json({
       success: false,
-      error: 'Internal server error',
-      message: error.message,
+      error: error.statusCode ? error.message : 'Could not publish the verified package',
     });
   }
 });
@@ -764,8 +778,8 @@ app.get('/api/v1/config', (req, res) => {
         serverUrl: `${req.protocol}://${req.get('host')}`,
         apiVersion: 'v1',
         port: PORT,
-        maxFileSize: '50MB',
-        allowedFileTypes: ['.zip', '.tar.gz', '.json', '.js', '.md'],
+        maxFileSize: '32MB',
+        allowedFileTypes: ['.zip'],
         supportedCategories: [
           'variant-analysis',
           'network-analysis',
@@ -782,7 +796,7 @@ app.get('/api/v1/config', (req, res) => {
         submissionGuidelines: {
           requiredFields: ['name', 'description', 'version', 'author', 'category', 'type'],
           versionFormat: 'Semantic versioning (e.g., 1.0.0)',
-          maxFiles: 5,
+          maxFiles: 1,
           reviewProcess: 'Manual review by administrators',
         },
       },
@@ -823,15 +837,16 @@ app.use((err, req, res, next) => {
       return res.status(400).json({
         success: false,
         error: 'File too large',
-        message: 'File size exceeds 50MB limit',
+        message: 'File size exceeds 32 MiB limit',
       });
-    } else if (err.code === 'LIMIT_FILE_COUNT') {
+    } else if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
       return res.status(400).json({
         success: false,
         error: 'Too many files',
-        message: 'Maximum 5 files allowed',
+        message: 'Exactly one ZIP archive is allowed',
       });
     }
+    return res.status(400).json({ success: false, error: 'Invalid upload', message: err.message });
   }
 
   res.status(500).json({
@@ -854,15 +869,16 @@ app.use((req, res) => {
 async function startServer() {
   await initializeServer();
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, HOST, () => {
+    const address = server.address();
     console.log(`
 🚀 CodeXomics Plugin Marketplace Server v1.1.0
-📡 Server running on http://localhost:${PORT}
-📚 API Documentation: http://localhost:${PORT}/api/v1/health
-🔍 Plugin Search: http://localhost:${PORT}/api/v1/plugins
-📊 Statistics: http://localhost:${PORT}/api/v1/stats
-📤 Plugin Submission: http://localhost:${PORT}/api/v1/plugins/submit
-⚙️  Configuration: http://localhost:${PORT}/api/v1/config
+📡 Server running on http://${HOST}:${address.port}
+📚 API Documentation: http://${HOST}:${address.port}/api/v1/health
+🔍 Plugin Search: http://${HOST}:${address.port}/api/v1/plugins
+📊 Statistics: http://${HOST}:${address.port}/api/v1/stats
+📤 Plugin Submission: http://${HOST}:${address.port}/api/v1/plugins/submit
+⚙️  Configuration: http://${HOST}:${address.port}/api/v1/config
         `);
   });
 }
@@ -870,7 +886,7 @@ async function startServer() {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down server...');
-  await saveMetadata();
+  await metadataWrites;
   process.exit(0);
 });
 

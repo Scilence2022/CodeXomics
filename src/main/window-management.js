@@ -4,7 +4,12 @@ const { BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const dialog = require('electron').dialog;
-const { createSecureWebPreferences } = require('./security-utils');
+const {
+  createSecureWebPreferences,
+  createExternalToolWebPreferences,
+  parseExternalToolURL,
+  restrictExternalToolContents,
+} = require('./security-utils');
 const workspaceHostManager = require('./workspace-host-manager');
 
 // External references (set by main module via setWindowMgmtDependencies)
@@ -724,6 +729,18 @@ function createBlastConfigWindow() {
 
 // Create specialized menu for Deep Gene Research window
 
+async function loadExternalToolPage(toolWindow, value) {
+  try {
+    const url = parseExternalToolURL(value);
+    if (!url) throw new Error('External tool URL must use HTTP or HTTPS without embedded credentials');
+    restrictExternalToolContents(toolWindow.webContents);
+    await toolWindow.loadURL(url.href);
+  } catch (error) {
+    if (!toolWindow.isDestroyed()) toolWindow.destroy();
+    throw error;
+  }
+}
+
 async function createProGenFixerWindow() {
   try {
     console.log('🚀 Starting ProGenFixer window creation...');
@@ -776,10 +793,7 @@ async function createProGenFixerWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: createSecureWebPreferences({
-        experimentalFeatures: true,
-        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
-      }),
+      webPreferences: createExternalToolWebPreferences(),
       title: 'ProGenFixer - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -793,7 +807,7 @@ async function createProGenFixerWindow() {
 
     // Load the ProGenFixer URL
     console.log('🌐 Loading ProGenFixer URL...');
-    await progenFixerWindow.loadURL(progenFixerUrl);
+    await loadExternalToolPage(progenFixerWindow, progenFixerUrl);
     console.log('✅ ProGenFixer URL loaded successfully');
 
     // Show the window when ready
@@ -957,10 +971,7 @@ async function createDeepGeneResearchWindow(params = {}) {
       height: 1000,
       minWidth: 1200,
       minHeight: 800,
-      webPreferences: createSecureWebPreferences({
-        experimentalFeatures: true,
-        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
-      }),
+      webPreferences: createExternalToolWebPreferences(),
       title: 'Deep Gene Research - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -974,7 +985,7 @@ async function createDeepGeneResearchWindow(params = {}) {
 
     // Load the Deep Gene Research URL
     console.log('🌐 Loading Deep Gene Research URL...');
-    await deepGeneResearchWindow.loadURL(deepGeneResearchUrl);
+    await loadExternalToolPage(deepGeneResearchWindow, deepGeneResearchUrl);
     console.log('✅ Deep Gene Research URL loaded successfully');
 
     // Show the window when ready
@@ -1187,10 +1198,7 @@ async function createChopchopWindow() {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: createSecureWebPreferences({
-        experimentalFeatures: true,
-        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
-      }),
+      webPreferences: createExternalToolWebPreferences(),
       title: 'CHOPCHOP CRISPR Toolbox - CodeXomics',
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -1204,7 +1212,7 @@ async function createChopchopWindow() {
 
     // Load the CHOPCHOP URL
     console.log('🌐 Loading CHOPCHOP URL...');
-    await chopchopWindow.loadURL(chopchopUrl);
+    await loadExternalToolPage(chopchopWindow, chopchopUrl);
     console.log('✅ CHOPCHOP URL loaded successfully');
 
     // Show the window when ready
@@ -1311,10 +1319,7 @@ async function createCustomExternalToolWindow(toolData) {
       height: 900,
       minWidth: 1000,
       minHeight: 700,
-      webPreferences: createSecureWebPreferences({
-        experimentalFeatures: true,
-        enableBlinkFeatures: 'ClipboardRead,ClipboardWrite',
-      }),
+      webPreferences: createExternalToolWebPreferences(),
       title: `${toolData.name} - CodeXomics`,
       icon: path.join(__dirname, '../assets/icon.png'),
       show: false,
@@ -1325,7 +1330,7 @@ async function createCustomExternalToolWindow(toolData) {
     });
 
     // Load the tool URL
-    await customToolWindow.loadURL(toolData.url);
+    await loadExternalToolPage(customToolWindow, toolData.url);
 
     // Show the window when ready
     customToolWindow.once('ready-to-show', () => {

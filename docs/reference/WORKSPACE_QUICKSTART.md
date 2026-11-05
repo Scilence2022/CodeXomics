@@ -107,6 +107,15 @@ curl http://localhost:3001/api/v1/plugins
 curl http://localhost:3001/api/v1/stats
 ```
 
+### Marketplace administration
+
+The server binds to `127.0.0.1` by default. Set `CODEXOMICS_MARKETPLACE_HOST` explicitly to serve on another interface. For remote deployment, use a TLS reverse proxy and keep the administrator token on the server side.
+
+- Set `CODEXOMICS_MARKETPLACE_ADMIN_TOKEN` to a strong secret before starting the server. The pending list and approval routes require `Authorization: Bearer <token>`. They are disabled when the token is absent.
+- Set `CODEXOMICS_MARKETPLACE_ADMIN_ID` to the audit identity used for approvals.
+- Submit one ZIP file, up to 32 MiB, with a root manifest whose ID and version match the submission. To approve a submission, review the staged archive and send its SHA-256 as `sha256` in the approval request body. Re-submit older pending packages that lack a verified ZIP digest.
+- Set `CODEXOMICS_MARKETPLACE_DATA_DIR` to an isolated data directory for a deployment or test server.
+
 ## Directory Structure
 
 ```
