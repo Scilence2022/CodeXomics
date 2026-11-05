@@ -1,42 +1,54 @@
 'use strict';
 
-const path = require('path');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const { test, expect, _electron: electron } = require('@playwright/test');
 
 const APP_ROOT = path.join(__dirname, '..', '..');
 
-/**
- * End-to-end smoke test: launch the Electron app and verify the main window
- * actually boots and renders. This is the minimal guard that the app starts —
- * something the source-grep unit tests cannot verify.
- */
-test('main window launches and renders', async () => {
-  const app = await electron.launch({
-    args: [APP_ROOT, '--no-sandbox', '--disable-gpu'],
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      CODEXOMICS_E2E: '1',
-    },
-  });
-
+test('genome view starts and opens a GenBank file', async () => {
+  const fixtureDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'codexomics-smoke-'));
+  let app;
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
-
-    // The app should report a non-empty title.
-    const title = await window.title();
-    expect(title.length).toBeGreaterThan(0);
-
-    // The document body must exist (renderer actually rendered).
-    await expect(window.locator('body')).toHaveCount(1);
-
-    // The genome browser container is a core element of the main UI.
-    const hasAppShell = await window.evaluate(() => {
-      return Boolean(document.querySelector('body')?.children?.length);
+    const fixture = path.join(fixtureDirectory, 'smoke.gbk');
+    await fs.writeFile(
+      fixture,
+      'LOCUS       SMOKE                     12 bp    DNA     linear   UNK 01-JAN-2000\n' +
+        'FEATURES             Location/Qualifiers\n' +
+        '     gene            2..8\n' +
+        '                     /gene="fixture_gene"\n' +
+        'ORIGIN\n' +
+        '        1 acgtacgtacgt\n' +
+        '//\n'
+    );
+    app = await electron.launch({
+      args: [APP_ROOT, '--no-sandbox', '--disable-gpu', fixture],
+      env: { ...process.env, NODE_ENV: 'test', CODEXOMICS_E2E: '1' },
     });
-    expect(hasAppShell).toBe(true);
+
+    let genomeView;
+    await expect
+      .poll(() => {
+        genomeView = app.windows().find(page => new URL(page.url()).pathname.endsWith('/renderer/index.html'));
+        return Boolean(genomeView);
+      })
+      .toBe(true);
+    await expect(genomeView.locator('#genomeViewer')).toHaveCount(1);
+    await expect
+      .poll(() =>
+        genomeView.evaluate(() => {
+          const genome = window.genomeBrowser;
+          return {
+            chromosome: genome?.currentChromosome,
+            sequence: genome?.currentSequence?.SMOKE,
+            feature: genome?.currentAnnotations?.SMOKE?.find(item => item.type === 'gene')?.qualifiers?.gene,
+          };
+        })
+      )
+      .toEqual({ chromosome: 'SMOKE', sequence: 'ACGTACGTACGT', feature: 'fixture_gene' });
   } finally {
-    await app.close();
+    if (app) await app.close();
+    await fs.rm(fixtureDirectory, { recursive: true, force: true });
   }
 });

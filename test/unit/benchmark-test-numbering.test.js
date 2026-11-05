@@ -112,9 +112,9 @@ describe('benchmark test numbering', () => {
 
     const [header, row] = csv.split('\n');
 
-    expect(header).toContain('"Test #"');
-    expect(header.split(',').indexOf('"Test #"')).toBe(1);
-    expect(row.split(',')[1]).toBe('"2"');
+    const numberColumn = header.split(',').indexOf('"Test #"');
+    expect(numberColumn).toBeGreaterThanOrEqual(0);
+    expect(row.split(',')[numberColumn]).toBe('"2"');
     expect(row).toContain('"sys_auto_02"');
   });
 

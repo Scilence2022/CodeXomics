@@ -188,14 +188,50 @@ describe('each test runs inside a ChatBox conversation', () => {
     cm.showNotification = vi.fn();
     cm.removeTypingIndicator = vi.fn();
     const framework = makeFramework(cm);
-    framework.beginBenchmarkConversation('auto_03');
+    const conversation = framework.beginBenchmarkConversation('auto_03');
     const controller = new AbortController();
     cm.conversationState.abortController = controller;
 
-    framework.abortTimedOutConversation({ id: 'auto_03' }, new Error('Test timeout after 1000ms'));
+    framework.abortTimedOutConversation({ id: 'auto_03' }, new Error('Test timeout after 1000ms'), {
+      controller: new AbortController(),
+      conversation,
+    });
 
     expect(controller.signal.aborted).toBe(true);
     expect(cm.conversationState.isProcessing).toBe(false);
+  });
+
+  it('cancels delayed preparation without touching the unrelated ChatBox request', async () => {
+    const cm = makeChatManager();
+    cm.llmConfigManager = { isConfigured: () => true };
+    cm.startConversation();
+    const userRequest = cm.conversationState.currentRequestId;
+    const controller = cm.conversationState.abortController;
+    const framework = makeFramework(cm);
+    framework.isRunning = true;
+    framework.testTimeout = 25;
+    framework.attemptToRecoverLLMInteractionData = vi.fn();
+    framework.displayTestError = vi.fn();
+    const test = { id: 'delayed-test' };
+    let finishSetup;
+    const setup = new Promise(resolve => {
+      finishSetup = resolve;
+    });
+    let late;
+    framework.executeTest = (_test, execution) => {
+      late = setup.then(() => framework.sendTestInstruction('fixture', { execution }));
+      return late;
+    };
+    cm.sendToLLM = vi.fn();
+
+    const result = await framework.runSingleTest(test, 'fixture');
+    expect(result.errors).toEqual(['Test timeout after 25ms']);
+    expect(cm.conversationState.currentRequestId).toBe(userRequest);
+    expect(controller.signal.aborted).toBe(false);
+    cm.endConversation(userRequest);
+    finishSetup();
+    await expect(late).rejects.toThrow(/timeout/i);
+    expect(cm.sendToLLM).not.toHaveBeenCalled();
   });
 
   it('does not let an abandoned test end the next test’s conversation', () => {
@@ -305,5 +341,51 @@ describe('Smart Executor execution records', () => {
       name: 'AbortError',
     });
     expect(executor.chatManager.executeToolByName).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps replacement execution state when a cancelled call unwinds late', async () => {
+    const executor = makeExecutor(['a_first', 'a_stale', 'b_first']);
+    const release = {};
+    const gates = {};
+    for (const name of ['a_first', 'b_first']) {
+      gates[name] = new Promise(resolve => {
+        release[name] = resolve;
+      });
+    }
+    const entered = {};
+    const starts = Object.fromEntries(
+      ['a_first', 'b_first'].map(name => [
+        name,
+        new Promise(resolve => {
+          entered[name] = resolve;
+        }),
+      ])
+    );
+    executor.chatManager.executeToolByName = vi.fn(async name => {
+      entered[name]?.();
+      await gates[name];
+      return { success: true };
+    });
+    const a = new AbortController();
+    const b = new AbortController();
+    const abandoned = executor.smartExecute(
+      'A',
+      [
+        { tool_name: 'a_first', parameters: {} },
+        { tool_name: 'a_stale', parameters: {} },
+      ],
+      { abortController: a }
+    );
+    const abandonedResult = expect(abandoned).rejects.toMatchObject({ name: 'AbortError' });
+    await starts.a_first;
+    a.abort();
+    const replacement = executor.smartExecute('B', [{ tool_name: 'b_first', parameters: {} }], { abortController: b });
+    await starts.b_first;
+    release.a_first();
+    await abandonedResult;
+    expect(executor.currentExecution.userMessage).toBe('B');
+    expect(executor.chatManager.executeToolByName.mock.calls.map(([name]) => name)).toEqual(['a_first', 'b_first']);
+    release.b_first();
+    await expect(replacement).resolves.toMatchObject({ success: true });
   });
 });

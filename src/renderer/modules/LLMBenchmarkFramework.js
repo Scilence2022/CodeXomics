@@ -370,7 +370,10 @@ class LLMBenchmarkFramework {
         testSuiteResults: [],
         overallStats: null,
         options: options,
-        harness: this.describeHarness(harnessProfile),
+        harness: {
+          run_id: benchmarkRunSessionId || `benchmark_run_${startTime}`,
+          ...this.describeHarness(harnessProfile),
+        },
       };
       this.harnessProfile = harnessProfile;
       console.log(`🔬 [Benchmark] Harness mode: ${harnessProfile.harness_mode}`, results.harness);
@@ -995,6 +998,7 @@ class LLMBenchmarkFramework {
 
     const startTime = Date.now();
     this.currentTest = test;
+    const execution = { controller: new AbortController(), conversation: null };
 
     const result = {
       testId: test.id,
@@ -1041,7 +1045,7 @@ class LLMBenchmarkFramework {
       // Create a promise that tracks partial progress
       const executeTestWithProgress = async () => {
         try {
-          const testResult = await this.executeTest(test);
+          const testResult = await this.executeTest(test, execution);
           return testResult;
         } catch (error) {
           // Even if test execution fails, try to capture any partial LLM interaction data
@@ -1058,12 +1062,17 @@ class LLMBenchmarkFramework {
         testResult = await executeTestWithProgress();
       } else {
         // Automated tests have timeout
-        testResult = await Promise.race([
-          executeTestWithProgress(),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error(`Test timeout after ${timeoutMs}ms`)), timeoutMs)
-          ),
-        ]);
+        let timer;
+        try {
+          testResult = await Promise.race([
+            executeTestWithProgress(),
+            new Promise((_, reject) => {
+              timer = setTimeout(() => reject(new Error(`Test timeout after ${timeoutMs}ms`)), timeoutMs);
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
       }
 
       result.llmResponse = testResult.llmResponse;
@@ -1091,7 +1100,7 @@ class LLMBenchmarkFramework {
       // running. Cancel it, or a model still looping over tool calls goes on
       // executing them (re-opening viewers, re-hitting external APIs) underneath
       // every test that follows.
-      this.abortTimedOutConversation(test, error);
+      this.abortTimedOutConversation(test, error, execution);
 
       // An earlyReturn test is scored on tool submission, not completion, so a
       // long-running tool (online BLAST against nt, makeblastdb over a whole
@@ -1265,11 +1274,20 @@ class LLMBenchmarkFramework {
    * the next test, which then scores against a genome someone else's tools are
    * still changing.
    */
-  abortTimedOutConversation(test, error) {
-    if (!this.isTestTimeoutError(error)) return;
+  abortTimedOutConversation(test, error, execution) {
+    if (!execution || !this.isTestTimeoutError(error)) return;
+
+    execution.controller.abort(error);
 
     const chatManager = this.chatManager;
-    if (!chatManager?.conversationState?.isProcessing) return;
+    const requestId = execution.conversation?.requestId;
+    if (
+      !requestId ||
+      !chatManager?.conversationState?.isProcessing ||
+      chatManager.conversationState.currentRequestId !== requestId
+    ) {
+      return;
+    }
 
     try {
       if (typeof chatManager.abortCurrentConversation === 'function') {
@@ -1343,7 +1361,7 @@ class LLMBenchmarkFramework {
   /**
    * Execute a single test
    */
-  async executeTest(test) {
+  async executeTest(test, execution = null) {
     const startTime = Date.now();
 
     let benchmarkSessionId = null;
@@ -1371,7 +1389,7 @@ class LLMBenchmarkFramework {
     if (test.evaluation === 'manual') {
       console.log(`📋 Manual test detected: ${test.name}`);
       try {
-        return await this.executeManualTest(test);
+        return await this.executeManualTest(test, execution);
       } finally {
         // End tracker session for manual tests
         if (benchmarkSessionId && createdTrackerSessionForTest && this.chatManager.toolExecutionTracker) {
@@ -1392,6 +1410,7 @@ class LLMBenchmarkFramework {
     // Execute test setup if provided
     if (test.setup) {
       await test.setup(context);
+      execution?.controller.signal.throwIfAborted();
     }
 
     // A benchmark run is unattended, so any tool that would open a blocking modal must
@@ -1423,6 +1442,7 @@ class LLMBenchmarkFramework {
       // Send the test instruction to the LLM with test information
       const instructionOptions = {
         ...test.options,
+        execution,
         timeout: timeoutMs, // Pass the actual timeout being used
         testInfo: {
           id: test.id,
@@ -1516,7 +1536,7 @@ class LLMBenchmarkFramework {
    * Execute a manual test that requires user interaction
    * CRITICAL FIX: First send instruction to LLM, then show manual dialog with actual LLM response
    */
-  async executeManualTest(test) {
+  async executeManualTest(test, execution = null) {
     console.log(`📋 Executing manual test: ${test.name}`);
     console.log(`🚀 STEP 1: Sending instruction to LLM first...`);
 
@@ -1527,6 +1547,7 @@ class LLMBenchmarkFramework {
     try {
       // STEP 1: Send instruction to LLM first (like automatic tests)
       const instructionOptions = {
+        execution,
         timeout: test.timeout || this.testTimeout,
         testInfo: {
           id: test.id,
@@ -1761,10 +1782,19 @@ class LLMBenchmarkFramework {
       },
     };
 
-    // Declare response variable in outer scope
     let response = null;
+    const execution = options.execution || { controller: new AbortController(), conversation: null };
+    const signal = execution.controller.signal;
+    let benchmarkConversation;
+    let chatSignal;
+    const cancelExecution = () => execution.controller.abort();
 
     try {
+      signal.throwIfAborted();
+      benchmarkConversation = this.beginBenchmarkConversation(options.testInfo?.id);
+      execution.conversation = benchmarkConversation;
+      chatSignal = this.chatManager.conversationState?.abortController?.signal;
+      chatSignal?.addEventListener('abort', cancelExecution, { once: true });
       console.log(`📤 Sending benchmark test instruction: ${instruction}`);
 
       // Capture request timing
@@ -1797,6 +1827,7 @@ class LLMBenchmarkFramework {
 
       // Capture the complete system prompt (now stored in full since details are persisted to disk)
       const capturedSystemPrompt = await this.captureSystemPrompt();
+      signal.throwIfAborted();
       interactionData.request.systemPrompt = capturedSystemPrompt;
       interactionData.request.systemPromptLength = capturedSystemPrompt ? capturedSystemPrompt.length : 0;
       interactionData.request.contextLength = this.getChatContextLength();
@@ -1825,7 +1856,7 @@ class LLMBenchmarkFramework {
       this.capturedLogs = capturedLogs;
 
       // Temporarily override console.log to capture ChatManager's detailed logging
-      console.log = (...args) => {
+      const captureConsoleLog = (...args) => {
         // MEMORY SAFETY: Check limits before capturing
         if (capturedLogs.length >= MAX_CAPTURED_LOGS) {
           // Remove oldest logs to make room (FIFO)
@@ -1872,19 +1903,21 @@ class LLMBenchmarkFramework {
       // This ensures only the current test instruction is sent, not the entire conversation history
       const originalContextMode = this.chatManager.contextModeEnabled;
 
-      // Opened inside the try so the finally below always closes it.
-      let benchmarkConversation = null;
+      const restoreTestContext = () => {
+        if (console.log === captureConsoleLog) console.log = originalConsoleLog;
+        if (
+          !benchmarkConversation ||
+          this.chatManager.conversationState?.currentRequestId === benchmarkConversation.requestId
+        ) {
+          this.chatManager.contextModeEnabled = originalContextMode;
+        }
+      };
+      console.log = captureConsoleLog;
+      signal.addEventListener('abort', restoreTestContext, { once: true });
 
       try {
         // CRITICAL FIX: Enable context mode for benchmark tests to prevent token overflow
         this.chatManager.contextModeEnabled = true;
-
-        // Run the test inside a real ChatBox conversation, exactly as
-        // sendMessage() does. Without it the conversation is never marked as
-        // processing, so a timed-out test cannot be aborted, a sticky abort from
-        // an earlier chat fails every test, and a user message can start a
-        // second loop on top of the running test.
-        benchmarkConversation = this.beginBenchmarkConversation(options.testInfo?.id);
 
         console.log('🔧 [Benchmark] Enabled context mode to prevent token overflow');
         console.log('🔧 [Benchmark] Original context mode:', originalContextMode);
@@ -1945,6 +1978,7 @@ class LLMBenchmarkFramework {
           instruction,
           harnessProfile.oracleEarlyStop ? { shouldStopAfterRound } : {}
         );
+        signal.throwIfAborted();
         console.log(
           `[Benchmark][request] test ${options.testInfo?.id || 'unknown'} LLM returned in ${Date.now() - requestSentAt}ms at ${new Date().toISOString()}`
         );
@@ -2150,16 +2184,8 @@ class LLMBenchmarkFramework {
           }
         }
       } finally {
-        this.endBenchmarkConversation(benchmarkConversation);
-
-        // Restore original console.log
-        console.log = originalConsoleLog;
-
-        // CRITICAL FIX: Restore original context mode after benchmark test
-        this.chatManager.contextModeEnabled = originalContextMode;
-        console.log('🔧 [Benchmark] Restored context mode to:', originalContextMode);
-
-        // MEMORY SAFETY: Check memory usage and cleanup if needed
+        signal.removeEventListener('abort', restoreTestContext);
+        restoreTestContext();
         this.checkMemoryUsage();
       }
 
@@ -2236,13 +2262,16 @@ class LLMBenchmarkFramework {
         Date.now() -
         (interactionData.request.timestamp ? new Date(interactionData.request.timestamp).getTime() : Date.now());
 
-      this.displayTestError(error, options);
+      if (!signal.aborted) this.displayTestError(error, options);
 
       // Return error with interaction data
       const wrappedError = new Error(`LLM communication failed: ${error.message}`);
       wrappedError.originalError = error;
       wrappedError.interactionData = interactionData;
       throw wrappedError;
+    } finally {
+      chatSignal?.removeEventListener('abort', cancelExecution);
+      this.endBenchmarkConversation(benchmarkConversation);
     }
   }
 
@@ -6411,6 +6440,7 @@ class LLMBenchmarkFramework {
         // Request summary (no full prompts)
         requestProvider: data.request?.provider,
         requestModel: data.request?.model,
+        harnessMode: data.request?.harnessMode,
         requestSystemPromptLength: data.request?.systemPromptLength,
         requestContextLength: data.request?.contextLength,
         // Response summary

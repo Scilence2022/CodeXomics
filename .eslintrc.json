@@ -145,5 +145,14 @@
       }
     }
   ],
-  "ignorePatterns": ["node_modules/", "dist/", "build/", "docs/", "site/", "scripts/marketplace-data/", "packages/"]
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "build/",
+    "coverage/",
+    "docs/",
+    "site/",
+    "scripts/marketplace-data/",
+    "packages/"
+  ]
 }

@@ -274,11 +274,14 @@ class ConversationTranscriptService {
     const budget = this.getConversationTokenBudget();
     if (!budget || !Array.isArray(conversationHistory) || conversationHistory.length === 0) return null;
 
-    let used = this.estimateConversationTokens(conversationHistory);
+    const schemas = Array.isArray(options.tools) && options.tools.length ? JSON.stringify(options.tools) : '';
+    const output = Number.isFinite(options.outputTokens) ? Math.max(0, options.outputTokens) : 0;
+    const reserved = this.estimateTextTokens(schemas) + output;
+    let used = this.estimateConversationTokens(conversationHistory) + reserved;
     if (used <= budget) return null;
 
     const originalMessage = options.originalMessage;
-    const report = { budget, before: used, after: used, compactedResults: 0, droppedMessages: 0 };
+    const report = { budget, before: used, after: used, reserved, compactedResults: 0, droppedMessages: 0 };
 
     // Protect the exchange that just happened rather than a fixed number of
     // messages: the model is mid-task and needs the round it is reasoning about.
@@ -339,13 +342,13 @@ class ConversationTranscriptService {
       // Nothing was trimmable — every oversized message is still needed. Report
       // nothing rather than a no-op trim the user would see as an action.
       console.warn(
-        `[Context Budget] Transcript is ~${used} tokens, over the ${budget} budget, ` +
+        `[Context Budget] Estimated request is ~${used} tokens, over the ${budget} budget, ` +
           'but every message is protected. Consider raising llm.maxContextTokens.'
       );
       return null;
     }
 
-    report.after = this.estimateConversationTokens(conversationHistory);
+    report.after = this.estimateConversationTokens(conversationHistory) + reserved;
     console.warn(
       `[Context Budget] Trimmed transcript from ~${report.before} to ~${report.after} tokens ` +
         `(budget ${budget}): compacted ${report.compactedResults} result(s), dropped ${report.droppedMessages} message(s).`

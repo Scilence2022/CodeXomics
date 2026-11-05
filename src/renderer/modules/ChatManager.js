@@ -773,7 +773,7 @@ class ChatManager {
    * @returns {Object} Execution result with response and mode
    */
   async processAgentPrompt(prompt, options = {}) {
-    const { activateMultiAgent = false, onProgress = null } = options;
+    const { activateMultiAgent = false, onProgress = null, requestDeadline = null } = options;
 
     // Save current agent state
     const previousAgentState = this.agentSystemEnabled;
@@ -817,9 +817,19 @@ class ChatManager {
         };
       }
 
-      // Initialize conversation state (same as sendMessage)
+      if (Number.isFinite(requestDeadline) && requestDeadline <= Date.now()) {
+        throw new Error('The MCP request expired before the ChatBox turn could start');
+      }
       this.startConversation();
       const agentRequestId = this.conversationState.currentRequestId;
+      const deadlineTimer = Number.isFinite(requestDeadline)
+        ? setTimeout(
+            () => {
+              if (this.conversationState.currentRequestId === agentRequestId) this.abortCurrentConversation();
+            },
+            Math.max(0, requestDeadline - Date.now())
+          )
+        : null;
 
       // Add user message to ChatBox with MCP source marker
       this.addMessageToChat(markedPrompt, 'user');
@@ -860,6 +870,7 @@ class ChatManager {
         }
         throw llmError;
       } finally {
+        clearTimeout(deadlineTimer);
         this.endConversation(agentRequestId);
       }
     } catch (error) {
@@ -5294,6 +5305,16 @@ class ChatManager {
   }
 
   async sendToLLM(message, options = {}) {
+    // Set up the AbortController. The loop keeps its own reference so its
+    // abort checkpoints stay bound to this request even after the shared
+    // conversation state has moved on to a newer one.
+    const requestAbortController = this.conversationState.isProcessing
+      ? this.conversationState.abortController || new AbortController()
+      : new AbortController();
+    this.conversationState.abortController = requestAbortController;
+    console.log('AbortController initialized:', !!this.conversationState.abortController);
+    this.throwIfConversationAborted(requestAbortController);
+
     // Set current message for Dynamic Tools Registry
     this.currentMessage = message;
 
@@ -5301,6 +5322,8 @@ class ChatManager {
     if (this.llmConfigManager && this.llmConfigManager.waitForInitialization) {
       await this.llmConfigManager.waitForInitialization();
     }
+
+    this.throwIfConversationAborted(requestAbortController);
 
     // Check if LLM is configured
     if (!this.llmConfigManager.isConfigured()) {
@@ -5322,13 +5345,6 @@ class ChatManager {
 
     console.log('=== ChatManager.sendToLLM DEBUG START ===');
     console.log('User message:', message);
-
-    // Set up the AbortController. The loop keeps its own reference so its
-    // abort checkpoints stay bound to this request even after the shared
-    // conversation state has moved on to a newer one.
-    const requestAbortController = new AbortController();
-    this.conversationState.abortController = requestAbortController;
-    console.log('AbortController initialized:', !!this.conversationState.abortController);
 
     try {
       // Check if multi-agent system is enabled
@@ -5444,8 +5460,13 @@ class ChatManager {
 
         // Keep the payload inside the context budget. Per-result sanitization
         // bounds one tool result; only this bounds their sum across a long turn.
+        const nativeFunctionCalling = this.configManager.get('chatboxSettings.enableNativeFunctionCalling', true);
+        const modelSelection = this.getChatboxModelSelection();
+        const provider = this.llmConfigManager.providers?.[modelSelection?.providerKey];
         const budgetReport = this.enforceConversationTokenBudget(conversationHistory, {
           originalMessage: message,
+          tools: nativeFunctionCalling ? this.currentNativeTools : [],
+          outputTokens: this.llmConfigManager.getMaxTokens?.(provider),
         });
         if (budgetReport && this.showThinkingProcess) {
           this.updateThinkingMessage(
@@ -5459,18 +5480,26 @@ class ChatManager {
         // instead of waiting for the whole round to resolve.
         console.log('Sending to LLM...');
         this.beginStreamingResponse();
+        const ownsStream = () =>
+          this.conversationState.abortController === requestAbortController && !requestAbortController.signal.aborted;
         let response;
         try {
           response = await this.llmConfigManager.sendMessageWithHistory(conversationHistory, context, memoryContext, {
-            onToken: token => this.appendStreamingToken(token),
-            onReasoningToken: token => this.appendStreamingReasoningToken(token),
-            onStreamReset: () => this.resetStreamingResponse(),
+            onToken: token => {
+              if (ownsStream()) this.appendStreamingToken(token);
+            },
+            onReasoningToken: token => {
+              if (ownsStream()) this.appendStreamingReasoningToken(token);
+            },
+            onStreamReset: () => {
+              if (ownsStream()) this.resetStreamingResponse();
+            },
             signal: requestAbortController.signal,
             modelType: this.chatBoxSettingsManager?.getSetting('chatboxModelType', 'auto'),
             providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
             modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
             tools: this.currentNativeTools,
-            nativeFunctionCalling: this.configManager.get('chatboxSettings.enableNativeFunctionCalling', true),
+            nativeFunctionCalling,
             constrainedToolOutput: this.configManager.get('chatboxSettings.enableConstrainedToolOutput', true),
             toolChoice: 'auto',
             parallelToolCalls: true,
@@ -5479,13 +5508,11 @@ class ChatManager {
         } finally {
           // The completed message is rendered by the normal path below, so the
           // preview bubble is always retired here — including on error/abort.
-          this.endStreamingResponse();
+          if (ownsStream()) this.endStreamingResponse();
         }
+        this.throwIfConversationAborted(requestAbortController);
         const responseAnalysis = this.analyzeLLMResponse(response, message);
         const responseText = responseAnalysis.text;
-
-        // Check whether the response was aborted
-        this.throwIfConversationAborted(requestAbortController);
 
         // Logged as a single object: the console call is a no-op unless debug
         // logging is on, and passing `response` directly avoids serializing the
@@ -5861,6 +5888,7 @@ class ChatManager {
               );
             }
 
+            this.throwIfConversationAborted(requestAbortController);
             console.log('Tool execution completed. Results:', toolResults);
             this.addToolResultsToReferenceContext(toolReferenceResults, toolResults);
             toolExecutionState.consecutiveSuppressedRounds = 0;
@@ -17795,6 +17823,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   startConversation() {
     this.conversationState.isProcessing = true;
     this.conversationState.aborted = false;
+    this.conversationState.abortController = new AbortController();
     // Unique even for two requests started in the same millisecond, because
     // endConversation(expectedRequestId) relies on it to tell them apart.
     this.conversationRequestSeq = (this.conversationRequestSeq || 0) + 1;
@@ -17938,6 +17967,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       // that is still awaiting a provider response reads this flag instead.
       this.conversationState.aborted = true;
       this.conversationState.abortController.abort();
+      this.endStreamingResponse();
       this.showNotification('Conversation aborted', 'warning');
 
       // Remove the typing indicator

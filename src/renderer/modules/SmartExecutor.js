@@ -32,10 +32,18 @@ class SmartExecutor {
    */
   async smartExecute(userMessage, tools, options = {}) {
     const startTime = Date.now();
-    this.requestAbortController = options.abortController || null;
+    const abortController = options.abortController || null;
+    const execution = {
+      id: `exec_${startTime}`,
+      userMessage,
+      startTime,
+      status: 'started',
+    };
+    this.currentExecution = execution;
+    this.isExecuting = true;
 
     try {
-      // Normalize the tools format
+      this.throwIfAborted(abortController);
       const toolRequests = this.normalizeToolRequests(tools);
 
       // Analyze the execution strategy
@@ -44,25 +52,18 @@ class SmartExecutor {
         toolRequests.map(t => t.tool_name)
       );
 
-      // Set the execution state
-      this.currentExecution = {
-        id: `exec_${Date.now()}`,
-        userMessage: userMessage,
-        tools: toolRequests,
-        optimization: optimization,
-        startTime: startTime,
-        status: 'started',
-      };
-
-      this.isExecuting = true;
+      this.throwIfAborted(abortController);
+      Object.assign(execution, { tools: toolRequests, optimization });
 
       // Execute according to the strategy, then report in call order. The
       // strategy regroups calls into phases, but the round transcript binds
       // each result to its call by tool_call_id and reads them in call order.
       const results = this.orderResultsLikeRequests(
-        await this.executeWithStrategy(toolRequests, optimization.strategy),
+        await this.executeWithStrategy(toolRequests, optimization.strategy, abortController),
         toolRequests
       );
+
+      this.throwIfAborted(abortController);
 
       // Update the performance metrics
       this.updateMetrics(startTime, results);
@@ -88,9 +89,10 @@ class SmartExecutor {
         executionTime: Date.now() - startTime,
       };
     } finally {
-      this.isExecuting = false;
-      this.currentExecution = null;
-      this.requestAbortController = null;
+      if (this.currentExecution === execution) {
+        this.isExecuting = false;
+        this.currentExecution = null;
+      }
     }
   }
 
@@ -112,8 +114,8 @@ class SmartExecutor {
   }
 
   /** Same abort checkpoint the standard tool queue uses between calls. */
-  throwIfAborted() {
-    this.chatManager?.throwIfConversationAborted?.(this.requestAbortController);
+  throwIfAborted(abortController) {
+    this.chatManager?.throwIfConversationAborted?.(abortController);
   }
 
   /** Sort results back into request order and drop the internal request link. */
@@ -160,7 +162,7 @@ class SmartExecutor {
   /**
    * Execute tools according to the strategy
    */
-  async executeWithStrategy(toolRequests, strategy) {
+  async executeWithStrategy(toolRequests, strategy, abortController = null) {
     const results = [];
     const executionPlan = strategy.executionPlan;
 
@@ -196,7 +198,7 @@ class SmartExecutor {
     }
 
     for (const phase of executionPlan) {
-      this.throwIfAborted();
+      this.throwIfAborted(abortController);
       console.log(`🚀 Executing ${phase.phase} (Priority: ${phase.priority})`);
 
       // Get the tool requests for the current stage
@@ -209,13 +211,14 @@ class SmartExecutor {
       if (phase.parallelizable && phaseTools.length > 1) {
         // Parallel execution
         console.log(`   ⚡ Parallel execution of ${phaseTools.length} tools`);
-        phaseResults = await this.executeParallel(phaseTools);
+        phaseResults = await this.executeParallel(phaseTools, abortController);
       } else {
         // Sequential execution
         console.log(`   📋 Sequential execution of ${phaseTools.length} tools`);
-        phaseResults = await this.executeSequential(phaseTools);
+        phaseResults = await this.executeSequential(phaseTools, abortController);
       }
 
+      this.throwIfAborted(abortController);
       results.push(...phaseResults);
 
       // For browser actions, provide visual feedback immediately
@@ -238,11 +241,20 @@ class SmartExecutor {
   /**
    * Execute tools in parallel
    */
-  async executeParallel(tools) {
-    const startedAt = Date.now();
-    const promises = tools.map(tool => this.executeSingleTool(tool));
-    const results = await Promise.allSettled(promises);
-    const executionTime = Date.now() - startedAt;
+  async executeParallel(tools, abortController = null) {
+    const times = new Map();
+    const results = await Promise.allSettled(
+      tools.map(async tool => {
+        this.throwIfAborted(abortController);
+        const startedAt = Date.now();
+        try {
+          return await this.executeSingleTool(tool);
+        } finally {
+          times.set(tool, Date.now() - startedAt);
+        }
+      })
+    );
+    this.throwIfAborted(abortController);
 
     return results.map((result, index) => {
       const explicitFailure =
@@ -259,7 +271,7 @@ class SmartExecutor {
             : explicitFailure
               ? result.value.error || result.value.message || 'Tool reported an unsuccessful result'
               : null,
-        executionTime,
+        executionTime: times.get(tools[index]) ?? 0,
         executionMode: 'parallel',
       });
     });
@@ -268,14 +280,15 @@ class SmartExecutor {
   /**
    * Execute tools sequentially
    */
-  async executeSequential(tools) {
+  async executeSequential(tools, abortController = null) {
     const results = [];
 
     for (const tool of tools) {
-      this.throwIfAborted();
+      this.throwIfAborted(abortController);
       const startedAt = Date.now();
       try {
         const result = await this.executeSingleTool(tool);
+        this.throwIfAborted(abortController);
         const explicitFailure = result && typeof result === 'object' && result.success === false;
         results.push(
           this.buildResultRecord(tool, {
@@ -287,6 +300,7 @@ class SmartExecutor {
           })
         );
       } catch (error) {
+        if (this.chatManager?.isAbortError?.(error)) throw error;
         results.push(
           this.buildResultRecord(tool, {
             success: false,

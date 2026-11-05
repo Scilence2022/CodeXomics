@@ -134,7 +134,8 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
 - `enforceConversationTokenBudget()` runs immediately before every provider call and is the only
   thing bounding transcript growth across a turn; `sanitizeResultForLLM()` bounds a single result,
   not their sum. Budget comes from `llm.maxContextTokens` (default 120000; `0` disables, a garbage
-  value falls back to the default, anything positive is floored at 4000).
+  value falls back to the default, anything positive is floored at 4000). The estimate
+  reserves space for advertised native schemas and the configured output limit.
 - Trimming happens in two phases: compact old tool result bodies first (structure preserved), then
   drop whole exchanges. Never split an assistant `tool_calls` entry from its `tool` messages —
   `buildTranscriptGroups()` defines the spans that must move together.
