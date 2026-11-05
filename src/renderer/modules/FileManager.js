@@ -583,6 +583,7 @@ class FileManager {
     const browser = this.genomeBrowser;
     const previousGenome = {
       loadedGenomePath: browser.loadedGenomePath,
+      loadedGenomeSourceSha256: browser.loadedGenomeSourceSha256,
       currentSequence: browser.currentSequence,
       currentAnnotations: browser.currentAnnotations,
       currentChromosome: browser.currentChromosome,
@@ -635,6 +636,7 @@ class FileManager {
       }
 
       const isGenome = ['.fa', '.fasta', '.gb', '.gbk', '.gbff', '.genbank'].includes(extension);
+      this.isLoadingGenome = isGenome;
       if (isGenome) {
         this.genomeBrowser.loadedOperons = [];
         this.genomeBrowser.mappedOperons = null;
@@ -682,10 +684,24 @@ class FileManager {
         }
       }
 
+      if (isGenome && browser.sidecarManager?.consumeLegacyWarning?.(filePath)) {
+        const warning =
+          'An older companion file could not be verified against these genome contents and was preserved separately.';
+        warnings.push(warning);
+        browser.showNotification?.(warning, 'warning');
+      }
+
       browser.updateFileInfo();
       browser.hideWelcomeScreen();
       this.autoEnableTracksForFileType(extension);
       browser.updateStatus(warnings.length ? 'File loaded with warnings' : 'File loaded successfully');
+      if (
+        isGenome &&
+        previousGenome.loadedGenomePath === filePath &&
+        previousGenome.loadedGenomeSourceSha256 !== browser.loadedGenomeSourceSha256
+      ) {
+        browser.sidecarManager?.clearCache?.(filePath, previousGenome.loadedGenomeSourceSha256 || null);
+      }
       return { success: true, status: 'loaded', filePath, warnings };
     } catch (error) {
       this.currentFile = previousFile;
@@ -698,6 +714,7 @@ class FileManager {
       return { success: false, status: 'failed', error: message, filePath };
     } finally {
       this.isLoadingFile = false;
+      this.isLoadingGenome = false;
       browser.showLoading(false);
     }
   }
@@ -758,6 +775,7 @@ class FileManager {
     }
 
     this.currentFile.data = fileData.data;
+    this.currentFile.sourceSha256 = fileData.sourceSha256;
 
     // Parse file based on extension
     await this.parseFile(options);
@@ -904,6 +922,7 @@ class FileManager {
     // Bind the genome source directly, as parseGenBank does: a file opened in a new window can be
     // parsed before TabManager exists, and onGenomeLoaded is then never called.
     this.genomeBrowser.loadedGenomePath = this.currentFile?.path || this.currentFile?.info?.path || null;
+    this.genomeBrowser.loadedGenomeSourceSha256 = this.currentFile?.sourceSha256 || null;
     this.genomeBrowser.currentSequence = sequences;
     this.genomeBrowser.populateChromosomeSelect();
 
@@ -1157,6 +1176,7 @@ class FileManager {
     // being parsed before any asynchronous overlay read begins. Waiting for
     // TabManager.onGenomeLoaded would leave the previous genome path active.
     this.genomeBrowser.loadedGenomePath = this.currentFile?.path || this.currentFile?.info?.path || null;
+    this.genomeBrowser.loadedGenomeSourceSha256 = this.currentFile?.sourceSha256 || null;
     this.genomeBrowser.currentSequence = sequences;
     this.genomeBrowser.currentAnnotations = annotations;
 

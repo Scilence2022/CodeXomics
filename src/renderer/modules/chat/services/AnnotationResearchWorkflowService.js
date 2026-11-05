@@ -222,6 +222,7 @@ class AnnotationResearchWorkflowService {
     const genomePath = this._genomePath();
     return Object.freeze({
       genomePath,
+      sourceSha256: this.app?.loadedGenomeSourceSha256 || null,
       annotations: this.app?.currentAnnotations || null,
       key: genomePath || this.app?.currentGenomeName || this.app?.currentChromosome || 'unsaved-genome',
     });
@@ -306,7 +307,11 @@ class AnnotationResearchWorkflowService {
   async _recoverArchivedProposal(taskId, workflow, workspace) {
     const reader = typeof window !== 'undefined' ? window.electronAPI?.readDgrReportAttachment : undefined;
     if (typeof reader !== 'function') return null;
-    const response = await reader(String(workspace.genomePath || ''), taskId);
+    const response = await reader(
+      String(workspace.genomePath || ''),
+      taskId,
+      ...(workspace.sourceSha256 ? [workspace.sourceSha256] : [])
+    );
     if (!response?.success || !this._isPlainRecord(response.annotationProposal)) return null;
     if (workflow.proposalHash) {
       const recoveredHash = await this._hash(response.annotationProposal);

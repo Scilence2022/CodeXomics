@@ -481,10 +481,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-gene-research-report', geneSymbol, report, options),
   readGeneResearchReport: (geneSymbol, options) => ipcRenderer.invoke('read-gene-research-report', geneSymbol, options),
   openGeneResearchReport: (geneSymbol, options) => ipcRenderer.invoke('open-gene-research-report', geneSymbol, options),
-  readDgrReportAttachment: (genomePath, taskId) => ipcRenderer.invoke('read-dgr-report-attachment', genomePath, taskId),
-  loadSidecarFile: genomePath => ipcRenderer.invoke('load-sidecar-file', genomePath),
-  saveSidecarFile: (genomePath, data) => ipcRenderer.invoke('save-sidecar-file', genomePath, data),
-  checkSidecarFile: genomePath => ipcRenderer.invoke('check-sidecar-file', genomePath),
+  readDgrReportAttachment: (genomePath, taskId, sourceSha256) =>
+    ipcRenderer.invoke('read-dgr-report-attachment', genomePath, taskId, sourceSha256),
+  loadSidecarFile: (genomePath, sourceSha256) => ipcRenderer.invoke('load-sidecar-file', genomePath, sourceSha256),
+  saveSidecarFile: (genomePath, data, sourceSha256) =>
+    ipcRenderer.invoke('save-sidecar-file', genomePath, data, sourceSha256),
+  checkSidecarFile: (genomePath, sourceSha256) => ipcRenderer.invoke('check-sidecar-file', genomePath, sourceSha256),
   deletePhysicalFile: filePath => ipcRenderer.invoke('deletePhysicalFile', filePath),
   updateRecentProjects: recentProjects => ipcRenderer.invoke('updateRecentProjects', recentProjects),
 
