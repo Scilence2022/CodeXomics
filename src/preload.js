@@ -83,6 +83,7 @@ const allowedInvokeChannels = [
   'config:save',
   'bam-reader:initialize',
   'bam-reader:get-records-for-range',
+  'bam-reader:get-depth-for-range',
   'bam-reader:destroy',
   'blast:detect-installation',
   'blast:run-command',
@@ -589,6 +590,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     initialize: (filePath, options) => ipcRenderer.invoke('bam-reader:initialize', filePath, options),
     getRecordsForRange: (readerId, chromosome, start, end, settings) =>
       ipcRenderer.invoke('bam-reader:get-records-for-range', readerId, chromosome, start, end, settings),
+    getDepthForRange: (readerId, chromosome, start, end, viewport, settings) =>
+      ipcRenderer.invoke('bam-reader:get-depth-for-range', readerId, chromosome, start, end, viewport, settings),
     destroy: readerId => ipcRenderer.invoke('bam-reader:destroy', readerId),
   },
 
