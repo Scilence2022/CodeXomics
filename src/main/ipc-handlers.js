@@ -1444,12 +1444,15 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('read-dgr-report-attachment', async (event, genomePath, taskId) => {
     try {
+      if (!isMainFrameAtFile(event, genomePage) || !isRegisteredGenomeSender(event)) {
+        return { success: false, error: 'DGR reports are limited to registered genome windows' };
+      }
       const task = String(taskId || '').trim();
       if (!task) return { success: false, error: 'Missing DGR task id' };
-      const { sidecarPath, fallbackPath } = resolveSidecarPaths(genomePath);
-      const sidecarFile = fs.existsSync(sidecarPath) ? sidecarPath : fs.existsSync(fallbackPath) ? fallbackPath : null;
-      if (!sidecarFile) return { success: false, error: 'Genome sidecar not found' };
-      const sidecar = JSON.parse(fs.readFileSync(sidecarFile, 'utf8'));
+      const paths = resolveSidecarPaths(genomePath);
+      const selected = await withSidecarWriteLock(paths.safeGenomePath, () => findSidecarCandidate(paths));
+      if (!selected) return { success: false, error: 'Genome sidecar not found' };
+      const sidecar = selected.data;
       const attachments = Object.values(sidecar.geneAttachments || {})
         .flat()
         .filter(item => item?.id === `dgr:${task}` && item?.kind === 'dgr-research-report');
@@ -1457,11 +1460,15 @@ function registerIpcHandlers(deps) {
         return { success: false, error: `No archived DGR report for task ${task}` };
       }
       const attachment = attachments[0];
-      const storedPath = String(attachment.storedPath || '');
-      if (!storedPath || !fs.existsSync(storedPath)) {
-        return { success: false, error: 'Archived report file is missing' };
+      const artifact = await readDgrArtifact({
+        userDataPath: app.getPath('userData'),
+        storedPath: attachment.storedPath,
+        expectedSha256: attachment.sha256,
+      });
+      const payload = JSON.parse(artifact.content);
+      if (String(payload?.id || payload?.taskId || '') !== task) {
+        return { success: false, error: 'Archived DGR report belongs to a different task' };
       }
-      const payload = JSON.parse(fs.readFileSync(storedPath, 'utf8'));
       const result = payload?.result || {};
       return {
         success: true,

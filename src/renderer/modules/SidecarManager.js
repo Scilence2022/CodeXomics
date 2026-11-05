@@ -139,30 +139,75 @@ class SidecarManager {
     // cannot turn a stale field snapshot into an unconditional replacement.
     if (rebase && !bases?.has(key)) this._rememberFieldBase(genomePath, key, data[key]);
     const desired = JSON.stringify(value);
+    const requested = desired === undefined ? undefined : JSON.parse(desired);
     const saveAgainst = async current => {
       const currentValue = JSON.stringify(current[key]);
-      if (rebase && currentValue !== expected && currentValue !== desired) {
-        throw Object.assign(new Error(`Sidecar field "${key}" changed in another window. Reload before saving.`), {
-          code: 'SIDECAR_CONFLICT',
-        });
-      }
-      if (currentValue !== desired || !rebase) {
-        const candidate = {
+      const candidateValue =
+        rebase && currentValue !== expected && currentValue !== desired
+          ? this._mergeGeneField(
+              key,
+              expected === undefined ? undefined : JSON.parse(expected),
+              current[key],
+              requested
+            )
+          : requested;
+      if (JSON.stringify(candidateValue) !== currentValue || !rebase) {
+        await this._performSave(genomePath, {
           ...current,
-          [key]: desired === undefined ? undefined : JSON.parse(desired),
+          [key]: candidateValue,
           lastModified: new Date().toISOString(),
-        };
-        await this._performSave(genomePath, candidate);
+        });
       }
     };
 
-    try {
-      await saveAgainst(data);
-    } catch (error) {
-      if (!rebase || error.code !== 'SIDECAR_CONFLICT' || this.cache.has(genomePath)) throw error;
-      await saveAgainst(await this.load(genomePath, { strict: true }));
+    let current = data;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await saveAgainst(current);
+        break;
+      } catch (error) {
+        if (!rebase || error.code !== 'SIDECAR_CONFLICT' || this.cache.has(genomePath) || attempt >= 2) throw error;
+        current = await this.load(genomePath, { strict: true });
+      }
     }
-    if (rebase) this._rememberFieldBase(genomePath, key, value);
+    // The caller still holds its original view. Only a get() updates that view
+    // to include independent entities merged from another window.
+    if (rebase) this._rememberFieldBase(genomePath, key, requested);
+  }
+
+  _mergeGeneField(key, baseline, current, requested) {
+    const conflict = geneId =>
+      Object.assign(
+        new Error(
+          geneId === undefined
+            ? `Sidecar field "${key}" changed in another window. Reload before saving.`
+            : `Sidecar field "${key}" changed for gene "${geneId}" in another window. Reload before saving.`
+        ),
+        { code: 'SIDECAR_CONFLICT' }
+      );
+    const isMap = value => value && typeof value === 'object' && !Array.isArray(value);
+    if (
+      !['geneNotes', 'geneAttachments'].includes(key) ||
+      !isMap(requested) ||
+      (baseline !== undefined && !isMap(baseline)) ||
+      (current !== undefined && !isMap(current))
+    ) {
+      throw conflict();
+    }
+
+    const before = new Map(Object.entries(baseline || {}));
+    const after = new Map(Object.entries(requested));
+    const latest = new Map(Object.entries(current || {}));
+    for (const id of new Set([...before.keys(), ...after.keys()])) {
+      const previous = JSON.stringify(before.get(id));
+      const desired = JSON.stringify(after.get(id));
+      if (previous === desired) continue;
+      const actual = JSON.stringify(latest.get(id));
+      if (actual !== previous && actual !== desired) throw conflict(id);
+      if (after.has(id)) latest.set(id, after.get(id));
+      else latest.delete(id);
+    }
+    return Object.fromEntries(latest);
   }
 
   async _withWriteLock(genomePath, operation) {

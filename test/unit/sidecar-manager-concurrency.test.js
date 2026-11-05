@@ -90,7 +90,7 @@ describe('SidecarManager write serialization', () => {
     expect(manager.cacheProvenance.has(genomePath)).toBe(false);
   });
 
-  it('rebases edits to another field but rejects stale edits to the same field', async () => {
+  it('rebases edits to another field but rejects stale edits to the same gene', async () => {
     const genomePath = '/tmp/shared.gbk';
     let disk = { _storageRevision: 1, geneNotes: { old: true }, primers: [] };
     const SidecarManager = loadSidecarManager({
@@ -111,12 +111,37 @@ describe('SidecarManager write serialization', () => {
       second.get(genomePath, 'primers'),
     ]);
 
-    await first.set(genomePath, 'geneNotes', { first: true });
+    await first.set(genomePath, 'geneNotes', { old: 'first' });
     await second.set(genomePath, 'primers', ['second']);
-    expect(disk).toMatchObject({ geneNotes: { first: true }, primers: ['second'] });
-    await expect(second.set(genomePath, 'geneNotes', { second: true })).rejects.toMatchObject({
+    expect(disk).toMatchObject({ geneNotes: { old: 'first' }, primers: ['second'] });
+    await expect(second.set(genomePath, 'geneNotes', { old: 'second' })).rejects.toMatchObject({
       code: 'SIDECAR_CONFLICT',
     });
-    expect(disk.geneNotes).toEqual({ first: true });
+    expect(disk.geneNotes).toEqual({ old: 'first' });
   });
+
+  it.each(['geneNotes', 'geneAttachments'])(
+    'merges independent genes in %s and retains unseen remote entries',
+    async key => {
+      const genomePath = '/tmp/independent.gbk';
+      let disk = { _storageRevision: 1, [key]: { removed: { value: 'original' } } };
+      const SidecarManager = loadSidecarManager({
+        loadSidecarFile: async () => ({ success: true, exists: true, data: structuredClone(disk) }),
+        saveSidecarFile: async (_path, payload) => {
+          if (payload._storageRevision !== disk._storageRevision) return { success: false, code: 'SIDECAR_CONFLICT' };
+          disk = { ...structuredClone(payload), _storageRevision: disk._storageRevision + 1 };
+          return { success: true, storageRevision: disk._storageRevision };
+        },
+      });
+      const first = new SidecarManager();
+      const second = new SidecarManager();
+      await first.get(genomePath, key);
+      await second.get(genomePath, key);
+      await first.set(genomePath, key, { removed: { value: 'original' }, remote: { value: 'r' } });
+      await second.set(genomePath, key, { local: { value: 'l' } });
+      expect(disk[key]).toEqual({ remote: { value: 'r' }, local: { value: 'l' } });
+      await second.set(genomePath, key, { local: { value: 'l2' } });
+      expect(disk[key]).toEqual({ remote: { value: 'r' }, local: { value: 'l2' } });
+    }
+  );
 });
