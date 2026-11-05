@@ -325,6 +325,9 @@
     }
   },
   "overrides": {
+    "app-builder-lib": {
+      "tar": "7.5.22"
+    },
     "qs": "6.17.1"
   }
 }
