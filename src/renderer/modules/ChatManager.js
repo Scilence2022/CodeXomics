@@ -4334,6 +4334,10 @@ class ChatManager {
                                 <option value="auto::auto">Auto</option>
                             </select>
                         </div>
+                        <div class="chat-model-picker chat-reasoning-picker" id="chatReasoningPicker" hidden>
+                            <i class="fas fa-lightbulb"></i>
+                            <select id="chatReasoningSelect" class="chat-model-select" aria-label="Thinking level"></select>
+                        </div>
                         <div class="context-mode-toggle">
                             <label class="toggle-label">
                                 <input type="checkbox" id="contextModeToggle" checked />
@@ -5172,6 +5176,7 @@ class ChatManager {
     const overrides = { disableFallback: true };
     if (Number.isFinite(profile.temperature)) overrides.temperatureOverride = profile.temperature;
     if (profile.disableStreaming === true) overrides.disableStreaming = true;
+    if (typeof profile.reasoningEffort === 'string') overrides.reasoningEffort = profile.reasoningEffort;
     return overrides;
   }
 
@@ -5461,10 +5466,23 @@ class ChatManager {
         const nativeFunctionCalling = this.configManager.get('chatboxSettings.enableNativeFunctionCalling', true);
         const modelSelection = this.getChatboxModelSelection();
         const provider = this.llmConfigManager.providers?.[modelSelection?.providerKey];
+        const requestOverrides = this.getBenchmarkRequestOverrides();
+        const reasoningEffort =
+          requestOverrides.reasoningEffort ??
+          this.chatBoxSettingsManager?.getSetting('chatboxReasoningEffort', 'default');
         const budgetReport = this.enforceConversationTokenBudget(conversationHistory, {
           originalMessage: message,
           tools: nativeFunctionCalling ? this.currentNativeTools : [],
-          outputTokens: this.llmConfigManager.getMaxTokens?.(provider),
+          // Thinking raises the output limit; reserve what will actually be asked for.
+          outputTokens:
+            typeof this.llmConfigManager.getRequestOutputTokens === 'function'
+              ? this.llmConfigManager.getRequestOutputTokens(
+                  modelSelection?.providerKey,
+                  modelSelection?.model,
+                  reasoningEffort,
+                  provider
+                )
+              : this.llmConfigManager.getMaxTokens?.(provider),
         });
         if (budgetReport && this.showThinkingProcess) {
           this.updateThinkingMessage(
@@ -5505,7 +5523,8 @@ class ChatManager {
             constrainedToolOutput: this.configManager.get('chatboxSettings.enableConstrainedToolOutput', true),
             toolChoice: 'auto',
             parallelToolCalls: true,
-            ...this.getBenchmarkRequestOverrides(),
+            reasoningEffort,
+            ...requestOverrides,
           });
         } finally {
           // The completed message is rendered by the normal path below, so the

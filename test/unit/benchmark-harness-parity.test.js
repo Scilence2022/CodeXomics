@@ -106,7 +106,7 @@ describe('request overrides', () => {
     expect(cm.getBenchmarkRequestOverrides()).toEqual({ disableFallback: true });
   });
 
-  it('pins temperature and turns streaming off only when oracle-assisted', () => {
+  it('pins temperature and thinking and turns streaming off only when oracle-assisted', () => {
     const cm = makeChatManager();
     cm.benchmarkAutomationActive = true;
     cm.benchmarkHarnessProfile = makeFramework(null).resolveHarnessProfile({ harnessMode: 'oracle-assisted' });
@@ -114,6 +114,7 @@ describe('request overrides', () => {
       disableFallback: true,
       temperatureOverride: 0,
       disableStreaming: true,
+      reasoningEffort: 'default',
     });
   });
 

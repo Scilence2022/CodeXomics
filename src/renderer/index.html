@@ -5006,7 +5006,22 @@ Supported formats:
                                 <div class="form-group">
                                     <label for="chatboxLLMMaxTokens">Max Tokens:</label>
                                     <input type="number" id="chatboxLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
-                                    <small class="help-text">Maximum tokens for LLM responses</small>
+                                    <small class="help-text">Maximum tokens for LLM responses. While thinking is on, requests raise this to at least 8K–16K so the reasoning does not use up the answer.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="chatboxReasoningEffort">Thinking level:</label>
+                                    <select id="chatboxReasoningEffort" class="select input-full">
+                                        <option value="default">Model default</option>
+                                        <option value="off">Off</option>
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                    <small class="help-text">How much the model reasons before answering. Applies only to models
+                                        with a thinking control (Claude, Gemini 2.5+, OpenAI reasoning models, DeepSeek,
+                                        Qwen3 on SiliconFlow, OpenRouter); a level a model does not accept is not sent. The same
+                                        setting appears beside the model selector in the ChatBox.</small>
                                 </div>
                                 
                                 <div class="form-group">
@@ -5476,6 +5491,7 @@ Supported formats:
     <script src="modules/ExportManager.js"></script>
     <script src="modules/ScreenshotManager.js"></script>
     <script src="modules/LLMStreamClient.js"></script>
+    <script src="modules/LLMReasoningProfiles.js"></script>
     <script src="modules/LLMConfigManager.js"></script>
     <script src="modules/MultiAgentSettingsManager.js"></script>
     <script src="modules/SkillsSettingsManager.js"></script>

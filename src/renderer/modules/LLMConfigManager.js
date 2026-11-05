@@ -2761,7 +2761,45 @@ class LLMConfigManager {
       const responseFormat = this.buildConstrainedToolResponseFormat(options);
       if (responseFormat) payload.response_format = responseFormat;
     }
+    if (providerKey) {
+      this.getReasoningProfiles()?.applyToOpenAICompatiblePayload(providerKey, payload, options.reasoningEffort);
+    }
     return payload;
+  }
+
+  /**
+   * The thinking-level rules (LLMReasoningProfiles), loaded as a script-tag
+   * global in the renderer and through require() under Node.
+   */
+  getReasoningProfiles() {
+    if (typeof LLMReasoningProfiles !== 'undefined') return LLMReasoningProfiles;
+    try {
+      if (typeof module !== 'undefined' && typeof require === 'function') {
+        return require('./LLMReasoningProfiles.js');
+      }
+    } catch (error) {
+      console.warn('LLMReasoningProfiles is unavailable; thinking levels are ignored:', error.message);
+    }
+    return null;
+  }
+
+  /**
+   * The thinking control a model offers (levels it accepts, and a note for the
+   * UI), or null when it has none.
+   */
+  getReasoningProfile(providerKey, model) {
+    return this.getReasoningProfiles()?.getProfile(providerKey, model) || null;
+  }
+
+  /**
+   * Output tokens a request will ask for: the configured limit, raised while
+   * thinking is on so the reasoning does not consume the whole answer. The
+   * context-budget trimmer reserves this much.
+   */
+  getRequestOutputTokens(providerKey, model, reasoningEffort, provider = null) {
+    const base = this.getMaxTokens(provider || this.providers?.[providerKey]);
+    const profiles = this.getReasoningProfiles();
+    return profiles ? profiles.getOutputTokens(providerKey, model, reasoningEffort, base) : base;
   }
 
   // ==========================================
@@ -3374,6 +3412,8 @@ class LLMConfigManager {
       payload.tools = anthropicTools;
       payload.tool_choice = { type: options.toolChoice || 'auto' };
     }
+    // Thinking level, and no temperature on the models that reject it.
+    this.getReasoningProfiles()?.applyToAnthropicPayload(payload, options.reasoningEffort);
     return payload;
   }
 
@@ -3397,6 +3437,7 @@ class LLMConfigManager {
       payload.tools = [{ functionDeclarations }];
       payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
     }
+    this.getReasoningProfiles()?.applyToGooglePayload(payload, provider.model, options.reasoningEffort);
     return payload;
   }
 

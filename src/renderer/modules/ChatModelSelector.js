@@ -12,11 +12,25 @@
  * The option list comes from `LLMConfigManager.getModelCatalog()`, the catalog
  * the Default Model tab also builds from, so both show the same friendly labels
  * and both offer models entered through "Other (specify below)".
+ *
+ * Beside it sits the thinking-level control (`chatboxReasoningEffort`, also on
+ * the Agent Settings → Generation tab). It appears only for a model that exposes
+ * a thinking control, and offers only the levels that model accepts.
  */
+const REASONING_LEVEL_LABELS = {
+  default: 'Thinking: default',
+  off: 'Thinking: off',
+  low: 'Thinking: low',
+  medium: 'Thinking: medium',
+  high: 'Thinking: high',
+};
+
 class ChatModelSelector {
   constructor(chatManager = null) {
     this.chatManager = chatManager || (typeof window !== 'undefined' ? window.chatManager : null);
     this.select = null;
+    this.reasoningSelect = null;
+    this.reasoningPicker = null;
     this.bound = false;
 
     this.handleSettingsChanged = () => this.refresh();
@@ -66,6 +80,11 @@ class ChatModelSelector {
     // rather than relying on startup ordering.
     this.select.addEventListener('mousedown', () => this.refresh());
     this.select.addEventListener('focus', () => this.refresh());
+
+    this.reasoningSelect = document.getElementById('chatReasoningSelect');
+    this.reasoningPicker = document.getElementById('chatReasoningPicker');
+    this.reasoningSelect?.addEventListener('change', () => this.applyReasoningLevel());
+
     this.bound = true;
     this.refresh();
   }
@@ -194,6 +213,63 @@ class ChatModelSelector {
     const hasDesired = Array.from(this.select.querySelectorAll('option')).some(option => option.value === desired);
     this.select.value = hasDesired ? desired : 'auto::auto';
     this.select.title = this.select.selectedOptions?.[0]?.title || '';
+    this.refreshReasoning();
+  }
+
+  /**
+   * Rebuild the thinking-level control for the model the next request will use.
+   */
+  refreshReasoning() {
+    const select = this.reasoningSelect;
+    if (!select) return;
+
+    const effective = this.getEffectiveSelection();
+    const llmConfig = this.llmConfig;
+    const profile =
+      effective && typeof llmConfig?.getReasoningProfile === 'function'
+        ? llmConfig.getReasoningProfile(effective.providerKey, effective.model)
+        : null;
+
+    if (this.reasoningPicker) this.reasoningPicker.hidden = !profile;
+    if (!profile) return;
+
+    const stored = this.getStoredReasoningLevel();
+    select.innerHTML = '';
+    for (const [level, label] of Object.entries(REASONING_LEVEL_LABELS)) {
+      const option = this.createOption(level, label);
+      if (level !== 'default' && !profile.levels.includes(level)) {
+        option.disabled = true;
+        option.title = 'Not available for this model';
+      }
+      select.appendChild(option);
+    }
+    // A stored level this model does not accept is not sent (the request uses
+    // the model's default), so the control shows what will actually happen.
+    const applies = stored === 'default' || profile.levels.includes(stored);
+    select.value = applies ? stored : 'default';
+    const { shortLabel } = this.describe(effective.providerKey, effective.model);
+    select.title = [
+      `Thinking level for ${shortLabel}.`,
+      profile.note,
+      applies ? '' : `The saved level (${stored}) does not apply to this model.`,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  getStoredReasoningLevel() {
+    const value = String(this.settingsManager?.getSetting('chatboxReasoningEffort', 'default') || 'default');
+    return Object.prototype.hasOwnProperty.call(REASONING_LEVEL_LABELS, value) ? value : 'default';
+  }
+
+  async applyReasoningLevel() {
+    const settings = this.settingsManager;
+    if (!settings || typeof settings.setSetting !== 'function' || !this.reasoningSelect) return;
+    try {
+      await settings.setSetting('chatboxReasoningEffort', this.reasoningSelect.value || 'default');
+    } catch (error) {
+      console.warn('[ChatModelSelector] Failed to persist thinking level:', error);
+    }
   }
 
   /**
@@ -239,6 +315,8 @@ class ChatModelSelector {
     } catch (error) {
       console.warn('[ChatModelSelector] Failed to persist model selection:', error);
     }
+    // A different model can offer different thinking levels, or none.
+    this.refreshReasoning();
   }
 }
 
