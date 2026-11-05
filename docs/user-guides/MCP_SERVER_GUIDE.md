@@ -103,6 +103,22 @@ npm run mcp-server -- --mode=agent
 
 Agent mode requires a configured LLM provider in CodeXomics. If the ChatBox is already processing a request, agent mode returns a busy response instead of starting a second run.
 
+## Request deadlines and cancellation
+
+Tools mode gives a request up to 30 seconds. Agent mode allows up to 120
+seconds. The SDK's legacy SSE transport and modern HTTP clients that return
+the session ID from initialization can explicitly cancel a request. The
+server forwards cancellation and deadline expiry to the matching Electron or
+internal WebSocket execution. ChatBox uses that signal to stop the matching
+model request.
+
+File export and reviewed annotation commits check their write deadlines again
+before persistence. A cancelled call may have already written a result.
+For annotation commits, retry the same ChangeSet to retrieve an existing
+receipt. A polling bridge can stop offering expired work to its client.
+An operation already picked up by that bridge follows the client's own
+cancellation behavior.
+
 ## Common Tool Families
 
 In tools mode, clients can access tool families for:

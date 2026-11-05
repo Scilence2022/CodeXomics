@@ -90,8 +90,8 @@ class SidecarManager {
     });
   }
 
-  async _performSave({ genomePath, sourceSha256, cacheKey }, data) {
-    const result = await window.electronAPI?.saveSidecarFile?.(genomePath, data, sourceSha256);
+  async _performSave({ genomePath, sourceSha256, cacheKey }, data, commitNotAfter) {
+    const result = await window.electronAPI?.saveSidecarFile?.(genomePath, data, sourceSha256, commitNotAfter);
     if (!result?.success) {
       const error = new Error(result?.error || 'Sidecar file API unavailable');
       error.code = result?.code;
@@ -123,15 +123,15 @@ class SidecarManager {
     return this._setField(genomePath, key, value, true);
   }
 
-  async setAndForceSave(genomePath, key, value) {
-    return this._setField(genomePath, key, value, false);
+  async setAndForceSave(genomePath, key, value, beforeWrite) {
+    return this._setField(genomePath, key, value, false, beforeWrite);
   }
 
-  async _setField(genomePath, key, value, rebase) {
+  async _setField(genomePath, key, value, rebase, beforeWrite) {
     if (!genomePath) throw new Error('Saving a sidecar field requires a genome path');
     this._assertWritable(key);
     const scope = this._scope(genomePath);
-    return this._withWriteLock(scope.cacheKey, () => this._saveField(scope, key, value, rebase));
+    return this._withWriteLock(scope.cacheKey, () => this._saveField(scope, key, value, rebase, beforeWrite));
   }
 
   _rememberFieldBase(cacheKey, key, value) {
@@ -139,7 +139,7 @@ class SidecarManager {
     this.fieldBases.get(cacheKey).set(key, JSON.stringify(value));
   }
 
-  async _saveField(scope, key, value, rebase) {
+  async _saveField(scope, key, value, rebase, beforeWrite) {
     const { cacheKey } = scope;
     const data = await this._load(scope, { strict: true });
     const bases = this.fieldBases.get(cacheKey);
@@ -164,11 +164,16 @@ class SidecarManager {
             )
           : requested;
       if (JSON.stringify(candidateValue) !== currentValue || !rebase) {
-        await this._performSave(scope, {
-          ...current,
-          [key]: candidateValue,
-          lastModified: new Date().toISOString(),
-        });
+        const commitNotAfter = beforeWrite?.();
+        await this._performSave(
+          scope,
+          {
+            ...current,
+            [key]: candidateValue,
+            lastModified: new Date().toISOString(),
+          },
+          commitNotAfter
+        );
       }
     };
 

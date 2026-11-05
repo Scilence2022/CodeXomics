@@ -101,8 +101,8 @@ describe('file operation IPC hardening', () => {
     expect(helperSource).toContain('await fs.promises.rename(tempPath, destinationPath)');
     expect(helperSource).toContain("fs.promises.open(path.dirname(destinationPath), 'r')");
     expect(helperSource).toContain('await directoryHandle.sync()');
-    expect(source).toContain('await writeFileAtomically(sidecarPath, content)');
-    expect(source).toContain('await writeFileAtomically(fallbackPath, content)');
+    expect(source).toContain('await writeFileAtomically(sidecarPath, content, commitNotAfter)');
+    expect(source).toContain('await writeFileAtomically(fallbackPath, content, commitNotAfter)');
   });
 
   it('selects the newest valid sidecar and rejects stale cross-window writes with storage CAS', () => {

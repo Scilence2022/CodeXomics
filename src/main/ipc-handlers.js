@@ -87,6 +87,12 @@ function getBamReaderClass() {
   return BamReaderClass;
 }
 
+function assertWriteDeadline(commitNotAfter) {
+  if (Number.isFinite(commitNotAfter) && Date.now() >= commitNotAfter) {
+    throw new Error('The MCP request deadline elapsed before the durable write');
+  }
+}
+
 function parseCommandLine(command) {
   const args = [];
   let current = '';
@@ -722,7 +728,8 @@ function registerIpcHandlers(deps) {
     };
   };
 
-  const writeFileAtomically = async (destinationPath, content) => {
+  const writeFileAtomically = async (destinationPath, content, commitNotAfter) => {
+    assertWriteDeadline(commitNotAfter);
     const tempPath = `${destinationPath}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`;
     let handle;
     try {
@@ -731,6 +738,7 @@ function registerIpcHandlers(deps) {
       await handle.sync();
       await handle.close();
       handle = null;
+      assertWriteDeadline(commitNotAfter);
       await fs.promises.rename(tempPath, destinationPath);
 
       // The file contents and atomic rename are durable only after the parent
@@ -1578,7 +1586,7 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('save-sidecar-file', async (event, genomePath, data, sourceSha256) => {
+  ipcMain.handle('save-sidecar-file', async (event, genomePath, data, sourceSha256, commitNotAfter) => {
     try {
       if (data !== undefined && (!data || typeof data !== 'object' || Array.isArray(data))) {
         throw new Error('Sidecar data must be a JSON object');
@@ -1596,6 +1604,7 @@ function registerIpcHandlers(deps) {
         } = paths;
         if (data?._sourceGenomeSha256 && data._sourceGenomeSha256 !== source.sha256) throw genomeSourceChanged();
 
+        assertWriteDeadline(commitNotAfter);
         const { selected: current } = await findSidecarCandidate(paths);
         const expectedRevision =
           Number.isInteger(data?._storageRevision) && data._storageRevision >= 0 ? data._storageRevision : 0;
@@ -1628,7 +1637,7 @@ function registerIpcHandlers(deps) {
           if (await isSidecarDirectoryUsable(sidecarDir)) {
             await fs.promises.mkdir(sidecarDir, { recursive: true });
             if (await isSidecarDirectoryUsable(sidecarDir)) {
-              await writeFileAtomically(sidecarPath, content);
+              await writeFileAtomically(sidecarPath, content, commitNotAfter);
               return {
                 success: true,
                 path: sidecarPath,
@@ -1643,7 +1652,7 @@ function registerIpcHandlers(deps) {
         }
 
         await fs.promises.mkdir(fallbackDir, { recursive: true });
-        await writeFileAtomically(fallbackPath, content);
+        await writeFileAtomically(fallbackPath, content, commitNotAfter);
         return { success: true, path: fallbackPath, fallback: true, storageRevision, sourceSha256: source.sha256 };
       });
     } catch (error) {
@@ -2360,10 +2369,12 @@ function registerIpcHandlers(deps) {
   });
 
   // Handle direct file write requests
-  ipcMain.handle('write-file', async (event, filePath, content) => {
+  ipcMain.handle('write-file', async (event, filePath, content, commitNotAfter) => {
     try {
       const path = require('path');
       const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'write file' });
+
+      assertWriteDeadline(commitNotAfter);
 
       // Ensure directory exists
       const directory = path.dirname(safeFilePath);
@@ -2372,6 +2383,7 @@ function registerIpcHandlers(deps) {
       }
 
       // Write the file
+      assertWriteDeadline(commitNotAfter);
       fs.writeFileSync(safeFilePath, content, 'utf8');
 
       // Verify file was written

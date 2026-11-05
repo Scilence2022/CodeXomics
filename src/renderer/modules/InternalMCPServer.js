@@ -13,6 +13,7 @@ class InternalMCPServer {
   constructor() {
     this.genomeStudio = null;
     this.isRunning = false;
+    this.pendingExecutions = new Map();
     this.setupIPCHandlers();
   }
 
@@ -24,11 +25,12 @@ class InternalMCPServer {
 
   // Setup IPC handlers for communication with main process MCP server
   setupIPCHandlers() {
+    mcpServerIpc.on('mcp-tool-cancel', (_event, { requestId }) => this.cancelRequest(requestId));
     mcpServerIpc.on('mcp-tool-call', async (event, request) => {
-      const { requestId, method, parameters, executionContext } = request;
+      const { requestId, method } = request;
 
       try {
-        const result = await this.executeMethod(method, parameters, executionContext, requestId);
+        const result = await this.executeRequest(request);
 
         // Send success response back to main process
         mcpServerIpc.send('mcp-tool-response', {
@@ -49,9 +51,32 @@ class InternalMCPServer {
     });
   }
 
+  cancelRequest(requestId) {
+    this.pendingExecutions.get(requestId)?.abort(new DOMException('The MCP request was cancelled', 'AbortError'));
+  }
+
+  async executeRequest({ requestId, method, parameters, executionContext }) {
+    if (!requestId || this.pendingExecutions.has(requestId)) throw new Error('Invalid or duplicate MCP request ID');
+    const controller = new AbortController();
+    const deadline = executionContext?.requestDeadline;
+    const timer = Number.isFinite(deadline)
+      ? setTimeout(() => this.cancelRequest(requestId), Math.max(0, deadline - Date.now()))
+      : null;
+    this.pendingExecutions.set(requestId, controller);
+    try {
+      const result = await this.executeMethod(method, parameters, executionContext, requestId, controller.signal);
+      controller.signal.throwIfAborted();
+      return result;
+    } finally {
+      clearTimeout(timer);
+      this.pendingExecutions.delete(requestId);
+    }
+  }
+
   // Execute the requested method
   // Uses dynamic routing to support all 40+ tools via ChatManager delegation
-  async executeMethod(method, parameters, executionContext = null, requestId = null) {
+  async executeMethod(method, parameters, executionContext = null, requestId = null, signal) {
+    signal?.throwIfAborted();
     if (!this.genomeStudio) {
       throw new Error('Genome Studio instance not available');
     }
@@ -83,7 +108,7 @@ class InternalMCPServer {
     // codexomics_chat is an MCP runtime wrapper, not a ChatManager tool.
     // Handle it before generic tool delegation so agent-mode chat reaches processAgentPrompt.
     if (method === 'codexomicsChat') {
-      return await this.handleCodexomicsChat(parameters, executionContext, requestId);
+      return await this.handleCodexomicsChat(parameters, executionContext, requestId, signal);
     }
 
     // Convert camelCase method name back to snake_case tool name for ChatManager
@@ -98,6 +123,7 @@ class InternalMCPServer {
         const result = await chatManager.executeToolByName(toolName, parameters, {
           bypassAgent: true,
           executionContext,
+          signal,
         });
         if (result !== undefined) {
           console.log(`✅ [InternalMCPServer] Tool '${toolName}' executed via ChatManager`);
@@ -294,7 +320,7 @@ class InternalMCPServer {
   }
 
   // Agent mode implementation - codexomics_chat
-  async handleCodexomicsChat(parameters, executionContext = null, requestId = null) {
+  async handleCodexomicsChat(parameters, executionContext = null, requestId = null, signal) {
     const chatManager = this.genomeStudio.chatManager || window.chatManager;
     if (!chatManager) {
       throw new Error('ChatManager not available for agent mode');
@@ -326,6 +352,7 @@ class InternalMCPServer {
       activateMultiAgent: parameters.activate_multi_agent || false,
       context: parameters.context || {},
       requestDeadline: executionContext?.requestDeadline,
+      signal,
       onProgress,
     });
 

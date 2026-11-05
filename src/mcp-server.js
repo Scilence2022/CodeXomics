@@ -16,6 +16,8 @@
  */
 
 const { EventEmitter } = require('events');
+const { AsyncLocalStorage } = require('node:async_hooks');
+const { createHmac, randomBytes, randomUUID, timingSafeEqual } = require('node:crypto');
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { SSEServerTransport } = require('@modelcontextprotocol/sdk/server/sse.js');
 const {
@@ -132,6 +134,8 @@ class StandardClaudeMCPServer extends EventEmitter {
     // switch_active_window so an external client's later un-addressed calls
     // target a chosen window without depending on global OS focus.
     this.sessionWindowPins = new Map();
+    this.httpSessionKey = randomBytes(32);
+    this.httpToolRequests = new Map();
     // Last window explicitly activated via switch_active_window. Used as a
     // last-resort disambiguator when no windowId is passed, no per-session pin
     // applies, and no genome window is OS-focused (e.g. background automation).
@@ -313,6 +317,21 @@ class StandardClaudeMCPServer extends EventEmitter {
     };
   }
 
+  _httpSessionSignature(nonce, authSessionId) {
+    return createHmac('sha256', this.httpSessionKey)
+      .update(JSON.stringify([nonce, authSessionId]))
+      .digest('hex');
+  }
+
+  _validHttpSession(sessionId, authSessionId) {
+    if (!/^[0-9a-f-]{36}\.[0-9a-f]{64}$/.test(sessionId)) return false;
+    const [nonce, signature] = sessionId.split('.');
+    return timingSafeEqual(
+      Buffer.from(signature, 'hex'),
+      Buffer.from(this._httpSessionSignature(nonce, authSessionId), 'hex')
+    );
+  }
+
   _routingClientId(requestedClientId, executionContext) {
     if (executionContext?.authenticated) {
       // HTTP authentication deliberately reuses one auth session per API key.
@@ -432,18 +451,74 @@ class StandardClaudeMCPServer extends EventEmitter {
     return Math.min(maximum, remaining);
   }
 
-  async _withTimeout(operation, timeoutMs, message) {
-    let timeoutId;
+  async _withTimeout(operation, timeoutMs, message, { signal, executionContext } = {}) {
+    const controller = new AbortController();
+    const abortFromClient = () => controller.abort(signal.reason);
+    if (signal?.aborted) abortFromClient();
+    else signal?.addEventListener('abort', abortFromClient, { once: true });
+    const timeout = setTimeout(() => controller.abort(new Error(message)), timeoutMs);
+    this.toolExecutionScope ||= new AsyncLocalStorage();
     try {
+      controller.signal.throwIfAborted();
       return await Promise.race([
-        Promise.resolve().then(operation),
         new Promise((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+          controller.signal.addEventListener('abort', () => reject(controller.signal.reason), { once: true });
+        }),
+        Promise.resolve().then(() => {
+          controller.signal.throwIfAborted();
+          // Some tool modules delegate through compatibility wrappers without
+          // forwarding the execution context. Keep the original context and
+          // cancellation signal for every hop in this request.
+          return this.toolExecutionScope.run({ executionContext, signal: controller.signal }, operation);
         }),
       ]);
     } finally {
-      if (timeoutId) clearTimeout(timeoutId);
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', abortFromClient);
     }
+  }
+
+  _startDelegatedRequest(requests, requestId, timeoutMs, message, { dispatch, cancelRemote, ...metadata }) {
+    const signal = this.toolExecutionScope?.getStore()?.signal;
+    signal?.throwIfAborted();
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timeout);
+        signal?.removeEventListener('abort', onAbort);
+        requests.delete(requestId);
+      };
+      const cancel = error => {
+        cleanup();
+        try {
+          cancelRemote?.(requestId);
+        } catch (sendError) {
+          this.serverLog('warn', `Could not forward tool cancellation: ${sendError.message}`);
+        }
+        reject(error);
+      };
+      const onAbort = () => cancel(signal.reason);
+      const timeout = setTimeout(() => cancel(new Error(message)), timeoutMs);
+      requests.set(requestId, {
+        ...metadata,
+        timeout,
+        cancel,
+        resolve: value => {
+          cleanup();
+          resolve(value);
+        },
+        reject: error => {
+          cleanup();
+          reject(error);
+        },
+      });
+      signal?.addEventListener('abort', onAbort, { once: true });
+      try {
+        dispatch?.();
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    });
   }
 
   _createProtocolServer() {
@@ -559,7 +634,8 @@ class StandardClaudeMCPServer extends EventEmitter {
               executionContext
             ),
           timeout,
-          `Tool execution timeout after ${timeout / 1000} seconds`
+          `Tool execution timeout after ${timeout / 1000} seconds`,
+          { executionContext, signal: extra.signal }
         );
 
         const executionTime = Date.now() - startTime;
@@ -621,7 +697,8 @@ class StandardClaudeMCPServer extends EventEmitter {
       cors({
         origin: process.env.CODEXOMICS_MCP_ALLOWED_ORIGIN || 'http://localhost',
         methods: ['GET', 'POST', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Cache-Control', 'Authorization'],
+        allowedHeaders: ['Content-Type', 'Cache-Control', 'Authorization', 'MCP-Session-Id', 'MCP-Protocol-Version'],
+        exposedHeaders: ['MCP-Session-Id'],
       })
     );
 
@@ -652,7 +729,12 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.app.use((req, res, next) => {
       this.serverLog('info', `📥 ${req.method} ${req.path}`);
       if (req.method === 'POST') {
-        const { authorization: _authorization, cookie: _cookie, ...safeHeaders } = req.headers;
+        const {
+          authorization: _authorization,
+          cookie: _cookie,
+          'mcp-session-id': _sessionId,
+          ...safeHeaders
+        } = req.headers;
         this.serverLog('info', `📦 POST Headers:`, safeHeaders);
       }
       next();
@@ -677,6 +759,9 @@ class StandardClaudeMCPServer extends EventEmitter {
 
     // Server info endpoint (public)
     this.app.get('/mcp', (req, res) => {
+      if (req.get('MCP-Session-Id') || req.get('Accept')?.includes('text/event-stream')) {
+        return res.sendStatus(405);
+      }
       const tools = this.toolsIntegrator.getAvailableTools();
       const categorized = this.toolCategoryManager.categorizeTools(tools);
       const authStats = this.authManager.getStatistics();
@@ -711,6 +796,8 @@ class StandardClaudeMCPServer extends EventEmitter {
         status: this.isInitialized ? 'ready' : 'initializing',
       });
     });
+
+    this.app.delete('/mcp', (_req, res) => res.sendStatus(405));
 
     // SSE endpoint for MCP Client
     this.app.get('/sse', this.authMiddleware, async (req, res) => {
@@ -1023,10 +1110,7 @@ class StandardClaudeMCPServer extends EventEmitter {
             const { requestId, result, error } = message;
             const pending = this.pendingRequests.get(requestId);
 
-            if (pending) {
-              clearTimeout(pending.timeout);
-              this.pendingRequests.delete(requestId);
-
+            if (pending && pending.owner === ws) {
               if (error) {
                 this.serverLog('info', `❌ Tool execution failed via internal client: ${pending.toolName}`, error);
                 pending.reject(new Error(error));
@@ -1226,7 +1310,8 @@ class StandardClaudeMCPServer extends EventEmitter {
                 executionContext
               ),
             timeoutMs,
-            `Tool execution timeout after ${timeoutMs / 1000} seconds`
+            `Tool execution timeout after ${timeoutMs / 1000} seconds`,
+            { executionContext }
           );
           return {
             jsonrpc: '2.0',
@@ -1514,6 +1599,12 @@ class StandardClaudeMCPServer extends EventEmitter {
 
       const request = req.body;
       const { method, params, id, jsonrpc } = request;
+      const modernTransport = req.path === '/mcp';
+      const authSessionId = req.mcpSession?.sessionId;
+      const transportSessionId = modernTransport ? req.get('MCP-Session-Id') : undefined;
+      if (transportSessionId && !this._validHttpSession(transportSessionId, authSessionId)) {
+        return res.sendStatus(404);
+      }
 
       // Validate JSON-RPC format
       if (jsonrpc !== '2.0') {
@@ -1550,6 +1641,12 @@ class StandardClaudeMCPServer extends EventEmitter {
 
           const tools = this._getPermittedTools(this._executionContext(req.mcpSession));
           this.serverLog('info', `📊 Server has ${tools.length} tools available`);
+          if (modernTransport && authSessionId && !transportSessionId) {
+            // Bind cancellations to an issued client identity without retaining
+            // idle session records or conflating clients that share an API key.
+            const nonce = randomUUID();
+            res.setHeader('MCP-Session-Id', `${nonce}.${this._httpSessionSignature(nonce, authSessionId)}`);
+          }
 
           response = {
             jsonrpc: '2.0',
@@ -1580,6 +1677,14 @@ class StandardClaudeMCPServer extends EventEmitter {
           // Notifications don't need responses
           return res.status(204).send();
 
+        case 'notifications/cancelled': {
+          if (transportSessionId && id === undefined) {
+            const requestKey = JSON.stringify([transportSessionId, params?.requestId]);
+            this.httpToolRequests.get(requestKey)?.abort(new Error('MCP client cancelled the request'));
+          }
+          return res.status(modernTransport ? 202 : 204).send();
+        }
+
         case 'tools/list': {
           this.serverLog('info', '📋 Handling tools/list request');
           const availableTools = this._getPermittedTools(this._executionContext(req.mcpSession));
@@ -1597,6 +1702,19 @@ class StandardClaudeMCPServer extends EventEmitter {
           this.serverLog('info', '🔧 Handling tools/call request');
           const { name: toolName, arguments: args } = params;
           const startTime = Date.now();
+          const requestKey =
+            transportSessionId && (typeof id === 'number' || typeof id === 'string')
+              ? JSON.stringify([transportSessionId, id])
+              : null;
+          if (requestKey && this.httpToolRequests.has(requestKey)) {
+            return res.status(400).json({
+              jsonrpc: '2.0',
+              error: { code: -32600, message: 'Request ID is already in use for this session' },
+              id,
+            });
+          }
+          const controller = requestKey ? new AbortController() : null;
+          if (controller) this.httpToolRequests.set(requestKey, controller);
 
           try {
             const timeoutMs = this._requestTimeoutMs();
@@ -1614,7 +1732,8 @@ class StandardClaudeMCPServer extends EventEmitter {
                   executionContext
                 ),
               timeoutMs,
-              `Tool execution timeout after ${timeoutMs / 1000} seconds`
+              `Tool execution timeout after ${timeoutMs / 1000} seconds`,
+              { executionContext, signal: controller?.signal }
             );
 
             const executionTime = Date.now() - startTime;
@@ -1628,6 +1747,7 @@ class StandardClaudeMCPServer extends EventEmitter {
               id,
             };
           } catch (error) {
+            if (controller?.signal.aborted) return res.status(204).send();
             this.serverLog('error', `❌ Tool ${toolName} failed:`, error);
             response = {
               jsonrpc: '2.0',
@@ -1642,6 +1762,8 @@ class StandardClaudeMCPServer extends EventEmitter {
               },
               id,
             };
+          } finally {
+            if (controller) this.httpToolRequests.delete(requestKey);
           }
           break;
         }
@@ -1677,7 +1799,6 @@ class StandardClaudeMCPServer extends EventEmitter {
       }
 
       this.serverLog('info', '✅ Sending response:', JSON.stringify(this.redactImageData(response), null, 2));
-      this.serverLog('info', '📡 Response headers being sent:', res.getHeaders());
 
       // Ensure response is sent properly
       res.json(response);
@@ -1717,7 +1838,7 @@ class StandardClaudeMCPServer extends EventEmitter {
 
     // Listen for tool responses
     ipcMain.on('mcp-tool-response', (event, response) => {
-      this.handleToolResponse(response);
+      this.handleToolResponse(response, event.sender);
     });
 
     // Listen for server status updates
@@ -1738,17 +1859,14 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.serverLog('info', '✅ IPC communication configured');
   }
 
-  handleToolResponse(response) {
+  handleToolResponse(response, sender = null) {
     const { requestId, success, result, error } = response;
 
     const pendingRequest = this.pendingRequests.get(requestId);
-    if (!pendingRequest) {
+    if (!pendingRequest || (sender && pendingRequest.owner !== sender)) {
       this.serverLog('warn', `❓ Received response for unknown request ID: ${requestId}`);
       return;
     }
-
-    clearTimeout(pendingRequest.timeout);
-    this.pendingRequests.delete(requestId);
 
     if (success) {
       pendingRequest.resolve(result);
@@ -1758,6 +1876,9 @@ class StandardClaudeMCPServer extends EventEmitter {
   }
 
   async executeToolOnClient(toolName, parameters, clientId, executionContext = null) {
+    const active = this.toolExecutionScope?.getStore();
+    active?.signal.throwIfAborted();
+    executionContext ||= active?.executionContext || null;
     // Check if this tool requires client-side execution
     const validation = this.toolCategoryManager.validateExecution(
       toolName,
@@ -1834,39 +1955,33 @@ class StandardClaudeMCPServer extends EventEmitter {
     // Convert snake_case tool name to camelCase method name
     const methodName = toolName.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
 
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pendingRequests.delete(requestId);
-        reject(new Error(`Tool execution timeout for ${toolName} via internal client (window: ${resolvedWindowId})`));
-      }, timeoutMs);
-
-      this.pendingRequests.set(requestId, {
-        // Echo the resolved window/genome on every result so clients can detect
-        // and self-correct if a call landed on a different genome than intended.
-        resolve: result => resolve(this._attachRoutingMeta(result, resolvedWindowId, genomeName)),
-        reject,
-        timeout,
+    const result = await this._startDelegatedRequest(
+      this.pendingRequests,
+      requestId,
+      timeoutMs,
+      `Tool execution timeout for ${toolName} via internal client (window: ${resolvedWindowId})`,
+      {
+        owner: targetClient,
         toolName,
         parameters,
-      });
-
-      // Send tool execution request via WebSocket to target window's client
-      this.serverLog(
-        'info',
-        `📡 [MCP Server] Sending tool execution via WebSocket: ${toolName} -> ${methodName} (window: ${resolvedWindowId})`
-      );
-      targetClient.send(
-        JSON.stringify({
-          type: 'tool-execution',
-          requestId,
-          method: methodName,
-          toolName,
-          parameters,
-          clientId,
-          executionContext,
-        })
-      );
-    });
+        dispatch: () =>
+          targetClient.send(
+            JSON.stringify({
+              type: 'tool-execution',
+              requestId,
+              method: methodName,
+              toolName,
+              parameters,
+              clientId,
+              executionContext,
+            })
+          ),
+        cancelRemote: () => {
+          if (targetClient.readyState === 1) targetClient.send(JSON.stringify({ type: 'tool-cancel', requestId }));
+        },
+      }
+    );
+    return this._attachRoutingMeta(result, resolvedWindowId, genomeName);
   }
 
   async executeViaElectronIPC(toolName, parameters, clientId, targetWindowId, executionContext = null) {
@@ -1892,34 +2007,29 @@ class StandardClaudeMCPServer extends EventEmitter {
     // Convert snake_case tool name to camelCase method name
     const methodName = toolName.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
 
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pendingRequests.delete(requestId);
-        reject(new Error(`Tool execution timeout for ${toolName} (window: ${targetWindowId})`));
-      }, timeoutMs);
-
-      this.pendingRequests.set(requestId, {
-        // Echo the resolved window/genome on every result (see WS path).
-        resolve: result => resolve(this._attachRoutingMeta(result, resolvedWindowId, genomeName)),
-        reject,
-        timeout,
+    const result = await this._startDelegatedRequest(
+      this.pendingRequests,
+      requestId,
+      timeoutMs,
+      `Tool execution timeout for ${toolName} (window: ${targetWindowId})`,
+      {
+        owner: targetWindow.webContents,
         toolName,
         parameters,
-      });
-
-      // Send tool execution request to renderer process via IPC
-      this.serverLog(
-        'info',
-        `📡 [MCP Server] Sending tool execution via Electron IPC: ${toolName} -> ${methodName} (window: ${targetWindowId})`
-      );
-      targetWindow.webContents.send('mcp-tool-call', {
-        requestId,
-        method: methodName,
-        parameters,
-        clientId,
-        executionContext,
-      });
-    });
+        dispatch: () =>
+          targetWindow.webContents.send('mcp-tool-call', {
+            requestId,
+            method: methodName,
+            parameters,
+            clientId,
+            executionContext,
+          }),
+        cancelRemote: () => {
+          if (!targetWindow.isDestroyed()) targetWindow.webContents.send('mcp-tool-cancel', { requestId });
+        },
+      }
+    );
+    return this._attachRoutingMeta(result, resolvedWindowId, genomeName);
   }
 
   async executeViaClientBridge(toolName, parameters, clientId, executionContext = null) {
@@ -1934,27 +2044,20 @@ class StandardClaudeMCPServer extends EventEmitter {
     const requestId = `bridge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const timeoutMs = this._executionHopTimeoutMs(executionContext);
 
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        bridge.pendingRequests.delete(requestId);
-        reject(new Error(`Bridge tool execution timeout for ${toolName}`));
-      }, timeoutMs);
-
-      bridge.pendingRequests.set(requestId, {
-        resolve,
-        reject,
-        timeout,
+    return this._startDelegatedRequest(
+      bridge.pendingRequests,
+      requestId,
+      timeoutMs,
+      `Bridge tool execution timeout for ${toolName}`,
+      {
         toolName,
         parameters,
         executionContext,
-      });
-
-      // Send execution request to bridge
-      this.serverLog('info', `📡 [MCP Server] Sending tool execution via Bridge: ${toolName}`);
-
-      // The bridge client will poll for pending requests
-      bridge.lastActivity = Date.now();
-    });
+        dispatch: () => {
+          bridge.lastActivity = Date.now();
+        },
+      }
+    );
   }
 
   handleClientBridgeRegistration(req, res) {
@@ -2208,6 +2311,10 @@ class StandardClaudeMCPServer extends EventEmitter {
 
   async _cleanupResources() {
     // Reject request waiters before closing transports so callers do not hang.
+    for (const controller of this.httpToolRequests.values()) {
+      controller.abort(new Error('Server stopping'));
+    }
+    this.httpToolRequests.clear();
     for (const [, bridge] of this.clientBridges.entries()) {
       for (const [, request] of bridge.pendingRequests.entries()) {
         clearTimeout(request.timeout);
@@ -2217,7 +2324,9 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.clientBridges.clear();
     for (const [, pendingRequest] of this.pendingRequests) {
       clearTimeout(pendingRequest.timeout);
-      pendingRequest.reject(new Error('Server stopping'));
+      const error = new Error('Server stopping');
+      if (pendingRequest.cancel) pendingRequest.cancel(error);
+      else pendingRequest.reject(error);
     }
     this.pendingRequests.clear();
 

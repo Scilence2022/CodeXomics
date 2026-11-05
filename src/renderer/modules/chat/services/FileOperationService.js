@@ -228,6 +228,15 @@ class FileOperationService {
     );
   }
 
+  assertExportCanWrite(context) {
+    context?.signal?.throwIfAborted();
+    const deadline = context?.commitNotAfter ?? context?.requestDeadline;
+    if (Number.isFinite(deadline) && Date.now() >= deadline) {
+      throw new Error('The MCP request deadline elapsed before the export write began');
+    }
+    return deadline;
+  }
+
   /**
    * Single persistence path for every export tool.
    *
@@ -239,13 +248,15 @@ class FileOperationService {
    * summarised as a successful export to a file that was never written.
    */
   async saveExportContent(content, outputFilename, formatType, parameters = {}, toolName = '') {
+    const context = parameters.__executionContext;
+    this.assertExportCanWrite(context);
     if (this.shouldAutoSaveExport(parameters)) {
-      return await this.writeFileDirectly(content, outputFilename, formatType);
+      return await this.writeFileDirectly(content, outputFilename, formatType, context);
     }
 
     this.requireExplicitExportPathForBenchmark(toolName || formatType);
 
-    const writeResult = await this.showExportSaveDialog(content, outputFilename, formatType, 'text/plain');
+    const writeResult = await this.showExportSaveDialog(content, outputFilename, formatType, 'text/plain', context);
     if (writeResult?.canceled) {
       throw new Error('export canceled before a destination was chosen');
     }
@@ -861,7 +872,7 @@ class FileOperationService {
   }
 
   // 4. EXPORT HELPERS
-  async showExportSaveDialog(content, defaultFilename, formatType, mimeType = 'text/plain') {
+  async showExportSaveDialog(content, defaultFilename, formatType, mimeType = 'text/plain', context) {
     try {
       if (window.electronAPI?.showSaveDialog) {
         const extensionMap = {
@@ -883,7 +894,12 @@ class FileOperationService {
           filters: filters,
         });
         if (!result.canceled && result.filePath) {
-          const writeResult = await window.electronAPI.writeFile(result.filePath, content);
+          const deadline = this.assertExportCanWrite(context);
+          const writeResult = await window.electronAPI.writeFile(
+            result.filePath,
+            content,
+            ...(deadline ? [deadline] : [])
+          );
           if (writeResult.success) {
             if (this.chatManager.showNotification) {
               this.chatManager.showNotification(`${formatType} saved successfully`, 'success');
@@ -916,7 +932,7 @@ class FileOperationService {
     URL.revokeObjectURL(url);
   }
 
-  async writeFileDirectly(content, filename, formatType) {
+  async writeFileDirectly(content, filename, formatType, context) {
     try {
       // Resolve relative paths against current working directory
       let resolvedPath = filename;
@@ -930,7 +946,8 @@ class FileOperationService {
 
       const electronAPI = typeof window !== 'undefined' ? window.electronAPI : null;
       if (electronAPI?.writeFile) {
-        const result = await electronAPI.writeFile(resolvedPath, content);
+        const deadline = this.assertExportCanWrite(context);
+        const result = await electronAPI.writeFile(resolvedPath, content, ...(deadline ? [deadline] : []));
         if (!result?.success) {
           throw new Error(result?.error || `Failed to write ${formatType} to ${resolvedPath}`);
         }
