@@ -820,6 +820,29 @@ class TrackRenderer {
     return reads;
   }
 
+  getAlignmentCoverageRenderer() {
+    if (!this.alignmentCoverageRenderer) {
+      const CoverageRenderer =
+        typeof module !== 'undefined' && module.exports
+          ? require('./AlignmentCoverageRenderer')
+          : window.AlignmentCoverageRenderer;
+      this.alignmentCoverageRenderer = new CoverageRenderer(this);
+    }
+    return this.alignmentCoverageRenderer;
+  }
+
+  getBamDepthForViewport(...args) {
+    return this.getAlignmentCoverageRenderer().getBamDepthForViewport(...args);
+  }
+
+  createCoverageVisualization(...args) {
+    return this.getAlignmentCoverageRenderer().createCoverageVisualization(...args);
+  }
+
+  calculateCoverage(...args) {
+    return this.getAlignmentCoverageRenderer().calculateCoverage(...args);
+  }
+
   /**
    * Save header visibility state before track recreation
    */
@@ -4629,6 +4652,7 @@ class TrackRenderer {
       });
 
       const reads = await this.getReadsForViewport(chromosome, viewport, settings, bamFile);
+      const depth = await this.getBamDepthForViewport(chromosome, viewport, settings, bamFile);
 
       console.log(`📊 [TrackRenderer] BAM query result (content only):`, {
         readsFound: reads.length,
@@ -4641,7 +4665,7 @@ class TrackRenderer {
       const isSampled = sampledReads._samplingInfo !== undefined;
       this.updateSamplingDisplayBasedOnReadsCount(sampledReads.length, isSampled);
 
-      if (sampledReads.length === 0) {
+      if (sampledReads.length === 0 && !depth?.alignedBases.some(count => count > 0)) {
         // Try to provide helpful diagnostic information
         let diagnosticMessage = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
 
@@ -4673,7 +4697,7 @@ class TrackRenderer {
 
         if (showCoverage) {
           coverageHeight = parseInt(settings.coverageHeight) || 50;
-          this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
+          this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings, depth);
         }
 
         let referenceHeight = 0;
@@ -4840,6 +4864,7 @@ class TrackRenderer {
 
       console.log('🔧 [DEBUG] [createSingleReadsTrack] About to call BAM getRecordsForRange...');
       const reads = await this.getReadsForViewport(chromosome, viewport, settings, bamFile);
+      const depth = await this.getBamDepthForViewport(chromosome, viewport, settings, bamFile);
       console.log('🔧 [DEBUG] [createSingleReadsTrack] BAM getRecordsForRange completed, reads count:', reads.length);
 
       // Check the path we'll take based on reads count
@@ -4862,7 +4887,7 @@ class TrackRenderer {
       const isSampled = sampledReads._samplingInfo !== undefined;
       this.updateSamplingDisplayBasedOnReadsCount(sampledReads.length, isSampled, track);
 
-      if (sampledReads.length === 0) {
+      if (sampledReads.length === 0 && !depth?.alignedBases.some(count => count > 0)) {
         // Try to provide helpful diagnostic information
         let diagnosticMessage = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
 
@@ -4895,7 +4920,7 @@ class TrackRenderer {
 
         if (showCoverage) {
           coverageHeight = parseInt(settings.coverageHeight) || 50;
-          this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings);
+          this.createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings, depth);
         }
 
         const showReference = this.isReadsComponentVisible(settings, 'showReference', 'readsReference');
@@ -14269,141 +14294,6 @@ This action cannot be undone.`;
   }
 
   /**
-   * Create coverage visualization above reads
-   */
-  createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings) {
-    // Calculate coverage data
-    const coverageData = this.calculateCoverage(reads, viewport.start, viewport.end);
-    const maxCoverage = Math.max(...coverageData, 1);
-    const coverageLabel = reads._sourceSamplingInfo ? 'Sampled read overlaps per bin' : 'Read overlaps per bin';
-
-    // Create coverage container
-    const coverageContainer = document.createElement('div');
-    coverageContainer.className = 'coverage-visualization';
-    coverageContainer.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: ${coverageHeight}px;
-            background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
-            border-bottom: 1px solid #dee2e6;
-            margin-bottom: 0;
-            overflow: visible;
-            z-index: 120;
-        `;
-
-    // Create SVG for coverage visualization
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', coverageHeight);
-    svg.setAttribute('viewBox', `0 0 100 ${coverageHeight}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.setAttribute('class', 'coverage-svg');
-    svg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
-
-    // Create coverage path
-    let pathData = `M 0 ${coverageHeight}`;
-    for (let i = 0; i < coverageData.length; i++) {
-      const x = (i / (coverageData.length - 1)) * 100;
-      const y = coverageHeight - (coverageData[i] / maxCoverage) * (coverageHeight - 5);
-      pathData += ` L ${x} ${y}`;
-    }
-    pathData += ` L 100 ${coverageHeight} Z`;
-
-    const coveragePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    coveragePath.setAttribute('d', pathData);
-    coveragePath.setAttribute('fill', settings.coverageColor || '#4a90e2');
-    coveragePath.setAttribute('fill-opacity', '0.6');
-    coveragePath.setAttribute('stroke', settings.coverageStrokeColor || '#2c5aa0');
-    coveragePath.setAttribute('stroke-width', '1');
-    coveragePath.setAttribute('vector-effect', 'non-scaling-stroke');
-
-    svg.appendChild(coveragePath);
-    coverageContainer.appendChild(svg);
-
-    // Add coverage statistics
-    const avgCoverage = (coverageData.reduce((sum, val) => sum + val, 0) / coverageData.length).toFixed(1);
-    const statsDiv = document.createElement('div');
-    statsDiv.className = 'coverage-stats';
-    statsDiv.style.cssText = `
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            background: rgba(255,255,255,0.9);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            color: #666;
-            border: 1px solid #ddd;
-        `;
-    statsDiv.textContent = `${coverageLabel} · Max: ${maxCoverage} | Avg: ${avgCoverage}`;
-    coverageContainer.appendChild(statsDiv);
-
-    this.addCoverageTooltip(coverageContainer, svg, coverageData, viewport, maxCoverage, avgCoverage, coverageLabel);
-    trackContent.appendChild(coverageContainer);
-  }
-
-  /**
-   * Add position-specific hover information to the aligned-reads coverage band.
-   */
-  addCoverageTooltip(container, svg, coverageData, viewport, maxCoverage, avgCoverage, coverageLabel) {
-    if (!coverageData.length) return;
-
-    const tooltip = document.createElement('div');
-    tooltip.className = 'coverage-tooltip track-data-tooltip';
-    container.appendChild(tooltip);
-
-    svg.addEventListener('mousemove', e => {
-      const rect = svg.getBoundingClientRect();
-      if (rect.width <= 0) return;
-
-      const relativeX = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
-      const ratio = relativeX / rect.width;
-      const index = Math.min(Math.floor(ratio * coverageData.length), coverageData.length - 1);
-      const range = viewport.end - viewport.start;
-      const binSize = range / coverageData.length;
-      const binStart = Math.floor(viewport.start + index * binSize);
-      const binEnd = Math.max(binStart, Math.min(viewport.end - 1, Math.ceil(binStart + binSize) - 1));
-      const position = Math.min(viewport.end - 1, Math.floor(viewport.start + ratio * range));
-      const sequenceLength = this.getSequenceLength();
-      const toDisplayPosition = sourcePosition => {
-        const normalized =
-          this.isCircularModeEnabled() && sequenceLength > 0
-            ? this.normalizeCircularPosition(sourcePosition, sequenceLength)
-            : sourcePosition;
-        return normalized + 1;
-      };
-
-      tooltip.innerHTML = `
-                <div class="track-data-tooltip__title">Position: ${toDisplayPosition(position).toLocaleString()}</div>
-                <div><span class="track-data-tooltip__label">${coverageLabel}:</span> ${coverageData[index]}</div>
-                <div class="track-data-tooltip__meta">
-                    Bin: ${toDisplayPosition(binStart).toLocaleString()}-${toDisplayPosition(binEnd).toLocaleString()}<br>
-                    Max: ${maxCoverage} · Avg: ${avgCoverage}
-                </div>
-            `;
-      tooltip.style.display = 'block';
-
-      const containerRect = container.getBoundingClientRect();
-      const tooltipWidth = tooltip.offsetWidth || 190;
-      const tooltipHeight = tooltip.offsetHeight || 70;
-      const tooltipX = Math.min(Math.max(relativeX + 10, 8), Math.max(8, containerRect.width - tooltipWidth - 8));
-      const tooltipY = Math.max(
-        6,
-        Math.min(e.clientY - containerRect.top - tooltipHeight - 8, containerRect.height - tooltipHeight - 6)
-      );
-
-      tooltip.style.left = `${tooltipX}px`;
-      tooltip.style.top = `${tooltipY}px`;
-    });
-
-    svg.addEventListener('mouseleave', () => {
-      tooltip.style.display = 'none';
-    });
-  }
-
-  /**
    * Create reference sequence visualization above reads (fixed position like coverage)
    * Using Single-line sequence track renderer for better performance and display quality
    */
@@ -14958,37 +14848,6 @@ This action cannot be undone.`;
   /**
    * Get color for DNA base - using standard biochemical color scheme
    */
-
-  /**
-   * Calculate coverage data for visualization
-   */
-  calculateCoverage(reads, start, end) {
-    const range = end - start;
-    const binSize = Math.max(1, Math.floor(range / 1000)); // 1000 bins max
-    const numBins = Math.ceil(range / binSize);
-    const coverage = new Array(numBins).fill(0);
-
-    // Each read changes the coverage at just two boundaries. A prefix
-    // sum then restores the existing inclusive bin counts.
-    reads.forEach(read => {
-      const readStart = Math.max(read.start, start);
-      const readEnd = Math.min(read.end, end);
-
-      if (readStart <= readEnd) {
-        const startBin = Math.floor((readStart - start) / binSize);
-        const endBin = Math.min(Math.floor((readEnd - start) / binSize), numBins - 1);
-        if (startBin <= endBin) {
-          coverage[startBin]++;
-          if (endBin + 1 < numBins) coverage[endBin + 1]--;
-        }
-      }
-    });
-
-    for (let bin = 1; bin < numBins; bin++) {
-      coverage[bin] += coverage[bin - 1];
-    }
-    return coverage;
-  }
 
   /**
    * Create reference sequence visualization between coverage and reads

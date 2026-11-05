@@ -2463,6 +2463,14 @@ function registerIpcHandlers(deps) {
     }
   });
 
+  ipcMain.handle(
+    'bam-reader:get-depth-for-range',
+    async (event, readerId, chromosome, start, end, viewport, settings = {}) => {
+      const reader = getOwnedBamReader(event, readerId);
+      return reader.getDepthForRange(chromosome, start, end, viewport, settings);
+    }
+  );
+
   ipcMain.handle('bam-reader:destroy', async (event, readerId) => {
     try {
       const reader = getOwnedBamReader(event, readerId);

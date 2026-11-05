@@ -831,6 +831,79 @@ class BamReader {
    */
 
   /**
+   * Accumulate aligned bases in viewport bins without converting or sampling
+   * the records used for the reads display. All coordinates are half-open.
+   */
+  async getDepthForRange(chromosome, start, end, viewport, settings = {}) {
+    if (this.usesIpcBackend) {
+      return window.electronAPI.bamReader.getDepthForRange(this.backendId, chromosome, start, end, viewport, settings);
+    }
+    if (!this.isInitialized || !this.bamFile) throw new Error('BAM reader is not initialized');
+    const { start: viewStart, end: viewEnd, offset = 0 } = viewport;
+    if (
+      ![start, end, viewStart, viewEnd, offset].every(Number.isSafeInteger) ||
+      start < 0 ||
+      end <= start ||
+      viewEnd <= viewStart ||
+      start + offset < viewStart ||
+      end + offset > viewEnd
+    ) {
+      throw new Error('Invalid BAM depth range');
+    }
+
+    const binSize = Math.ceil((viewEnd - viewStart) / 1000);
+    const binCount = Math.ceil((viewEnd - viewStart) / binSize);
+    const alignedBases = new Array(binCount).fill(0);
+    const wholeBins = new Float64Array(binCount);
+    const addSpan = (left, right) => {
+      const from = Math.max(start, left) + offset - viewStart;
+      const to = Math.min(end, right) + offset - viewStart;
+      if (to <= from) return;
+      const first = Math.floor(from / binSize);
+      const last = Math.floor((to - 1) / binSize);
+      if (first === last) {
+        alignedBases[first] += to - from;
+        return;
+      }
+      alignedBases[first] += (first + 1) * binSize - from;
+      alignedBases[last] += to - last * binSize;
+      wholeBins[first + 1]++;
+      wholeBins[last]--;
+    };
+
+    const refs = settings.ignoreChromosome ? this.references.map(ref => ref.name) : [chromosome];
+    for (const reference of refs) {
+      for await (const records of this.bamFile.streamRecordsForRange(reference, start, end)) {
+        for (const record of records) {
+          if (
+            record.flags & 4 ||
+            (settings.showSecondary === false && record.flags & 256) ||
+            (settings.showSupplementary === false && record.flags & 2048) ||
+            (record.mq ?? record.mapq ?? 0) < (settings.minMappingQuality || 0)
+          ) {
+            continue;
+          }
+
+          let position = record.start;
+          const cigar = record.CIGAR || record.cigar || '';
+          for (const [, length, operation] of cigar.matchAll(/(\d+)([MIDNSHP=X])/g)) {
+            if (!'MDN=X'.includes(operation)) continue;
+            const next = position + Number(length);
+            if ('M=X'.includes(operation)) addSpan(position, next);
+            position = next;
+          }
+        }
+      }
+    }
+    let whole = 0;
+    for (let index = 0; index < binCount; index++) {
+      whole += wholeBins[index];
+      alignedBases[index] += whole * binSize;
+    }
+    return { binSize, alignedBases };
+  }
+
+  /**
    * Read BAM records for a specific genomic region using @gmod/bam directly
    * @param {string} chromosome - Chromosome name
    * @param {number} start - Start position (0-based)
@@ -1024,7 +1097,7 @@ class BamReader {
 
         // Divide into position-based strata for more uniform sampling
         const NUM_STRATA = 100; // Divide region into 100 strata
-        const strataSize = Math.ceil(positionRange / NUM_STRATA);
+        const strataSize = Math.max(1, Math.ceil(positionRange / NUM_STRATA));
         const strata = new Array(NUM_STRATA).fill(null).map(() => []);
 
         // Assign records to strata based on position
