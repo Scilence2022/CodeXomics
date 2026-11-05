@@ -70,6 +70,18 @@ class ConversationTranscriptService {
     return message;
   }
 
+  /**
+   * The user message that opens the turn in progress. The round loop also
+   * writes user-role messages of its own (execution state, protocol recovery,
+   * tool feedback), so "the last user message" is not the turn boundary; this
+   * marker is. Provider adapters replay reasoning state only after it.
+   */
+  createTurnStartMessage(content) {
+    const message = { role: 'user', content };
+    Object.defineProperty(message, '__codexomicsTurnStart', { value: true, enumerable: false });
+    return message;
+  }
+
   attachToolExecutionRecords(message, executions) {
     if (!message || !Array.isArray(executions) || executions.length === 0) return message;
     Object.defineProperty(message, '__codexomicsToolExecutions', {
@@ -96,8 +108,40 @@ class ConversationTranscriptService {
     return callIds.length === new Set(callIds).size && callIds.every(id => resultIds.has(id));
   }
 
-  buildAssistantToolCallMessage(assistantText, toolsToExecute) {
-    return {
+  /**
+   * Attach the provider's reasoning state for a tool-call turn: Anthropic
+   * thinking blocks with their signatures, Gemini thought signatures, or the
+   * `reasoning_content` DeepSeek wants back within a turn. Providers reject a
+   * tool loop whose thinking state was dropped, so it rides on the canonical
+   * assistant message for the provider adapters to restore. Non-enumerable, like
+   * the execution ledger, so an OpenAI-shaped payload never serializes it.
+   */
+  attachReasoningReplay(message, reasoningReplay) {
+    if (!message || !reasoningReplay || typeof reasoningReplay !== 'object') return message;
+    Object.defineProperty(message, '__codexomicsReasoning', {
+      value: reasoningReplay,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+    return message;
+  }
+
+  getMessageReasoningReplay(message) {
+    const state = message?.__codexomicsReasoning;
+    return state && typeof state === 'object' ? state : null;
+  }
+
+  clearReasoningReplay(message) {
+    if (message && Object.prototype.hasOwnProperty.call(message, '__codexomicsReasoning')) {
+      delete message.__codexomicsReasoning;
+      return true;
+    }
+    return false;
+  }
+
+  buildAssistantToolCallMessage(assistantText, toolsToExecute, reasoningReplay = null) {
+    const message = {
       role: 'assistant',
       content: assistantText && assistantText.trim() ? assistantText : null,
       tool_calls: toolsToExecute.map(tool => ({
@@ -109,6 +153,7 @@ class ConversationTranscriptService {
         },
       })),
     };
+    return this.attachReasoningReplay(message, reasoningReplay);
   }
 
   buildToolResultMessage(result, trailingGuidance = '') {
@@ -148,10 +193,18 @@ class ConversationTranscriptService {
   }
 
   appendToolRoundToHistory(conversationHistory, options = {}) {
-    const { assistantText = '', toolsToExecute = [], toolResults = [], queuedResearchTask = false } = options;
+    const {
+      assistantText = '',
+      toolsToExecute = [],
+      toolResults = [],
+      queuedResearchTask = false,
+      reasoningReplay = null,
+    } = options;
 
     if (this.canReplayToolRoundNatively(toolsToExecute, toolResults)) {
-      conversationHistory.push(this.buildAssistantToolCallMessage(assistantText, toolsToExecute));
+      // Reasoning state is bound to the native turn it came from; the prose
+      // fallback below has no turn to bind it to, so it is dropped there.
+      conversationHistory.push(this.buildAssistantToolCallMessage(assistantText, toolsToExecute, reasoningReplay));
       const guidance = this.buildToolRoundGuidance(queuedResearchTask);
       const resultsByCallId = new Map(toolResults.map(result => [result.tool_call_id, result]));
       toolsToExecute.forEach((tool, index) => {
@@ -218,8 +271,11 @@ class ConversationTranscriptService {
     for (const call of message?.tool_calls || []) {
       text += `${call?.function?.name || ''}${call?.function?.arguments || ''}`;
     }
+    // Replayed reasoning (thinking text, signatures) is sent too, so it counts.
+    const reasoning = this.getMessageReasoningReplay(message);
+    const reasoningTokens = reasoning ? this.estimateTextTokens(JSON.stringify(reasoning)) : 0;
     // Per-message protocol overhead: role, ids, and framing tokens.
-    return this.estimateTextTokens(text) + 8;
+    return this.estimateTextTokens(text) + reasoningTokens + 8;
   }
 
   estimateConversationTokens(conversationHistory = []) {
@@ -305,6 +361,7 @@ class ConversationTranscriptService {
       return false;
     };
 
+    let firstEditedIndex = Infinity;
     for (let index = 0; index < conversationHistory.length && used > budget; index++) {
       if (isProtected(index)) continue;
       const message = conversationHistory[index];
@@ -313,6 +370,7 @@ class ConversationTranscriptService {
       if (!this.compactResultMessageContent(message)) continue;
       used -= before - this.estimateMessageTokens(message);
       report.compactedResults++;
+      firstEditedIndex = Math.min(firstEditedIndex, index);
     }
 
     if (used > budget) {
@@ -329,12 +387,25 @@ class ConversationTranscriptService {
           used -= this.estimateMessageTokens(message);
           Object.defineProperty(message, '__codexomicsDropped', { value: true, enumerable: false });
           report.droppedMessages++;
+          firstEditedIndex = Math.min(firstEditedIndex, index);
         }
       }
       if (report.droppedMessages > 0) {
         for (let index = conversationHistory.length - 1; index >= 0; index--) {
           if (conversationHistory[index]?.__codexomicsDropped) conversationHistory.splice(index, 1);
         }
+      }
+    }
+
+    // A thinking block is only valid against the exact history it was produced
+    // from. Anthropic rejects (or silently ignores) one replayed after an earlier
+    // turn was edited, so drop reasoning state from every message after the
+    // first edit. After the splice, that index is the first surviving message
+    // past the edit, which is where invalidation must start.
+    if (Number.isFinite(firstEditedIndex)) {
+      report.clearedReasoning = 0;
+      for (let index = firstEditedIndex; index < conversationHistory.length; index++) {
+        if (this.clearReasoningReplay(conversationHistory[index])) report.clearedReasoning++;
       }
     }
 

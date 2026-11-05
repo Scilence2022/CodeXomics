@@ -5985,6 +5985,9 @@ class ChatManager {
               toolsToExecute,
               toolResults,
               queuedResearchTask,
+              // Thinking blocks / thought signatures / reasoning_content the
+              // provider needs back on the next round of this turn.
+              reasoningReplay: this.llmConfigManager?.extractReasoningReplayState?.(response) || null,
             });
             console.log(`Tool round replayed into history using the ${replayProtocol} protocol`);
 
@@ -6631,7 +6634,7 @@ class ChatManager {
     if (this.contextModeEnabled) {
       console.log('Context mode enabled: sending only current message');
       // Add only the new user message
-      history.push({ role: 'user', content: newMessage });
+      history.push(this.getTranscriptService().createTurnStartMessage(newMessage));
       return history;
     }
 
@@ -6671,7 +6674,7 @@ class ChatManager {
     }
 
     // Add the new user message
-    history.push({ role: 'user', content: newMessage });
+    history.push(this.getTranscriptService().createTurnStartMessage(newMessage));
 
     return history;
   }

@@ -18,6 +18,20 @@ const DEFAULT_LLM_REQUEST_TIMEOUT_MS = 180000;
 const DEFAULT_LLM_TEMPERATURE = 0.3;
 
 /**
+ * Openings of user-role messages the ChatBox round loop writes itself — the
+ * prose tool-result envelope (ConversationTranscriptService) and the execution
+ * state digest (ChatManager.buildToolExecutionStateMessage). They are not user
+ * turns; only a transcript without a turn-start marker needs this list.
+ */
+const LOOP_MESSAGE_PREFIXES = ['[CodeXomics automated tool-execution record.', '[Tool Execution State]'];
+
+/**
+ * The value Google documents for a Gemini 3 function call whose real thought
+ * signature is unavailable, such as a turn another model produced.
+ */
+const GOOGLE_THOUGHT_SIGNATURE_BYPASS = 'skip_thought_signature_validator';
+
+/**
  * Providers that speak the OpenAI /chat/completions dialect, and the few ways
  * they genuinely differ. Everything absent from an entry — bearer auth, the
  * error envelope, retry on a retryable status, response normalization — is
@@ -27,7 +41,9 @@ const DEFAULT_LLM_TEMPERATURE = 0.3;
  */
 const OPENAI_COMPATIBLE_PROVIDERS = {
   openai: { label: 'OpenAI', historyMethod: 'sendOpenAIMessageWithHistory' },
-  deepseek: { label: 'DeepSeek', historyMethod: 'sendDeepSeekMessageWithHistory' },
+  // DeepSeek's thinking mode wants the turn's reasoning_content back on each
+  // assistant tool-call message until the next user message.
+  deepseek: { label: 'DeepSeek', historyMethod: 'sendDeepSeekMessageWithHistory', replayReasoningContent: true },
   siliconflow: { label: 'SiliconFlow', historyMethod: 'sendSiliconFlowMessageWithHistory' },
   // OpenRouter rejects an unavailable model with 403/404 rather than a body we
   // could act on, so an unavailable model is retried once against a fallback.
@@ -2728,10 +2744,10 @@ class LLMConfigManager {
     };
   }
 
-  buildOpenAICompatiblePayload(provider, conversationHistory, options = {}, extra = {}) {
+  buildOpenAICompatiblePayload(provider, conversationHistory, options = {}, extra = {}, providerKey = null) {
     const payload = {
       model: provider.model,
-      messages: conversationHistory,
+      messages: this.toOpenAICompatibleMessages(providerKey, conversationHistory, options),
       max_tokens: this.getMaxTokens(provider),
       temperature: this.getRequestTemperature(options),
       ...extra,
@@ -2748,6 +2764,178 @@ class LLMConfigManager {
     return payload;
   }
 
+  // ==========================================
+  // Reasoning replay across a tool loop
+  // ==========================================
+
+  /**
+   * Index of the first message of the turn in progress. Reasoning state is only
+   * ever replayed inside this span: providers want it back within a turn, and
+   * some reject it from earlier ones.
+   *
+   * The ChatBox marks the user message that opened the turn
+   * (ConversationTranscriptService.createTurnStartMessage), because the round
+   * loop writes user-role messages of its own. Without the marker, the last user
+   * message that is not one of those loop messages is the boundary.
+   */
+  getCurrentTurnStart(conversationHistory = []) {
+    for (let index = conversationHistory.length - 1; index >= 0; index--) {
+      if (conversationHistory[index]?.__codexomicsTurnStart === true) return index + 1;
+    }
+    for (let index = conversationHistory.length - 1; index >= 0; index--) {
+      const message = conversationHistory[index];
+      if (message?.role !== 'user' || message.__codexomicsToolFeedback === true) continue;
+      const content = typeof message.content === 'string' ? message.content : '';
+      if (LOOP_MESSAGE_PREFIXES.some(prefix => content.startsWith(prefix))) continue;
+      return index + 1;
+    }
+    return 0;
+  }
+
+  /**
+   * The reasoning state ConversationTranscriptService attached to an assistant
+   * tool-call message, when it came from the given provider family.
+   * @param {object} message
+   * @param {'anthropic'|'google'|'openai-compatible'} family
+   */
+  getReasoningReplay(message, family) {
+    const state = message?.__codexomicsReasoning;
+    return state && typeof state === 'object' && state.family === family ? state : null;
+  }
+
+  historyHasReasoningReplay(conversationHistory = [], family) {
+    const turnStart = this.getCurrentTurnStart(conversationHistory);
+    return conversationHistory.slice(turnStart).some(message => this.getReasoningReplay(message, family));
+  }
+
+  /**
+   * Pull the provider-native reasoning state out of a normalized tool-call
+   * response, for the transcript to carry into the next round:
+   * - Anthropic: `thinking` / `redacted_thinking` blocks with their signatures.
+   * - Gemini: the `thoughtSignature` on each functionCall part.
+   * - OpenAI-compatible: the raw `reasoning_content` string.
+   * Returns null when there is nothing a provider needs back.
+   */
+  extractReasoningReplayState(response) {
+    if (!response || typeof response !== 'object') return null;
+    const provider = response.provider;
+
+    if (provider === 'anthropic' && Array.isArray(response.content)) {
+      const blocks = [];
+      for (const block of response.content) {
+        if (block?.type === 'thinking' && typeof block.signature === 'string' && block.signature) {
+          // The text may be empty (display "omitted"); the signature is what counts.
+          blocks.push({
+            type: 'thinking',
+            thinking: typeof block.thinking === 'string' ? block.thinking : '',
+            signature: block.signature,
+          });
+        } else if (block?.type === 'redacted_thinking' && typeof block.data === 'string' && block.data) {
+          blocks.push({ type: 'redacted_thinking', data: block.data });
+        }
+      }
+      return blocks.length > 0 ? { family: 'anthropic', blocks } : null;
+    }
+
+    if (provider === 'google') {
+      const parts = Array.isArray(response.content?.parts) ? response.content.parts : [];
+      const functionCalls = parts
+        .filter(part => part?.functionCall)
+        .map(part => ({
+          name: part.functionCall.name,
+          thoughtSignature: typeof part.thoughtSignature === 'string' ? part.thoughtSignature : null,
+        }));
+      return functionCalls.some(call => call.thoughtSignature) ? { family: 'google', functionCalls } : null;
+    }
+
+    if (OPENAI_COMPATIBLE_PROVIDERS[provider]) {
+      const reasoning = response.reasoning_content;
+      return typeof reasoning === 'string' && reasoning
+        ? { family: 'openai-compatible', provider, reasoningContent: reasoning }
+        : null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Run a provider request, and if the provider rejects the replayed reasoning
+   * state (a signature from an edited history, a model that does not accept
+   * reasoning_content), run it once more without it rather than failing the
+   * turn. Losing the thinking costs the model some context; failing costs the
+   * user the answer.
+   */
+  async withReasoningReplayFallback(family, conversationHistory, options, send) {
+    try {
+      return await send(options);
+    } catch (error) {
+      const message = String(error?.message || '');
+      const rejectedReplay =
+        !options?.omitReasoningReplay &&
+        error?.status === 400 &&
+        /thinking|signature|reasoning/i.test(message) &&
+        this.historyHasReasoningReplay(conversationHistory, family);
+      if (!rejectedReplay) throw error;
+      console.warn(`[LLM] The provider rejected the replayed reasoning state; retrying without it: ${message}`);
+      options?.onStreamReset?.();
+      return await send({ ...options, omitReasoningReplay: true });
+    }
+  }
+
+  /**
+   * The canonical transcript as an OpenAI-compatible provider receives it. For a
+   * provider that wants reasoning back within a turn (DeepSeek), the turn's
+   * assistant tool-call messages gain `reasoning_content`; every other provider
+   * gets the transcript unchanged, as the same array.
+   */
+  toOpenAICompatibleMessages(providerKey, conversationHistory = [], options = {}) {
+    const spec = OPENAI_COMPATIBLE_PROVIDERS[providerKey];
+    if (!spec?.replayReasoningContent || options.omitReasoningReplay) return conversationHistory;
+    const turnStart = this.getCurrentTurnStart(conversationHistory);
+    let changed = false;
+    const messages = conversationHistory.map((message, index) => {
+      if (index < turnStart || message?.role !== 'assistant') return message;
+      const replay = this.getReasoningReplay(message, 'openai-compatible');
+      if (!replay || replay.provider !== providerKey) return message;
+      changed = true;
+      return { ...message, reasoning_content: replay.reasoningContent };
+    });
+    return changed ? messages : conversationHistory;
+  }
+
+  /** Gemini 3 and later validate thought signatures on function calls. */
+  requiresGoogleThoughtSignatures(model) {
+    const match = /gemini-(\d+)/i.exec(String(model || ''));
+    return Boolean(match) && Number(match[1]) >= 3;
+  }
+
+  /**
+   * Put each function call's thought signature back on the part it came from,
+   * matched by name in order. Gemini 3 rejects a current-turn function call
+   * whose step carries no signature at all; when the real one is gone (another
+   * provider produced the round, or the replay was refused) the first call of
+   * the step gets the validator bypass value Google documents for that case.
+   */
+  applyGoogleThoughtSignatures(message, functionCallParts, options = {}) {
+    const replay = options.omitReasoningReplay ? null : this.getReasoningReplay(message, 'google');
+    const pending = (replay?.functionCalls || []).filter(call => call.thoughtSignature).map(call => ({ ...call }));
+    for (const part of functionCallParts) {
+      const matchIndex = pending.findIndex(call => call.name === part.functionCall.name);
+      if (matchIndex === -1) continue;
+      part.thoughtSignature = pending[matchIndex].thoughtSignature;
+      pending.splice(matchIndex, 1);
+    }
+    // A signature whose call was not replayed (the loop rejected that call)
+    // still belongs to this step; the first replayed call carries it.
+    if (pending.length > 0 && functionCallParts.length > 0 && !functionCallParts[0].thoughtSignature) {
+      functionCallParts[0].thoughtSignature = pending[0].thoughtSignature;
+    }
+    const hasSignature = functionCallParts.some(part => part.thoughtSignature);
+    if (!hasSignature && functionCallParts.length > 0 && this.requiresGoogleThoughtSignatures(options.model)) {
+      functionCallParts[0].thoughtSignature = GOOGLE_THOUGHT_SIGNATURE_BYPASS;
+    }
+  }
+
   /**
    * Translate the canonical transcript into Anthropic content blocks.
    *
@@ -2759,9 +2947,10 @@ class LLMConfigManager {
    * @param {Array<object>} conversationHistory
    * @returns {Array<object>} Anthropic messages (system excluded)
    */
-  toAnthropicMessages(conversationHistory = []) {
+  toAnthropicMessages(conversationHistory = [], options = {}) {
     const messages = [];
     let pendingToolResults = null;
+    const turnStart = options.omitReasoningReplay ? Infinity : this.getCurrentTurnStart(conversationHistory);
 
     const flushToolResults = () => {
       if (pendingToolResults) {
@@ -2770,7 +2959,7 @@ class LLMConfigManager {
       }
     };
 
-    for (const message of conversationHistory) {
+    for (const [index, message] of conversationHistory.entries()) {
       if (message.role === 'system') continue;
 
       if (message.role === 'tool') {
@@ -2787,7 +2976,10 @@ class LLMConfigManager {
       flushToolResults();
 
       if (message.role === 'assistant' && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-        const blocks = [];
+        // Thinking blocks go back first and byte-for-byte: Anthropic verifies
+        // the signature, and a tool loop with thinking on needs them returned.
+        const replay = index >= turnStart ? this.getReasoningReplay(message, 'anthropic') : null;
+        const blocks = replay ? replay.blocks.map(block => ({ ...block })) : [];
         if (typeof message.content === 'string' && message.content.trim()) {
           blocks.push({ type: 'text', text: message.content });
         }
@@ -2817,9 +3009,10 @@ class LLMConfigManager {
    * @param {Array<object>} conversationHistory
    * @returns {Array<object>} Gemini contents (system excluded)
    */
-  toGoogleContents(conversationHistory = []) {
+  toGoogleContents(conversationHistory = [], options = {}) {
     const contents = [];
     let pendingResponses = null;
+    const turnStart = this.getCurrentTurnStart(conversationHistory);
 
     const flushResponses = () => {
       if (pendingResponses) {
@@ -2828,7 +3021,7 @@ class LLMConfigManager {
       }
     };
 
-    for (const message of conversationHistory) {
+    for (const [index, message] of conversationHistory.entries()) {
       if (message.role === 'system') continue;
 
       if (message.role === 'tool') {
@@ -2851,11 +3044,11 @@ class LLMConfigManager {
         if (typeof message.content === 'string' && message.content.trim()) {
           parts.push({ text: message.content });
         }
-        for (const call of message.tool_calls) {
-          parts.push({
-            functionCall: { name: call.function?.name, args: this.parseToolArguments(call.function?.arguments) },
-          });
-        }
+        const functionCallParts = message.tool_calls.map(call => ({
+          functionCall: { name: call.function?.name, args: this.parseToolArguments(call.function?.arguments) },
+        }));
+        if (index >= turnStart) this.applyGoogleThoughtSignatures(message, functionCallParts, options);
+        parts.push(...functionCallParts);
         contents.push({ role: 'model', parts });
         continue;
       }
@@ -3105,7 +3298,7 @@ class LLMConfigManager {
         this.buildChatCompletionsHeaders(providerKey, provider),
         providerKey,
         provider.model,
-        this.buildOpenAICompatiblePayload(provider, conversationHistory, options, { stream: true }),
+        this.buildOpenAICompatiblePayload(provider, conversationHistory, options, { stream: true }, providerKey),
         options,
         'streamOpenAICompatible'
       );
@@ -3123,27 +3316,12 @@ class LLMConfigManager {
     const providerLabel = provider?.name || 'Anthropic';
 
     try {
-      const systemMessage = conversationHistory.find(msg => msg.role === 'system');
-      const payload = {
-        model: provider.model,
-        max_tokens: this.getMaxTokens(provider),
-        temperature: this.getRequestTemperature(options),
-        messages: this.toAnthropicMessages(conversationHistory),
-        stream: true,
-      };
-      if (systemMessage) payload.system = systemMessage.content;
-      const anthropicTools = this.buildAnthropicTools(options);
-      if (anthropicTools.length > 0) {
-        payload.tools = anthropicTools;
-        payload.tool_choice = { type: options.toolChoice || 'auto' };
-      }
-
       const data = await this.requestHistoryStream(
         `${provider.baseUrl}/v1/messages`,
         this.buildAnthropicHeaders(provider),
         'anthropic',
         provider.model,
-        payload,
+        this.buildAnthropicPayload(provider, conversationHistory, options, { stream: true }),
         options,
         'streamAnthropic'
       );
@@ -3160,25 +3338,6 @@ class LLMConfigManager {
     const providerLabel = provider?.name || 'Google';
 
     try {
-      const systemMessage = conversationHistory.find(msg => msg.role === 'system');
-      const contents = this.toGoogleContents(conversationHistory);
-
-      const payload = {
-        contents,
-        generationConfig: {
-          maxOutputTokens: this.getMaxTokens(provider),
-          temperature: this.getRequestTemperature(options),
-        },
-      };
-      if (systemMessage?.content) {
-        payload.systemInstruction = { parts: [{ text: systemMessage.content }] };
-      }
-      const functionDeclarations = this.buildGoogleFunctionDeclarations(options);
-      if (functionDeclarations.length > 0) {
-        payload.tools = [{ functionDeclarations }];
-        payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
-      }
-
       const apiUrl = `${provider.baseUrl}/v1beta/models/${provider.model}:streamGenerateContent?alt=sse`;
 
       const data = await this.requestHistoryStream(
@@ -3186,7 +3345,7 @@ class LLMConfigManager {
         this.buildGoogleHeaders(provider),
         'google',
         provider.model,
-        payload,
+        this.buildGooglePayload(provider, conversationHistory, options),
         options,
         'streamGoogle'
       );
@@ -3194,6 +3353,51 @@ class LLMConfigManager {
     } catch (error) {
       return this.handleStreamFailure(error, providerLabel, options);
     }
+  }
+
+  /**
+   * Anthropic Messages payload, shared by the streaming and plain requests so
+   * the two cannot drift.
+   */
+  buildAnthropicPayload(provider, conversationHistory, options = {}, extra = {}) {
+    const systemMessage = conversationHistory.find(msg => msg.role === 'system');
+    const payload = {
+      model: provider.model,
+      max_tokens: this.getMaxTokens(provider),
+      temperature: this.getRequestTemperature(options),
+      messages: this.toAnthropicMessages(conversationHistory, options),
+      ...extra,
+    };
+    if (systemMessage) payload.system = systemMessage.content;
+    const anthropicTools = this.buildAnthropicTools(options);
+    if (anthropicTools.length > 0) {
+      payload.tools = anthropicTools;
+      payload.tool_choice = { type: options.toolChoice || 'auto' };
+    }
+    return payload;
+  }
+
+  /** Gemini generateContent payload, shared by the streaming and plain requests. */
+  buildGooglePayload(provider, conversationHistory, options = {}) {
+    const systemMessage = conversationHistory.find(msg => msg.role === 'system');
+    const payload = {
+      contents: this.toGoogleContents(conversationHistory, { ...options, model: provider.model }),
+      generationConfig: {
+        maxOutputTokens: this.getMaxTokens(provider),
+        temperature: this.getRequestTemperature(options),
+      },
+    };
+    // systemInstruction carries the system prompt and tool guidance; Gemini has
+    // no system role in contents.
+    if (systemMessage?.content) {
+      payload.systemInstruction = { parts: [{ text: systemMessage.content }] };
+    }
+    const functionDeclarations = this.buildGoogleFunctionDeclarations(options);
+    if (functionDeclarations.length > 0) {
+      payload.tools = [{ functionDeclarations }];
+      payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
+    }
+    return payload;
   }
 
   /**
@@ -3218,6 +3422,12 @@ class LLMConfigManager {
    * @param {object} options request options (signal, tools, fallback flags, ...)
    */
   async sendOpenAICompatibleMessageWithHistory(providerKey, provider, conversationHistory, options = {}) {
+    return this.withReasoningReplayFallback('openai-compatible', conversationHistory, options, requestOptions =>
+      this.sendOpenAICompatibleRequest(providerKey, provider, conversationHistory, requestOptions)
+    );
+  }
+
+  async sendOpenAICompatibleRequest(providerKey, provider, conversationHistory, options = {}) {
     const spec = OPENAI_COMPATIBLE_PROVIDERS[providerKey] || {};
     const label = spec.label || providerKey;
     const normalize = spec.normalize ? this[spec.normalize] : null;
@@ -3249,7 +3459,8 @@ class LLMConfigManager {
           { ...provider, model },
           conversationHistory,
           options,
-          spec.payloadExtra || {}
+          spec.payloadExtra || {},
+          providerKey
         ),
         options,
         false,
@@ -3356,29 +3567,16 @@ class LLMConfigManager {
   }
 
   async sendAnthropicMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    return this.withReasoningReplayFallback('anthropic', conversationHistory, options, requestOptions =>
+      this.sendAnthropicRequest(provider, conversationHistory, requestOptions)
+    );
+  }
+
+  async sendAnthropicRequest(provider, conversationHistory, options = {}) {
     const streamed = await this.tryStreamAnthropic(provider, conversationHistory, options);
     if (streamed !== null) return streamed;
 
-    // Anthropic requires separate system message
-    const systemMessage = conversationHistory.find(msg => msg.role === 'system');
-    const messages = this.toAnthropicMessages(conversationHistory);
-
-    const payload = {
-      model: provider.model,
-      max_tokens: this.getMaxTokens(provider),
-      temperature: this.getRequestTemperature(options),
-      messages: messages,
-    };
-
-    if (systemMessage) {
-      payload.system = systemMessage.content;
-    }
-    const anthropicTools = this.buildAnthropicTools(options);
-    if (anthropicTools.length > 0) {
-      payload.tools = anthropicTools;
-      payload.tool_choice = { type: options.toolChoice || 'auto' };
-    }
-
+    const payload = this.buildAnthropicPayload(provider, conversationHistory, options);
     console.log('Sending to Anthropic - Request Payload:', payload);
 
     // Same envelope and retry policy as the OpenAI-compatible family: a bare
@@ -3451,39 +3649,21 @@ class LLMConfigManager {
   }
 
   async sendGoogleMessageWithHistory(provider, conversationHistory, context, memoryContext = null, options = {}) {
+    return this.withReasoningReplayFallback('google', conversationHistory, options, requestOptions =>
+      this.sendGoogleRequest(provider, conversationHistory, requestOptions)
+    );
+  }
+
+  async sendGoogleRequest(provider, conversationHistory, options = {}) {
     const streamed = await this.tryStreamGoogle(provider, conversationHistory, options);
     if (streamed !== null) return streamed;
 
-    // Google uses systemInstruction for system messages (not in contents array)
-    const systemMessage = conversationHistory.find(msg => msg.role === 'system');
-    const contents = this.toGoogleContents(conversationHistory);
-
-    // Build the payload with systemInstruction if a system message exists
-    const payload = {
-      contents: contents,
-      generationConfig: {
-        maxOutputTokens: this.getMaxTokens(provider),
-        temperature: this.getRequestTemperature(options),
-      },
-    };
-
-    // CRITICAL FIX: Add systemInstruction to ensure system prompt and tools are included
-    if (systemMessage && systemMessage.content) {
-      payload.systemInstruction = {
-        parts: [{ text: systemMessage.content }],
-      };
-      console.log('Google API: Including systemInstruction with', systemMessage.content.length, 'chars');
-    } else {
+    const payload = this.buildGooglePayload(provider, conversationHistory, options);
+    if (!payload.systemInstruction) {
       console.warn(
         'Google API: No system message found in conversation history - tools and system prompt will be missing!'
       );
     }
-    const functionDeclarations = this.buildGoogleFunctionDeclarations(options);
-    if (functionDeclarations.length > 0) {
-      payload.tools = [{ functionDeclarations }];
-      payload.toolConfig = { functionCallingConfig: { mode: 'AUTO' } };
-    }
-
     console.log('Sending to Google - Request Payload:', payload);
 
     // The key rides in a header, not the query string: a URL with credentials in
