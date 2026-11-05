@@ -8,6 +8,7 @@ class ReadsManager {
     this.genomeBrowser = genomeBrowser;
     this.rawReadsData = null; // Store the original SAM file data
     this.cache = new Map(); // Cache for loaded regions
+    this.maxCacheBytes = 24 * 1024 * 1024;
     this.maxCacheSize = 50; // Maximum number of cached regions
     this.regionSize = 50000; // Size of each cached region (50kb)
     this.currentFile = null;
@@ -81,7 +82,7 @@ class ReadsManager {
     }
 
     // Use direct region query instead of expanded regions
-    const regionKey = this.getRegionKey(chromosome, start, end);
+    const regionKey = this.getRegionKey(chromosome, start, end, settings);
 
     console.log(`🔍 [ReadsManager] Direct region query:`, {
       requestedRegion: `${start}-${end}`,
@@ -97,13 +98,16 @@ class ReadsManager {
       console.log(`✅ [ReadsManager] Cache HIT for key: ${regionKey}`);
       console.log(`🔍 [ReadsManager] Cached reads count: ${cached.reads.length}`);
 
-      return cached.reads;
+      return this.applySampling(cached.reads, settings);
     }
 
     console.log(`❌ [ReadsManager] Cache MISS for key: ${regionKey}`);
     this.stats.cacheMisses++;
 
     // Use appropriate loading method based on mode
+    const sourceFile = this.currentFile;
+    const sourceReader = this.bamReader;
+    const sourceText = this.rawReadsData;
     let reads;
     if (this.isBamMode && this.bamReader) {
       // Use BAM reader for binary BAM files - pass sampling settings to BAM loading
@@ -119,8 +123,9 @@ class ReadsManager {
     // Apply sampling if enabled and threshold is exceeded
     const sampledReads = this.applySampling(reads, settings);
 
-    // Cache the sampled results (to avoid caching huge datasets)
-    this.cacheRegion(regionKey, sampledReads);
+    if (this.currentFile === sourceFile && this.bamReader === sourceReader && this.rawReadsData === sourceText) {
+      this.cacheRegion(regionKey, reads);
+    }
 
     console.log(
       `🔍 [ReadsManager] Final result: ${sampledReads.length} reads for region ${start}-${end}${sampledReads.length !== reads.length ? ` (sampled from ${reads.length})` : ''}`
@@ -132,9 +137,8 @@ class ReadsManager {
   /**
    * Generate a cache key for a region
    */
-  getRegionKey(chromosome, start, end) {
-    // Use exact region boundaries for direct querying
-    return `${chromosome}:${start}-${end}`;
+  getRegionKey(chromosome, start, end, settings = {}) {
+    return JSON.stringify([chromosome, start, end, settings.ignoreChromosome === true]);
   }
 
   /**
@@ -215,6 +219,7 @@ class ReadsManager {
     }
 
     // Store sampling information for statistics
+    sampledReads._sourceSamplingInfo = reads._sourceSamplingInfo;
     sampledReads._samplingInfo = {
       originalCount: reads.length,
       sampledCount: targetCount,
@@ -313,36 +318,21 @@ class ReadsManager {
    * Cache region data with LRU eviction
    */
   cacheRegion(regionKey, reads) {
-    // Remove oldest entries if cache is full
-    if (this.cache.size >= this.maxCacheSize) {
-      this.evictOldestCacheEntries();
+    const bytes = reads.reduce(
+      (sum, read) => sum + 256 + 2 * ((read.sequence?.length || 0) + (read.quality?.length || 0)),
+      0
+    );
+    if (bytes > this.maxCacheBytes) return;
+
+    this.cache.delete(regionKey);
+    let usedBytes = Array.from(this.cache.values()).reduce((sum, entry) => sum + entry.bytes, 0);
+    const oldest = Array.from(this.cache).sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
+    for (const [key, entry] of oldest) {
+      if (this.cache.size < this.maxCacheSize && usedBytes + bytes <= this.maxCacheBytes) break;
+      this.cache.delete(key);
+      usedBytes -= entry.bytes;
     }
-
-    this.cache.set(regionKey, {
-      reads: reads,
-      lastAccessed: Date.now(),
-      size: reads.length,
-    });
-
-    console.log(`Cached region ${regionKey} with ${reads.length} reads (cache size: ${this.cache.size})`);
-  }
-
-  /**
-   * Evict oldest cache entries to make room for new ones
-   */
-  evictOldestCacheEntries() {
-    const entriesToRemove = Math.max(1, Math.floor(this.maxCacheSize * 0.2)); // Remove 20% of cache
-    const entries = Array.from(this.cache.entries());
-
-    // Sort by last accessed time (oldest first)
-    entries.sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
-
-    for (let i = 0; i < entriesToRemove; i++) {
-      if (entries[i]) {
-        this.cache.delete(entries[i][0]);
-        console.log(`Evicted cache entry: ${entries[i][0]}`);
-      }
-    }
+    this.cache.set(regionKey, { reads, lastAccessed: Date.now(), bytes, size: reads.length });
   }
 
   /**
@@ -402,7 +392,7 @@ class ReadsManager {
 
     const entriesToRemove = [];
 
-    for (const [key,] of this.cache.entries()) {
+    for (const [key] of this.cache.entries()) {
       const [keyChromosome, keyRange] = key.split(':');
 
       // Different chromosome - remove immediately

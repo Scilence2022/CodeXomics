@@ -7,6 +7,7 @@ class FileManager {
     this.genomeBrowser = genomeBrowser;
     this.currentFile = null;
     this.autoWorkingDirectory = null;
+    this.isLoadingFile = false;
   }
 
   getPathModule() {
@@ -573,20 +574,27 @@ class FileManager {
   }
 
   async loadFile(filePath, options = {}) {
-    console.log('🔍 FileManager.loadFile() called with path:', filePath);
-    this.genomeBrowser.showLoading(true);
-    this.genomeBrowser.updateStatus('Loading file...');
-    this.autoWorkingDirectory = null;
+    if (this.isLoadingFile) {
+      return { success: false, status: 'busy', error: 'Another file import is in progress', filePath };
+    }
+    this.isLoadingFile = true;
+    const previousFile = this.currentFile;
+    const previousWorkingDirectory = this.autoWorkingDirectory;
+    const browser = this.genomeBrowser;
+    const previousGenome = {
+      loadedGenomePath: browser.loadedGenomePath,
+      currentSequence: browser.currentSequence,
+      currentAnnotations: browser.currentAnnotations,
+      currentChromosome: browser.currentChromosome,
+      sourceFeatures: browser.sourceFeatures,
+      loadedOperons: browser.loadedOperons,
+      mappedOperons: browser.mappedOperons,
+      operonMappingChromosome: browser.operonMappingChromosome,
+    };
+    browser.showLoading(true);
+    browser.updateStatus('Loading file...');
 
     try {
-      // Clear loaded operons when loading a new genome file
-      if (this.genomeBrowser.loadedOperons) {
-        this.genomeBrowser.loadedOperons = [];
-        this.genomeBrowser.mappedOperons = null;
-        this.genomeBrowser.operonMappingChromosome = null;
-        console.log('🧬 Cleared loaded operons and mapping cache for new genome file');
-      }
-
       // Get file info
       console.log('📋 Getting file info for:', filePath);
       const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
@@ -609,7 +617,7 @@ class FileManager {
       }
 
       // Get streaming threshold from track settings for consistent behavior
-      const readsSettings = this.genomeBrowser.trackRenderer.getTrackSettings('reads');
+      const readsSettings = this.genomeBrowser.trackRenderer?.getTrackSettings('reads') || {};
       const streamingThreshold = readsSettings.streamingThreshold || 50;
 
       // Skip warning for SAM/BAM files since they use dynamic loading and can handle large files efficiently
@@ -622,10 +630,16 @@ class FileManager {
         );
         if (!proceed) {
           this.genomeBrowser.updateStatus('File loading cancelled');
-          return;
+          return { success: false, status: 'cancelled', error: 'File loading cancelled', filePath };
         }
       }
 
+      const isGenome = ['.fa', '.fasta', '.gb', '.gbk', '.gbff', '.genbank'].includes(extension);
+      if (isGenome) {
+        this.genomeBrowser.loadedOperons = [];
+        this.genomeBrowser.mappedOperons = null;
+        this.genomeBrowser.operonMappingChromosome = null;
+      }
       this.currentFile = {
         path: filePath,
         info: fileInfo.info,
@@ -643,85 +657,52 @@ class FileManager {
         await this.loadFileStream(filePath);
       } else {
         console.log(`Using regular loading for ${extension} file: ${fileSizeMB.toFixed(1)} MB`);
-        await this.loadFileRegular(filePath, options);
+        await this.loadFileRegular(filePath, options, extension);
       }
 
-      // Update UI
-      this.genomeBrowser.updateFileInfo();
-      this.genomeBrowser.hideWelcomeScreen();
-      if (this.autoWorkingDirectory) {
-        const path = this.getPathModule();
-        this.genomeBrowser.updateStatus(`Working directory set to: ${path.basename(this.autoWorkingDirectory)}`);
-      } else {
-        this.genomeBrowser.updateStatus('File loaded successfully');
+      const warnings = [];
+      if (isGenome) {
+        this.autoWorkingDirectory = null;
+        const fileDir = this.getPathModule().dirname(filePath);
+        const updates = [
+          [browser.chatManager, 'setWorkingDirectory', { directory_path: fileDir }],
+          [browser.geneNotesManager, 'reloadForFile'],
+          [browser.geneAttachmentsManager, 'reloadForFile'],
+          [browser.primerManager, 'reloadForFile'],
+        ];
+        for (const [manager, method, argument] of updates) {
+          if (typeof manager?.[method] !== 'function') continue;
+          try {
+            await manager[method](argument);
+            if (method === 'setWorkingDirectory') this.autoWorkingDirectory = fileDir;
+          } catch (error) {
+            warnings.push(error.message);
+            console.warn('Post-import update failed:', error);
+          }
+        }
       }
 
-      // Auto-enable tracks for the loaded file type
+      browser.updateFileInfo();
+      browser.hideWelcomeScreen();
       this.autoEnableTracksForFileType(extension);
-
-      // Reload gene notes and attachments from sidecar file for the newly loaded file
-      if (
-        this.genomeBrowser.geneNotesManager &&
-        typeof this.genomeBrowser.geneNotesManager.reloadForFile === 'function'
-      ) {
-        await this.genomeBrowser.geneNotesManager.reloadForFile();
-        console.log('📝 Gene notes reloaded for new file');
-      }
-      if (
-        this.genomeBrowser.geneAttachmentsManager &&
-        typeof this.genomeBrowser.geneAttachmentsManager.reloadForFile === 'function'
-      ) {
-        await this.genomeBrowser.geneAttachmentsManager.reloadForFile();
-        console.log('📎 Gene attachments reloaded for new file');
-      }
-      if (this.genomeBrowser.primerManager && typeof this.genomeBrowser.primerManager.reloadForFile === 'function') {
-        await this.genomeBrowser.primerManager.reloadForFile();
-        console.log('🧬 Primers reloaded for new file');
-      }
+      browser.updateStatus(warnings.length ? 'File loaded with warnings' : 'File loaded successfully');
+      return { success: true, status: 'loaded', filePath, warnings };
     } catch (error) {
+      this.currentFile = previousFile;
+      this.autoWorkingDirectory = previousWorkingDirectory;
+      Object.assign(browser, previousGenome);
+      const message = error?.message || String(error);
       console.error('Error loading file:', error);
-
-      // Provide more helpful error messages for common issues
-      let errorMessage = error.message;
-
-      if (error.message.includes('Cannot create a string longer than')) {
-        errorMessage = `File is too large to load into memory (JavaScript string limit exceeded). 
-                
-This typically happens with files larger than ~500MB. Please try:
-1. Using a smaller SAM file
-2. Converting to BAM format and using appropriate tools
-3. Splitting the file into smaller chunks
-
-File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024)).toFixed(1) + ' MB' : 'Unknown'}`;
-      } else if (error.message.includes('out of memory') || error.message.includes('Maximum call stack')) {
-        errorMessage = `Insufficient memory to load this file. 
-                
-The file is too large for the available system memory. Please try:
-1. Closing other applications to free memory
-2. Using a smaller file
-3. Restarting the application
-
-File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024)).toFixed(1) + ' MB' : 'Unknown'}`;
-      }
-
-      this.genomeBrowser.updateStatus(`Error: ${errorMessage}`);
-
-      // Show a more user-friendly alert for memory-related errors
-      if (
-        error.message.includes('Cannot create a string longer than') ||
-        error.message.includes('out of memory') ||
-        error.message.includes('Maximum call stack')
-      ) {
-        alert(`Failed to load file due to size/memory limitations:\n\n${errorMessage}`);
-      } else {
-        alert(`Failed to load file: ${error.message}`);
-      }
+      browser.updateStatus(`Error: ${message}`);
+      if (options.reportErrors !== false) alert(`Failed to load file: ${message}`);
+      return { success: false, status: 'failed', error: message, filePath };
     } finally {
-      this.genomeBrowser.showLoading(false);
+      this.isLoadingFile = false;
+      browser.showLoading(false);
     }
   }
 
-  async loadFileRegular(filePath, options = {}) {
+  async loadFileRegular(filePath, options = {}, extension = this.currentFile.info.extension.toLowerCase()) {
     // Set up progress listener for streaming reads
     const progressHandler = (event, progressData) => {
       const { progress, totalRead, fileSize } = progressData;
@@ -732,12 +713,13 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
 
     ipcRenderer.on('file-read-progress', progressHandler);
 
-    // Read file content
-    this.genomeBrowser.updateStatus('Reading file content...');
-    const fileData = await ipcRenderer.invoke('read-file', filePath);
-
-    // Remove progress listener
-    ipcRenderer.removeListener('file-read-progress', progressHandler);
+    let fileData;
+    try {
+      this.genomeBrowser.updateStatus('Reading file content...');
+      fileData = await ipcRenderer.invoke('read-file', filePath);
+    } finally {
+      ipcRenderer.removeListener('file-read-progress', progressHandler);
+    }
 
     // Check if this is a BigWig file by extension
     const isBigWigFile = filePath.toLowerCase().endsWith('.bw') || filePath.toLowerCase().endsWith('.bigwig');
@@ -763,7 +745,7 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
       }
 
       // Check if the error is due to file being too large for memory
-      if (fileData.requiresStreaming) {
+      if (fileData.requiresStreaming && extension === '.sam' && !filePath.toLowerCase().endsWith('.gz')) {
         this.genomeBrowser.updateStatus('File too large for memory loading, switching to streaming...');
         console.log(`File is too large (${(fileData.fileSize / (1024 * 1024)).toFixed(1)} MB), using streaming mode`);
 
@@ -890,24 +872,6 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
   }
 
   async parseFasta() {
-    // Auto-set working directory to the FASTA file's directory
-    if (this.currentFile?.path) {
-      const path = this.getPathModule();
-      const fileDir = path.dirname(this.currentFile.path);
-      console.log(`📁 Auto-setting working directory to: ${fileDir}`);
-
-      // Call set_working_directory through ChatManager if available
-      if (this.genomeBrowser?.chatManager) {
-        try {
-          await this.genomeBrowser.chatManager.setWorkingDirectory({ directory_path: fileDir });
-          this.autoWorkingDirectory = fileDir;
-          console.log('✅ Working directory set successfully');
-        } catch (error) {
-          console.warn('⚠️ Failed to set working directory:', error);
-        }
-      }
-    }
-
     const lines = this.currentFile.data.split('\n');
     const sequences = {};
     let currentSeq = null;
@@ -932,6 +896,10 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     if (currentSeq) {
       sequences[currentSeq] = currentData;
     }
+
+    if (!Object.values(sequences).some(Boolean)) throw new Error('No sequence records found in FASTA file');
+    this.genomeBrowser.currentAnnotations = {};
+    this.genomeBrowser.sourceFeatures = {};
 
     // Bind the genome source directly, as parseGenBank does: a file opened in a new window can be
     // parsed before TabManager exists, and onGenomeLoaded is then never called.
@@ -964,24 +932,6 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
     console.log('📄 Current file data length:', this.currentFile?.data?.length || 'No data');
     if (!this.currentFile?.data) {
       throw new Error('No file data available for GenBank parsing');
-    }
-
-    // Auto-set working directory to the GBK file's directory
-    if (this.currentFile?.path) {
-      const path = this.getPathModule();
-      const fileDir = path.dirname(this.currentFile.path);
-      console.log(`📁 Auto-setting working directory to: ${fileDir}`);
-
-      // Call set_working_directory through ChatManager if available
-      if (this.genomeBrowser?.chatManager) {
-        try {
-          await this.genomeBrowser.chatManager.setWorkingDirectory({ directory_path: fileDir });
-          this.autoWorkingDirectory = fileDir;
-          console.log('✅ Working directory set successfully');
-        } catch (error) {
-          console.warn('⚠️ Failed to set working directory:', error);
-        }
-      }
     }
 
     const lines = this.currentFile.data.split('\n');
@@ -1220,6 +1170,8 @@ File size: ${this.currentFile?.info ? (this.currentFile.info.size / (1024 * 1024
       `Final results: ${Object.keys(sequences).length} sequences, ${Object.keys(annotations).length} annotation sets`
     );
     console.log('Sequences:', Object.keys(sequences));
+
+    if (!Object.values(sequences).some(Boolean)) throw new Error('No sequence records found in GenBank file');
 
     // Extract and store source feature information separately for metadata
     this.extractSourceFeatures(annotations);
@@ -2478,7 +2430,9 @@ Original error: ${error.message}`;
     }
   }
 
-  async loadMultipleWIGFiles(filePaths) {
+  async loadMultipleWIGFiles(filePaths, options = {}) {
+    if (this.isLoadingFile) return { success: false, status: 'busy', error: 'Another file import is in progress' };
+    this.isLoadingFile = true;
     this.genomeBrowser.showLoading(true);
     this.genomeBrowser.updateStatus(`Loading ${filePaths.length} WIG files...`);
 
@@ -2493,7 +2447,8 @@ Original error: ${error.message}`;
       // Process each file
       for (let i = 0; i < filePaths.length; i++) {
         const filePath = filePaths[i];
-        const fileName = filePath.split('/').pop();
+        const fileName = this.getPathModule().basename(filePath);
+        const previousFile = this.currentFile;
 
         try {
           this.genomeBrowser.updateStatus(`Processing WIG file ${i + 1}/${filePaths.length}: ${fileName}`);
@@ -2535,6 +2490,7 @@ Original error: ${error.message}`;
           });
           successCount++;
         } catch (error) {
+          this.currentFile = previousFile;
           console.error(`Error loading WIG file ${fileName}:`, error);
           results.push({
             file: fileName,
@@ -2568,16 +2524,23 @@ Original error: ${error.message}`;
       this.genomeBrowser.updateStatus(summary.statusText);
 
       // Show detailed results if there were any errors
-      if (errorCount > 0) {
-        this.showMultipleWIGLoadResults(results);
-      }
+      if (errorCount > 0 && options.reportErrors !== false) this.showMultipleWIGLoadResults(results);
+      return {
+        success: errorCount === 0,
+        status: errorCount === 0 ? 'loaded' : successCount > 0 ? 'partial' : 'failed',
+        error: errorCount ? `${errorCount} WIG track(s) failed to load` : undefined,
+        successCount,
+        results,
+      };
     } catch (error) {
       console.error('Error loading multiple WIG files:', error);
       this.genomeBrowser.updateStatus(`Error: ${error.message}`);
-      alert(`Failed to load WIG files: ${error.message}`);
+      if (options.reportErrors !== false) alert(`Failed to load WIG files: ${error.message}`);
+      return { success: false, status: 'failed', error: error.message };
     } finally {
       // Ensure flag is cleared even if an error occurs
       this._isLoadingMultipleWIGFiles = false;
+      this.isLoadingFile = false;
       this.genomeBrowser.showLoading(false);
     }
   }
