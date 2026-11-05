@@ -6,6 +6,7 @@ class AlignmentCoverageRenderer {
 
   async getBamDepthForViewport(chromosome, viewport, settings, bamFile) {
     if (!this.trackRenderer.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage')) return null;
+    viewport = { ...viewport, start: Math.floor(viewport.start), end: Math.ceil(viewport.end) };
     const { reader } = bamFile;
     if (typeof reader.getDepthForRange !== 'function') return null;
     const segments = this.trackRenderer.isCircularModeEnabled()
@@ -47,6 +48,7 @@ class AlignmentCoverageRenderer {
    * Create coverage visualization above reads
    */
   createCoverageVisualization(trackContent, reads, viewport, coverageHeight, settings, depth = null) {
+    if (depth) viewport = { ...viewport, start: Math.floor(viewport.start), end: Math.ceil(viewport.end) };
     const range = viewport.end - viewport.start;
     const binSize = depth?.binSize ?? Math.max(1, Math.floor(range / 1000));
     const coverageData = depth
