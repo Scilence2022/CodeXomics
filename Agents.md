@@ -115,6 +115,13 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
   external tool output can contain it.
 - Anthropic requires every `tool_result` block for a turn in one user message; Gemini wants the
   matching `functionResponse` parts grouped the same way. Both translators already do this.
+- Provider reasoning state (Anthropic thinking blocks with signatures, Gemini thought signatures,
+  DeepSeek `reasoning_content`) rides on the assistant tool-call message as the non-enumerable
+  `__codexomicsReasoning`, from `extractReasoningReplayState()` via `appendToolRoundToHistory()`.
+  Never make it enumerable: OpenAI-compatible payloads send the transcript objects as they are.
+  The translators restore it only after the turn-start marker (`createTurnStartMessage()`), since
+  the loop writes user-role messages of its own. Anything that edits earlier history must drop it
+  from later messages, as `enforceConversationTokenBudget()` does.
 
 ## 5b. Cancellation And Timeout Rules
 
@@ -175,6 +182,14 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
   defaults in `ChatBoxSettingsManager` and `DEFAULT_LLM_TEMPERATURE` in sync.
 - MCP system prompts are fetched through `getCachedMcpPrompt()`. Anything that
   changes a server's prompt content must call `invalidateMcpPromptCache()`.
+- The ChatBox thinking level (`chatboxReasoningEffort`) is mapped per provider by
+  `LLMReasoningProfiles`, applied inside `buildOpenAICompatiblePayload()`,
+  `buildAnthropicPayload()` and `buildGooglePayload()` only. A level a model does
+  not accept resolves to `default` and sends nothing. New model families get a
+  profile there, with a test, rather than provider-specific code in the request
+  path. `getRequestOutputTokens()` is what the context trimmer reserves.
+- Anthropic and Gemini streaming and non-streaming requests share their payload
+  builder; never assemble either payload inline again.
 
 ## 5f. Transcript Service Rules
 
@@ -258,6 +273,12 @@ Model list auto-refresh (`LLMConfigManager`):
 - `populateProviderModelSelect()` is the only writer of the provider model selects. It rebuilds from the markup snapshot in `staticModelOptionsHtml`, so shipped `<option>` labels and the `other` entry must stay in `index.html`.
 - Refreshed lists are cached in `provider.remoteModels` with `modelsSource: 'remote'`. `reconcileBuiltInModelLists()` discards any persisted list that did not come from a provider API, so shipped model updates are never shadowed by an old config file.
 - Auto-refresh triggers are passive only: opening the modal, switching tabs, and saving changed credentials. Do not add refresh calls on app start or to the message-sending path.
+
+Model pickers:
+
+- Every model list outside a provider tab (the Default Model tab, the ChatBox composer picker) builds from `getModelCatalog()`. Friendly labels come from the provider tab's shipped `<option>` markup through `getShippedModelLabels()`; do not keep a second label table.
+- The catalog adds the provider default and the global default when the list lacks them, which is how a model entered through "Other (specify below)" reaches the pickers.
+- Saving provider configuration dispatches `llmConfigurationChanged`; ChatBox settings saves dispatch `chatbox-settingsChanged`. The composer controls listen to both.
 
 ## 9. UI, Styling, And Theme Rules
 

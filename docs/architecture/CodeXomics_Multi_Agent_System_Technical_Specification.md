@@ -422,7 +422,7 @@ chatboxLLMProvider: 'auto',          // automatic provider selection
 chatboxLLMModel: 'auto',             // automatic model selection
 chatboxLLMTemperature: 0.7,          // response creativity
 chatboxLLMMaxTokens: 4000,           // maximum token count
-chatboxLLMTimeout: 30,               // request timeout
+chatboxReasoningEffort: 'default',   // thinking level: default/off/low/medium/high
 chatboxLLMUseSystemPrompt: true,     // enable the system prompt
 chatboxLLMEnableFunctionCalling: true // enable function calling
 ```

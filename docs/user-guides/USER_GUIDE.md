@@ -119,7 +119,7 @@ display a warning. Previously saved keys remain available when the OS store reco
 **Configure Agent Settings:**
 
 - **Mode** — leave multi-agent mode off for a single assistant that plans and calls tools directly, or turn it on to route requests to the specialised agents; enable or disable individual agents here
-- **Generation** — temperature, token limits, and timeouts applied in both modes. The model itself is chosen from the picker beside the ChatBox input box; its _Auto_ entry follows the default in **Options → Configure LLM Providers**
+- **Generation** — temperature, token limit, and the default thinking level, applied in both modes. The model itself is chosen from the picker beside the ChatBox input box; its _Auto_ entry follows the default in **Options → Configure LLM Providers**
 - **Execution** — function-call rounds, early completion, tool-repetition limits, and timeouts
 - **Context** — system prompt composition and dynamic tool selection
 - **Memory** and **Skills** — memory system and installed agent skills
@@ -468,8 +468,16 @@ The conversation also keeps a detailed status message for each run, updated in p
 **Default Model:**
 
 - Set in the **Default Model** tab under **Options → Configure LLM Providers**
-- Used whenever the ChatBox model selector is set to Auto
-- The selector beside the ChatBox input box overrides it per conversation
+- Used whenever the ChatBox model selector is set to Auto; the Auto entry shows which model that currently is
+- Leave its Model on Auto to use the **Provider default model** chosen on that provider's tab
+- The selector beside the ChatBox input box overrides it per conversation. It lists every enabled provider's models, including ones entered through "Other (specify below)"
+
+**Thinking Level:**
+
+- Set beside the model selector in the ChatBox, or as a default under Agent Settings → Generation
+- _Default_ leaves the model's own behaviour; _Off_, _Low_, _Medium_ and _High_ set how much it reasons before answering
+- Shown only for models with a thinking control: Claude, Gemini 2.5 and later, OpenAI reasoning models, DeepSeek, Qwen3 hybrid models on SiliconFlow, and OpenRouter. Levels a model does not accept are greyed out — some models always think, so they have no _Off_
+- Higher levels give better plans on multi-step requests at the cost of latency and tokens; the output limit is raised automatically while thinking is on
 
 **Temperature Settings:**
 
