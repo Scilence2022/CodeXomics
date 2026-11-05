@@ -10,6 +10,7 @@ const vm = require('vm');
 const { ToolRegistryService } = require('../src/main/tool-registry-service');
 const FunctionCallsOrganizer = require('../src/renderer/modules/FunctionCallsOrganizer');
 const ToolsIntegrator = require('../src/mcp-tools/ToolsIntegrator');
+const ToolExecutionService = require('../src/renderer/modules/chat/services/ToolExecutionService');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -166,16 +167,38 @@ function collectFunctionOrganizerNames() {
   return unique(Object.values(organizer.functionCategories).flatMap(category => category.functions || []));
 }
 
-function collectToolExecutionAliases(snapshot) {
-  const aliases = new Set(Object.keys(snapshot.aliases || {}));
-  const source = read('src/renderer/modules/chat/services/ToolExecutionService.js');
-  const start = source.indexOf('const legacyAliases =');
-  const end = source.indexOf('if (legacyAliases', start);
-  const aliasBlock = start >= 0 && end > start ? source.slice(start, end) : '';
-  for (const match of aliasBlock.matchAll(/([a-z][a-z0-9_]+):\s*'([a-z][a-z0-9_]+)'/g)) {
-    aliases.add(match[1]);
+function validateToolAliases(tools, runtimeAliases) {
+  const registryNames = new Set(tools.map(tool => tool.name));
+  const aliases = new Map();
+  const errors = [];
+  const register = (alias, target, source) => {
+    let message;
+    if (typeof alias !== 'string' || !/^[a-z][a-z0-9_]*$/.test(alias) || Object.hasOwn(Object.prototype, alias)) {
+      message = 'Invalid tool alias';
+    } else if (registryNames.has(alias)) {
+      message = 'Tool alias shadows a canonical registry name';
+    } else if (!registryNames.has(target)) {
+      message = 'Tool alias target is missing from the registry';
+    } else if (aliases.has(alias) && aliases.get(alias) !== target) {
+      message = 'Tool alias resolves to conflicting registry targets';
+    }
+    if (message) {
+      errors.push({ source, message, alias, target, existingTarget: aliases.get(alias) });
+    } else {
+      aliases.set(alias, target);
+    }
+  };
+
+  for (const tool of tools) {
+    const declared = tool.aliases || tool.legacy_aliases || [];
+    if (Array.isArray(declared)) {
+      for (const alias of declared) register(alias, tool.name, tool.sourceFile || tool.name);
+    }
   }
-  return aliases;
+  for (const [alias, target] of Object.entries(runtimeAliases)) {
+    register(alias, target, 'ToolExecutionService.legacyAliases');
+  }
+  return { aliases, errors };
 }
 
 function collectLlmPolicyNames() {
@@ -220,9 +243,9 @@ function pushComparison(report, label, values, validNames, exceptionKey) {
   }
 
   if (comparison.staleExceptions.length > 0) {
-    report.warnings.push({
+    report.errors.push({
       source: label,
-      message: 'Known registry consistency exceptions can now be removed',
+      message: 'Remove obsolete registry consistency exceptions',
       tools: comparison.staleExceptions,
     });
   }
@@ -238,8 +261,8 @@ async function validateToolRegistryConsistency() {
   const registryNames = new Set(snapshot.tools.map(tool => tool.name));
   const builtInNames = unique(snapshot.builtInTools.map(tool => tool.name));
   const registryBuiltInNames = unique(snapshot.tools.filter(tool => tool.isBuiltIn).map(tool => tool.name));
-  const aliases = collectToolExecutionAliases(snapshot);
-  const validNames = new Set([...registryNames, ...aliases]);
+  const { aliases, errors: aliasErrors } = validateToolAliases(snapshot.tools, ToolExecutionService.legacyAliases);
+  const validNames = new Set([...registryNames, ...aliases.keys()]);
 
   const report = {
     success: true,
@@ -247,11 +270,12 @@ async function validateToolRegistryConsistency() {
       registryTools: snapshot.tools.length,
       uniqueRegistryTools: registryNames.size,
       builtInTools: builtInNames.length,
+      aliases: aliases.size,
       registryDiagnostics: snapshot.diagnostics.length,
     },
     comparisons: {},
     warnings: [],
-    errors: [],
+    errors: aliasErrors,
   };
 
   if (!snapshot.success) {
@@ -311,5 +335,6 @@ if (require.main === module) {
 module.exports = {
   KNOWN_EXCEPTIONS,
   collectLlmPolicyNames,
+  validateToolAliases,
   validateToolRegistryConsistency,
 };

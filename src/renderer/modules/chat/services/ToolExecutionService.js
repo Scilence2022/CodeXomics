@@ -3,6 +3,50 @@
  * ToolExecutionService - Tool routing logic extracted from ChatManager
  */
 class ToolExecutionService {
+  static legacyAliases = Object.freeze({
+    find_gene: 'find_gene_by_name',
+    search_gene_by_name: 'find_gene_by_name',
+    load_genome: 'load_genome_file',
+    load_fasta: 'load_genome_file',
+    load_fasta_file: 'load_genome_file',
+    load_genbank: 'load_genome_file',
+    load_genbank_file: 'load_genome_file',
+    load_gbk: 'load_genome_file',
+    load_gbk_file: 'load_genome_file',
+    load_annotation: 'load_annotation_file',
+    load_bed: 'load_annotation_file',
+    load_bed_file: 'load_annotation_file',
+    load_gff: 'load_annotation_file',
+    load_gff_file: 'load_annotation_file',
+    load_gff3: 'load_annotation_file',
+    load_gff3_file: 'load_annotation_file',
+    load_gtf: 'load_annotation_file',
+    load_gtf_file: 'load_annotation_file',
+    load_variant: 'load_variant_file',
+    load_vcf: 'load_variant_file',
+    load_vcf_file: 'load_variant_file',
+    load_reads: 'load_reads_file',
+    load_bam: 'load_reads_file',
+    load_bam_file: 'load_reads_file',
+    load_sam: 'load_reads_file',
+    load_sam_file: 'load_reads_file',
+    load_wig: 'load_wig_tracks',
+    load_wig_file: 'load_wig_tracks',
+    load_bigwig: 'load_wig_tracks',
+    load_bigwig_file: 'load_wig_tracks',
+    load_bedgraph: 'load_wig_tracks',
+    load_bedgraph_file: 'load_wig_tracks',
+    load_track: 'load_wig_tracks',
+    load_track_file: 'load_wig_tracks',
+    load_tracks: 'load_wig_tracks',
+    load_operon: 'load_operon_file',
+    load_operons: 'load_operon_file',
+    // Primer library tools (renamed away from "annotation" framing)
+    add_primer_annotation: 'save_primer',
+    list_primer_annotations: 'list_primers',
+    clear_primer_annotations: 'delete_primers',
+  });
+
   constructor(app, chatManager) {
     this.app = app;
     this.chatManager = chatManager;
@@ -21,53 +65,10 @@ class ToolExecutionService {
         if (options.signal) Object.defineProperty(context, 'signal', { value: options.signal });
         parameters.__executionContext = Object.freeze(context);
       }
-      // --- LEGACY ALIAS RESOLUTION ---
-      const legacyAliases = {
-        find_gene: 'find_gene_by_name',
-        search_gene_by_name: 'find_gene_by_name',
-        load_genome: 'load_genome_file',
-        load_fasta: 'load_genome_file',
-        load_fasta_file: 'load_genome_file',
-        load_genbank: 'load_genome_file',
-        load_genbank_file: 'load_genome_file',
-        load_gbk: 'load_genome_file',
-        load_gbk_file: 'load_genome_file',
-        load_annotation: 'load_annotation_file',
-        load_bed: 'load_annotation_file',
-        load_bed_file: 'load_annotation_file',
-        load_gff: 'load_annotation_file',
-        load_gff_file: 'load_annotation_file',
-        load_gff3: 'load_annotation_file',
-        load_gff3_file: 'load_annotation_file',
-        load_gtf: 'load_annotation_file',
-        load_gtf_file: 'load_annotation_file',
-        load_variant: 'load_variant_file',
-        load_vcf: 'load_variant_file',
-        load_vcf_file: 'load_variant_file',
-        load_reads: 'load_reads_file',
-        load_bam: 'load_reads_file',
-        load_bam_file: 'load_reads_file',
-        load_sam: 'load_reads_file',
-        load_sam_file: 'load_reads_file',
-        load_wig: 'load_wig_tracks',
-        load_wig_file: 'load_wig_tracks',
-        load_bigwig: 'load_wig_tracks',
-        load_bigwig_file: 'load_wig_tracks',
-        load_bedgraph: 'load_wig_tracks',
-        load_bedgraph_file: 'load_wig_tracks',
-        load_track: 'load_wig_tracks',
-        load_track_file: 'load_wig_tracks',
-        load_tracks: 'load_wig_tracks',
-        load_operon: 'load_operon_file',
-        load_operons: 'load_operon_file',
-        // Primer library tools (renamed away from "annotation" framing)
-        add_primer_annotation: 'save_primer',
-        list_primer_annotations: 'list_primers',
-        clear_primer_annotations: 'delete_primers',
-      };
-      if (legacyAliases[toolName]) {
-        console.log(`[ToolExecutionService] Legacy alias: '${toolName}' → '${legacyAliases[toolName]}'`);
-        toolName = legacyAliases[toolName];
+      const aliases = ToolExecutionService.legacyAliases;
+      if (Object.hasOwn(aliases, toolName)) {
+        console.log(`[ToolExecutionService] Legacy alias: '${toolName}' → '${aliases[toolName]}'`);
+        toolName = aliases[toolName];
       }
 
       console.log(`[ToolExecutionService] Executing: ${toolName}`, {
@@ -558,4 +559,9 @@ class ToolExecutionService {
 }
 
 // Make it available globally if needed by plugin system
-window.ToolExecutionService = ToolExecutionService;
+if (typeof window !== 'undefined') {
+  window.ToolExecutionService = ToolExecutionService;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ToolExecutionService;
+}

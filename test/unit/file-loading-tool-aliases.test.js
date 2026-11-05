@@ -64,6 +64,18 @@ describe('file loading tool aliases', () => {
     expect(organizer.getFunctionCategory('load_bed_file').name).toBe('dataRetrieval');
   });
 
+  it('only resolves names explicitly declared by the runtime alias map', async () => {
+    const ToolExecutionService = loadBrowserClass(
+      'src/renderer/modules/chat/services/ToolExecutionService.js',
+      'ToolExecutionService'
+    );
+    const service = new ToolExecutionService({}, {});
+    service._dispatch = async name => name;
+
+    await expect(service.execute('add_primer_annotation', {})).resolves.toBe('save_primer');
+    await expect(service.execute('constructor', {})).resolves.toBe('constructor');
+  });
+
   it('registers canonical registry snapshot tools in FunctionCallsOrganizer', () => {
     const FunctionCallsOrganizer = loadBrowserClass(
       'src/renderer/modules/FunctionCallsOrganizer.js',
