@@ -4875,6 +4875,21 @@ function registerIpcHandlers(deps) {
     console.log('IPC: Opening ProGenFixer window...');
     createProGenFixerWindow();
   });
+
+  return {
+    /**
+     * Start building the tool registry snapshot while the first genome window
+     * is still loading. Parsing ~200 YAML descriptors takes ~150 ms; done here
+     * it overlaps the renderer's own script loading instead of starting only
+     * when ChatManager asks for it. getSnapshot() shares one in-flight load, so
+     * the renderer's request simply awaits this one.
+     */
+    prewarmStartupCaches() {
+      toolRegistryService.getSnapshot().catch(error => {
+        console.warn('[Main] Tool registry prewarm failed:', error.message);
+      });
+    },
+  };
 }
 
 module.exports = { registerIpcHandlers };
