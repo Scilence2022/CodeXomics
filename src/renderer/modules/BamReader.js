@@ -852,7 +852,9 @@ class BamReader {
         settings
       );
       this.applyBackendState(result.state);
-      return result.reads || [];
+      const reads = result.reads || [];
+      if (result.sourceSamplingInfo) reads._sourceSamplingInfo = result.sourceSamplingInfo;
+      return reads;
     }
 
     const startTime = performance.now();
@@ -993,6 +995,8 @@ class BamReader {
         console.warn(`   This might indicate an issue with the BAM file or query region`);
         console.warn(`   Consider using a more specific region or checking the BAM file integrity`);
       }
+
+      const totalRegionRecords = allRecords.length;
 
       // Apply early sampling for extremely large datasets to prevent stack overflow
       const EXTREME_DATASET_THRESHOLD = 200000; // 200k records threshold
@@ -1203,6 +1207,9 @@ class BamReader {
       );
       console.log(`🔍 [BamReader] === BAM QUERY DEBUG END ===`);
 
+      if (totalRegionRecords > EXTREME_DATASET_THRESHOLD) {
+        reads._sourceSamplingInfo = { totalRecords: totalRegionRecords, sampledRecords: allRecords.length };
+      }
       return reads;
     } catch (error) {
       const queryTime = performance.now() - startTime;
@@ -1794,6 +1801,7 @@ class BamReader {
    * @param {number} end - End position
    * @param {number} chunkSize - Chunk size for streaming
    */
+  // prettier-ignore
   async* streamReadsForRegion(chromosome, start, end, chunkSize = 10000) {
     // For now, just return all reads in one chunk
     // Future enhancement: implement chunked reading for very large regions

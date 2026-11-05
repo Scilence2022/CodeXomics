@@ -134,7 +134,8 @@ class GeneAttachmentsManager {
   async getAttachmentsStoragePath(geneId = null) {
     try {
       // Try to get project-based storage first
-      const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+      const currentFilePath =
+        this.genomeBrowser?.loadedGenomePath || this.genomeBrowser?.fileManager?.currentFile?.path;
       if (currentFilePath) {
         const path = this.getPathModule();
         const projectDir = path.dirname(currentFilePath);
@@ -431,7 +432,7 @@ class GeneAttachmentsManager {
         }
 
         if (addedAttachments.length > 0) {
-          await this.saveAttachmentMetadata();
+          await this.saveAttachmentMetadata({ throwOnError: true });
           this.showNotification(`Added ${addedAttachments.length} attachment(s)`, 'success');
           return addedAttachments;
         }
@@ -441,7 +442,7 @@ class GeneAttachmentsManager {
         // Process provided file info
         const attachment = await this.processAndStoreFile(geneId, fileInfo.path);
         if (attachment) {
-          await this.saveAttachmentMetadata();
+          await this.saveAttachmentMetadata({ throwOnError: true });
           this.showNotification('Attachment added', 'success');
           return attachment;
         }
@@ -460,7 +461,9 @@ class GeneAttachmentsManager {
    */
   async registerResearchSourceAttachment(geneId, sourcePath, document) {
     await this.ready;
-    const sha256 = String(document?.sha256 || '').trim().toLowerCase();
+    const sha256 = String(document?.sha256 || '')
+      .trim()
+      .toLowerCase();
     const documentId = String(document?.documentId || '').trim();
     if (!geneId || !/^[a-f0-9]{64}$/.test(sha256) || documentId !== `sha256:${sha256}`) {
       throw new Error('DGR research source attachment requires verified document metadata');
@@ -503,7 +506,9 @@ class GeneAttachmentsManager {
     if (!attachment || attachment.extension !== 'pdf') {
       throw new Error(`Research source attachment ${attachmentId} is not a PDF for ${geneId}`);
     }
-    const sha256 = String(document?.sha256 || '').trim().toLowerCase();
+    const sha256 = String(document?.sha256 || '')
+      .trim()
+      .toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(sha256) || document?.documentId !== `sha256:${sha256}`) {
       throw new Error('Research source attachment metadata failed content-address verification');
     }
@@ -628,6 +633,14 @@ class GeneAttachmentsManager {
 
       const attachment = attachments[attachmentIndex];
 
+      attachments.splice(attachmentIndex, 1);
+      try {
+        await this.saveAttachmentMetadata({ throwOnError: true });
+      } catch (error) {
+        attachments.splice(attachmentIndex, 0, attachment);
+        throw error;
+      }
+
       // Delete the physical file
       try {
         if (window.electronAPI?.deleteAttachmentFile) {
@@ -638,11 +651,6 @@ class GeneAttachmentsManager {
         console.warn('Could not delete attachment file:', e);
       }
 
-      // Remove from array
-      attachments.splice(attachmentIndex, 1);
-
-      // Save updated metadata
-      await this.saveAttachmentMetadata();
       this.showNotification('Attachment removed', 'success');
 
       return true;
@@ -729,8 +737,7 @@ class GeneAttachmentsManager {
     if (!attachment) return false;
 
     attachment.description = description;
-    await this.saveAttachmentMetadata();
-    return true;
+    return this.saveAttachmentMetadata();
   }
 
   /**
@@ -745,7 +752,8 @@ class GeneAttachmentsManager {
       }
 
       // Use sidecar manager if available and file is loaded
-      const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+      const currentFilePath =
+        this.genomeBrowser?.loadedGenomePath || this.genomeBrowser?.fileManager?.currentFile?.path;
       if (this.sidecarManager && currentFilePath) {
         if (options.durable && typeof this.sidecarManager.setAndForceSave === 'function') {
           await this.sidecarManager.setAndForceSave(currentFilePath, 'geneAttachments', metadata);
@@ -776,7 +784,8 @@ class GeneAttachmentsManager {
       let metadata = {};
 
       // Use sidecar manager if available and file is loaded
-      const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+      const currentFilePath =
+        this.genomeBrowser?.loadedGenomePath || this.genomeBrowser?.fileManager?.currentFile?.path;
       if (this.sidecarManager && currentFilePath) {
         metadata = (await this.sidecarManager.get(currentFilePath, 'geneAttachments')) || {};
         console.log(`📂 Loading attachment metadata from sidecar file: ${currentFilePath}`);

@@ -28,9 +28,7 @@ describe('file operation IPC hardening', () => {
 
     expect(source).toContain('getPathModule()');
     expect(source).toContain('this.autoWorkingDirectory = fileDir');
-    expect(source).toContain(
-      'this.genomeBrowser.updateStatus(`Working directory set to: $' + '{path.basename(this.autoWorkingDirectory)}`)'
-    );
+    expect(source).toContain('this.getPathModule().dirname(filePath)');
     expect(source).not.toContain('this.genomeBrowser.showNotification(`Working directory set to:');
     expect(source).not.toMatch(/\brequire\(['"]path['"]\)/);
     expect(source).not.toMatch(/\brequire\(['"]fs['"]\)/);
@@ -145,7 +143,7 @@ describe('file operation IPC hardening', () => {
     );
     expect(storageSource).toMatch(/crypto\s*\.createHash\('sha256'\)/);
     expect(source).toContain('buildFallbackPaths(');
-    expect(source).toContain('[sidecarPath, fallbackPath, ...legacyFallbackPaths]');
+    expect(source).toContain('[paths.legacyAdjacentPath, ...paths.legacyFallbackPaths]');
     expect(source).toContain('if (selected.isLegacy)');
     expect(source).toContain('_sourceGenomePathSha256: sourcePathHash');
     expect(storageSource).toContain('fallback sidecar has no verifiable genome-path binding');

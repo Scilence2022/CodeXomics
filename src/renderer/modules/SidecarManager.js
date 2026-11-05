@@ -2,15 +2,14 @@
  * SidecarManager - Manages per-file metadata storage using companion sidecar files
  *
  * For each genome file (e.g., mygenome.gbk), a sidecar file is created
- * (e.g., mygenome.CodeXomics) to store gene notes, attachments, and other metadata.
+ * (e.g., .codexomics/mygenome.gbk.CodeXomics) to store gene notes, attachments, and other metadata.
  */
 class SidecarManager {
   constructor() {
     this.cache = new Map(); // Cache loaded sidecar data by file path
     this.cacheProvenance = new Map(); // genomePath -> verified | fallback
-    this.pendingSaves = new Map(); // Track pending save operations
+    this.fieldBases = new Map();
     this.writeLocks = new Map();
-    this.saveDebounceMs = 1000; // Debounce saves to prevent excessive disk writes
 
     console.log('📁 SidecarManager initialized');
   }
@@ -22,12 +21,8 @@ class SidecarManager {
    */
   getSidecarPath(genomePath) {
     if (!genomePath) return null;
-
     const path = window.path;
-    const dir = path.dirname(genomePath);
-    const basename = path.basename(genomePath, path.extname(genomePath));
-
-    return path.join(dir, `${basename}.CodeXomics`);
+    return path.join(path.dirname(genomePath), '.codexomics', `${path.basename(genomePath)}.CodeXomics`);
   }
 
   /**
@@ -88,145 +83,86 @@ class SidecarManager {
     }
   }
 
-  /**
-   * Save sidecar data for a genome file (debounced)
-   * @param {string} genomePath - Path to the genome file
-   * @param {Object} data - The data to save
-   */
   async save(genomePath, data = null) {
-    if (!genomePath) {
-      console.warn('⚠️ SidecarManager.save called with no genomePath');
-      return;
-    }
-
-    return this._withWriteLock(genomePath, () => this._scheduleSave(genomePath, data));
-  }
-
-  async _scheduleSave(genomePath, data = null) {
-    const clone = input => {
-      if (typeof structuredClone === 'function') return structuredClone(input);
-      return JSON.parse(JSON.stringify(input));
-    };
-
-    // Use cached data if no data provided
-    if (!data) {
-      data = this.cache.get(genomePath) || this.getDefaultData(genomePath);
-    }
-
-    // Update cache
-    data = clone(data);
-    data.lastModified = new Date().toISOString();
-    this.cache.set(genomePath, data);
-
-    // Clear existing debounce timer
-    if (this.pendingSaves.has(genomePath)) {
-      clearTimeout(this.pendingSaves.get(genomePath));
-    }
-
-    // Debounce the actual file write
-    const timeoutId = setTimeout(async () => {
-      try {
-        await this._withWriteLock(genomePath, async () => {
-          const cached = this.cache.get(genomePath);
-          if (!cached) return;
-          await this._performSave(genomePath, clone(cached));
-        });
-      } finally {
-        if (this.pendingSaves.get(genomePath) === timeoutId) {
-          this.pendingSaves.delete(genomePath);
-        }
-      }
-    }, this.saveDebounceMs);
-
-    this.pendingSaves.set(genomePath, timeoutId);
-  }
-
-  /**
-   * Perform the actual save operation
-   * @private
-   */
-  async _performSave(genomePath, data, options = {}) {
-    try {
-      if (!window.electronAPI || typeof window.electronAPI.saveSidecarFile !== 'function') {
-        const unavailableError = new Error('Sidecar file API unavailable');
-        if (options.throwOnError) throw unavailableError;
-        return false;
-      }
-
-      const result = await window.electronAPI.saveSidecarFile(genomePath, data);
-      if (!result || !result.success) {
-        const saveError = new Error(result?.error || 'Sidecar file API unavailable');
-        if (result?.conflict || result?.code === 'SIDECAR_CONFLICT') {
-          saveError.code = 'SIDECAR_CONFLICT';
-          saveError.currentRevision = result.currentRevision;
-        }
-        throw saveError;
-      }
-
-      if (Number.isInteger(result.storageRevision) && result.storageRevision >= 0) {
-        data._storageRevision = result.storageRevision;
-        const cached = this.cache.get(genomePath);
-        const sentRevision = Number.isInteger(cached?._storageRevision) ? cached._storageRevision : 0;
-        const expectedRevision = Number.isInteger(data._storageRevision) ? data._storageRevision - 1 : 0;
-        if (cached && sentRevision === expectedRevision) {
-          cached._storageRevision = result.storageRevision;
-        }
-      }
-
-      console.log(`💾 Saved sidecar data to: ${result.path || this.getSidecarPath(genomePath)}`);
-      this.cacheProvenance.set(genomePath, 'verified');
-    } catch (error) {
-      console.error(`❌ Error saving sidecar file: ${error.message}`);
-      if (error.code === 'SIDECAR_CONFLICT') {
-        this.cache.delete(genomePath);
-        this.cacheProvenance.delete(genomePath);
-      }
-      if (options.throwOnError) throw error;
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Fallback save to app data directory when original location is not writable
-   * @private
-   */
-  async _saveFallback(genomePath, data) {
-    await this._withWriteLock(genomePath, () =>
-      this._performSave(genomePath, {
-        ...(data || {}),
-        _originalPath: genomePath,
-      })
-    );
-  }
-
-  /**
-   * Get a specific key from sidecar data
-   * @param {string} genomePath - Path to the genome file
-   * @param {string} key - The key to retrieve (e.g., 'geneNotes', 'geneAttachments')
-   * @returns {Promise<any>} The value for the key
-   */
-  async get(genomePath, key, options = {}) {
-    const data = await this.load(genomePath, options);
-    return data[key] || {};
-  }
-
-  /**
-   * Set a specific key in sidecar data
-   * @param {string} genomePath - Path to the genome file
-   * @param {string} key - The key to set
-   * @param {any} value - The value to store
-   */
-  async set(genomePath, key, value) {
+    if (!genomePath) throw new Error('Saving sidecar data requires a genome path');
     return this._withWriteLock(genomePath, async () => {
-      const data = await this.load(genomePath);
-      data[key] = value;
-      await this._scheduleSave(genomePath, data);
+      const snapshot = data || (await this.load(genomePath, { strict: true }));
+      await this._performSave(genomePath, { ...snapshot, lastModified: new Date().toISOString() });
     });
   }
 
+  async _performSave(genomePath, data) {
+    const result = await window.electronAPI?.saveSidecarFile?.(genomePath, data);
+    if (!result?.success) {
+      const error = new Error(result?.error || 'Sidecar file API unavailable');
+      if (result?.conflict || result?.code === 'SIDECAR_CONFLICT') {
+        error.code = 'SIDECAR_CONFLICT';
+        error.currentRevision = result.currentRevision;
+        this.cache.delete(genomePath);
+        this.cacheProvenance.delete(genomePath);
+      }
+      throw error;
+    }
+
+    if (Number.isInteger(result.storageRevision) && result.storageRevision >= 0) {
+      data._storageRevision = result.storageRevision;
+    }
+    this.cache.set(genomePath, data);
+    this.cacheProvenance.set(genomePath, 'verified');
+  }
+
+  async get(genomePath, key, options = {}) {
+    const data = await this.load(genomePath, options);
+    if (!options.strict) this._rememberFieldBase(genomePath, key, data[key]);
+    return data[key] || {};
+  }
+
+  async set(genomePath, key, value) {
+    return this._withWriteLock(genomePath, () => this._saveField(genomePath, key, value, true));
+  }
+
   async setAndForceSave(genomePath, key, value) {
-    return this._withWriteLock(genomePath, () => this._setAndForceSave(genomePath, key, value));
+    return this._withWriteLock(genomePath, () => this._saveField(genomePath, key, value, false));
+  }
+
+  _rememberFieldBase(genomePath, key, value) {
+    if (!this.fieldBases.has(genomePath)) this.fieldBases.set(genomePath, new Map());
+    this.fieldBases.get(genomePath).set(key, JSON.stringify(value));
+  }
+
+  async _saveField(genomePath, key, value, rebase) {
+    if (!genomePath) throw new Error('Saving a sidecar field requires a genome path');
+    const data = await this.load(genomePath, { strict: true });
+    const bases = this.fieldBases.get(genomePath);
+    const expected = rebase && bases?.has(key) ? bases.get(key) : JSON.stringify(data[key]);
+    // Track the caller's baseline separately so a refresh for an unrelated key
+    // cannot turn a stale field snapshot into an unconditional replacement.
+    if (rebase && !bases?.has(key)) this._rememberFieldBase(genomePath, key, data[key]);
+    const desired = JSON.stringify(value);
+    const saveAgainst = async current => {
+      const currentValue = JSON.stringify(current[key]);
+      if (rebase && currentValue !== expected && currentValue !== desired) {
+        throw Object.assign(new Error(`Sidecar field "${key}" changed in another window. Reload before saving.`), {
+          code: 'SIDECAR_CONFLICT',
+        });
+      }
+      if (currentValue !== desired || !rebase) {
+        const candidate = {
+          ...current,
+          [key]: desired === undefined ? undefined : JSON.parse(desired),
+          lastModified: new Date().toISOString(),
+        };
+        await this._performSave(genomePath, candidate);
+      }
+    };
+
+    try {
+      await saveAgainst(data);
+    } catch (error) {
+      if (!rebase || error.code !== 'SIDECAR_CONFLICT' || this.cache.has(genomePath)) throw error;
+      await saveAgainst(await this.load(genomePath, { strict: true }));
+    }
+    if (rebase) this._rememberFieldBase(genomePath, key, value);
   }
 
   async _withWriteLock(genomePath, operation) {
@@ -243,42 +179,6 @@ class SidecarManager {
     } finally {
       release();
       if (this.writeLocks.get(genomePath) === tail) this.writeLocks.delete(genomePath);
-    }
-  }
-
-  async _setAndForceSave(genomePath, key, value) {
-    if (!genomePath) throw new Error('setAndForceSave requires a genome path');
-    const hadCachedData = this.cache.has(genomePath);
-    const previousProvenance = this.cacheProvenance.get(genomePath);
-    const previousData = await this.load(genomePath, { strict: true });
-    const clone = input => {
-      if (typeof structuredClone === 'function') return structuredClone(input);
-      return JSON.parse(JSON.stringify(input));
-    };
-    const previousSnapshot = clone(previousData);
-    const candidate = clone(previousData);
-    candidate[key] = clone(value);
-    candidate.lastModified = new Date().toISOString();
-
-    if (this.pendingSaves.has(genomePath)) {
-      clearTimeout(this.pendingSaves.get(genomePath));
-      this.pendingSaves.delete(genomePath);
-    }
-    this.cache.set(genomePath, candidate);
-    try {
-      await this._performSave(genomePath, candidate, { throwOnError: true });
-    } catch (error) {
-      if (error.code === 'SIDECAR_CONFLICT') {
-        this.cache.delete(genomePath);
-        this.cacheProvenance.delete(genomePath);
-      } else if (hadCachedData) {
-        this.cache.set(genomePath, previousSnapshot);
-        this.cacheProvenance.set(genomePath, previousProvenance);
-      } else {
-        this.cache.delete(genomePath);
-        this.cacheProvenance.delete(genomePath);
-      }
-      throw error;
     }
   }
 
@@ -309,30 +209,16 @@ class SidecarManager {
     if (genomePath) {
       this.cache.delete(genomePath);
       this.cacheProvenance.delete(genomePath);
+      this.fieldBases.delete(genomePath);
     } else {
       this.cache.clear();
       this.cacheProvenance.clear();
+      this.fieldBases.clear();
     }
   }
 
-  /**
-   * Force immediate save (bypass debounce)
-   * @param {string} genomePath - Path to the genome file
-   */
   async forceSave(genomePath) {
-    return this._withWriteLock(genomePath, async () => {
-      if (this.pendingSaves.has(genomePath)) {
-        clearTimeout(this.pendingSaves.get(genomePath));
-        this.pendingSaves.delete(genomePath);
-      }
-
-      const data = this.cache.get(genomePath);
-      if (data) {
-        const snapshot =
-          typeof structuredClone === 'function' ? structuredClone(data) : JSON.parse(JSON.stringify(data));
-        await this._performSave(genomePath, snapshot, { throwOnError: true });
-      }
-    });
+    if (this.cache.has(genomePath)) await this.save(genomePath);
   }
 
   /**

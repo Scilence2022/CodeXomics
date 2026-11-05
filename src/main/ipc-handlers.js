@@ -684,7 +684,9 @@ function registerIpcHandlers(deps) {
       ? fs.realpathSync.native(authorizedGenomePath)
       : fs.realpathSync(authorizedGenomePath);
     const parsed = path.parse(safeGenomePath);
-    const sidecarPath = path.resolve(parsed.dir, `${parsed.name}.CodeXomics`);
+    const sidecarDir = path.join(parsed.dir, '.codexomics');
+    const sidecarPath = path.join(sidecarDir, `${parsed.base}.CodeXomics`);
+    const legacyAdjacentPath = path.join(parsed.dir, `${parsed.name}.CodeXomics`);
     const fallbackDir = path.resolve(app.getPath('userData'), 'sidecar');
     const { sourcePathHash, fallbackPath, legacyFallbackPaths } = buildFallbackPaths(
       fallbackDir,
@@ -693,7 +695,7 @@ function registerIpcHandlers(deps) {
     );
 
     if (
-      path.dirname(sidecarPath) !== parsed.dir ||
+      path.dirname(sidecarPath) !== sidecarDir ||
       path.dirname(fallbackPath) !== fallbackDir ||
       legacyFallbackPaths.some(candidate => path.dirname(candidate) !== fallbackDir)
     ) {
@@ -704,6 +706,8 @@ function registerIpcHandlers(deps) {
       authorizedGenomePath,
       safeGenomePath,
       sidecarPath,
+      sidecarDir,
+      legacyAdjacentPath,
       fallbackDir,
       fallbackPath,
       legacyFallbackPaths,
@@ -760,14 +764,15 @@ function registerIpcHandlers(deps) {
   };
 
   const readNewestSidecarCandidate = async (paths, options = {}) => {
-    const existingPaths = paths.filter(candidatePath => fs.existsSync(candidatePath));
+    const existingPaths = paths.filter(candidatePath => candidatePath && fs.existsSync(candidatePath));
     if (existingPaths.length === 0) return null;
 
     const validCandidates = [];
     const errors = [];
     for (const candidatePath of existingPaths) {
       try {
-        const stats = await fs.promises.stat(candidatePath);
+        const stats = await fs.promises.lstat(candidatePath);
+        if (!stats.isFile()) throw new Error('sidecar candidate is not a regular file');
         assertSidecarContentSize(stats.size);
         const content = await fs.promises.readFile(candidatePath, 'utf8');
         assertSidecarContentSize(content);
@@ -776,13 +781,31 @@ function registerIpcHandlers(deps) {
         if (!data || typeof data !== 'object' || Array.isArray(data)) {
           throw new Error('sidecar root must be a JSON object');
         }
-        const isLegacy = options.legacyFallbackPaths?.has(candidatePath) || false;
-        const isFallback = options.fallbackPaths?.has(candidatePath) || false;
-        if (isFallback) {
-          validateFallbackBinding(data, {
-            ...options,
-            isLegacy,
+        const isLegacyAdjacent = candidatePath === options.legacyAdjacentPath;
+        const isLegacyFallback = options.legacyFallbackPaths?.includes(candidatePath) || false;
+        const isLegacy = isLegacyAdjacent || isLegacyFallback;
+        if (isLegacyAdjacent && !data._sourceGenomePathSha256 && !data._originalPath) {
+          // Legacy adjacent files without a path binding can be adopted only
+          // when their recorded source agrees and there is no competing stem.
+          const source = path.parse(options.safeGenomePath);
+          if (data.sourceFile && data.sourceFile !== source.base) continue;
+          const siblings = await fs.promises.readdir(source.dir);
+          const ambiguous = siblings.some(name => {
+            const sibling = path.parse(name);
+            return (
+              name !== source.base &&
+              sibling.name.toLowerCase() === source.name.toLowerCase() &&
+              sibling.ext.toLowerCase() !== '.codexomics'
+            );
           });
+          if (ambiguous) continue;
+        } else {
+          try {
+            validateFallbackBinding(data, options);
+          } catch (error) {
+            if (isLegacyAdjacent) continue;
+            throw error;
+          }
         }
         const storageRevision =
           Number.isInteger(data._storageRevision) && data._storageRevision >= 0 ? data._storageRevision : 0;
@@ -800,6 +823,7 @@ function registerIpcHandlers(deps) {
       }
     }
     if (validCandidates.length === 0) {
+      if (errors.length === 0) return null;
       throw new Error(`All existing sidecar candidates are corrupt (${errors.join('; ')})`);
     }
     validCandidates.sort(
@@ -809,6 +833,24 @@ function registerIpcHandlers(deps) {
         left.path.localeCompare(right.path)
     );
     return validCandidates[0];
+  };
+
+  const isSidecarDirectoryUsable = async directory => {
+    try {
+      return (await fs.promises.lstat(directory)).isDirectory();
+    } catch (error) {
+      if (error.code === 'ENOENT') return true;
+      if (['EACCES', 'EPERM'].includes(error.code)) return false;
+      throw error;
+    }
+  };
+
+  const findSidecarCandidate = async paths => {
+    const primary = (await isSidecarDirectoryUsable(paths.sidecarDir)) ? paths.sidecarPath : null;
+    return (
+      (await readNewestSidecarCandidate([primary, paths.fallbackPath], paths)) ||
+      readNewestSidecarCandidate([paths.legacyAdjacentPath, ...paths.legacyFallbackPaths], paths)
+    );
   };
 
   const sanitizeScreenshotFormat = format => {
@@ -1434,27 +1476,10 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('load-sidecar-file', async (event, genomePath) => {
     try {
-      const {
-        authorizedGenomePath,
-        safeGenomePath,
-        sidecarPath,
-        fallbackDir,
-        fallbackPath,
-        legacyFallbackPaths,
-        sourcePathHash,
-      } = resolveSidecarPaths(genomePath);
+      const paths = resolveSidecarPaths(genomePath);
+      const { safeGenomePath, fallbackDir, fallbackPath, sourcePathHash } = paths;
       return await withSidecarWriteLock(safeGenomePath, async () => {
-        const candidateOptions = {
-          authorizedGenomePath,
-          safeGenomePath,
-          sourcePathHash,
-          legacyFallbackPaths: new Set(legacyFallbackPaths),
-          fallbackPaths: new Set([fallbackPath, ...legacyFallbackPaths]),
-        };
-        let selected = await readNewestSidecarCandidate(
-          [sidecarPath, fallbackPath, ...legacyFallbackPaths],
-          candidateOptions
-        );
+        let selected = await findSidecarCandidate(paths);
 
         if (!selected) {
           return { success: true, exists: false, data: null };
@@ -1495,23 +1520,10 @@ function registerIpcHandlers(deps) {
         throw new Error('Sidecar data must be a JSON object');
       }
       assertSidecarValueSize(data || {});
-      const {
-        authorizedGenomePath,
-        safeGenomePath,
-        sidecarPath,
-        fallbackDir,
-        fallbackPath,
-        legacyFallbackPaths,
-        sourcePathHash,
-      } = resolveSidecarPaths(genomePath);
+      const paths = resolveSidecarPaths(genomePath);
+      const { safeGenomePath, sidecarPath, sidecarDir, fallbackDir, fallbackPath, sourcePathHash } = paths;
       return await withSidecarWriteLock(safeGenomePath, async () => {
-        const current = await readNewestSidecarCandidate([sidecarPath, fallbackPath, ...legacyFallbackPaths], {
-          authorizedGenomePath,
-          safeGenomePath,
-          sourcePathHash,
-          legacyFallbackPaths: new Set(legacyFallbackPaths),
-          fallbackPaths: new Set([fallbackPath, ...legacyFallbackPaths]),
-        });
+        const current = await findSidecarCandidate(paths);
         const expectedRevision =
           Number.isInteger(data?._storageRevision) && data._storageRevision >= 0 ? data._storageRevision : 0;
         const currentRevision = current?.storageRevision || 0;
@@ -1531,7 +1543,7 @@ function registerIpcHandlers(deps) {
           _storageRevision: storageRevision,
           _sourceGenomePathSha256: sourcePathHash,
           _originalPath: safeGenomePath,
-          sourceFile: data?.sourceFile || path.basename(safeGenomePath),
+          sourceFile: path.basename(safeGenomePath),
           lastModified: data?.lastModified || new Date().toISOString(),
         };
         assertSidecarValueSize(storedData);
@@ -1539,17 +1551,20 @@ function registerIpcHandlers(deps) {
         assertSidecarContentSize(content);
 
         try {
-          await writeFileAtomically(sidecarPath, content);
-          return { success: true, path: sidecarPath, fallback: false, storageRevision };
-        } catch (writeError) {
-          if (!['EACCES', 'EROFS', 'EPERM', 'ENOENT'].includes(writeError.code)) {
-            throw writeError;
+          if (await isSidecarDirectoryUsable(sidecarDir)) {
+            await fs.promises.mkdir(sidecarDir, { recursive: true });
+            if (await isSidecarDirectoryUsable(sidecarDir)) {
+              await writeFileAtomically(sidecarPath, content);
+              return { success: true, path: sidecarPath, fallback: false, storageRevision };
+            }
           }
-
-          await fs.promises.mkdir(fallbackDir, { recursive: true });
-          await writeFileAtomically(fallbackPath, content);
-          return { success: true, path: fallbackPath, fallback: true, storageRevision };
+        } catch (writeError) {
+          if (!['EACCES', 'EROFS', 'EPERM', 'ENOENT', 'EEXIST'].includes(writeError.code)) throw writeError;
         }
+
+        await fs.promises.mkdir(fallbackDir, { recursive: true });
+        await writeFileAtomically(fallbackPath, content);
+        return { success: true, path: fallbackPath, fallback: true, storageRevision };
       });
     } catch (error) {
       return { success: false, error: error.message };
@@ -1558,15 +1573,8 @@ function registerIpcHandlers(deps) {
 
   ipcMain.handle('check-sidecar-file', async (event, genomePath) => {
     try {
-      const { authorizedGenomePath, safeGenomePath, sidecarPath, fallbackPath, legacyFallbackPaths, sourcePathHash } =
-        resolveSidecarPaths(genomePath);
-      const selected = await readNewestSidecarCandidate([sidecarPath, fallbackPath, ...legacyFallbackPaths], {
-        authorizedGenomePath,
-        safeGenomePath,
-        sourcePathHash,
-        legacyFallbackPaths: new Set(legacyFallbackPaths),
-        fallbackPaths: new Set([fallbackPath, ...legacyFallbackPaths]),
-      });
+      const paths = resolveSidecarPaths(genomePath);
+      const selected = await withSidecarWriteLock(paths.safeGenomePath, () => findSidecarCandidate(paths));
       return {
         success: true,
         exists: Boolean(selected),
@@ -2091,16 +2099,21 @@ function registerIpcHandlers(deps) {
       const isGzipped = extension === '.gz';
 
       if (isGzipped) {
-        // For gzipped files, we need to decompress them
-        // Use async decompression to avoid blocking the main process
-        const zlib = require('zlib');
-        const { promisify } = require('util');
-        const gunzip = promisify(zlib.gunzip);
-
-        const compressedData = await fs.promises.readFile(safeFilePath);
-        const decompressedData = await gunzip(compressedData);
-        const data = decompressedData.toString('utf8');
-        return { success: true, data, isGzipped: true };
+        const { pipeline } = require('node:stream/promises');
+        const { createGunzip } = require('node:zlib');
+        const limit = 256 * 1024 * 1024;
+        const decoder = new TextDecoder();
+        const chunks = [];
+        let bytes = 0;
+        await pipeline(fs.createReadStream(safeFilePath), createGunzip(), async stream => {
+          for await (const chunk of stream) {
+            bytes += chunk.length;
+            if (bytes > limit) throw new Error('Gzip output exceeds the 256 MiB import limit');
+            chunks.push(decoder.decode(chunk, { stream: true }));
+          }
+          chunks.push(decoder.decode());
+        });
+        return { success: true, data: chunks.join(''), isGzipped: true };
       } else {
         const data = await fs.promises.readFile(safeFilePath, 'utf8');
         return { success: true, data };
@@ -2441,6 +2454,7 @@ function registerIpcHandlers(deps) {
       const reads = await reader.getRecordsForRange(chromosome, start, end, settings);
       return toIpcSafeValue({
         reads: toIpcSafeValue(reads),
+        sourceSamplingInfo: reads._sourceSamplingInfo || null,
         state: getBamReaderState(reader),
       });
     } catch (error) {

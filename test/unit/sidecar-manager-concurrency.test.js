@@ -20,7 +20,7 @@ function loadSidecarManager(electronAPI) {
 }
 
 describe('SidecarManager write serialization', () => {
-  it('does not let an already-started debounced write overwrite a forced annotation ledger save', async () => {
+  it('waits for the current durable edit before saving an annotation ledger', async () => {
     const genomePath = '/tmp/serialized.gbk';
     let disk = { version: '1.0', geneNotes: {} };
     let writes = 0;
@@ -51,14 +51,11 @@ describe('SidecarManager write serialization', () => {
     };
     const SidecarManager = loadSidecarManager(electronAPI);
     const manager = new SidecarManager();
-    manager.saveDebounceMs = 0;
-
-    await manager.set(genomePath, 'geneNotes', { old: true });
+    const firstSave = manager.set(genomePath, 'geneNotes', { old: true });
     await firstWriteStarted;
     const forcedSave = manager.setAndForceSave(genomePath, 'annotationCuration', { revision: 1 });
     releaseFirstWrite();
-    await forcedSave;
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await Promise.all([firstSave, forcedSave]);
 
     expect(writes).toBeGreaterThanOrEqual(2);
     expect(disk.geneNotes).toEqual({ old: true });
@@ -91,5 +88,35 @@ describe('SidecarManager write serialization', () => {
     });
     expect(manager.cache.has(genomePath)).toBe(false);
     expect(manager.cacheProvenance.has(genomePath)).toBe(false);
+  });
+
+  it('rebases edits to another field but rejects stale edits to the same field', async () => {
+    const genomePath = '/tmp/shared.gbk';
+    let disk = { _storageRevision: 1, geneNotes: { old: true }, primers: [] };
+    const SidecarManager = loadSidecarManager({
+      loadSidecarFile: async () => ({ success: true, exists: true, data: structuredClone(disk) }),
+      saveSidecarFile: async (_path, payload) => {
+        if (payload._storageRevision !== disk._storageRevision) {
+          return { success: false, code: 'SIDECAR_CONFLICT' };
+        }
+        disk = { ...structuredClone(payload), _storageRevision: disk._storageRevision + 1 };
+        return { success: true, storageRevision: disk._storageRevision };
+      },
+    });
+    const first = new SidecarManager();
+    const second = new SidecarManager();
+    await Promise.all([
+      first.get(genomePath, 'geneNotes'),
+      second.get(genomePath, 'geneNotes'),
+      second.get(genomePath, 'primers'),
+    ]);
+
+    await first.set(genomePath, 'geneNotes', { first: true });
+    await second.set(genomePath, 'primers', ['second']);
+    expect(disk).toMatchObject({ geneNotes: { first: true }, primers: ['second'] });
+    await expect(second.set(genomePath, 'geneNotes', { second: true })).rejects.toMatchObject({
+      code: 'SIDECAR_CONFLICT',
+    });
+    expect(disk.geneNotes).toEqual({ first: true });
   });
 });

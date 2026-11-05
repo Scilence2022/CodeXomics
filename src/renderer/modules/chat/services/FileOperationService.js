@@ -67,6 +67,11 @@ class FileOperationService {
     return { success: true };
   }
 
+  async loadFileOrThrow(filePath, options = {}) {
+    const result = await this.app.fileManager.loadFile(filePath, { ...options, reportErrors: false });
+    if (result?.success === false) throw new Error(result.error);
+  }
+
   // 1. FILE LOADING OPERATIONS
   async loadGenomeFile(parameters = {}) {
     try {
@@ -80,7 +85,7 @@ class FileOperationService {
 
         await this.validateFilePath(filePath, 'Genome file', 'load_genome_file');
 
-        await this.app.fileManager.loadFile(filePath);
+        await this.loadFileOrThrow(filePath);
 
         return {
           success: true,
@@ -150,7 +155,7 @@ class FileOperationService {
         await this.validateFilePath(filePath, 'Annotation file', 'load_annotation_file');
 
         // Load annotation file passing merge options
-        await this.app.fileManager.loadFile(filePath, options);
+        await this.loadFileOrThrow(filePath, options);
 
         return {
           success: true,
@@ -671,7 +676,7 @@ class FileOperationService {
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         await this.validateFilePath(filePath, 'Variant file', 'load_variant_file');
-        await this.app.fileManager.loadFile(filePath);
+        await this.loadFileOrThrow(filePath);
         return {
           success: true,
           message: `Successfully loaded variant file: ${filePath}`,
@@ -702,7 +707,7 @@ class FileOperationService {
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         await this.validateFilePath(filePath, 'Reads file', 'load_reads_file');
-        await this.app.fileManager.loadFile(filePath);
+        await this.loadFileOrThrow(filePath);
         return { success: true, message: `Successfully loaded reads file: ${filePath}`, filePath, fileType: 'reads' };
       } else {
         this.requireExplicitFilePathForBenchmark('load_reads_file');
@@ -731,8 +736,12 @@ class FileOperationService {
         for (const wigPath of pathsArray) {
           await this.validateFilePath(wigPath, 'WIG track file', 'load_wig_tracks');
         }
-        if (pathsArray.length > 1) await this.app.fileManager.loadMultipleWIGFiles(pathsArray);
-        else await this.app.fileManager.loadFile(pathsArray[0]);
+        if (pathsArray.length > 1) {
+          const result = await this.app.fileManager.loadMultipleWIGFiles(pathsArray, { reportErrors: false });
+          if (result?.success === false) return { ...result, filePaths: pathsArray, fileType: 'wig' };
+        } else {
+          await this.loadFileOrThrow(pathsArray[0]);
+        }
         return {
           success: true,
           message: `Successfully loaded ${pathsArray.length} WIG track(s)`,

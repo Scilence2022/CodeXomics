@@ -103,7 +103,7 @@ describe('Aligned reads reference and coverage interactions', () => {
     const tooltip = coverage.querySelector('.coverage-tooltip');
     expect(tooltip.style.display).toBe('block');
     expect(tooltip.textContent).toContain('Position: 6');
-    expect(tooltip.textContent).toContain('Coverage: 1x');
+    expect(tooltip.textContent).toContain('Read overlaps per bin: 1');
   });
 
   it('keeps the coverage hover panel above the reference and reads layers', () => {

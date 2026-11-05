@@ -76,7 +76,7 @@ class GeneNotesManager {
       return true;
     } catch (error) {
       console.error('Error saving note:', error);
-      this.showNotification('Failed to save user note', 'error');
+      this.showNotification(`Could not save user note: ${error.message}`, 'error');
       return false;
     }
   }
@@ -87,14 +87,16 @@ class GeneNotesManager {
   async deleteNote(geneId) {
     if (!geneId || !this.notes.has(geneId)) return false;
 
+    const previousNote = this.notes.get(geneId);
     try {
       this.notes.delete(geneId);
       await this.persistNotes();
       this.showNotification('User note deleted', 'success');
       return true;
     } catch (error) {
+      this.notes.set(geneId, previousNote);
       console.error('Error deleting note:', error);
-      this.showNotification('Failed to delete user note', 'error');
+      this.showNotification(`Could not delete user note: ${error.message}`, 'error');
       return false;
     }
   }
@@ -103,24 +105,20 @@ class GeneNotesManager {
    * Persist notes to sidecar file (or fallback to ConfigManager)
    */
   async persistNotes() {
-    try {
-      const data = {};
-      for (const [geneId, note] of this.notes) {
-        data[geneId] = note;
-      }
+    const data = {};
+    for (const [geneId, note] of this.notes) {
+      data[geneId] = note;
+    }
 
-      // Use sidecar manager if available and file is loaded
-      const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
-      if (this.sidecarManager && currentFilePath) {
-        await this.sidecarManager.set(currentFilePath, 'geneNotes', data);
-        console.log('💾 Notes saved to sidecar file');
-      } else if (this.configManager) {
-        // Fallback to ConfigManager (legacy behavior)
-        this.configManager.set('geneNotes.data', data);
-        console.log('💾 Notes saved to config (fallback)');
-      }
-    } catch (error) {
-      console.error('Error persisting notes:', error);
+    // Use sidecar manager if available and file is loaded
+    const currentFilePath = this.genomeBrowser?.loadedGenomePath || this.genomeBrowser?.fileManager?.currentFile?.path;
+    if (this.sidecarManager && currentFilePath) {
+      await this.sidecarManager.set(currentFilePath, 'geneNotes', data);
+      console.log('💾 Notes saved to sidecar file');
+    } else if (this.configManager) {
+      // Fallback to ConfigManager (legacy behavior)
+      this.configManager.set('geneNotes.data', data);
+      console.log('💾 Notes saved to config (fallback)');
     }
   }
 
@@ -132,7 +130,8 @@ class GeneNotesManager {
       let data = {};
 
       // Use sidecar manager if available and file is loaded
-      const currentFilePath = this.genomeBrowser?.fileManager?.currentFile?.path;
+      const currentFilePath =
+        this.genomeBrowser?.loadedGenomePath || this.genomeBrowser?.fileManager?.currentFile?.path;
       if (this.sidecarManager && currentFilePath) {
         data = (await this.sidecarManager.get(currentFilePath, 'geneNotes')) || {};
         console.log(`📂 Loading notes from sidecar file: ${currentFilePath}`);

@@ -6792,7 +6792,7 @@ class GenomeBrowser {
     if (!textarea) return;
 
     const content = textarea.value;
-    await this.geneNotesManager.saveNote(geneId, content);
+    if (!(await this.geneNotesManager.saveNote(geneId, content))) return;
 
     // Update the "updated" timestamp display
     const updatedSpan = document.querySelector('.gene-notes-updated');

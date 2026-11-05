@@ -810,6 +810,7 @@ class TrackRenderer {
         );
       }
 
+      if (segmentReads._sourceSamplingInfo) reads._sourceSamplingInfo = segmentReads._sourceSamplingInfo;
       segmentReads.forEach(read => {
         const adjustedRead = this.adjustReadForViewportSegment(read, segment);
         if (adjustedRead) reads.push(adjustedRead);
@@ -4322,7 +4323,11 @@ class TrackRenderer {
       console.log(`🔍 [DEBUG] showReference setting: ${settings.showReference}`);
 
       // Get reads for current region using ReadsManager with settings
-      const visibleReads = await this.getReadsForViewport(chromosome, viewport, settings);
+      const readsForCoverage = await this.getReadsForViewport(chromosome, viewport, {
+        ...settings,
+        enableSampling: false,
+      });
+      const visibleReads = this.genomeBrowser.readsManager.applySampling(readsForCoverage, settings);
 
       console.log(`🎯 [TrackRenderer] Retrieved reads for sequence display check:`, {
         readsCount: visibleReads.length,
@@ -4417,7 +4422,7 @@ class TrackRenderer {
 
         if (showCoverage) {
           coverageHeight = parseInt(settings.coverageHeight) || 50;
-          this.createCoverageVisualization(trackContent, visibleReads, viewport, coverageHeight, settings);
+          this.createCoverageVisualization(trackContent, readsForCoverage, viewport, coverageHeight, settings);
         }
 
         let referenceHeight = 0;
@@ -14270,6 +14275,7 @@ This action cannot be undone.`;
     // Calculate coverage data
     const coverageData = this.calculateCoverage(reads, viewport.start, viewport.end);
     const maxCoverage = Math.max(...coverageData, 1);
+    const coverageLabel = reads._sourceSamplingInfo ? 'Sampled read overlaps per bin' : 'Read overlaps per bin';
 
     // Create coverage container
     const coverageContainer = document.createElement('div');
@@ -14331,17 +14337,17 @@ This action cannot be undone.`;
             color: #666;
             border: 1px solid #ddd;
         `;
-    statsDiv.textContent = `Max: ${maxCoverage}x | Avg: ${avgCoverage}x`;
+    statsDiv.textContent = `${coverageLabel} · Max: ${maxCoverage} | Avg: ${avgCoverage}`;
     coverageContainer.appendChild(statsDiv);
 
-    this.addCoverageTooltip(coverageContainer, svg, coverageData, viewport, maxCoverage, avgCoverage);
+    this.addCoverageTooltip(coverageContainer, svg, coverageData, viewport, maxCoverage, avgCoverage, coverageLabel);
     trackContent.appendChild(coverageContainer);
   }
 
   /**
    * Add position-specific hover information to the aligned-reads coverage band.
    */
-  addCoverageTooltip(container, svg, coverageData, viewport, maxCoverage, avgCoverage) {
+  addCoverageTooltip(container, svg, coverageData, viewport, maxCoverage, avgCoverage, coverageLabel) {
     if (!coverageData.length) return;
 
     const tooltip = document.createElement('div');
@@ -14371,10 +14377,10 @@ This action cannot be undone.`;
 
       tooltip.innerHTML = `
                 <div class="track-data-tooltip__title">Position: ${toDisplayPosition(position).toLocaleString()}</div>
-                <div><span class="track-data-tooltip__label">Coverage:</span> ${coverageData[index]}x</div>
+                <div><span class="track-data-tooltip__label">${coverageLabel}:</span> ${coverageData[index]}</div>
                 <div class="track-data-tooltip__meta">
                     Bin: ${toDisplayPosition(binStart).toLocaleString()}-${toDisplayPosition(binEnd).toLocaleString()}<br>
-                    Max: ${maxCoverage}x · Avg: ${avgCoverage}x
+                    Max: ${maxCoverage} · Avg: ${avgCoverage}
                 </div>
             `;
       tooltip.style.display = 'block';

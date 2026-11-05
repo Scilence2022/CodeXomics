@@ -50,7 +50,7 @@ class PrimerManager {
   }
 
   getCurrentFilePath() {
-    return this.genomeBrowser?.fileManager?.currentFile?.path || null;
+    return this.genomeBrowser?.loadedGenomePath || this.genomeBrowser?.fileManager?.currentFile?.path || null;
   }
 
   // --- Real-time binding service integration -------------------------------
