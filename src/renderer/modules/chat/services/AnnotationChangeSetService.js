@@ -3335,9 +3335,11 @@ class AnnotationChangeSetService {
     });
   }
 
-  async restoreCommittedAnnotationOverlay() {
+  async restoreCommittedAnnotationOverlay(beforePublish) {
     return this._withLedgerLock(async workspace => {
+      beforePublish?.();
       const ledger = await this._loadLedger(workspace);
+      beforePublish?.();
       const restored = Object.values(ledger.changeSets).filter(
         changeSet => changeSet?.status === 'committed' && changeSet.commitReceipt
       ).length;
@@ -3346,6 +3348,7 @@ class AnnotationChangeSetService {
       // a stalled button. Reconciliation warms it whenever committed history
       // exists, so this only does work for a pending-only queue.
       if (Object.keys(ledger.changeSets || {}).length > 0) await this._featureIndex(workspace);
+      beforePublish?.();
       // Genome load path: the freshly bound ledger may already carry a pending
       // queue from an earlier session, so the badge is published right away.
       this._broadcastLedgerState(ledger, workspace.genomePath, 'genome-loaded');
