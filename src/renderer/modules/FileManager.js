@@ -1281,6 +1281,12 @@ class FileManager {
         feature.genbankLocationSpan = [full.start, full.end];
       }
     }
+    const location = feature.genbankLocation || feature.location;
+    if (location?.includes(':')) {
+      const Exporter =
+        typeof module !== 'undefined' && module.exports ? require('./export/GenBankExporter') : window.GenBankExporter;
+      feature.genbankLocalSegments = new Exporter(this.genomeBrowser).getLocalDisplaySegments(location);
+    }
     if (translations.length) {
       const full = translations.length === 1 ? translations[0] : translations;
       const previous = feature.qualifiers.translation;

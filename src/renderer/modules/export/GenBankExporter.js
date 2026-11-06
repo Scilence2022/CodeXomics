@@ -434,6 +434,24 @@ class GenBankExporter {
     );
   }
 
+  getLocalDisplaySegments(location) {
+    const segments = [];
+    try {
+      this.mapLocalLocation(
+        location.replace(/\s+/g, ''),
+        (start, end) => {
+          if (start > 0 && end >= start) segments.push({ start, end });
+        },
+        () => undefined,
+        () => undefined
+      );
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      return [];
+    }
+    return segments;
+  }
+
   mapPositionQualifiers(qualifiers, mapSpan, allowFuzzy = false) {
     let result;
     const locationOptions = { allowFuzzy, preserveRemote: true };
@@ -551,6 +569,7 @@ class GenBankExporter {
       genbankLocationBounds: [minStart, maxEnd, feature.strand],
       genbankLocationSpan: [minStart, maxEnd],
       qualifiers,
+      ...(original.includes(':') ? { genbankLocalSegments: segments } : {}),
       ...(qualifierError ? { genbankQualifierCoordinateError: qualifierError } : {}),
     };
     if (editedInterior && feature.type?.toLowerCase() === 'cds') {

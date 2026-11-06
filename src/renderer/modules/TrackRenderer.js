@@ -2528,15 +2528,34 @@ class TrackRenderer {
     const settings = this.getTrackSettings('genes');
     const isCircular = this.isCircularModeEnabled(settings);
 
-    return annotations.filter(feature => {
+    const overlaps = span =>
+      isCircular
+        ? this.isFeatureVisibleCircular(span, viewport)
+        : this.overlapsLinearViewport(Number(span.start), Number(span.end), viewport);
+    const visibleAnnotations = [];
+    for (const feature of annotations) {
       const { type } = feature;
-      if (!validTypes.includes(type) && !type.includes('RNA')) return false;
+      if (!validTypes.includes(type) && !type.includes('RNA')) continue;
 
-      const visible = isCircular
-        ? this.isFeatureVisibleCircular(feature, viewport)
-        : this.overlapsLinearViewport(Number(feature.start), Number(feature.end), viewport);
-      return visible && this.genomeBrowser.shouldShowGeneType(type);
-    });
+      if (feature.genbankLocalSegments) {
+        const localFeatures = this.projectLocalGenBankFeature(feature).filter(overlaps);
+        if (localFeatures.length && this.genomeBrowser.shouldShowGeneType(type)) {
+          visibleAnnotations.push(...localFeatures);
+        }
+      } else if (overlaps(feature) && this.genomeBrowser.shouldShowGeneType(type)) {
+        visibleAnnotations.push(feature);
+      }
+    }
+    return visibleAnnotations;
+  }
+
+  projectLocalGenBankFeature(feature) {
+    if (!feature.genbankLocalSegments) return [feature];
+    return feature.genbankLocalSegments.map(segment => ({
+      ...feature,
+      ...segment,
+      _genbankSourceFeature: feature,
+    }));
   }
 
   /**
@@ -6993,7 +7012,9 @@ class TrackRenderer {
   filterProteinAnnotations(annotations, viewport) {
     if (!this.genomeBrowser.shouldShowGeneType('CDS')) return [];
     return this.filterFeaturesByViewport(
-      annotations.filter(feature => feature.type === 'CDS'),
+      annotations
+        .filter(feature => feature.type === 'CDS')
+        .flatMap(feature => this.projectLocalGenBankFeature(feature)),
       viewport
     );
   }
@@ -7733,6 +7754,10 @@ class TrackRenderer {
   }
 
   showGeneDetails(gene, operonInfo, options = {}) {
+    const localDisplay = gene._genbankSourceFeature
+      ? { ...gene, start: gene._sourceStart ?? gene.start, end: gene._sourceEnd ?? gene.end }
+      : null;
+    gene = gene._genbankSourceFeature || gene;
     const featureType = (gene.type || '').toLowerCase();
     if (featureType === 'primer' || featureType === 'primer_bind') {
       // Route primers to dedicated Primer Details sidebar
@@ -7760,30 +7785,36 @@ class TrackRenderer {
 
     const genesSettings = this.getTrackSettings('genes');
     if (options.scrollBottomSequence !== false && genesSettings.autoScrollBottomSequenceOnGeneSelect !== false) {
-      this.genomeBrowser.scrollBottomSequenceToGene?.(gene);
+      this.genomeBrowser.scrollBottomSequenceToGene?.(localDisplay || gene);
     }
   }
 
   showProteinDetails(protein, chromosome) {
+    protein = protein._genbankSourceFeature || protein;
     const sequence = this.genomeBrowser.currentSequence[chromosome];
-    // protein.start and protein.end are already 0-based coordinates, consistent with viewport coordinates
-    const dnaSequence = sequence.substring(protein.start, protein.end);
-    const proteinSequence = this.genomeBrowser.translateDNA(dnaSequence, protein.strand);
-
-    console.log(`🔍 [showProteinDetails] Fixed protein coordinate mapping:`, {
-      proteinStart: protein.start,
-      proteinEnd: protein.end,
-      dnaSequenceLength: dnaSequence.length,
-      expectedLength: protein.end - protein.start,
-    });
+    let dnaSequence;
+    let proteinSequence;
+    let position = `${protein.start}-${protein.end}`;
+    if (protein.genbankLocationBounds) {
+      try {
+        const manager = this.genomeBrowser.exportManager;
+        dnaSequence = manager.extractFeatureSequence(sequence, protein);
+        proteinSequence = manager.extractFeatureProtein(sequence, protein);
+        position = protein.genbankLocation || protein.location;
+      } catch (error) {
+        alert(`Protein sequence unavailable: ${error.message}`);
+        return;
+      }
+    } else {
+      dnaSequence = sequence.substring(protein.start, protein.end);
+      proteinSequence = this.genomeBrowser.translateDNA(dnaSequence, protein.strand);
+    }
 
     const details = [];
     details.push(`Type: Protein (CDS)`);
-    details.push(`Position: ${protein.start}-${protein.end}`);
+    details.push(`Position: ${position}`);
     details.push(`Strand: ${protein.strand === -1 ? 'Reverse (-)' : 'Forward (+)'}`);
-    details.push(
-      `Length: ${protein.end - protein.start + 1} bp (${Math.floor((protein.end - protein.start + 1) / 3)} aa)`
-    );
+    details.push(`Length: ${dnaSequence.length} bp (${proteinSequence.length} aa)`);
     details.push(`DNA Sequence: ${dnaSequence.substring(0, 60)}${dnaSequence.length > 60 ? '...' : ''}`);
     details.push(`Protein Sequence: ${proteinSequence.substring(0, 20)}${proteinSequence.length > 20 ? '...' : ''}`);
 

@@ -78,6 +78,68 @@ describe('Viewport Filtering', () => {
     expect(geneShapeIdx).toBeGreaterThan(0);
     expect(filterIdx).toBeGreaterThan(0);
   });
+
+  it('shows only local pieces of mixed GenBank features and keeps their original identity for selection', () => {
+    const source = {
+      type: 'CDS',
+      start: 10,
+      end: 900,
+      genbankLocalSegments: [
+        { start: 10, end: 20 },
+        { start: 40, end: 50 },
+      ],
+    };
+    const remoteOnly = { type: 'CDS', start: 12, end: 19, genbankLocalSegments: [] };
+    const renderer = Object.create(TrackRenderer.prototype);
+    renderer.genomeBrowser = {
+      currentAnnotations: { chr1: [source, remoteOnly] },
+      currentChromosome: 'chr1',
+      shouldShowGeneType: () => true,
+      selectGene: vi.fn(),
+      scheduleGeneDetailsPanelUpdate: vi.fn(),
+      scrollBottomSequenceToGene: vi.fn(),
+    };
+    renderer.getTrackSettings = () => ({});
+    renderer.isCircularModeEnabled = () => false;
+    const viewport = { start: 1, end: 25 };
+    const [visible] = renderer.filterGeneAnnotations([source, remoteOnly], viewport);
+    expect(renderer.filterGeneAnnotations([source, remoteOnly], { start: 500, end: 550 })).toEqual([]);
+    expect(renderer.filterGeneAnnotations([source, remoteOnly], viewport)).toHaveLength(1);
+    expect(renderer.filterProteinAnnotations([source, remoteOnly], viewport)).toHaveLength(1);
+    expect(visible).toMatchObject({ start: 10, end: 20 });
+    renderer.showGeneDetails(visible, null);
+    expect(renderer.genomeBrowser.selectGene).toHaveBeenCalledWith(source, null);
+    expect(renderer.genomeBrowser.scrollBottomSequenceToGene).toHaveBeenCalledWith(
+      expect.objectContaining({ start: 10, end: 20 })
+    );
+  });
+
+  it('uses the full annotated CDS when opening details from a local segment', () => {
+    const renderer = Object.create(TrackRenderer.prototype);
+    const source = {
+      type: 'CDS',
+      start: 10,
+      end: 900,
+      location: 'join(10..20,AB123.1:880..900)',
+      genbankLocationBounds: [10, 900, 1],
+    };
+    const sequence = 'A'.repeat(30);
+    const alertSpy = vi.spyOn(globalThis, 'alert').mockImplementation(() => {});
+    try {
+      const extractFeatureSequence = vi.fn().mockReturnValue('ATGGCTTAA');
+      const extractFeatureProtein = vi.fn().mockReturnValue('MA');
+      renderer.genomeBrowser = {
+        currentSequence: { chr1: sequence },
+        exportManager: { extractFeatureSequence, extractFeatureProtein },
+      };
+      renderer.showProteinDetails({ ...source, end: 20, _genbankSourceFeature: source }, 'chr1');
+      expect(extractFeatureSequence).toHaveBeenCalledWith(sequence, source);
+      expect(extractFeatureProtein).toHaveBeenCalledWith(sequence, source);
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Length: 9 bp (2 aa)'));
+    } finally {
+      alertSpy.mockRestore();
+    }
+  });
 });
 
 describe('Circular Viewport Handling', () => {

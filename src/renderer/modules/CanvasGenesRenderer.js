@@ -283,13 +283,14 @@ class CanvasGenesRenderer {
     this.ctx.translate(x, y);
 
     // Check for selection state (matching SVG logic)
+    const sourceGene = gene._genbankSourceFeature || gene;
     const isSelected =
       this.genomeBrowser &&
       this.genomeBrowser.selectedGene &&
       this.genomeBrowser.selectedGene.gene &&
-      this.genomeBrowser.selectedGene.gene.start === gene.start &&
-      this.genomeBrowser.selectedGene.gene.end === gene.end &&
-      this.genomeBrowser.selectedGene.gene.type === gene.type;
+      this.genomeBrowser.selectedGene.gene.start === sourceGene.start &&
+      this.genomeBrowser.selectedGene.gene.end === sourceGene.end &&
+      this.genomeBrowser.selectedGene.gene.type === sourceGene.type;
 
     if (isSelected) {
       this.ctx.shadowBlur = 10;

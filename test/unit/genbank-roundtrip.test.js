@@ -124,6 +124,7 @@ describe('GenBank round trip', () => {
     const exporter = new GenBankExporter(browser);
     const manager = new ExportManager(browser);
     const [feature] = browser.currentAnnotations.LOCAL;
+    expect(feature.genbankLocalSegments).toEqual([{ start: 2, end: 3 }]);
     const extract = (candidate = feature) => manager.extractFeatureSequence(browser.currentSequence.LOCAL, candidate);
     expect(extract()).toBe('GGGAA');
     expect(extract({ ...feature, location: feature.location.replace('AB0002.2', 'AB0002') })).toBe('GGGAA');

@@ -17,6 +17,7 @@ test('genome view opens a GenBank file and isolates companion data after replace
       'FEATURES             Location/Qualifiers\n' +
       '     gene            2..8\n' +
       '                     /gene="fixture_gene"\n' +
+      '     CDS             join(2..4,AB123.1:500..510)\n' +
       'ORIGIN\n' +
       '        1 acgtacgtacgt\n' +
       '//\n';
@@ -55,14 +56,23 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
       .poll(() =>
         genomeView.evaluate(() => {
           const genome = window.genomeBrowser;
+          const mixed = genome?.currentAnnotations?.SMOKE?.find(item => item.type === 'CDS');
           return {
             chromosome: genome?.currentChromosome,
             sequence: genome?.currentSequence?.SMOKE,
             feature: genome?.currentAnnotations?.SMOKE?.find(item => item.type === 'gene')?.qualifiers?.gene,
+            localSegments: mixed
+              ? genome.trackRenderer?.projectLocalGenBankFeature(mixed).map(({ start, end }) => [start, end])
+              : undefined,
           };
         })
       )
-      .toEqual({ chromosome: 'SMOKE', sequence: 'ACGTACGTACGT', feature: 'fixture_gene' });
+      .toEqual({
+        chromosome: 'SMOKE',
+        sequence: 'ACGTACGTACGT',
+        feature: 'fixture_gene',
+        localSegments: [[2, 4]],
+      });
 
     const originalBinding = await genomeView.evaluate(async () => {
       const { loadedGenomePath, loadedGenomeSourceSha256, sidecarManager } = window.genomeBrowser;
