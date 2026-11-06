@@ -192,16 +192,76 @@ describe('GenBank round trip', () => {
   });
 
   it.each([
-    ['join(<2..4,7..8)', {}],
-    ['join(2..4,AB123.1:7..8)', {}],
-  ])('requires review for gap edits to %s with unresolved coordinates', (location, qualifiers) => {
+    ['join(<2..4,7..8)', 5, 'join(<2..4,9..10)'],
+    ['join(2..4,7..>8)', 5, 'join(2..4,9..>10)'],
+    ['complement(4..>8)', 2, 'complement(6..>10)'],
+    ['complement(join(AB123.1:4..6,2..4,7..8))', 5, 'complement(join(AB123.1:4..6,2..4,9..10))'],
+  ])(
+    'remaps local edits to %s without changing remote references or boundary markers',
+    (location, position, expected) => {
+      const actions = createActionManager({});
+      const exporter = new GenBankExporter({});
+      const strand = location.startsWith('complement(') ? -1 : 1;
+      const edited = actions.adjustSingleFeature(
+        { type: 'misc_feature', start: 2, end: 8, strand, location, genbankLocationBounds: [2, 8, strand] },
+        [{ type: 'insert', position, sequence: 'AA' }]
+      );
+      expect(exporter.formatLocation(edited)).toBe(expected);
+    }
+  );
+
+  it.each([
+    ['<4..8', { type: 'insert', position: 2, sequence: 'AA' }, /may overlap fuzzy coordinate/],
+    ['4..>8', { type: 'delete', start: 9, end: 9 }, /may overlap fuzzy coordinate/],
+    ['<4..8', { type: 'replace', start: 2, end: 9, newSequence: 'AA' }, /may overlap fuzzy coordinate/],
+    ['join(4..8,AB123.1:4..8)', { type: 'replace', start: 2, end: 9, newSequence: 'AA' }, /Edit overlaps coordinate/],
+  ])('blocks export when an edit may invalidate %s', (location, edit, diagnostic) => {
     const actions = createActionManager({});
     const exporter = new GenBankExporter({});
-    const edited = actions.adjustSingleFeature(
-      { type: 'CDS', start: 2, end: 8, strand: 1, location, qualifiers, genbankLocationBounds: [2, 8, 1] },
-      [{ type: 'insert', position: 5, sequence: 'AA' }]
-    );
-    expect(() => exporter.formatLocation(edited)).toThrow(/edited compound location/);
+    const feature = { type: 'CDS', start: 4, end: 8, strand: 1, location, genbankLocationBounds: [4, 8, 1] };
+    const workspace = { annotations: { FIXTURE: [feature] } };
+    actions.applyFeatureModificationToGenomeData(workspace, 'FIXTURE', edit);
+    const [edited] = workspace.annotations.FIXTURE;
+    expect(() => exporter.formatLocation(edited)).toThrow(diagnostic);
+    const editedAgain = actions.adjustSingleFeature(edited, [{ type: 'insert', position: 10, sequence: 'AA' }]);
+    expect(() => exporter.formatLocation(editedAgain)).toThrow(diagnostic);
+    expect(exporter.formatLocation(feature)).toBe(location);
+  });
+
+  it('keeps a remote-only feature through a replacement of the same numeric local coordinates', () => {
+    const actions = createActionManager({});
+    const exporter = new GenBankExporter({});
+    const feature = {
+      type: 'misc_feature',
+      start: 4,
+      end: 8,
+      strand: 1,
+      location: 'AB123.1:4..8',
+      genbankLocationBounds: [4, 8, 1],
+    };
+    const workspace = { annotations: { FIXTURE: [feature] } };
+    actions.applyFeatureModificationToGenomeData(workspace, 'FIXTURE', {
+      type: 'replace',
+      start: 2,
+      end: 9,
+      newSequence: 'AA',
+    });
+    expect(workspace.annotations.FIXTURE).toEqual([feature]);
+    expect(exporter.formatLocation(workspace.annotations.FIXTURE[0])).toBe('AB123.1:4..8');
+  });
+
+  it('blocks legacy fuzzy shifts that lack the edit position needed to check the boundary', () => {
+    const exporter = new GenBankExporter({});
+    expect(() =>
+      exporter.formatLocation({
+        type: 'CDS',
+        start: 5,
+        end: 9,
+        strand: 1,
+        location: '<4..8',
+        genbankLocationBounds: [4, 8, 1],
+      })
+    ).toThrow(/edited fuzzy location/);
   });
 
   it('round-trips repeated coordinate qualifiers after gap and upstream edits', async () => {

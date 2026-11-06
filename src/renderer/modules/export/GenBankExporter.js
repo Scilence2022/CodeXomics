@@ -331,6 +331,7 @@ class GenBankExporter {
   }
 
   formatLocation(feature) {
+    if (feature.genbankLocationCoordinateError) throw new RangeError(feature.genbankLocationCoordinateError);
     const negative = feature.strand === -1 || feature.strand === '-';
     const original = feature.genbankLocation || feature.location;
     const bounds = feature.genbankLocationBounds;
@@ -340,11 +341,14 @@ class GenBankExporter {
       if (shift === 0) {
         return original.replace(/\s+/g, '');
       }
-      if (shift !== null && !original.includes(':')) {
+      if (shift !== null && !/[<>:]/.test(original)) {
         return original.replace(/\s+/g, '').replace(/\d+/g, value => String(Number(value) + shift));
       }
+      if (/[<>]/.test(original)) {
+        throw new RangeError(`Cannot export edited fuzzy location for ${feature.name || feature.type}: ${original}`);
+      }
       if (compound) {
-        throw new Error(`Cannot export edited compound location for ${feature.name || feature.type}: ${original}`);
+        throw new RangeError(`Cannot export edited compound location for ${feature.name || feature.type}: ${original}`);
       }
     }
     const formatSpan = (start, end) => (start === end ? String(start) : `${start}..${end}`);
@@ -379,10 +383,13 @@ class GenBankExporter {
     return this.mapPositionQualifiers(qualifiers, (start, end) => [start + shift, end + shift]);
   }
 
-  mapLocalLocation(expression, mapSpan, mapGroup, depth = 0) {
+  mapLocalLocation(expression, mapSpan, mapGroup, preserveRemote = false, depth = 0) {
     if (depth > 32) throw new SyntaxError('GenBank location nesting exceeds the supported limit');
     const span = /^[<>]?(\d+)(?:\.\.[<>]?(\d+))?$/.exec(expression);
     if (span) return mapSpan(Number(span[1]), Number(span[2] || span[1]), expression);
+    if (preserveRemote && /^[a-z][a-z0-9_.]*:[<>]?\d+(?:\.\.[<>]?\d+|\^\d+)?$/i.test(expression)) {
+      return expression;
+    }
 
     const operator = /^(join|order|complement)\((.+)\)$/i.exec(expression);
     if (!operator) throw new SyntaxError(`Cannot extract local sequence for location: ${expression}`);
@@ -406,25 +413,34 @@ class GenBankExporter {
     parts.push(body.slice(start));
     return mapGroup(
       type,
-      parts.map(part => this.mapLocalLocation(part, mapSpan, mapGroup, depth + 1))
+      parts.map(part => this.mapLocalLocation(part, mapSpan, mapGroup, preserveRemote, depth + 1))
     );
   }
 
-  mapExactLocation(expression, mapSpan) {
-    if (/[<>:^]/.test(expression)) throw new SyntaxError(`Unsupported coordinate: ${expression}`);
+  mapEditableLocation(expression, mapSpan, allowUncertain = false) {
+    if (!allowUncertain && /[<>:^]/.test(expression)) throw new SyntaxError(`Unsupported coordinate: ${expression}`);
     return this.mapLocalLocation(
       expression.replace(/\s+/g, ''),
       (start, end, span) => {
         if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start) {
           throw new SyntaxError(`Invalid GenBank location: ${span}`);
         }
-        const [first, last] = mapSpan(start, end);
+        const range = span.includes('..');
+        const [left, right] = span.split('..');
+        if (range && (left.startsWith('>') || right.startsWith('<'))) {
+          throw new SyntaxError(`Unsupported fuzzy boundary: ${span}`);
+        }
+        const partialStart = left.startsWith('<');
+        const partialEnd = (range ? right : left).startsWith('>');
+        const [first, last] = mapSpan(start, end, partialStart, partialEnd);
         if (!Number.isSafeInteger(first) || !Number.isSafeInteger(last) || first < 1 || last < first) {
           throw new RangeError(`Invalid remapped GenBank location: ${span}`);
         }
-        return span.includes('..') ? `${first}..${last}` : String(first);
+        const startMarker = left.match(/^[<>]/)?.[0] || '';
+        return range ? `${startMarker}${first}..${partialEnd ? '>' : ''}${last}` : `${startMarker}${first}`;
       },
-      (type, parts) => `${type}(${parts.join(',')})`
+      (type, parts) => `${type}(${parts.join(',')})`,
+      allowUncertain
     );
   }
 
@@ -436,11 +452,11 @@ class GenBankExporter {
       const remap = value => {
         try {
           if (typeof value !== 'string') throw new SyntaxError('Expected a coordinate string');
-          if (name === 'rpt_unit_range') return this.mapExactLocation(value, mapSpan);
+          if (name === 'rpt_unit_range') return this.mapEditableLocation(value, mapSpan);
           const match = /^(\(\s*pos\s*:\s*)(.+?)(\s*,\s*aa\s*:.*\))$/is.exec(value);
           if (!match) throw new SyntaxError('Expected a position followed by an amino acid');
           const [, prefix, location, suffix] = match;
-          return prefix + this.mapExactLocation(location, mapSpan) + suffix;
+          return prefix + this.mapEditableLocation(location, mapSpan) + suffix;
         } catch (error) {
           if (!(error instanceof SyntaxError || error instanceof RangeError)) throw error;
           throw new SyntaxError(`Cannot remap /${key}: ${error.message}`, { cause: error });
@@ -452,7 +468,8 @@ class GenBankExporter {
     return result || qualifiers;
   }
 
-  remapDisjointCompoundLocation(feature, modification) {
+  remapDisjointLocation(feature, modification) {
+    if (feature.genbankLocationCoordinateError) return feature;
     if (!['insert', 'delete', 'replace'].includes(modification.type)) return null;
     const insertion = modification.type === 'insert';
     const position = insertion ? modification.position : modification.start;
@@ -467,31 +484,51 @@ class GenBankExporter {
     }
     if (!Number.isSafeInteger(added) || added < 0) return null;
 
-    if (/[<>:^]/.test(feature.genbankLocation || feature.location)) return null;
-    if (this.getUniformLocationShift(feature) === null) return null;
-    const location = this.formatLocation(feature);
+    const original = feature.genbankLocation || feature.location;
+    const requiresReview = /[<>:]/.test(original);
+    if (original.includes('^') && !requiresReview) return null;
+    if (!requiresReview && this.getUniformLocationShift(feature) === null) return null;
     const segments = [];
     let minStart = Infinity;
     let maxEnd = 0;
-    const remapSpan = (start, end) => {
-      const overlaps = insertion ? start < position && position <= end : position <= end && editEnd >= start;
-      if (overlaps) throw new RangeError(`Edit overlaps coordinate ${start}..${end}`);
+    const remapSpan = (start, end, partialStart, partialEnd) => {
+      const possibleEnd = partialEnd ? Infinity : end;
+      const overlaps = insertion
+        ? (partialStart || position > start) && position <= possibleEnd
+        : (partialStart || editEnd >= start) && position <= possibleEnd;
+      if (overlaps) {
+        const reason = partialStart || partialEnd ? 'Edit may overlap fuzzy coordinate' : 'Edit overlaps coordinate';
+        throw new RangeError(`${reason} ${start}..${end}`);
+      }
       const shift = (insertion ? start >= position : start > editEnd) ? delta : 0;
       return [start + shift, end + shift];
     };
+    let location;
     let remapped;
     try {
-      remapped = this.mapExactLocation(location, (start, end) => {
-        const [first, last] = remapSpan(start, end);
-        minStart = Math.min(minStart, first);
-        maxEnd = Math.max(maxEnd, last);
-        segments.push({ start: first, end: last });
-        return [first, last];
-      });
+      location = this.formatLocation(feature);
+      remapped = this.mapEditableLocation(
+        location,
+        (start, end, partialStart, partialEnd) => {
+          const [first, last] = remapSpan(start, end, partialStart, partialEnd);
+          minStart = Math.min(minStart, first);
+          maxEnd = Math.max(maxEnd, last);
+          segments.push({ start: first, end: last });
+          return [first, last];
+        },
+        true
+      );
     } catch (error) {
-      if (error instanceof SyntaxError || error instanceof RangeError) return null;
-      throw error;
+      if (!(error instanceof SyntaxError || error instanceof RangeError)) throw error;
+      if (requiresReview) {
+        return {
+          ...feature,
+          genbankLocationCoordinateError: `Cannot export edited location for ${feature.name || feature.type}: ${error.message}`,
+        };
+      }
+      return null;
     }
+    if (segments.length === 0) return feature; // All segments belong to other records.
     if (remapped === location && position > maxEnd) return feature;
     let qualifiers = feature.qualifiers;
     let qualifierError;

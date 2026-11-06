@@ -422,9 +422,11 @@ between segments can shift the affected coordinates while preserving the
 segment order and the existing translation. Exact local coordinates in
 `/transl_except`, `/anticodon`, and `/rpt_unit_range` move with the affected
 bases. If an edit overlaps a qualifier position or leaves its coordinates
-unresolved, the affected feature blocks GenBank export. Edits that overlap
-feature segments or involve uncertain or remote feature positions may still
-require manual review.
+unresolved, the affected feature blocks GenBank export. Local edits preserve
+accession-qualified remote coordinates and shift only the affected local
+segments. Fuzzy boundaries such as `<100` and `>250` keep their markers when
+an edit is outside the possible feature span. An edit that may overlap an
+uncertain boundary requires review before export.
 
 ### Conflict Detection
 
