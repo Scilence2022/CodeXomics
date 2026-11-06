@@ -2955,18 +2955,17 @@ class TabManager {
     const readPanel = document.getElementById('readDetailsSection');
     if (readPanel && tabState.sidebarPanels.readDetailsSection) {
       tabState.sidebarPanels.readDetailsSection.visible = readPanel.style.display !== 'none';
-      if (tabState.sidebarPanels.readDetailsSection.visible) {
-        tabState.sidebarPanels.readDetailsSection.content = readPanel.innerHTML;
-      }
+      tabState.sidebarPanels.readDetailsSection.content = null;
     }
 
     // Save variant details panel state
     const variantPanel = document.getElementById('variantDetailsSection');
     if (variantPanel && tabState.sidebarPanels.variantDetailsSection) {
-      tabState.sidebarPanels.variantDetailsSection.visible = variantPanel.style.display !== 'none';
-      if (tabState.sidebarPanels.variantDetailsSection.visible) {
-        tabState.sidebarPanels.variantDetailsSection.content = variantPanel.innerHTML;
-      }
+      const variantState = tabState.sidebarPanels.variantDetailsSection;
+      variantState.visible = variantPanel.style.display !== 'none';
+      const isReadMutation = Boolean(variantPanel.querySelector('.read-mutation-title'));
+      variantState.readMutation = variantState.visible && isReadMutation ? this.genomeBrowser.selectedMutation : null;
+      variantState.content = variantState.visible && !isReadMutation ? variantPanel.innerHTML : null;
     }
 
     // Save search results panel state
@@ -3066,8 +3065,9 @@ class TabManager {
     // Restore read details panel
     const readPanel = document.getElementById('readDetailsSection');
     if (readPanel && tabState.sidebarPanels.readDetailsSection) {
-      if (tabState.sidebarPanels.readDetailsSection.visible && tabState.sidebarPanels.readDetailsSection.content) {
-        readPanel.innerHTML = tabState.sidebarPanels.readDetailsSection.content;
+      const selectedRead = tabState.sidebarPanels.readDetailsSection.visible ? tabState.selectedRead : null;
+      if (selectedRead?.read) {
+        this.genomeBrowser.populateReadDetails(selectedRead.read, selectedRead.fileInfo);
         readPanel.style.display = 'block';
       } else {
         readPanel.style.display = 'none';
@@ -3077,11 +3077,23 @@ class TabManager {
     // Restore variant details panel
     const variantPanel = document.getElementById('variantDetailsSection');
     if (variantPanel && tabState.sidebarPanels.variantDetailsSection) {
-      if (
-        tabState.sidebarPanels.variantDetailsSection.visible &&
-        tabState.sidebarPanels.variantDetailsSection.content
+      const { visible, content, readMutation } = tabState.sidebarPanels.variantDetailsSection;
+      this.genomeBrowser.selectedMutation = visible ? readMutation || null : null;
+      if (visible && readMutation?.read && readMutation.mutation) {
+        const header = variantPanel.querySelector('h3');
+        if (header) {
+          header.textContent = 'Read Mutation Details';
+          header.classList.add('read-mutation-title');
+        }
+        this.genomeBrowser.populateReadMutationDetails(readMutation.read, readMutation.mutation);
+        variantPanel.style.display = 'block';
+      } else if (
+        visible &&
+        typeof content === 'string' &&
+        content &&
+        !content.includes('class="read-mutation-details"')
       ) {
-        variantPanel.innerHTML = tabState.sidebarPanels.variantDetailsSection.content;
+        variantPanel.innerHTML = content;
         variantPanel.style.display = 'block';
       } else {
         variantPanel.style.display = 'none';

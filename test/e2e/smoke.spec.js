@@ -211,6 +211,99 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     );
     expect(samQueries).toEqual({ cancelled: null, reads: ['read'] });
 
+    const quotedReadName = `read'"<em>`;
+    const qualityMarkup = '<img/id=codexomics-quality-probe>';
+    const readFixture = path.join(fixtureDirectory, 'read-details.sam');
+    const alignment = [
+      quotedReadName,
+      0,
+      'SMOKE',
+      1,
+      60,
+      `${qualityMarkup.length}M`,
+      '*',
+      0,
+      0,
+      'A'.repeat(qualityMarkup.length),
+      qualityMarkup,
+    ].join('\t');
+    await fs.writeFile(readFixture, alignment + '\n');
+    const readDetails = await genomeView.evaluate(async filePath => {
+      const api = window.electronAPI;
+      const query = await api.getSamReadsForRange(filePath, 'SMOKE', 0, 1, {}, globalThis.crypto.randomUUID());
+      const read = { ...query.reads[0], tags: { zz: '<em id=codexomics-read-tag-probe>sample</em>' } };
+      const genome = window.genomeBrowser;
+      const copy = genome.copySpecificReadSequence;
+      const select = genome.selectReadById;
+      const actions = [];
+      try {
+        genome.copySpecificReadSequence = (...args) => actions.push(args);
+        genome.selectReadById = id => actions.push(['select', id]);
+        genome.populateReadDetails(read);
+        const details = document.querySelector('#readDetailsContent');
+        const quality = details.querySelector('.quality-full-line');
+        const section = quality.closest('.read-sequence-section');
+        const toggle = section.querySelector('.toggle-read-sequence-btn');
+        toggle.click();
+        const expanded = quality.closest('.read-sequence-full').style.display === 'block';
+        toggle.click();
+        const collapsed = quality.closest('.read-sequence-full').style.display === 'none';
+        section.querySelector('[data-read-copy="quality"]').click();
+        const mutation = { type: 'substitution', position: 2, refSequence: 'A', sequence: 'T' };
+        genome.selectMutation(read, mutation);
+        document.querySelector('.read-mutation-view-btn').click();
+        document.querySelector('#readDetailsSection').style.display = 'block';
+        const state = { selectedRead: genome.selectedRead };
+        genome.tabManager.saveSidebarPanelStates(state);
+        const savedReadAsData = state.sidebarPanels.readDetailsSection.content === null;
+        const savedMutationAsData = state.sidebarPanels.variantDetailsSection.readMutation?.read.id === read.id;
+        state.sidebarPanels.readDetailsSection.content = '<em id=codexomics-legacy-read-probe>stored HTML</em>';
+        details.replaceChildren();
+        document.querySelector('#variantDetailsContent').replaceChildren();
+        genome.tabManager.restoreSidebarPanelStates(state);
+        details.querySelector('[data-read-copy="quality"]').click();
+        document.querySelector('.read-mutation-view-btn').click();
+        genome.showReadSelectionFeedback(read);
+        const notification = [...document.querySelectorAll('.notification-content span')].at(-1);
+        return {
+          readName: details.querySelector('.read-name').textContent,
+          quality: details.querySelector('.quality-full-line').textContent,
+          tag: [...details.querySelectorAll('.read-attribute-value')].at(-1).textContent,
+          parsedMarkup: Boolean(
+            details.querySelector(
+              '#codexomics-quality-probe, #codexomics-read-tag-probe, #codexomics-legacy-read-probe'
+            ) || notification.querySelector('em')
+          ),
+          notification: notification.textContent,
+          savedReadAsData,
+          savedMutationAsData,
+          expanded,
+          collapsed,
+          actions,
+        };
+      } finally {
+        genome.copySpecificReadSequence = copy;
+        genome.selectReadById = select;
+      }
+    }, readFixture);
+    expect(readDetails).toEqual({
+      readName: quotedReadName,
+      quality: qualityMarkup,
+      tag: '<em id=codexomics-read-tag-probe>sample</em>',
+      parsedMarkup: false,
+      notification: `Selected read: ${quotedReadName} at 1-${qualityMarkup.length}`,
+      savedReadAsData: true,
+      savedMutationAsData: true,
+      expanded: true,
+      collapsed: true,
+      actions: [
+        ['quality', quotedReadName],
+        ['select', quotedReadName],
+        ['quality', quotedReadName],
+        ['select', quotedReadName],
+      ],
+    });
+
     const fasta = path.join(fixtureDirectory, 'refseq.fna.gz');
     const fastaText = '>REFSEQ\r\nACGT';
     await fs.writeFile(fasta, gzipSync(fastaText));

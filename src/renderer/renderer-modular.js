@@ -5898,7 +5898,7 @@ class GenomeBrowser {
 
       // Update tab manager about sidebar panel state change
       if (this.tabManager) {
-        this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', true, readDetailsSection.innerHTML);
+        this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', true, null);
       }
 
       // Scroll sidebar to bring read details section into view
@@ -5914,7 +5914,12 @@ class GenomeBrowser {
 
       // Update tab manager about sidebar panel state change
       if (this.tabManager) {
-        this.tabManager.updateCurrentTabSidebarPanel('variantDetailsSection', true, variantDetailsSection.innerHTML);
+        const isReadMutation = Boolean(variantDetailsSection.querySelector('.read-mutation-title'));
+        this.tabManager.updateCurrentTabSidebarPanel(
+          'variantDetailsSection',
+          true,
+          isReadMutation ? null : variantDetailsSection.innerHTML
+        );
       }
 
       // Scroll sidebar to bring variant details section into view
@@ -6823,18 +6828,15 @@ class GenomeBrowser {
 
     // Get basic read information
     const readName = read.id || read.qname || 'Unknown Read';
-    const position = `${read.start.toLocaleString()}-${read.end.toLocaleString()}`;
+    const position = this.escapeHtml(`${read.start.toLocaleString()}-${read.end.toLocaleString()}`);
     const length = (read.end - read.start + 1).toLocaleString();
     const strand = read.strand === '+' || read.strand === 1 ? 'Forward (+)' : 'Reverse (-)';
-
-    // Get current chromosome for context
-    const currentChr = document.getElementById('chromosomeSelect').value;
 
     // Create the read details HTML
     let html = `
             <div class="read-details-info">
                 <div class="read-basic-info">
-                    <div class="read-name">${readName}</div>
+                    <div class="read-name">${this.escapeHtml(String(readName))}</div>
                     <div class="read-type-badge">Aligned Read</div>
                     <div class="read-position">Position: ${position}</div>
                     <div class="read-strand">Strand: ${strand} | Length: ${length} bp</div>
@@ -6845,7 +6847,7 @@ class GenomeBrowser {
       html += `
                     <div class="read-file-info" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color);">
                         <div style="font-size: 12px; color: var(--text-secondary);">
-                            <strong>File:</strong> ${fileInfo.name || 'Unknown File'}
+                            <strong>File:</strong> ${this.escapeHtml(String(fileInfo.name || 'Unknown File'))}
                         </div>
                     </div>
             `;
@@ -6855,7 +6857,7 @@ class GenomeBrowser {
 
     // Add sequences section if we have sequence data
     if (read.sequence || read.quality) {
-      html += this.createReadSequencesSection(read, readName, currentChr);
+      html += this.createReadSequencesSection(read);
     }
 
     // Add read attributes if available
@@ -6870,7 +6872,7 @@ class GenomeBrowser {
         if (value != null && String(value).trim() !== '') {
           html += `
                         <div class="read-attribute">
-                            <div class="read-attribute-label">${key.replace(/_/g, ' ')}</div>
+                            <div class="read-attribute-label">${this.escapeHtml(key.replace(/_/g, ' '))}</div>
                             <div class="read-attribute-value">${this.formatReadAttributeValue(key, value)}</div>
                         </div>
                     `;
@@ -6883,10 +6885,10 @@ class GenomeBrowser {
     // Add action buttons
     html += `
             <div class="read-actions">
-                <button class="btn read-zoom-btn read-action-btn" onclick="window.genomeBrowser.zoomToRead()">
+                <button class="btn read-zoom-btn read-action-btn">
                     <i class="fas fa-search-plus"></i> Zoom to Read
                 </button>
-                <button class="btn read-copy-btn read-action-btn" onclick="window.genomeBrowser.copyReadSequence()">
+                <button class="btn read-copy-btn read-action-btn">
                     <i class="fas fa-copy"></i> Copy Sequence
                 </button>
         `;
@@ -6894,7 +6896,7 @@ class GenomeBrowser {
     // Add copy quality button if quality data is available
     if (read.quality && read.quality.length > 0) {
       html += `
-                <button class="btn read-copy-quality-btn read-action-btn" onclick="window.genomeBrowser.copyReadQuality()">
+                <button class="btn read-copy-quality-btn read-action-btn">
                     <i class="fas fa-copy"></i> Copy Quality
                 </button>
             `;
@@ -6904,11 +6906,13 @@ class GenomeBrowser {
 
     readDetailsContent.innerHTML = html;
 
-    // Add event listeners for expandable sequences
-    this.setupExpandableReadSequences();
+    readDetailsContent.querySelector('.read-zoom-btn').addEventListener('click', () => this.zoomToRead());
+    readDetailsContent.querySelector('.read-copy-btn').addEventListener('click', () => this.copyReadSequence());
+    readDetailsContent.querySelector('.read-copy-quality-btn')?.addEventListener('click', () => this.copyReadQuality());
+    this.setupExpandableReadSequences(readDetailsContent, readName);
   }
 
-  createReadSequencesSection(read, readName, chromosome) {
+  createReadSequencesSection(read) {
     let html = `
             <div class="read-sequences">
                 <h4>Sequences</h4>
@@ -6924,19 +6928,19 @@ class GenomeBrowser {
                     <div class="read-sequence-header">
                         <span>DNA Sequence</span>
                         <div class="read-sequence-actions">
-                            <button class="toggle-read-sequence-btn" onclick="window.genomeBrowser.toggleReadSequence('dna-${readName}')">
+                            <button class="toggle-read-sequence-btn">
                                 <i class="fas fa-expand-alt"></i> Show Full
                             </button>
-                            <button class="copy-read-sequence-btn" onclick="window.genomeBrowser.copySpecificReadSequence('dna', '${readName}')">
+                            <button class="copy-read-sequence-btn" data-read-copy="dna">
                                 <i class="fas fa-copy"></i> Copy
                             </button>
                         </div>
                     </div>
                     <div class="read-sequence-content">
-                        <div class="read-sequence-preview" id="dna-${readName}-preview">
+                        <div class="read-sequence-preview">
                             ${sequencePreview}
                         </div>
-                        <div class="read-sequence-full" id="dna-${readName}-full">
+                        <div class="read-sequence-full">
                             <div class="read-sequence-formatted">
                                 ${sequenceFormatted}
                             </div>
@@ -6948,7 +6952,7 @@ class GenomeBrowser {
 
     // Add quality scores if available
     if (read.quality && read.quality.length > 0) {
-      const qualityPreview = this.formatQualityPreview(read.quality, 100);
+      const qualityPreview = this.escapeHtml(this.formatQualityPreview(read.quality, 100));
       const qualityFormatted = this.formatQualityFull(read.quality);
 
       html += `
@@ -6956,19 +6960,19 @@ class GenomeBrowser {
                     <div class="read-sequence-header">
                         <span>Quality Scores</span>
                         <div class="read-sequence-actions">
-                            <button class="toggle-read-sequence-btn" onclick="window.genomeBrowser.toggleReadSequence('quality-${readName}')">
+                            <button class="toggle-read-sequence-btn">
                                 <i class="fas fa-expand-alt"></i> Show Full
                             </button>
-                            <button class="copy-read-sequence-btn" onclick="window.genomeBrowser.copySpecificReadSequence('quality', '${readName}')">
+                            <button class="copy-read-sequence-btn" data-read-copy="quality">
                                 <i class="fas fa-copy"></i> Copy
                             </button>
                         </div>
                     </div>
                     <div class="read-sequence-content">
-                        <div class="read-sequence-preview" id="quality-${readName}-preview">
+                        <div class="read-sequence-preview">
                             ${qualityPreview}
                         </div>
-                        <div class="read-sequence-full" id="quality-${readName}-full">
+                        <div class="read-sequence-full">
                             <div class="read-sequence-formatted">
                                 ${qualityFormatted}
                             </div>
@@ -6985,14 +6989,14 @@ class GenomeBrowser {
                     <div class="read-sequence-header">
                         <span>CIGAR String</span>
                         <div class="read-sequence-actions">
-                            <button class="copy-read-sequence-btn" onclick="window.genomeBrowser.copySpecificReadSequence('cigar', '${readName}')">
+                            <button class="copy-read-sequence-btn" data-read-copy="cigar">
                                 <i class="fas fa-copy"></i> Copy
                             </button>
                         </div>
                     </div>
                     <div class="read-sequence-content">
                         <div class="read-sequence-preview">
-                            <code style="font-family: 'Courier New', monospace; font-size: 12px; word-break: break-all;">${read.cigar}</code>
+                            <code style="font-family: 'Courier New', monospace; font-size: 12px; word-break: break-all;">${this.escapeHtml(read.cigar)}</code>
                         </div>
                     </div>
                 </div>
@@ -7039,6 +7043,7 @@ class GenomeBrowser {
   }
 
   formatReadAttributeValue(key, value) {
+    const displayValue = this.escapeHtml(String(value));
     // Special formatting for certain attributes
     if (key.toLowerCase().includes('quality')) {
       const numValue = parseFloat(value);
@@ -7047,15 +7052,15 @@ class GenomeBrowser {
         if (numValue >= 30) qualityClass = 'quality-high';
         else if (numValue >= 20) qualityClass = 'quality-medium';
 
-        return `<span class="${qualityClass}" style="font-weight: 600;">${value}</span>`;
+        return `<span class="${qualityClass}" style="font-weight: 600;">${displayValue}</span>`;
       }
     }
 
     if (key.toLowerCase().includes('flags')) {
-      return `<code style="font-family: 'Courier New', monospace; font-size: 11px;">${value}</code>`;
+      return `<code style="font-family: 'Courier New', monospace; font-size: 11px;">${displayValue}</code>`;
     }
 
-    return value;
+    return displayValue;
   }
 
   /**
@@ -7065,9 +7070,13 @@ class GenomeBrowser {
     const variantContent = document.getElementById('variantDetailsContent');
     if (!variantContent) return;
 
-    const readName = read.id || read.qname || 'Unknown Read';
-    const position = mutation.position.toLocaleString();
-    const type = mutation.type.charAt(0).toUpperCase() + mutation.type.slice(1);
+    const readId = read.id || read.qname;
+    const readName = this.escapeHtml(String(readId || 'Unknown Read'));
+    const position = this.escapeHtml(mutation.position.toLocaleString());
+    const type = this.escapeHtml(mutation.type.charAt(0).toUpperCase() + mutation.type.slice(1));
+    const reference = this.escapeHtml(mutation.refSequence || (mutation.type === 'insertion' ? '-' : 'N'));
+    const alternate = this.escapeHtml(mutation.sequence || (mutation.type === 'deletion' ? '-' : 'N'));
+    const quality = this.escapeHtml(String(read.mappingQuality || 0));
 
     const detailsHTML = `
             <div class="read-mutation-details">
@@ -7088,21 +7097,21 @@ class GenomeBrowser {
                     </div>
                     <div class="info-item" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
                         <div style="font-size: 11px; color: #777; text-transform: uppercase;">Reference</div>
-                        <div style="font-weight: 700; color: #d32f2f;">${mutation.refSequence || (mutation.type === 'insertion' ? '-' : 'N')}</div>
+                        <div style="font-weight: 700; color: #d32f2f;">${reference}</div>
                     </div>
                     <div class="info-item" style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #eee;">
                         <div style="font-size: 11px; color: #777; text-transform: uppercase;">Alternate</div>
-                        <div style="font-weight: 700; color: #2e7d32;">${mutation.sequence || (mutation.type === 'deletion' ? '-' : 'N')}</div>
+                        <div style="font-weight: 700; color: #2e7d32;">${alternate}</div>
                     </div>
                 </div>
 
                 <div class="read-context" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
                     <h4 style="margin: 0 0 10px 0; font-size: 14px;">Source Read Context</h4>
                     <div style="font-size: 12px; margin-bottom: 5px;"><strong>Read ID:</strong> ${readName}</div>
-                    <div style="font-size: 12px; margin-bottom: 5px;"><strong>Mapping Quality:</strong> ${read.mappingQuality || 0}</div>
+                    <div style="font-size: 12px; margin-bottom: 5px;"><strong>Mapping Quality:</strong> ${quality}</div>
                     <div style="font-size: 12px; margin-bottom: 10px;"><strong>Strand:</strong> ${read.strand === '+' || read.strand === 1 ? 'Forward (+)' : 'Reverse (-)'}</div>
                     
-                    <button class="btn btn-sm" onclick="window.genomeBrowser.selectReadById('${read.id}')" style="width: 100%; margin-top: 10px; background: #fff; border: 1px solid #ccc;">
+                    <button class="btn btn-sm read-mutation-view-btn" style="width: 100%; margin-top: 10px; background: #fff; border: 1px solid #ccc;">
                         <i class="fas fa-align-left"></i> View Full Read Details
                     </button>
                 </div>
@@ -7110,6 +7119,9 @@ class GenomeBrowser {
         `;
 
     variantContent.innerHTML = detailsHTML;
+    variantContent
+      .querySelector('.read-mutation-view-btn')
+      .addEventListener('click', () => this.selectReadById(readId));
   }
 
   interpretSamFlags(flags) {
@@ -7155,7 +7167,9 @@ class GenomeBrowser {
     for (let i = 0; i < qualityStr.length; i += charsPerLine) {
       const lineNumber = Math.floor(i / charsPerLine) * charsPerLine + startPosition;
       const line = qualityStr.substring(i, i + charsPerLine);
-      lines.push(`<span class="sequence-position">${lineNumber.toString().padStart(8, ' ')}</span>${line}`);
+      lines.push(
+        `<span class="sequence-position">${lineNumber.toString().padStart(8, ' ')}</span>${this.escapeHtml(line)}`
+      );
     }
 
     return lines.join('<br>');
@@ -7171,12 +7185,16 @@ class GenomeBrowser {
       typeof quality === 'string' ? quality : Array.isArray(quality) ? quality.join(' ') : String(quality);
 
     // Display entire quality string as one continuous line without breaking
-    return `<div class="quality-full-line">${qualityStr}</div>`;
+    return `<div class="quality-full-line">${this.escapeHtml(qualityStr)}</div>`;
   }
 
-  setupExpandableReadSequences() {
-    // This will be called after the HTML is inserted to set up event listeners
-    // for expandable sequence sections in read details
+  setupExpandableReadSequences(container, readName) {
+    for (const button of container.querySelectorAll('.toggle-read-sequence-btn')) {
+      button.addEventListener('click', () => this.toggleReadSequence(button));
+    }
+    for (const button of container.querySelectorAll('[data-read-copy]')) {
+      button.addEventListener('click', () => this.copySpecificReadSequence(button.dataset.readCopy, readName));
+    }
   }
 
   /**
@@ -7749,8 +7767,11 @@ class GenomeBrowser {
   colorizeSequenceBases(sequence) {
     let colorized = '';
     for (let i = 0; i < sequence.length; i++) {
-      const base = sequence[i].toLowerCase();
-      colorized += `<span class="base-${base}">${sequence[i]}</span>`;
+      const character = sequence[i];
+      const base = character.toLowerCase();
+      colorized += /^[a-z]$/.test(base)
+        ? `<span class="base-${base}">${character}</span>`
+        : `<span>${this.escapeHtml(character)}</span>`;
     }
     return colorized;
   }
@@ -9596,24 +9617,17 @@ class GenomeBrowser {
     }
   }
 
-  toggleReadSequence(elementId) {
-    const previewElement = document.getElementById(`${elementId}-preview`);
-    const fullElement = document.getElementById(`${elementId}-full`);
-    const toggleButton = document.querySelector(`button[onclick*="${elementId}"]`);
+  toggleReadSequence(button) {
+    const section = button.closest('.read-sequence-section');
+    const preview = section.querySelector('.read-sequence-preview');
+    const full = section.querySelector('.read-sequence-full');
+    const showFull = full.style.display !== 'block';
 
-    if (previewElement && fullElement && toggleButton) {
-      const isShowingFull = fullElement.style.display !== 'none';
-
-      if (isShowingFull) {
-        previewElement.style.display = 'block';
-        fullElement.style.display = 'none';
-        toggleButton.innerHTML = '<i class="fas fa-expand-alt"></i> Show Full';
-      } else {
-        previewElement.style.display = 'none';
-        fullElement.style.display = 'block';
-        toggleButton.innerHTML = '<i class="fas fa-compress-alt"></i> Show Preview';
-      }
-    }
+    preview.style.display = showFull ? 'none' : 'block';
+    full.style.display = showFull ? 'block' : 'none';
+    button.innerHTML = showFull
+      ? '<i class="fas fa-compress-alt"></i> Show Preview'
+      : '<i class="fas fa-expand-alt"></i> Show Full';
   }
 
   // User-defined features functionality
@@ -11167,9 +11181,10 @@ class GenomeBrowser {
     notification.innerHTML = `
             <div class="notification-content">
                 <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                <span>${message}</span>
+                <span></span>
             </div>
         `;
+    notification.querySelector('span').textContent = message;
 
     // Add to page
     document.body.appendChild(notification);
