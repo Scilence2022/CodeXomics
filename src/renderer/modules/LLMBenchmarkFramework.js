@@ -202,6 +202,9 @@ class LLMBenchmarkFramework {
         oracleEarlyStop: true,
         temperature: 0,
         disableStreaming: true,
+        // The user's ChatBox thinking level does not apply: oracle runs send
+        // the model's default request.
+        reasoningEffort: 'default',
         disableFallback: true,
         toolSelectionLimit: 24,
         forceAgentSystemOff: true,

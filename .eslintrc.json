@@ -55,6 +55,7 @@
     "LLMBenchmarkFramework": "readonly",
     "LLMConfigManager": "readonly",
     "LLMStreamClient": "readonly",
+    "LLMReasoningProfiles": "readonly",
     "LiteratureAPIService": "readonly",
     "MCPServerManager": "readonly",
     "ManifestBuilder": "readonly",

@@ -1872,7 +1872,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="openaiModel">Default Model:</label>
+                                <label for="openaiModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshOpenaiModelsBtn" title="Refresh the model list from OpenAI">
                                     <i class="fas fa-sync"></i> Refresh
@@ -1923,16 +1923,16 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="anthropicModel">Default Model:</label>
+                                <label for="anthropicModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshAnthropicModelsBtn" title="Refresh the model list from Anthropic">
                                     <i class="fas fa-sync"></i> Refresh
                                 </button>
                             </div>
                             <select id="anthropicModel" class="select">
-                                <option value="claude-opus-4.7">Claude Opus 4.7 (Opus - $15/$75 per M)</option>
-                                <option value="claude-sonnet-4.6" selected>Claude Sonnet 4.6 (Balanced - $3/$15 per M)</option>
-                                <option value="claude-haiku-4.5">Claude Haiku 4.5 (Fast - $0.25/$1.25 per M)</option>
+                                <option value="claude-opus-4-7">Claude Opus 4.7 (Opus - $5/$25 per M)</option>
+                                <option value="claude-sonnet-4-6" selected>Claude Sonnet 4.6 (Balanced - $3/$15 per M)</option>
+                                <option value="claude-haiku-4-5">Claude Haiku 4.5 (Fast - $1/$5 per M)</option>
                                 <option value="other">Other (specify below)</option>
                             </select>
                             <small class="help-text model-refresh-status" id="anthropicModelsStatus"></small>
@@ -1971,7 +1971,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="googleModel">Default Model:</label>
+                                <label for="googleModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshGoogleModelsBtn" title="Refresh the model list from Google">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2018,7 +2018,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="deepseekModel">Default Model:</label>
+                                <label for="deepseekModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshDeepseekModelsBtn" title="Refresh the model list from DeepSeek">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2066,7 +2066,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="siliconflowModel">Default Model:</label>
+                                <label for="siliconflowModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshSiliconflowModelsBtn" title="Refresh the model list from SiliconFlow">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2203,7 +2203,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="openrouterModel">Default Model:</label>
+                                <label for="openrouterModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshOpenrouterModelsBtn" title="Refresh the model list from OpenRouter">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2307,7 +2307,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="minimaxModel">Default Model:</label>
+                                <label for="minimaxModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshMinimaxModelsBtn" title="Refresh the model list from MiniMax">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2357,7 +2357,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="minimax_cnModel">Default Model:</label>
+                                <label for="minimax_cnModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshMinimax_cnModelsBtn" title="Refresh the model list from MiniMax CN">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2407,7 +2407,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="zhongkeyuModel">Default Model:</label>
+                                <label for="zhongkeyuModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshZhongkeyuModelsBtn" title="Refresh the model list from Zhongkeyu">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2453,7 +2453,7 @@
                         </div>
                         <div class="form-group">
                             <div class="model-field-header">
-                                <label for="localModel">Default Model:</label>
+                                <label for="localModel" title="Used when this provider is selected with the model left on Auto">Provider default model:</label>
                                 <button type="button" class="btn btn-secondary btn-sm btn-refresh-models"
                                     id="refreshLocalModelsBtn" title="Refresh the model list from this endpoint">
                                     <i class="fas fa-sync"></i> Refresh
@@ -2552,7 +2552,7 @@
                     <div id="models-config" class="provider-config">
                         <div class="model-selection-header">
                             <h4><i class="fas fa-brain"></i> Default Model</h4>
-                            <p class="help-text">Used when the ChatBox model selector is set to Auto.</p>
+                            <p class="help-text">Used when the ChatBox model selector is set to Auto. Leave Model on Auto to use the provider default model set on that provider's tab.</p>
                         </div>
                         <div class="form-group">
                             <label for="mainProvider">Provider:</label>
@@ -5006,13 +5006,22 @@ Supported formats:
                                 <div class="form-group">
                                     <label for="chatboxLLMMaxTokens">Max Tokens:</label>
                                     <input type="number" id="chatboxLLMMaxTokens" class="input-full" min="1000" max="32000" step="1000" value="4000">
-                                    <small class="help-text">Maximum tokens for LLM responses</small>
+                                    <small class="help-text">Maximum tokens for LLM responses. While thinking is on, requests raise this to at least 8K–16K so the reasoning does not use up the answer.</small>
                                 </div>
-                                
+
                                 <div class="form-group">
-                                    <label for="chatboxLLMTimeout">Timeout (seconds):</label>
-                                    <input type="number" id="chatboxLLMTimeout" class="input-full" min="5" max="300" step="5" value="30">
-                                    <small class="help-text">Timeout for LLM requests</small>
+                                    <label for="chatboxReasoningEffort">Thinking level:</label>
+                                    <select id="chatboxReasoningEffort" class="select input-full">
+                                        <option value="default">Model default</option>
+                                        <option value="off">Off</option>
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                    <small class="help-text">How much the model reasons before answering. Applies only to models
+                                        with a thinking control (Claude, Gemini 2.5+, OpenAI reasoning models, DeepSeek,
+                                        Qwen3 on SiliconFlow, OpenRouter); a level a model does not accept is not sent. The same
+                                        setting appears beside the model selector in the ChatBox.</small>
                                 </div>
                                 
                                 <div class="form-group">
@@ -5485,6 +5494,7 @@ Supported formats:
     <script defer src="modules/ExportManager.js"></script>
     <script defer src="modules/ScreenshotManager.js"></script>
     <script defer src="modules/LLMStreamClient.js"></script>
+    <script defer src="modules/LLMReasoningProfiles.js"></script>
     <script defer src="modules/LLMConfigManager.js"></script>
     <script defer src="modules/MultiAgentSettingsManager.js"></script>
     <script defer src="modules/SkillsSettingsManager.js"></script>

@@ -105,7 +105,7 @@ class ConfigManager {
           anthropic: {
             name: 'Anthropic',
             apiKey: '',
-            model: 'claude-sonnet-4.6',
+            model: 'claude-sonnet-4-6',
             baseUrl: 'https://api.anthropic.com',
             enabled: false,
             maxTokens: 4096,

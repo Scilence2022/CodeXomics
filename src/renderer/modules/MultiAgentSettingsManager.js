@@ -47,9 +47,9 @@ class MultiAgentSettingsManager {
       anthropic: {
         name: 'Anthropic (Claude)',
         models: {
-          'claude-opus-4.7': 'Claude Opus 4.7 (Opus)',
-          'claude-sonnet-4.6': 'Claude Sonnet 4.6 (Balanced)',
-          'claude-haiku-4.5': 'Claude Haiku 4.5 (Fast)',
+          'claude-opus-4-7': 'Claude Opus 4.7 (Opus)',
+          'claude-sonnet-4-6': 'Claude Sonnet 4.6 (Balanced)',
+          'claude-haiku-4-5': 'Claude Haiku 4.5 (Fast)',
         },
         baseUrl: 'https://api.anthropic.com',
         apiKeyPrefix: 'sk-ant-',

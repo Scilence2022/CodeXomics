@@ -1258,9 +1258,14 @@
 #llmChatPanel .chat-input-options {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* Model and thinking pickers sit together on the left; the context toggle keeps the right edge. */
+#llmChatPanel .chat-input-options .context-mode-toggle {
+  margin-left: auto;
 }
 
 #llmChatPanel .chat-model-picker {
@@ -1270,6 +1275,15 @@
   min-width: 0;
   color: var(--text-secondary);
   font-size: 11.5px;
+}
+
+/* The class sets display:flex, which would otherwise override [hidden]. */
+#llmChatPanel .chat-model-picker[hidden] {
+  display: none;
+}
+
+#llmChatPanel .chat-reasoning-picker .chat-model-select {
+  max-width: 132px;
 }
 
 #llmChatPanel .chat-model-picker i {
