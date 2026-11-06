@@ -428,6 +428,13 @@ segments. Fuzzy boundaries such as `<100` and `>250` keep their markers when
 an edit is outside the possible feature span. An edit that may overlap an
 uncertain boundary requires review before export.
 
+An edit wholly within one exact local segment can resize that segment.
+For an affected CDS, GenBank and protein exports verify the edited
+sequence before preserving the annotated translation. Automatic
+verification covers tables 1 and 11, an ATG start, a terminal stop, and
+the same protein as the original annotation. Boundary changes, frame
+changes, protein changes, and special translation settings require review.
+
 ### Conflict Detection
 
 **Conflict Types**:

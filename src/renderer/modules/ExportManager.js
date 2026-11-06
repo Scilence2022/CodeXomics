@@ -618,6 +618,11 @@ class ExportManager {
     const qualifiers = feature.qualifiers || {};
     const featureTable = Number(first(qualifiers.transl_table) || 1);
     const table = requestedTable === undefined ? featureTable : Number(requestedTable);
+    if (Object.hasOwn(feature, 'genbankCdsTranslationBeforeEdit')) {
+      if (table !== featureTable) throw new Error(`Cannot verify an edited CDS using translation table ${table}`);
+      const Exporter = this.getGenBankExporter();
+      return new Exporter(this.genomeBrowser).validateEditedCds(sequence, feature);
+    }
     const annotated = String(first(qualifiers.translation) || '').replace(/\s+/g, '');
     if (table === featureTable && /^[A-Z*]+$/i.test(annotated)) return annotated.replace(/\*+$/, '');
     if (table !== 1 || qualifiers.transl_except) {

@@ -4828,10 +4828,10 @@ class ActionManager {
       sortedModifications.length === 1 &&
       feature.genbankLocationBounds &&
       !feature.genbankLocationEdited &&
-      /\b(?:join|order)\(|[<>:]/i.test(location)
+      (/\b(?:join|order)\(|[<>:]/i.test(location) || (location && feature.type?.toLowerCase() === 'cds'))
     ) {
       this.genbankExporter ||= new GenBankExporter(this.genomeBrowser);
-      const remapped = this.genbankExporter.remapDisjointLocation(feature, sortedModifications[0]);
+      const remapped = this.genbankExporter.remapLocationForEdit(feature, sortedModifications[0]);
       if (remapped) return remapped;
     }
     let adjustedStart = feature.start;

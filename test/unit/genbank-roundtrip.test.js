@@ -122,7 +122,100 @@ describe('GenBank round trip', () => {
     expect(exporter.formatLocation(shifted)).toBe('join(6..8,22..27)');
     const changed = actions.adjustSingleFeature(shifted, [{ type: 'replace', start: 23, end: 23, newSequence: 'G' }]);
     expect(changed.qualifiers.translation).toBeUndefined();
-    expect(() => exporter.formatLocation(changed)).toThrow(/edited compound location/);
+    expect(exporter.formatLocation(changed)).toBe('join(6..8,22..27)');
+    expect(() => exporter.generateFeatures('FIXTURE', 'A'.repeat(32), [changed], {})).toThrow(/edited CDS/);
+  });
+
+  it.each([
+    { location: 'join(1..9,14..16)', strand: 1, position: 6, replacement: 'C' },
+    { location: 'complement(join(1..3,8..16))', strand: -1, position: 11, replacement: 'G' },
+  ])(
+    'verifies synonymous edits in $location before GenBank and protein export',
+    async ({ location, strand, position, replacement }) => {
+      const manager = new ExportManager({});
+      const sequence = 'ATGGCTGAACCCCTAA';
+      const source = strand === 1 ? sequence : manager.reverseComplement(sequence);
+      const browser = await parse(
+        [
+          'LOCUS       FIXTURE 16 bp DNA linear',
+          'FEATURES             Location/Qualifiers',
+          `     CDS             ${location}`,
+          '                     /translation="MAE"',
+          '                     /transl_table=11',
+          'ORIGIN',
+          `        1 ${source.toLowerCase()}`,
+          '//',
+        ].join('\n')
+      );
+      const actions = createActionManager(browser);
+      const exporter = new GenBankExporter(browser);
+      const data = { sequence: { ...browser.currentSequence }, annotations: { ...browser.currentAnnotations } };
+      const edit = { type: 'replace', start: position, end: position, newSequence: replacement };
+      actions.applySequenceModificationToGenomeData(data, 'FIXTURE', edit);
+      actions.applyFeatureModificationToGenomeData(data, 'FIXTURE', edit);
+      const [cds] = data.annotations.FIXTURE;
+      expect(cds.qualifiers.translation).toBeUndefined();
+      expect(manager.extractFeatureProtein(data.sequence.FIXTURE, cds)).toBe('MAE');
+      const reopened = await parse(
+        exporter.exportGenBank({
+          chromosomes: ['FIXTURE'],
+          getSequence: chr => data.sequence[chr],
+          getFeatures: chr => data.annotations[chr],
+        })
+      );
+      expect(reopened.currentAnnotations.FIXTURE.find(item => item.type === 'CDS')).toMatchObject({
+        location,
+        strand,
+        qualifiers: { translation: 'MAE', transl_table: '11' },
+      });
+    }
+  );
+
+  it.each([
+    [{ type: 'insert', position: 5, sequence: 'A' }, /not a complete unambiguous CDS/],
+    [{ type: 'replace', start: 5, end: 5, newSequence: 'T' }, /changes the annotated protein/],
+  ])('blocks both exports when an internal edit alters a CDS (%j)', (edit, reason) => {
+    const actions = createActionManager({});
+    const exporter = new GenBankExporter({});
+    const manager = new ExportManager({});
+    const data = {
+      sequence: { FIXTURE: 'ATGGCTGAACCCCTAA' },
+      annotations: {
+        FIXTURE: [
+          {
+            type: 'CDS',
+            start: 1,
+            end: 16,
+            strand: 1,
+            location: 'join(1..9,14..16)',
+            genbankLocationBounds: [1, 16, 1],
+            qualifiers: { translation: 'MAE', protein_id: 'old' },
+          },
+        ],
+      },
+    };
+    actions.applySequenceModificationToGenomeData(data, 'FIXTURE', edit);
+    actions.applyFeatureModificationToGenomeData(data, 'FIXTURE', edit);
+    const [cds] = data.annotations.FIXTURE;
+    expect(() => manager.extractFeatureProtein(data.sequence.FIXTURE, cds)).toThrow(reason);
+    expect(() => exporter.generateFeatures('FIXTURE', data.sequence.FIXTURE, [cds], {})).toThrow(reason);
+  });
+
+  it('remaps a noncoding join after an insertion and a deletion within its segments', () => {
+    const actions = createActionManager({});
+    const exporter = new GenBankExporter({});
+    const feature = {
+      type: 'misc_feature',
+      start: 2,
+      end: 15,
+      strand: 1,
+      location: 'join(2..7,10..15)',
+      genbankLocationBounds: [2, 15, 1],
+    };
+    const inserted = actions.adjustSingleFeature(feature, [{ type: 'insert', position: 5, sequence: 'AA' }]);
+    const deleted = actions.adjustSingleFeature(inserted, [{ type: 'delete', start: 14, end: 15 }]);
+    expect(exporter.formatLocation(inserted)).toBe('join(2..9,12..17)');
+    expect(exporter.formatLocation(deleted)).toBe('join(2..9,12..15)');
   });
 
   it('keeps coding order, translation and sequence through repeated edits between local joined segments', async () => {
