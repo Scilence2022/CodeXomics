@@ -4,6 +4,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { gzipSync } = require('node:zlib');
+const { createHash } = require('node:crypto');
 const { test, expect, _electron: electron } = require('@playwright/test');
 
 const APP_ROOT = path.join(__dirname, '..', '..');
@@ -209,6 +210,30 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
       { sam, smallSam }
     );
     expect(samQueries).toEqual({ cancelled: null, reads: ['read'] });
+
+    const fasta = path.join(fixtureDirectory, 'refseq.fna.gz');
+    const fastaText = '>REFSEQ\r\nACGT';
+    await fs.writeFile(fasta, gzipSync(fastaText));
+    const fastaImport = await genomeView.evaluate(async filePath => {
+      const genome = window.genomeBrowser;
+      const chat = genome.chatManager;
+      const incompatible = await chat.loadGenomeFile({ filePath, fileType: 'genbank' });
+      const loaded = await chat.loadGenomeFile({ filePath, fileType: 'fasta' });
+      return {
+        incompatible,
+        loaded,
+        sequence: genome.currentSequence.REFSEQ,
+        digest: genome.loadedGenomeSourceSha256,
+        type: genome.loadedFiles.find(file => file.path === filePath)?.type,
+      };
+    }, fasta);
+    expect(fastaImport).toMatchObject({
+      incompatible: { success: false, error: 'Expected a genbank genome file' },
+      loaded: { success: true, filePath: fasta },
+      sequence: 'ACGT',
+      digest: createHash('sha256').update(fastaText).digest('hex'),
+      type: 'FASTA',
+    });
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });

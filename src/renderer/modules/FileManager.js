@@ -2,6 +2,11 @@
 /**
  * FileManager - Handles all file operations including loading, parsing, and file type management
  */
+const fileManagerGenomeFormats =
+  typeof module !== 'undefined' && module.exports
+    ? require('../../shared/genome-file-formats')
+    : globalThis.genomeFileFormats;
+
 class FileManager {
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
@@ -650,6 +655,15 @@ class FileManager {
         extension = baseName.includes('.') ? '.' + baseName.split('.').pop().toLowerCase() : '.gz';
       }
 
+      const genomeFormat = fileManagerGenomeFormats.getGenomeFileFormat(extension);
+      const expectedFormat = options.expectedGenomeFormat;
+      if (
+        expectedFormat !== undefined &&
+        (!genomeFormat || (expectedFormat !== 'auto' && expectedFormat !== genomeFormat))
+      ) {
+        throw new Error(`Expected a ${expectedFormat === 'auto' ? 'FASTA or GenBank' : expectedFormat} genome file`);
+      }
+
       // Get streaming threshold from track settings for consistent behavior
       const readsSettings = this.genomeBrowser.trackRenderer?.getTrackSettings('reads') || {};
       const streamingThreshold = readsSettings.streamingThreshold || 50;
@@ -669,7 +683,7 @@ class FileManager {
       }
 
       this.assertFileImportActive(options);
-      const isGenome = ['.fa', '.fasta', '.gb', '.gbk', '.gbff', '.genbank'].includes(extension);
+      const isGenome = genomeFormat !== null;
       this.isLoadingGenome = isGenome;
       if (isGenome) {
         this.genomeBrowser.loadedOperons = [];
@@ -885,19 +899,11 @@ class FileManager {
       extension = originalExtension || '.gz';
     }
 
+    const genomeFormat = fileManagerGenomeFormats.getGenomeFileFormat(extension);
+    if (genomeFormat === 'fasta') return this.parseFasta(options);
+    if (genomeFormat === 'genbank') return this.parseGenBank(options);
+
     switch (extension) {
-      case '.fasta':
-      case '.fa':
-        console.log('📂 Parsing as FASTA file');
-        await this.parseFasta(options);
-        break;
-      case '.gb':
-      case '.gbk':
-      case '.gbff':
-      case '.genbank':
-        console.log('📂 Parsing as GenBank file');
-        await this.parseGenBank(options);
-        break;
       case '.gff':
       case '.gtf':
         await this.parseGFF(options);
@@ -923,7 +929,7 @@ class FileManager {
         break;
       default:
         throw new Error(
-          `Unsupported file format: ${extension}${isGzipped ? ' (gzipped)' : ''}. Supported formats: FASTA (.fasta, .fa), GenBank (.gb, .gbk, .gbff), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam), WIG (.wig), BigWig (.bw, .bigwig). Compressed files (.gz) are also supported.`
+          `Unsupported file format: ${extension}${isGzipped ? ' (gzipped)' : ''}. Supported formats: FASTA (.fasta, .fa, .fas, .fna), GenBank (.gb, .gbk, .gbff, .genbank), GFF (.gff, .gtf), BED (.bed), VCF (.vcf), SAM (.sam), WIG (.wig), BigWig (.bw, .bigwig). Compressed files (.gz) are also supported.`
         );
     }
   }
@@ -1908,7 +1914,7 @@ Original error: ${error.message}`;
     // Add file to loaded files if not already present
     const fileName = this.currentFile.info.name;
     const fileExtension = this.currentFile.info.extension.toLowerCase();
-    const fileType = this.getFileTypeFromExtension(fileExtension);
+    const fileType = this.getFileTypeFromExtension(fileExtension, fileName);
 
     const existingFile = this.genomeBrowser.loadedFiles.find(file => file.name === fileName);
     if (!existingFile) {
@@ -1941,7 +1947,7 @@ Original error: ${error.message}`;
     // Add file to loaded files if not already present
     const fileName = this.currentFile.info.name;
     const fileExtension = this.currentFile.info.extension.toLowerCase();
-    const fileType = this.getFileTypeFromExtension(fileExtension);
+    const fileType = this.getFileTypeFromExtension(fileExtension, fileName);
 
     const existingFile = this.genomeBrowser.loadedFiles.find(file => file.name === fileName);
     if (!existingFile) {
@@ -2012,7 +2018,10 @@ Original error: ${error.message}`;
     return colors[Math.floor(Math.random() * colors.length)];
   }
 
-  getFileTypeFromExtension(extension) {
+  getFileTypeFromExtension(extension, fileName = extension) {
+    const genomeFormat = fileManagerGenomeFormats.getGenomeFileFormat(fileName);
+    if (genomeFormat) return genomeFormat === 'fasta' ? 'FASTA' : 'GenBank';
+
     const typeMap = {
       '.bed': 'BED',
       '.gff': 'GFF',
@@ -2024,11 +2033,6 @@ Original error: ${error.message}`;
       '.wig': 'WIG',
       '.bw': 'BigWig',
       '.bigwig': 'BigWig',
-      '.fasta': 'FASTA',
-      '.fa': 'FASTA',
-      '.gb': 'GenBank',
-      '.gbk': 'GenBank',
-      '.gbff': 'GenBank',
     };
 
     return typeMap[extension] || 'Unknown';

@@ -77,7 +77,7 @@ class FileOperationService {
     const context = parameters.__executionContext;
     try {
       const filePath = parameters.filePath || parameters.file_path || parameters.path;
-      const { showFileDialog = false } = parameters;
+      const { showFileDialog = false, fileType = 'auto' } = parameters;
       context?.signal?.throwIfAborted();
 
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
@@ -89,6 +89,7 @@ class FileOperationService {
 
         const result = await this.app.fileManager.loadFile(filePath, {
           reportErrors: false,
+          expectedGenomeFormat: fileType,
           signal: context?.signal,
           requestDeadline: context?.requestDeadline,
         });
