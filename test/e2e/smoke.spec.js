@@ -182,6 +182,22 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
         localSegments: [[2, 4]],
       });
 
+    await genomeView.locator('#bookmarksBtn').click();
+    const bookmarks = genomeView.locator('#bookmarksSection');
+    const currentView = bookmarks.getByRole('button', { name: 'Current View' });
+    const bookmarkDialog = genomeView.getByRole('dialog', { name: 'Bookmark Current View' });
+    await currentView.click();
+    await expect(bookmarkDialog.getByLabel('Bookmark name')).toHaveValue('SMOKE:1-12');
+    await bookmarkDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(bookmarkDialog).toHaveCount(0);
+    await expect(bookmarks.getByText('No region bookmarks saved')).toBeVisible();
+    await currentView.click();
+    await bookmarkDialog.getByLabel('Bookmark name').fill('Smoke bookmark');
+    await bookmarkDialog.getByRole('button', { name: 'Save' }).click();
+    await expect(bookmarkDialog).toHaveCount(0);
+    await expect(bookmarks.getByText('Smoke bookmark', { exact: true })).toBeVisible();
+    await expect(bookmarks.getByText('SMOKE:1-12', { exact: true })).toBeVisible();
+
     const originalBinding = await genomeView.evaluate(async () => {
       const { loadedGenomePath, loadedGenomeSourceSha256, sidecarManager } = window.genomeBrowser;
       return {
