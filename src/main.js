@@ -381,11 +381,14 @@ app.whenReady().then(async () => {
   wt.setWindowTabsDependencies(deps);
   wt.registerWindowTabIpcHandlers();
   mcp.setMCPDependencies(deps);
-  registerIpcHandlers(deps);
+  const ipcHandlers = registerIpcHandlers(deps);
   registerProjectIpcHandlers(deps);
 
   // Create the main application window
   mainWindow = wm.createWindow();
+
+  // Warm main-process caches the renderer will ask for, while it loads.
+  ipcHandlers.prewarmStartupCaches();
 
   // Wire window registry (needs mainWindow reference)
   wr.setDependencies({ mainWindow, unifiedMCPServer });

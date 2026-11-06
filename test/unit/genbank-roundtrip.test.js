@@ -7,6 +7,12 @@ const require = createRequire(import.meta.url);
 const FileManager = require('../../src/renderer/modules/FileManager.js');
 const ExportManager = require('../../src/renderer/modules/ExportManager.js');
 const GenBankExporter = require('../../src/renderer/modules/export/GenBankExporter.js');
+const actionSandbox = { window: {}, console, GenBankExporter };
+runInNewContext(readFileSync(require.resolve('../../src/renderer/modules/ActionManager.js'), 'utf8'), actionSandbox);
+
+function createActionManager(browser) {
+  return Object.assign(Object.create(actionSandbox.window.ActionManager.prototype), { genomeBrowser: browser });
+}
 
 async function parse(data) {
   const browser = {
@@ -110,17 +116,182 @@ describe('GenBank round trip', () => {
       ].join('\n')
     );
     const [cds] = browser.currentAnnotations.FIXTURE;
-    const sandbox = { window: {}, console };
-    const source = readFileSync(require.resolve('../../src/renderer/modules/ActionManager.js'), 'utf8');
-    runInNewContext(source, sandbox);
-    const edit = sandbox.window.ActionManager.prototype.adjustSingleFeature;
+    const actions = createActionManager(browser);
     const exporter = new GenBankExporter(browser);
-    const shifted = edit(cds, [{ type: 'insert', position: 2, length: 2 }]);
+    const shifted = actions.adjustSingleFeature(cds, [{ type: 'insert', position: 2, length: 2 }]);
     expect(exporter.formatLocation(shifted)).toBe('join(6..8,22..27)');
-    const changed = edit(shifted, [{ type: 'replace', start: 23, end: 23, newSequence: 'G' }]);
+    const changed = actions.adjustSingleFeature(shifted, [{ type: 'replace', start: 23, end: 23, newSequence: 'G' }]);
     expect(changed.qualifiers.translation).toBeUndefined();
     expect(() => exporter.formatLocation(changed)).toThrow(/edited compound location/);
   });
+
+  it('keeps coding order, translation and sequence through repeated edits between local joined segments', async () => {
+    const browser = await parse(
+      [
+        'LOCUS       FIXTURE 30 bp DNA circular',
+        'FEATURES             Location/Qualifiers',
+        '     CDS             complement(join(22..24,',
+        '                     2..4,6))',
+        '                     /translation="MK"',
+        'ORIGIN',
+        '        1 aaccggttta ggccttaacc ggatcccggt',
+        '//',
+      ].join('\n')
+    );
+    const actions = createActionManager(browser);
+    const exporter = new GenBankExporter(browser);
+    const manager = new ExportManager(browser);
+    const [original] = browser.currentAnnotations.FIXTURE;
+    const originalSequence = browser.currentSequence.FIXTURE;
+    const workspace = { sequence: { FIXTURE: originalSequence }, annotations: { FIXTURE: [original] } };
+    const extract = (sequence, feature) => manager.extractFeatureSequence(sequence, feature);
+    const expectedSequence = extract(originalSequence, original);
+    const edits = [
+      { type: 'insert', position: 22, sequence: 'TTA', expected: 'complement(join(25..27,2..4,6))' },
+      { type: 'delete', start: 8, end: 11, expected: 'complement(join(21..23,2..4,6))' },
+      { type: 'replace', start: 9, end: 10, newSequence: 'AGTC', expected: 'complement(join(23..25,2..4,6))' },
+    ];
+    for (const modification of edits) {
+      actions.applySequenceModificationToGenomeData(workspace, 'FIXTURE', modification);
+      actions.applyFeatureModificationToGenomeData(workspace, 'FIXTURE', modification);
+      const [feature] = workspace.annotations.FIXTURE;
+      expect(exporter.formatLocation(feature)).toBe(modification.expected);
+      expect(extract(workspace.sequence.FIXTURE, feature)).toBe(expectedSequence);
+      expect(feature.qualifiers.translation).toBe('MK');
+    }
+
+    const serialized = exporter.exportGenBank({
+      chromosomes: ['FIXTURE'],
+      getSequence: chr => workspace.sequence[chr],
+      getFeatures: chr => workspace.annotations[chr],
+      options: { includeProteinSequences: true },
+    });
+    const reopened = await parse(serialized);
+    const [feature] = reopened.currentAnnotations.FIXTURE.filter(item => item.type === 'CDS');
+    expect(feature.location).toBe(edits.at(-1).expected);
+    expect(extract(reopened.currentSequence.FIXTURE, feature)).toBe(expectedSequence);
+    expect(feature.qualifiers.translation).toBe('MK');
+    expect(reopened.sourceFeatures.FIXTURE.topology).toBe('circular');
+    expect(exporter.formatLocation(original)).toBe('complement(join(22..24,2..4,6))');
+  });
+
+  it('remaps order locations while keeping them unavailable for joined sequence extraction', () => {
+    const actions = createActionManager({});
+    const exporter = new GenBankExporter({});
+    const feature = {
+      type: 'misc_feature',
+      start: 2,
+      end: 8,
+      strand: 1,
+      location: 'order(2,7..8)',
+      genbankLocationBounds: [2, 8, 1],
+    };
+    const edited = actions.adjustSingleFeature(feature, [{ type: 'insert', position: 5, sequence: 'AA' }]);
+    expect(exporter.formatLocation(edited)).toBe('order(2,9..10)');
+    expect(() => exporter.extractLocationSequence('A'.repeat(10), edited, vi.fn())).toThrow(/order location/);
+  });
+
+  it.each([
+    ['join(<2..4,7..8)', {}],
+    ['join(2..4,AB123.1:7..8)', {}],
+  ])('requires review for gap edits to %s with unresolved coordinates', (location, qualifiers) => {
+    const actions = createActionManager({});
+    const exporter = new GenBankExporter({});
+    const edited = actions.adjustSingleFeature(
+      { type: 'CDS', start: 2, end: 8, strand: 1, location, qualifiers, genbankLocationBounds: [2, 8, 1] },
+      [{ type: 'insert', position: 5, sequence: 'AA' }]
+    );
+    expect(() => exporter.formatLocation(edited)).toThrow(/edited compound location/);
+  });
+
+  it('round-trips repeated coordinate qualifiers after gap and upstream edits', async () => {
+    const browser = await parse(
+      [
+        'LOCUS       FIXTURE 30 bp DNA linear',
+        'FEATURES             Location/Qualifiers',
+        '     CDS             join(2..7,20..25)',
+        '                     /transl_except=(pos:5..7,aa:Sec)',
+        '                     /transl_except=(pos:join(20,21..22),aa:Trp)',
+        '     tRNA            complement(join(3..7,21..26))',
+        '                     /anticodon=(pos:complement(22..24),aa:Leu,seq:taa)',
+        '     repeat_region   join(2..7,20..25)',
+        '                     /rpt_unit_range=4..6',
+        '                     /rpt_unit_range=21..23',
+        'ORIGIN',
+        '        1 aaccggttta ggccttaacc ggatcccggt',
+        '//',
+      ].join('\n')
+    );
+    const actions = createActionManager(browser);
+    const data = { sequence: { ...browser.currentSequence }, annotations: { ...browser.currentAnnotations } };
+    for (const edit of [
+      { type: 'insert', position: 12, sequence: 'TTA' },
+      { type: 'delete', start: 1, end: 1 },
+    ]) {
+      actions.applySequenceModificationToGenomeData(data, 'FIXTURE', edit);
+      actions.applyFeatureModificationToGenomeData(data, 'FIXTURE', edit);
+    }
+    const exporter = new GenBankExporter(browser);
+    const reopened = await parse(
+      exporter.exportGenBank({
+        chromosomes: ['FIXTURE'],
+        getSequence: chr => data.sequence[chr],
+        getFeatures: chr => data.annotations[chr],
+      })
+    );
+    const byType = Object.fromEntries(reopened.currentAnnotations.FIXTURE.map(feature => [feature.type, feature]));
+    expect(byType.CDS.location).toBe('join(1..6,22..27)');
+    expect(byType.CDS.qualifiers.transl_except).toEqual(['(pos:4..6,aa:Sec)', '(pos:join(22,23..24),aa:Trp)']);
+    expect(byType.tRNA.location).toBe('complement(join(2..6,23..28))');
+    expect(byType.tRNA.qualifiers.anticodon).toBe('(pos:complement(24..26),aa:Leu,seq:taa)');
+    expect(byType.repeat_region.qualifiers.rpt_unit_range).toEqual(['3..5', '23..25']);
+    expect(browser.currentAnnotations.FIXTURE[0].qualifiers.transl_except[0]).toBe('(pos:5..7,aa:Sec)');
+  });
+
+  it.each([
+    ['complement(2..8)', 'complement(5..11)'],
+    ['complement(join(2..5,7..8))', 'complement(join(5..8,10..11))'],
+  ])('shifts coordinate qualifiers with legacy uniform offsets for %s', (location, remapped) => {
+    const exporter = new GenBankExporter({});
+    const feature = {
+      type: 'tRNA',
+      start: 5,
+      end: 11,
+      strand: -1,
+      location,
+      genbankLocationBounds: [2, 8, -1],
+      qualifiers: { anticodon: '(pos:complement(3..5),aa:Leu,seq:taa)' },
+    };
+    const content = exporter.generateFeatures('fixture', 'A'.repeat(12), [feature], {});
+    expect(content).toContain(remapped);
+    expect(content).toContain('(pos:complement(6..8),aa:Leu,seq:taa)');
+    expect(feature.qualifiers.anticodon).toBe('(pos:complement(3..5),aa:Leu,seq:taa)');
+    expect(() =>
+      exporter.generateFeatures('fixture', 'A'.repeat(12), [{ ...feature, genbankLocationEdited: true }], {})
+    ).toThrow(/Cannot export (?:coordinate qualifiers|edited compound location)/);
+  });
+
+  it.each([{ transl_except: '(pos:AB123.1:7..8,aa:Sec)' }, { rpt_unit_range: '3..7' }])(
+    'rejects export when an edit cannot remap a coordinate qualifier %j',
+    qualifiers => {
+      const actions = createActionManager({});
+      const exporter = new GenBankExporter({});
+      const edited = actions.adjustSingleFeature(
+        {
+          type: 'misc_feature',
+          start: 2,
+          end: 8,
+          strand: 1,
+          location: 'join(2..4,7..8)',
+          qualifiers,
+          genbankLocationBounds: [2, 8, 1],
+        },
+        [{ type: 'insert', position: 5, sequence: 'AA' }]
+      );
+      expect(exporter.formatLocation(edited)).toBe('join(2..4,9..10)');
+      expect(() => exporter.generateFeatures('fixture', 'A'.repeat(10), [edited], {})).toThrow(/Cannot remap \//);
+    }
+  );
 
   it('shifts an unchanged compound location uniformly and rejects an edit across its spans', () => {
     const exporter = new GenBankExporter({});

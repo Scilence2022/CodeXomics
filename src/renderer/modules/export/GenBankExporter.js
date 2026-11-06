@@ -1,3 +1,5 @@
+const GENBANK_POSITION_QUALIFIERS = new Set(['transl_except', 'anticodon', 'rpt_unit_range']);
+
 /**
  * GenBankExporter - Unified GenBank format export
  *
@@ -302,7 +304,11 @@ class GenBankExporter {
       }
       locationLines.push(line);
       content += `     ${feature.type.padEnd(15)} ${locationLines.join('\n                     ')}\n`;
-      const qualifiers = feature.qualifiers || { gene: feature.name, product: feature.product, note: feature.note };
+      const qualifiers = this.getExportQualifiers(feature) || {
+        gene: feature.name,
+        product: feature.product,
+        note: feature.note,
+      };
       for (const [key, raw] of Object.entries(qualifiers)) {
         if (key === 'translation' && options.includeProteinSequences === false) continue;
         for (const value of Array.isArray(raw) ? raw : [raw]) {
@@ -330,19 +336,11 @@ class GenBankExporter {
     const bounds = feature.genbankLocationBounds;
     const compound = typeof original === 'string' && /\b(?:join|order)\(|[:^]/i.test(original);
     if (typeof original === 'string' && Array.isArray(bounds)) {
-      const [start, end, strand] = bounds;
-      const shift = feature.start - start;
-      const sameStrand = negative === (strand === -1 || strand === '-');
-      if (sameStrand && shift === 0 && feature.end === end && !feature.genbankLocationEdited) {
+      const shift = this.getUniformLocationShift(feature);
+      if (shift === 0) {
         return original.replace(/\s+/g, '');
       }
-      if (
-        sameStrand &&
-        Number.isSafeInteger(shift) &&
-        feature.end - end === shift &&
-        !feature.genbankLocationEdited &&
-        !original.includes(':')
-      ) {
+      if (shift !== null && !original.includes(':')) {
         return original.replace(/\s+/g, '').replace(/\d+/g, value => String(Number(value) + shift));
       }
       if (compound) {
@@ -357,39 +355,180 @@ class GenBankExporter {
     return negative ? `complement(${span})` : span;
   }
 
-  extractLocationSequence(sequence, feature, reverseComplement) {
+  getUniformLocationShift(feature) {
+    if (!Array.isArray(feature.genbankLocationBounds) || feature.genbankLocationEdited) return null;
+    const [start, end, strand] = feature.genbankLocationBounds;
+    const negative = value => value === -1 || value === '-';
+    const shift = feature.start - start;
+    return negative(strand) === negative(feature.strand) && Number.isSafeInteger(shift) && feature.end - end === shift
+      ? shift
+      : null;
+  }
+
+  getExportQualifiers(feature) {
+    const { qualifiers } = feature;
+    if (feature.genbankQualifierCoordinateError) throw new SyntaxError(feature.genbankQualifierCoordinateError);
+    if (!Object.keys(qualifiers || {}).some(key => GENBANK_POSITION_QUALIFIERS.has(key.toLowerCase()))) {
+      return qualifiers;
+    }
+    const shift = this.getUniformLocationShift(feature);
+    if (shift === 0 || (!feature.genbankLocationBounds && !feature.genbankLocationEdited)) return qualifiers;
+    if (shift === null) {
+      throw new SyntaxError(`Cannot export coordinate qualifiers for edited feature ${feature.name || feature.type}`);
+    }
+    return this.mapPositionQualifiers(qualifiers, (start, end) => [start + shift, end + shift]);
+  }
+
+  mapLocalLocation(expression, mapSpan, mapGroup, depth = 0) {
+    if (depth > 32) throw new SyntaxError('GenBank location nesting exceeds the supported limit');
+    const span = /^[<>]?(\d+)(?:\.\.[<>]?(\d+))?$/.exec(expression);
+    if (span) return mapSpan(Number(span[1]), Number(span[2] || span[1]), expression);
+
+    const operator = /^(join|order|complement)\((.+)\)$/i.exec(expression);
+    if (!operator) throw new SyntaxError(`Cannot extract local sequence for location: ${expression}`);
+    const [, type, body] = operator;
+
+    const parts = [];
+    let nesting = 0;
+    let start = 0;
+    for (let index = 0; index < body.length; index++) {
+      if (body[index] === '(') nesting++;
+      if (body[index] === ')') nesting--;
+      if (nesting < 0) throw new SyntaxError(`Invalid GenBank location: ${expression}`);
+      if (body[index] === ',' && nesting === 0) {
+        parts.push(body.slice(start, index));
+        start = index + 1;
+      }
+    }
+    if (nesting !== 0 || (type.toLowerCase() === 'complement' && parts.length)) {
+      throw new SyntaxError(`Invalid GenBank location: ${expression}`);
+    }
+    parts.push(body.slice(start));
+    return mapGroup(
+      type,
+      parts.map(part => this.mapLocalLocation(part, mapSpan, mapGroup, depth + 1))
+    );
+  }
+
+  mapExactLocation(expression, mapSpan) {
+    if (/[<>:^]/.test(expression)) throw new SyntaxError(`Unsupported coordinate: ${expression}`);
+    return this.mapLocalLocation(
+      expression.replace(/\s+/g, ''),
+      (start, end, span) => {
+        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start) {
+          throw new SyntaxError(`Invalid GenBank location: ${span}`);
+        }
+        const [first, last] = mapSpan(start, end);
+        if (!Number.isSafeInteger(first) || !Number.isSafeInteger(last) || first < 1 || last < first) {
+          throw new RangeError(`Invalid remapped GenBank location: ${span}`);
+        }
+        return span.includes('..') ? `${first}..${last}` : String(first);
+      },
+      (type, parts) => `${type}(${parts.join(',')})`
+    );
+  }
+
+  mapPositionQualifiers(qualifiers, mapSpan) {
+    let result;
+    for (const [key, raw] of Object.entries(qualifiers || {})) {
+      const name = key.toLowerCase();
+      if (!GENBANK_POSITION_QUALIFIERS.has(name)) continue;
+      const remap = value => {
+        try {
+          if (typeof value !== 'string') throw new SyntaxError('Expected a coordinate string');
+          if (name === 'rpt_unit_range') return this.mapExactLocation(value, mapSpan);
+          const match = /^(\(\s*pos\s*:\s*)(.+?)(\s*,\s*aa\s*:.*\))$/is.exec(value);
+          if (!match) throw new SyntaxError('Expected a position followed by an amino acid');
+          const [, prefix, location, suffix] = match;
+          return prefix + this.mapExactLocation(location, mapSpan) + suffix;
+        } catch (error) {
+          if (!(error instanceof SyntaxError || error instanceof RangeError)) throw error;
+          throw new SyntaxError(`Cannot remap /${key}: ${error.message}`, { cause: error });
+        }
+      };
+      result ||= { ...qualifiers };
+      result[key] = Array.isArray(raw) ? raw.map(remap) : remap(raw);
+    }
+    return result || qualifiers;
+  }
+
+  remapDisjointCompoundLocation(feature, modification) {
+    if (!['insert', 'delete', 'replace'].includes(modification.type)) return null;
+    const insertion = modification.type === 'insert';
+    const position = insertion ? modification.position : modification.start;
+    const editEnd = insertion ? position : modification.end;
+    const removed = insertion ? 0 : editEnd - position + 1;
+    const added = insertion
+      ? (modification.sequence?.length ?? modification.length)
+      : (modification.newSequence?.length ?? modification.newLength ?? 0);
+    const delta = added - removed;
+    if (!Number.isSafeInteger(position) || position < 1 || !Number.isSafeInteger(editEnd) || editEnd < position) {
+      return null;
+    }
+    if (!Number.isSafeInteger(added) || added < 0) return null;
+
+    if (/[<>:^]/.test(feature.genbankLocation || feature.location)) return null;
+    if (this.getUniformLocationShift(feature) === null) return null;
     const location = this.formatLocation(feature);
-    const extract = (expression, depth = 0) => {
-      if (depth > 32) throw new Error('GenBank location nesting exceeds the supported limit');
-      const simple = /^[<>]?(\d+)(?:\.\.[<>]?(\d+))?$/.exec(expression);
-      if (simple) {
-        const start = Number(simple[1]);
-        const end = Number(simple[2] || simple[1]);
+    const segments = [];
+    let minStart = Infinity;
+    let maxEnd = 0;
+    const remapSpan = (start, end) => {
+      const overlaps = insertion ? start < position && position <= end : position <= end && editEnd >= start;
+      if (overlaps) throw new RangeError(`Edit overlaps coordinate ${start}..${end}`);
+      const shift = (insertion ? start >= position : start > editEnd) ? delta : 0;
+      return [start + shift, end + shift];
+    };
+    let remapped;
+    try {
+      remapped = this.mapExactLocation(location, (start, end) => {
+        const [first, last] = remapSpan(start, end);
+        minStart = Math.min(minStart, first);
+        maxEnd = Math.max(maxEnd, last);
+        segments.push({ start: first, end: last });
+        return [first, last];
+      });
+    } catch (error) {
+      if (error instanceof SyntaxError || error instanceof RangeError) return null;
+      throw error;
+    }
+    if (remapped === location && position > maxEnd) return feature;
+    let qualifiers = feature.qualifiers;
+    let qualifierError;
+    try {
+      qualifiers = this.mapPositionQualifiers(this.getExportQualifiers(feature), remapSpan);
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      qualifierError = error.message;
+    }
+    if (remapped === location && !qualifierError && qualifiers === feature.qualifiers) return feature;
+    return {
+      ...feature,
+      start: minStart,
+      end: maxEnd,
+      segments,
+      location: remapped,
+      genbankLocation: remapped,
+      genbankLocationBounds: [minStart, maxEnd, feature.strand],
+      genbankLocationSpan: [minStart, maxEnd],
+      qualifiers,
+      ...(qualifierError ? { genbankQualifierCoordinateError: qualifierError } : {}),
+    };
+  }
+
+  extractLocationSequence(sequence, feature, reverseComplement) {
+    return this.mapLocalLocation(
+      this.formatLocation(feature),
+      (start, end, expression) => {
         if (start < 1 || end < start || end > sequence.length) throw new Error(`Out-of-range location: ${expression}`);
         return sequence.slice(start - 1, end);
+      },
+      (type, parts) => {
+        if (type.toLowerCase() === 'complement') return reverseComplement(parts[0]);
+        if (type.toLowerCase() === 'join') return parts.join('');
+        throw new Error('Cannot extract local sequence for an order location');
       }
-
-      const operator = /^(join|complement)\((.+)\)$/i.exec(expression);
-      if (!operator) throw new Error(`Cannot extract local sequence for location: ${expression}`);
-      const [, type, body] = operator;
-      if (type.toLowerCase() === 'complement') return reverseComplement(extract(body, depth + 1));
-
-      const parts = [];
-      let nesting = 0;
-      let start = 0;
-      for (let index = 0; index < body.length; index++) {
-        if (body[index] === '(') nesting++;
-        if (body[index] === ')') nesting--;
-        if (body[index] === ',' && nesting === 0) {
-          parts.push(body.slice(start, index));
-          start = index + 1;
-        }
-      }
-      if (nesting !== 0) throw new Error(`Invalid GenBank location: ${expression}`);
-      parts.push(body.slice(start));
-      return parts.map(part => extract(part, depth + 1)).join('');
-    };
-    return extract(location);
+    );
   }
 
   /**
