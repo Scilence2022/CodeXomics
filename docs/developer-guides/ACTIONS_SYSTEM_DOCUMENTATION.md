@@ -417,6 +417,12 @@ strand: string
    - Update UI
    - Clear queue
 
+For compound GenBank features with exact local positions, a sequence edit
+between segments can shift the affected coordinates while preserving the
+segment order and the existing translation. Edits that overlap a segment or
+require remapping uncertain, remote, or qualifier coordinates may require
+manual review before GenBank export.
+
 ### Conflict Detection
 
 **Conflict Types**:
