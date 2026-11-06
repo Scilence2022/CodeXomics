@@ -32,6 +32,7 @@ const allowedInvokeChannels = [
   'write-file',
   'read-file',
   'sam-reader:get-region',
+  'sam-reader:cancel-region',
   'get-file-info',
   'authorize-file-load',
   'authorize-file-drop',
@@ -587,8 +588,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: filePath => ipcRenderer.invoke('read-file', filePath),
 
   // BAM reader APIs
-  getSamReadsForRange: (filePath, chromosome, start, end, settings) =>
-    ipcRenderer.invoke('sam-reader:get-region', filePath, chromosome, start, end, settings),
+  getSamReadsForRange: (filePath, chromosome, start, end, settings, requestId) =>
+    ipcRenderer.invoke('sam-reader:get-region', filePath, chromosome, start, end, settings, requestId),
+  cancelSamRegionQuery: requestId => ipcRenderer.invoke('sam-reader:cancel-region', requestId),
 
   bamReader: {
     initialize: (filePath, options) => ipcRenderer.invoke('bam-reader:initialize', filePath, options),

@@ -639,6 +639,7 @@ function registerIpcHandlers(deps) {
     checkPortAvailable,
   } = deps;
   const bamReaders = new Map();
+  const samQueriesBySender = new WeakMap();
   const getMainGenomeTarget = () =>
     (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow || null;
   const isRegisteredGenomeSender = event => {
@@ -2601,12 +2602,40 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('sam-reader:get-region', async (event, filePath, chromosome, start, end, settings = {}) => {
+  ipcMain.handle('sam-reader:get-region', async (event, filePath, chromosome, start, end, settings = {}, requestId) => {
     if (!isMainFrameAtFile(event, genomePage)) throw new Error('Untrusted SAM query sender');
+    if (typeof requestId !== 'string' || !/^[a-f0-9-]{36}$/.test(requestId)) {
+      throw new Error('Invalid SAM query identifier');
+    }
     const safePath = assertAllowedFileAccess(app, filePath, { operation: 'query SAM file', mustExist: true });
     if (path.extname(safePath).toLowerCase() !== '.sam') throw new Error('A SAM file is required');
-    const { readSamRegion } = require('./sam-region-reader');
-    return readSamRegion(safePath, chromosome, start, end, settings);
+
+    const sender = event.sender;
+    let queries = samQueriesBySender.get(sender);
+    if (!queries) {
+      queries = new Map();
+      samQueriesBySender.set(sender, queries);
+      sender.once('destroyed', () => {
+        for (const controller of queries.values()) controller.abort();
+      });
+    }
+    if (queries.has(requestId)) throw new Error('A SAM query already has this identifier');
+    const controller = new AbortController();
+    queries.set(requestId, controller);
+    try {
+      const { readSamRegion } = require('./sam-region-reader');
+      return await readSamRegion(safePath, chromosome, start, end, settings, controller.signal);
+    } catch (error) {
+      if (controller.signal.aborted) return null;
+      throw error;
+    } finally {
+      queries.delete(requestId);
+    }
+  });
+
+  ipcMain.handle('sam-reader:cancel-region', (event, requestId) => {
+    if (!isMainFrameAtFile(event, genomePage)) throw new Error('Untrusted SAM query sender');
+    samQueriesBySender.get(event.sender)?.get(requestId)?.abort();
   });
 
   ipcMain.handle('get-file-info', async (event, filePath) => {

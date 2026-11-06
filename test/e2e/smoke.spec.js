@@ -190,6 +190,25 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     await fs.unlink(path.join(pluginDestination, 'assets'));
     expect(await copyPlugin()).toEqual({ success: true });
     expect(await fs.readFile(path.join(pluginDestination, 'assets', 'index.js'), 'utf8')).toBe('module.exports = {};');
+
+    const sam = path.join(fixtureDirectory, 'reads.sam');
+    const smallSam = path.join(fixtureDirectory, 'small.sam');
+    const samRecord = 'read\t0\tSMOKE\t1\t60\t1M\t*\t0\t0\tA\t*\n';
+    await fs.writeFile(sam, samRecord.repeat(400_000));
+    await fs.writeFile(smallSam, samRecord);
+    const samQueries = await genomeView.evaluate(
+      async ({ sam, smallSam }) => {
+        const api = window.electronAPI;
+        const id = globalThis.crypto.randomUUID();
+        const pending = api.getSamReadsForRange(sam, 'SMOKE', 0, 1, {}, id);
+        await api.cancelSamRegionQuery(id);
+        const cancelled = await pending;
+        const next = await api.getSamReadsForRange(smallSam, 'SMOKE', 0, 1, {}, id);
+        return { cancelled, reads: next.reads.map(read => read.id) };
+      },
+      { sam, smallSam }
+    );
+    expect(samQueries).toEqual({ cancelled: null, reads: ['read'] });
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });

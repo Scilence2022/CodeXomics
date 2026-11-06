@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -62,6 +62,45 @@ describe('SAM region scanning', () => {
     await expect(oldQuery).resolves.toEqual([]);
     expect(manager.cache.size).toBe(0);
     expect((await manager.getReadsForRegion('chr1', 0, 1)).map(read => read.id)).toEqual(['new']);
+  });
+
+  it('cancels the active IPC scan when the SAM source changes', async () => {
+    const manager = new ReadsManager({});
+    await manager.initializeWithStreamingSAM('/old.sam');
+    let resolveScan;
+    const api = {
+      getSamReadsForRange: vi.fn(
+        () =>
+          new Promise(resolve => {
+            resolveScan = resolve;
+          })
+      ),
+      cancelSamRegionQuery: vi.fn(async () => {
+        resolveScan(null);
+      }),
+    };
+    vi.stubGlobal('electronAPI', api);
+    try {
+      const query = manager.getReadsForRegion('chr1', 0, 1);
+      const requestId = api.getSamReadsForRange.mock.calls[0][5];
+      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+      await manager.initializeWithSAMData(makeLine('new', 0, 1, '1M', 'A'), '/new.sam');
+      await expect(query).resolves.toEqual([]);
+      expect(api.cancelSamRegionQuery).toHaveBeenCalledWith(requestId);
+      expect(manager.stats.loadedRegions).toBe(0);
+      expect(manager.cache.size).toBe(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('aborts the underlying SAM stream without returning a partial result', async () => {
+    await withSamFile(makeLine('read', 0, 1, '1M', 'A').concat('\n').repeat(1000), async file => {
+      const controller = new AbortController();
+      const pending = readSamRegion(file, 'chr1', 0, 1, {}, controller.signal);
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    });
   });
 
   it('counts every qualifying alignment when the display payload reaches its limit', async () => {
