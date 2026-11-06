@@ -6,14 +6,22 @@ import path from 'path';
 const require = createRequire(import.meta.url);
 const UIManager = require('../../src/renderer/modules/UIManager.js');
 
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
+});
+
+afterEach(() => {
+  // Discard deferred initialization for the partial DOM fixtures.
+  vi.clearAllTimers();
+  vi.useRealTimers();
+  localStorage.clear();
+  vi.restoreAllMocks();
+});
+
 describe('UIManager dropdown handlers', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
-  });
-
-  afterEach(() => {
-    localStorage.clear();
-    vi.restoreAllMocks();
   });
 
   it('does not throw when optional dropdown controls are missing', () => {
@@ -58,11 +66,6 @@ describe('UIManager sidebar controls', () => {
       configurable: true,
       get: () => (sidebar.classList.contains('collapsed') ? 0 : parseInt(sidebar.style.width, 10) || 0),
     });
-  });
-
-  afterEach(() => {
-    localStorage.clear();
-    vi.restoreAllMocks();
   });
 
   it('synchronizes both controls when a panel opens the hidden sidebar', () => {
