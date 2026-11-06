@@ -85,12 +85,12 @@ jobs:
         if: matrix.platform == 'win'
         shell: pwsh
         run: |
-          $expected = (Get-Content package.json | ConvertFrom-Json).build.win.publisherName
+          $expected = (Get-Content package.json | ConvertFrom-Json).build.win.signtoolOptions.publisherName
           Get-ChildItem dist/*.exe | ForEach-Object {
             $signature = Get-AuthenticodeSignature $_.FullName
             if ($signature.Status -ne 'Valid') { throw "Invalid Authenticode signature: $($_.Name)" }
             $publisher = $signature.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false)
-            if ($expected -notcontains $publisher) { throw "Signing certificate subject must match build.win.publisherName" }
+            if ($expected -notcontains $publisher) { throw "Signing certificate subject must match build.win.signtoolOptions.publisherName" }
           }
       - name: Verify update metadata and artifact checksums
         shell: bash
