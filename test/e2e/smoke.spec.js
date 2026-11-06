@@ -150,6 +150,25 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     );
     expect(escapedWrite).toMatchObject({ success: false, error: expect.stringMatching(/Blocked write file/) });
     await expect(fs.stat(path.join(outsideDirectory, 'export.gbk'))).rejects.toMatchObject({ code: 'ENOENT' });
+
+    const exportPath = path.join(fixtureDirectory, 'stable-export.gbk');
+    await fs.writeFile(exportPath, 'previous export', { mode: 0o640 });
+    const failed = await genomeView.evaluate(
+      destination => window.electronAPI.writeFile(destination, { invalid: true }),
+      exportPath
+    );
+    expect(failed.success).toBe(false);
+    expect(await fs.readFile(exportPath, 'utf8')).toBe('previous export');
+    expect(
+      (await fs.readdir(fixtureDirectory)).filter(name => name.startsWith('.codexomics-') && name.endsWith('.tmp'))
+    ).toEqual([]);
+    const written = await genomeView.evaluate(
+      destination => window.electronAPI.writeFile(destination, 'new export'),
+      exportPath
+    );
+    expect(written).toMatchObject({ success: true, filePath: exportPath, fileSize: 10 });
+    expect(await fs.readFile(exportPath, 'utf8')).toBe('new export');
+    if (process.platform !== 'win32') expect((await fs.stat(exportPath)).mode & 0o777).toBe(0o640);
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });

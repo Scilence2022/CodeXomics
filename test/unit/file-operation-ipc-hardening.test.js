@@ -120,7 +120,7 @@ describe('file operation IPC hardening', () => {
     );
     expect(source).toContain("code: 'SIDECAR_CONFLICT'");
     expect(source).toContain('expectedRevision !== currentRevision');
-    expect(source).toContain('withSidecarWriteLock(paths.safeGenomePath');
+    expect(source).toContain('withFileWriteLock(paths.safeGenomePath');
   });
 
   it('isolates fallback sidecars with SHA-256 and treats the legacy hash only as a migration candidate', () => {
