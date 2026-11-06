@@ -154,12 +154,12 @@ class BookmarkPanelUI {
     const start = (Number(currentPosition.start) || 0) + 1;
     const end = Number(currentPosition.end) || start;
     const defaultName = `${chromosome}:${start}-${end}`;
-    const name = typeof window.prompt === 'function' ? window.prompt('Bookmark name', defaultName) : defaultName;
-    if (!name || !name.trim()) return;
+    const name = await this._promptForBookmarkName(defaultName);
+    if (!name) return;
 
     if (this.gb?.chatManager && typeof this.gb.chatManager.bookmarkPosition === 'function') {
       await this.gb.chatManager.bookmarkPosition({
-        name: name.trim(),
+        name,
         chromosome,
         start,
         end,
@@ -168,7 +168,7 @@ class BookmarkPanelUI {
       const bookmarks = this._getConfigBookmarks();
       bookmarks.push({
         id: this._generateId(),
-        name: name.trim(),
+        name,
         chromosome,
         start,
         end,
@@ -181,6 +181,37 @@ class BookmarkPanelUI {
 
     this.refresh();
     this._notify(`Bookmarked ${chromosome}:${start}-${end}`, 'success');
+  }
+
+  async _promptForBookmarkName(defaultName) {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'modal-content bookmark-name-dialog';
+    dialog.setAttribute('aria-labelledby', 'bookmarkNameTitle');
+    dialog.innerHTML = `
+      <form method="dialog">
+        <div class="modal-header"><h3 id="bookmarkNameTitle">Bookmark Current View</h3></div>
+        <div class="modal-body">
+          <label for="bookmarkNameInput">Bookmark name</label>
+          <input id="bookmarkNameInput" class="form-control" type="text" required autofocus>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary" value="save">Save</button>
+          <button type="submit" class="btn" value="cancel" formnovalidate>Cancel</button>
+        </div>
+      </form>
+    `;
+    const input = dialog.querySelector('input');
+    input.value = defaultName;
+    const closed = new Promise(resolve => dialog.addEventListener('close', resolve, { once: true }));
+    document.body.appendChild(dialog);
+    try {
+      dialog.showModal();
+      input.select();
+      await closed;
+      return dialog.returnValue === 'save' ? input.value.trim() : null;
+    } finally {
+      dialog.remove();
+    }
   }
 
   _navigateToBookmark(key) {

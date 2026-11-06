@@ -114,6 +114,21 @@
   gap: 14px;
 }
 
+.bookmark-name-dialog {
+  width: min(400px, 90%);
+  padding: 0;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.bookmark-name-dialog::backdrop {
+  background: var(--bg-modal);
+}
+
+.bookmark-name-dialog input {
+  width: 100%;
+}
+
 .bookmarks-toolbar {
   display: flex;
   align-items: center;
