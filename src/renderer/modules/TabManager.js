@@ -1278,13 +1278,14 @@ class TabManager {
   /**
    * Update the search results for the current tab
    */
-  updateCurrentTabSearchResults(results) {
+  updateCurrentTabSearchResults(results, query = '') {
     if (!this.activeTabId) return;
 
     const tabState = this.tabStates.get(this.activeTabId);
     if (!tabState) return;
 
     tabState.searchResults = [...results];
+    tabState.searchQuery = query;
     tabState.lastAccessedAt = new Date();
   }
 
@@ -2971,10 +2972,10 @@ class TabManager {
     // Save search results panel state
     const searchPanel = document.getElementById('searchResultsSection');
     if (searchPanel && tabState.sidebarPanels.searchResultsSection) {
-      tabState.sidebarPanels.searchResultsSection.visible = searchPanel.style.display !== 'none';
-      if (tabState.sidebarPanels.searchResultsSection.visible) {
-        tabState.sidebarPanels.searchResultsSection.content = searchPanel.innerHTML;
-      }
+      const searchState = tabState.sidebarPanels.searchResultsSection;
+      searchState.visible = searchPanel.style.display !== 'none';
+      searchState.content = null;
+      searchState.selectedIndex = this.genomeBrowser.navigationManager?.currentSearchIndex ?? 0;
     }
 
     // Save operons panel visibility. Its entries are kept in tabState.operonsInView
@@ -3111,21 +3112,18 @@ class TabManager {
     // Restore search results panel
     const searchPanel = document.getElementById('searchResultsSection');
     if (searchPanel && tabState.sidebarPanels.searchResultsSection) {
-      if (tabState.sidebarPanels.searchResultsSection.visible && tabState.sidebarPanels.searchResultsSection.content) {
-        searchPanel.innerHTML = tabState.sidebarPanels.searchResultsSection.content;
+      const navigation = this.genomeBrowser.navigationManager;
+      const { visible, selectedIndex } = tabState.sidebarPanels.searchResultsSection;
+      const results = Array.isArray(tabState.searchResults) ? tabState.searchResults : [];
+      if (visible && results.length > 0 && navigation) {
+        navigation.renderSearchResultsList(results, tabState.searchQuery, selectedIndex);
         searchPanel.style.display = 'block';
-
-        // Update NavigationManager with the saved search results for this tab
-        if (this.genomeBrowser && this.genomeBrowser.navigationManager && tabState.searchResults) {
-          this.genomeBrowser.navigationManager.searchResults = tabState.searchResults;
-        }
-
-        // Re-attach event handlers for search result items
-        if (this.genomeBrowser && this.genomeBrowser.navigationManager) {
-          this.genomeBrowser.navigationManager.reattachSearchResultEventHandlers();
-        }
       } else {
         searchPanel.style.display = 'none';
+        if (navigation) {
+          navigation.searchResults = [];
+          navigation.currentSearchIndex = 0;
+        }
       }
     }
 
