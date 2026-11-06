@@ -1,4 +1,13 @@
 const GENBANK_POSITION_QUALIFIERS = new Set(['transl_except', 'anticodon', 'rpt_unit_range']);
+const GENBANK_CDS_REVIEW_QUALIFIERS = [
+  'transl_except',
+  'exception',
+  'ribosomal_slippage',
+  'trans_splicing',
+  'artificial_location',
+  'pseudo',
+  'pseudogene',
+];
 
 /**
  * GenBankExporter - Unified GenBank format export
@@ -304,11 +313,14 @@ class GenBankExporter {
       }
       locationLines.push(line);
       content += `     ${feature.type.padEnd(15)} ${locationLines.join('\n                     ')}\n`;
-      const qualifiers = this.getExportQualifiers(feature) || {
+      let qualifiers = this.getExportQualifiers(feature) || {
         gene: feature.name,
         product: feature.product,
         note: feature.note,
       };
+      if (Object.hasOwn(feature, 'genbankCdsTranslationBeforeEdit')) {
+        qualifiers = { ...qualifiers, translation: this.validateEditedCds(sequence, feature) };
+      }
       for (const [key, raw] of Object.entries(qualifiers)) {
         if (key === 'translation' && options.includeProteinSequences === false) continue;
         for (const value of Array.isArray(raw) ? raw : [raw]) {
@@ -349,6 +361,9 @@ class GenBankExporter {
       }
       if (compound) {
         throw new RangeError(`Cannot export edited compound location for ${feature.name || feature.type}: ${original}`);
+      }
+      if (feature.genbankLocationEdited && feature.type?.toLowerCase() === 'cds') {
+        throw new RangeError(`Cannot export edited CDS boundary for ${feature.name || feature.type}: ${original}`);
       }
     }
     const formatSpan = (start, end) => (start === end ? String(start) : `${start}..${end}`);
@@ -468,7 +483,7 @@ class GenBankExporter {
     return result || qualifiers;
   }
 
-  remapDisjointLocation(feature, modification) {
+  remapLocationForEdit(feature, modification) {
     if (feature.genbankLocationCoordinateError) return feature;
     if (!['insert', 'delete', 'replace'].includes(modification.type)) return null;
     const insertion = modification.type === 'insert';
@@ -491,6 +506,7 @@ class GenBankExporter {
     const segments = [];
     let minStart = Infinity;
     let maxEnd = 0;
+    let editedInterior = false;
     const remapSpan = (start, end, partialStart, partialEnd) => {
       const possibleEnd = partialEnd ? Infinity : end;
       const overlaps = insertion
@@ -510,7 +526,15 @@ class GenBankExporter {
       remapped = this.mapEditableLocation(
         location,
         (start, end, partialStart, partialEnd) => {
-          const [first, last] = remapSpan(start, end, partialStart, partialEnd);
+          let mapped;
+          if (!requiresReview && start < position && (insertion ? position <= end : editEnd < end)) {
+            if (editedInterior) throw new RangeError('Edit overlaps more than one feature segment');
+            editedInterior = true;
+            mapped = [start, end + delta];
+          } else {
+            mapped = remapSpan(start, end, partialStart, partialEnd);
+          }
+          const [first, last] = mapped;
           minStart = Math.min(minStart, first);
           maxEnd = Math.max(maxEnd, last);
           segments.push({ start: first, end: last });
@@ -538,8 +562,10 @@ class GenBankExporter {
       if (!(error instanceof SyntaxError)) throw error;
       qualifierError = error.message;
     }
-    if (remapped === location && !qualifierError && qualifiers === feature.qualifiers) return feature;
-    return {
+    if (!editedInterior && remapped === location && !qualifierError && qualifiers === feature.qualifiers) {
+      return feature;
+    }
+    const remappedFeature = {
       ...feature,
       start: minStart,
       end: maxEnd,
@@ -551,6 +577,49 @@ class GenBankExporter {
       qualifiers,
       ...(qualifierError ? { genbankQualifierCoordinateError: qualifierError } : {}),
     };
+    if (editedInterior && feature.type?.toLowerCase() === 'cds') {
+      remappedFeature.genbankCdsTranslationBeforeEdit = Object.hasOwn(feature, 'genbankCdsTranslationBeforeEdit')
+        ? feature.genbankCdsTranslationBeforeEdit
+        : (feature.qualifiers?.translation ?? null);
+      remappedFeature.qualifiers = { ...qualifiers };
+      delete remappedFeature.qualifiers.translation;
+      delete remappedFeature.genbankLegacyTranslation;
+    }
+    return remappedFeature;
+  }
+
+  validateEditedCds(sequence, feature) {
+    const qualifiers = this.getExportQualifiers(feature) || {};
+    const previous = feature.genbankCdsTranslationBeforeEdit;
+    const review = reason =>
+      new Error(`Cannot export edited CDS ${feature.name || feature.type}: ${reason}. Annotation review is required.`);
+    const table = Number(qualifiers.transl_table ?? 1);
+    if (
+      typeof previous !== 'string' ||
+      !/^[A-Z]+\*?$/.test(previous.replace(/\s+/g, '')) ||
+      ![1, 11].includes(table) ||
+      Number(qualifiers.codon_start ?? 1) !== 1 ||
+      GENBANK_CDS_REVIEW_QUALIFIERS.some(key => Object.hasOwn(qualifiers, key))
+    ) {
+      throw review('the original translation or translation settings cannot be verified');
+    }
+    const node = typeof module !== 'undefined' && module.exports;
+    const processing = node ? require('../UnifiedSequenceProcessing') : window.UnifiedSequenceProcessing;
+    const translator = node ? require('../UnifiedDNATranslation') : window.UnifiedDNATranslation;
+    const bases = this.extractLocationSequence(
+      sequence,
+      feature,
+      value => processing.reverseComplement(value, { caseSensitive: false, validateInput: false }).sequence
+    ).toUpperCase();
+    if (bases.length % 3 !== 0 || !/^ATG[ACGT]*(?:TAA|TAG|TGA)$/.test(bases)) {
+      throw review('the edited sequence is not a complete unambiguous CDS with an ATG start and a terminal stop');
+    }
+    // Tables 1 and 11 have identical codon assignments with an ATG start.
+    const result = translator.translateDNA({ sequence: bases, geneticCode: 'standard', includeStops: true });
+    if (!result.success || result.protein !== previous.replace(/\s+/g, '').replace(/\*$/, '') + '*') {
+      throw review('the edited sequence changes the annotated protein');
+    }
+    return result.protein.slice(0, -1);
   }
 
   extractLocationSequence(sequence, feature, reverseComplement) {
