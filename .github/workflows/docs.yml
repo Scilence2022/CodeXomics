@@ -1,4 +1,4 @@
-name: Deploy Documentation
+name: Documentation
 
 on:
   push:
@@ -12,6 +12,22 @@ on:
       - 'Memory.md'
       - 'CHANGELOG.md'
       - 'package.json'
+      - 'package-lock.json'
+      - 'src/version.js'
+      - 'scripts/validate-documentation.js'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'README.md'
+      - 'Agents.md'
+      - 'Memory.md'
+      - 'CHANGELOG.md'
+      - 'package.json'
+      - 'package-lock.json'
       - 'src/version.js'
       - 'scripts/validate-documentation.js'
       - '.github/workflows/docs.yml'
@@ -19,21 +35,20 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: 'pages'
-  cancel-in-progress: false
+  group: pages-${{ github.event.pull_request.number || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
+    name: Validate documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -43,24 +58,26 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '22.x'
 
       - name: Install dependencies
         run: |
-          pip install mkdocs-material mkdocs-minify-plugin
+          pip install 'mkdocs>=1.6,<2' mkdocs-material mkdocs-minify-plugin
 
-      - name: Validate documentation metadata
-        run: node scripts/validate-documentation.js
-
-      - name: Build documentation
-        run: mkdocs build --strict
+      - name: Validate documentation and build the site
+        run: npm run docs:validate
 
       - name: Upload artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
   deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
