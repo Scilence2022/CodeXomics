@@ -736,7 +736,7 @@ function registerIpcHandlers(deps) {
     destinationPath,
     content,
     commitNotAfter,
-    { mode = 0o600, validateTarget } = {}
+    { mode = 0o600, validateTarget, commit } = {}
   ) => {
     assertWriteDeadline(commitNotAfter);
     const tempPath = path.join(
@@ -748,14 +748,19 @@ function registerIpcHandlers(deps) {
     try {
       handle = await fs.promises.open(tempPath, 'wx', 0o600);
       created = true;
-      await handle.writeFile(content, 'utf8');
-      if (mode !== 0o600) await handle.chmod(mode);
-      await handle.sync();
-      await handle.close();
-      handle = null;
-      validateTarget?.();
-      assertWriteDeadline(commitNotAfter);
-      await fs.promises.rename(tempPath, destinationPath);
+      if (typeof content === 'function') await content(handle);
+      else await handle.writeFile(content, 'utf8');
+      const publish = async finalMode => {
+        if (finalMode !== 0o600) await handle.chmod(finalMode);
+        await handle.sync();
+        await handle.close();
+        handle = null;
+        validateTarget?.();
+        assertWriteDeadline(commitNotAfter);
+        await fs.promises.rename(tempPath, destinationPath);
+      };
+      if (commit) await commit(publish);
+      else await publish(mode);
 
       // The file contents and atomic rename are durable only after the parent
       // directory entry is flushed. Directory fsync is unavailable on some
@@ -3029,128 +3034,136 @@ function registerIpcHandlers(deps) {
   // 5. Utility Tools IPC Handlers
   // =====================================================================
 
-  /**
-   * Download a file from the internet to a local path
-   */
-  ipcMain.handle('download-internet-file', async (event, options) => {
-    const { url, destinationPath, filename } = options;
+  const downloadsBySender = new WeakMap();
+
+  ipcMain.handle('cancel-internet-download', (event, requestId) => {
+    downloadsBySender.get(event.sender)?.get(requestId)?.abort(new Error('Download cancelled'));
+  });
+
+  ipcMain.handle('download-internet-file', async (event, options = {}) => {
+    const sender = event.sender;
+    const controller = new AbortController();
+    let downloads;
+    let requestId;
+    let deadlineTimer;
 
     try {
-      console.log(`[Download] Starting download from: ${url}`);
-
-      // Validate URL
-      if (!url || typeof url !== 'string') {
-        return { success: false, error: 'Invalid URL provided' };
-      }
-
-      // Parse URL to get protocol and filename
+      const { url, destinationPath, filename, commitNotAfter } = options;
+      const assertCanWrite = () => {
+        controller.signal.throwIfAborted();
+        assertWriteDeadline(commitNotAfter);
+      };
+      assertCanWrite();
+      if (typeof url !== 'string' || !url) throw new Error('Invalid URL provided');
       const urlObj = new URL(url);
       if (!['http:', 'https:'].includes(urlObj.protocol)) {
-        return { success: false, error: 'Only HTTP and HTTPS downloads are allowed' };
+        throw new Error('Only HTTP and HTTPS downloads are allowed');
       }
       const protocol = urlObj.protocol === 'https:' ? require('https') : require('http');
 
-      // Determine filename from URL if not provided
       const extractedFilename = path.basename(filename || path.basename(urlObj.pathname) || 'downloaded_file');
-
-      // Determine destination directory
-      let destDir = destinationPath;
-      if (!destDir) {
-        // Default to Downloads folder in user's home directory
-        destDir = path.join(app.getPath('downloads'));
-      }
-
-      const safeDestDir = assertAllowedFileAccess(app, destDir, { operation: 'download destination' });
-      const fullPath = assertAllowedFileAccess(app, path.join(safeDestDir, extractedFilename), {
-        operation: 'download target',
+      const safeDestDir = assertAllowedFileAccess(app, destinationPath || app.getPath('downloads'), {
+        operation: 'download destination',
       });
+      const requestedPath = path.join(safeDestDir, extractedFilename);
+      const access = { operation: 'download target', resolvePhysical: true };
+      const destination = assertAllowedFileAccess(app, requestedPath, access);
+      const validateTarget = () => {
+        assertCanWrite();
+        if (assertAllowedFileAccess(app, requestedPath, access) !== destination) {
+          throw new Error('The download destination changed before publication');
+        }
+      };
 
-      // Ensure destination directory exists after validation
-      if (!fs.existsSync(safeDestDir)) {
-        fs.mkdirSync(safeDestDir, { recursive: true });
+      const id = options.requestId ?? crypto.randomUUID();
+      if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id)) {
+        throw new Error('Invalid download request identifier');
+      }
+      downloads = downloadsBySender.get(sender);
+      if (!downloads) {
+        const activeDownloads = new Map();
+        downloads = activeDownloads;
+        downloadsBySender.set(sender, activeDownloads);
+        sender.once('destroyed', () => {
+          for (const active of activeDownloads.values()) active.abort(new Error('Download window closed'));
+        });
+      }
+      if (downloads.has(id)) throw new Error('A download already has this identifier');
+      downloads.set(id, controller);
+      requestId = id;
+      const remainingMs = Number.isFinite(commitNotAfter) ? commitNotAfter - Date.now() : 0;
+      if (remainingMs > 0 && remainingMs <= 2 ** 31 - 1) {
+        deadlineTimer = setTimeout(() => {
+          controller.abort(new Error('The MCP request deadline elapsed before the durable write'));
+        }, remainingMs);
       }
 
-      return new Promise(resolve => {
-        const file = fs.createWriteStream(fullPath);
-
-        const request = protocol.get(url, response => {
-          // Handle redirects
-          if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-            console.log(`[Download] Following redirect to: ${response.headers.location}`);
-            file.close();
-            fs.unlinkSync(fullPath);
-            resolve({
-              success: false,
-              error: 'Redirected downloads must be retried with the final HTTPS URL',
-              redirectUrl: response.headers.location,
-            });
-            return;
-          }
-
-          if (response.statusCode !== 200) {
-            file.close();
-            fs.unlinkSync(fullPath);
-            resolve({
-              success: false,
-              error: `HTTP Error: ${response.statusCode} ${response.statusMessage}`,
-            });
-            return;
-          }
-
-          const contentLength = parseInt(response.headers['content-length'], 10);
-          let downloadedBytes = 0;
-
-          response.on('data', chunk => {
-            downloadedBytes += chunk.length;
-            if (contentLength) {
-              const progress = Math.round((downloadedBytes / contentLength) * 100);
-              // Send progress to renderer if needed
-              event.sender.send('download-progress', {
-                url,
-                progress,
-                downloadedBytes,
-                totalBytes: contentLength,
+      await fs.promises.mkdir(safeDestDir, { recursive: true });
+      validateTarget();
+      let downloadedBytes = 0;
+      await writeFileAtomically(
+        destination,
+        async handle => {
+          const response = await new Promise((resolve, reject) => {
+            const request = protocol.get(urlObj, { signal: controller.signal }, resolve);
+            request.on('error', reject);
+            request.setTimeout(60000, () => request.destroy(new Error('Download timeout (60 seconds)')));
+          });
+          try {
+            const { statusCode, statusMessage, headers } = response;
+            if (statusCode >= 300 && statusCode < 400 && headers.location) {
+              throw Object.assign(new Error('Redirected downloads must be retried with the final HTTPS URL'), {
+                redirectUrl: headers.location,
               });
             }
-          });
-
-          response.pipe(file);
-
-          file.on('finish', () => {
-            file.close();
-            const stats = fs.statSync(fullPath);
-            console.log(`[Download] Completed: ${fullPath} (${stats.size} bytes)`);
-            resolve({
-              success: true,
-              filePath: fullPath,
-              filename: extractedFilename,
-              fileSize: stats.size,
-              url: url,
-            });
-          });
-        });
-
-        request.on('error', error => {
-          file.close();
-          if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
+            if (statusCode !== 200) throw new Error(`HTTP Error: ${statusCode} ${statusMessage}`);
+            const totalBytes = Number.parseInt(headers['content-length'], 10);
+            const downloadChunks = async function* () {
+              for await (const chunk of response) {
+                downloadedBytes += chunk.length;
+                if (totalBytes && !sender.isDestroyed()) {
+                  sender.send('download-progress', {
+                    url,
+                    progress: Math.round((downloadedBytes / totalBytes) * 100),
+                    downloadedBytes,
+                    totalBytes,
+                  });
+                }
+                yield chunk;
+              }
+            };
+            await handle.writeFile(downloadChunks(), { signal: controller.signal });
+            if (!response.complete) throw new Error('Download ended before the response was complete');
+          } finally {
+            response.destroy();
           }
-          console.error(`[Download] Error:`, error);
-          resolve({ success: false, error: error.message });
-        });
-
-        request.setTimeout(60000, () => {
-          request.destroy();
-          file.close();
-          if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-          }
-          resolve({ success: false, error: 'Download timeout (60 seconds)' });
-        });
-      });
+        },
+        commitNotAfter,
+        {
+          validateTarget,
+          // Leave other writes free to proceed while the network transfer is still running.
+          commit: publish =>
+            withFileWriteLock(destination, async () => {
+              validateTarget();
+              const previous = await fs.promises.stat(destination).catch(error => {
+                if (error.code === 'ENOENT') return null;
+                throw error;
+              });
+              if (previous && !previous.isFile()) throw new Error('The download destination is not a regular file');
+              if (previous) await fs.promises.access(destination, fs.constants.W_OK);
+              await publish(previous ? previous.mode & 0o777 : 0o666 & ~process.umask());
+            }),
+        }
+      );
+      return { success: true, filePath: requestedPath, filename: extractedFilename, fileSize: downloadedBytes, url };
     } catch (error) {
-      console.error(`[Download] Error:`, error);
-      return { success: false, error: error.message };
+      const failure = controller.signal.reason || error;
+      return failure.redirectUrl
+        ? { success: false, error: failure.message, redirectUrl: failure.redirectUrl }
+        : { success: false, error: failure.message };
+    } finally {
+      clearTimeout(deadlineTimer);
+      if (requestId) downloads.delete(requestId);
     }
   });
 

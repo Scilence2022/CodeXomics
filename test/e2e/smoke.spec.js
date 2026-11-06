@@ -1,6 +1,8 @@
 'use strict';
 
 const fs = require('node:fs/promises');
+const http = require('node:http');
+const { once } = require('node:events');
 const os = require('node:os');
 const path = require('node:path');
 const { gzipSync } = require('node:zlib');
@@ -8,6 +10,108 @@ const { createHash } = require('node:crypto');
 const { test, expect, _electron: electron } = require('@playwright/test');
 
 const APP_ROOT = path.join(__dirname, '..', '..');
+
+async function verifyDownloadPublication(genomeView, fixtureDirectory) {
+  const filename = 'download.gbk';
+  const destination = path.join(fixtureDirectory, filename);
+  const requests = [];
+  const cancelledConnections = [];
+  const server = http.createServer((request, response) => {
+    requests.push(request.url);
+    switch (request.url) {
+      case '/redirect':
+        response.writeHead(302, { location: '/success' }).end();
+        break;
+      case '/missing':
+        response.writeHead(404).end('missing');
+        break;
+      case '/interrupted':
+        response.writeHead(200, { 'content-length': 100 }).write('partial');
+        setImmediate(() => response.destroy());
+        break;
+      case '/deadline':
+      case '/cancel':
+        response.on('close', () => cancelledConnections.push(request.url));
+        response.writeHead(200, { 'content-length': 100 }).write('partial');
+        break;
+      default:
+        response.end('new download');
+    }
+  });
+  server.listen(0, '127.0.0.1');
+  try {
+    await once(server, 'listening');
+    const baseUrl = `http://127.0.0.1:${server.address().port}`;
+    const options = { filename, destinationPath: fixtureDirectory };
+    const download = (endpoint, commitNotAfter) =>
+      genomeView.evaluate(args => window.electronAPI.downloadInternetFile(args), {
+        ...options,
+        url: baseUrl + endpoint,
+        commitNotAfter,
+      });
+    const expectPreservedDestination = async (content = 'previous download') => {
+      expect(await fs.readFile(destination, 'utf8')).toBe(content);
+      expect((await fs.readdir(fixtureDirectory)).filter(name => /^\.codexomics-.*\.tmp$/.test(name))).toEqual([]);
+    };
+    await fs.writeFile(destination, 'previous download', { mode: 0o640 });
+    expect(await download('/missing')).toMatchObject({ success: false, error: expect.stringMatching(/404/) });
+    expect(await download('/redirect')).toMatchObject({ success: false, redirectUrl: '/success' });
+    expect(await download('/interrupted')).toMatchObject({ success: false });
+    await expectPreservedDestination();
+    expect(await download('/expired', Date.now() - 1)).toMatchObject({
+      success: false,
+      error: expect.stringMatching(/deadline/),
+    });
+    expect(requests).toEqual(['/missing', '/redirect', '/interrupted']);
+
+    expect(await download('/deadline', Date.now() + 1000)).toMatchObject({
+      success: false,
+      error: expect.stringMatching(/deadline/),
+    });
+    await expectPreservedDestination();
+
+    const cancelled = await genomeView.evaluate(
+      async ({ parameters, destination }) => {
+        const mcp = window.genomeBrowser.internalMCPServer;
+        const requestId = crypto.randomUUID();
+        let concurrentWrite;
+        const onProgress = async (_event, progress) => {
+          if (progress.url !== parameters.url) return;
+          window.ipcRenderer.removeListener('download-progress', onProgress);
+          concurrentWrite = await window.electronAPI.writeFile(destination, 'concurrent export');
+          mcp.cancelRequest(requestId);
+        };
+        window.ipcRenderer.on('download-progress', onProgress);
+        try {
+          await mcp.executeRequest({
+            requestId,
+            method: 'downloadInternetFile',
+            parameters,
+            executionContext: { requestDeadline: Date.now() + 5000 },
+          });
+          return null;
+        } catch (error) {
+          return { error: error.name, concurrentWrite };
+        } finally {
+          window.ipcRenderer.removeListener('download-progress', onProgress);
+        }
+      },
+      { parameters: { ...options, url: baseUrl + '/cancel' }, destination }
+    );
+    expect(cancelled).toMatchObject({ error: 'AbortError', concurrentWrite: { success: true } });
+    await expect.poll(() => cancelledConnections).toEqual(['/deadline', '/cancel']);
+    await expectPreservedDestination('concurrent export');
+
+    expect(await download('/success')).toMatchObject({ success: true, filePath: destination, fileSize: 12 });
+    expect(await fs.readFile(destination, 'utf8')).toBe('new download');
+    if (process.platform !== 'win32') expect((await fs.stat(destination)).mode & 0o777).toBe(0o640);
+  } finally {
+    await new Promise(resolve => {
+      server.close(resolve);
+      server.closeAllConnections();
+    });
+  }
+}
 
 test('genome view opens compressed GenBank at launch and isolates companion data after replacement', async () => {
   const fixtureDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'codexomics-smoke-'));
@@ -170,6 +274,7 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     expect(written).toMatchObject({ success: true, filePath: exportPath, fileSize: 10 });
     expect(await fs.readFile(exportPath, 'utf8')).toBe('new export');
     if (process.platform !== 'win32') expect((await fs.stat(exportPath)).mode & 0o777).toBe(0o640);
+    await verifyDownloadPublication(genomeView, fixtureDirectory);
 
     const pluginSource = path.join(fixtureDirectory, 'plugin-source');
     const pluginDestination = path.join(fixtureDirectory, 'plugins', 'smoke-plugin');

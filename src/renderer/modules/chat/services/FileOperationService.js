@@ -804,7 +804,17 @@ class FileOperationService {
   }
 
   async downloadInternetFile(parameters = {}) {
+    const context = parameters.__executionContext;
+    const signal = context?.signal;
+    const commitNotAfter = context?.commitNotAfter ?? context?.requestDeadline;
+    const assertCanStart = () => {
+      signal?.throwIfAborted();
+      if (Number.isFinite(commitNotAfter) && Date.now() >= commitNotAfter) {
+        throw new Error('The MCP request deadline elapsed before the download began');
+      }
+    };
     try {
+      assertCanStart();
       let { url, destinationPath, destination_path, savePath, save_path, filename, fileName, file_name } = parameters;
       destinationPath = destinationPath || destination_path || savePath || save_path;
       filename = filename || fileName || file_name;
@@ -830,36 +840,34 @@ class FileOperationService {
         destinationPath = approvalResult.path || destinationPath;
       }
 
-      if (window.electronAPI?.downloadInternetFile) {
-        const result = await window.electronAPI.downloadInternetFile({ url, destinationPath, filename });
-        if (result.success) {
-          return {
-            success: true,
-            message: `Successfully downloaded file to: ${result.filePath}`,
-            filePath: result.filePath,
-            filename: result.filename,
-            fileSize: result.fileSize,
-            url,
-            tool: 'download_internet_file',
-          };
-        }
-        throw new Error(result.error || 'Download failed');
-      } else if (window.ipcRenderer) {
-        const result = await window.ipcRenderer.invoke('download-internet-file', { url, destinationPath, filename });
-        if (result.success) {
-          return {
-            success: true,
-            message: `Successfully downloaded file to: ${result.filePath}`,
-            filePath: result.filePath,
-            filename: result.filename,
-            fileSize: result.fileSize,
-            url,
-            tool: 'download_internet_file',
-          };
-        }
-        throw new Error(result.error || 'Download failed');
-      } else {
-        throw new Error('electronAPI.downloadInternetFile not available');
+      assertCanStart();
+      const { electronAPI, ipcRenderer } = window;
+      const download =
+        electronAPI?.downloadInternetFile ||
+        (ipcRenderer && (options => ipcRenderer.invoke('download-internet-file', options)));
+      if (!download) throw new Error('electronAPI.downloadInternetFile not available');
+      const requestId = signal ? globalThis.crypto.randomUUID() : undefined;
+      const cancelDownload = () => {
+        const cancellation = electronAPI?.cancelInternetDownload
+          ? electronAPI.cancelInternetDownload(requestId)
+          : ipcRenderer?.invoke('cancel-internet-download', requestId);
+        cancellation?.catch(error => console.warn('Could not cancel download:', error));
+      };
+      signal?.addEventListener('abort', cancelDownload, { once: true });
+      try {
+        const result = await download({ url, destinationPath, filename, commitNotAfter, requestId });
+        if (!result.success) throw new Error(result.error || 'Download failed');
+        return {
+          success: true,
+          message: `Successfully downloaded file to: ${result.filePath}`,
+          filePath: result.filePath,
+          filename: result.filename,
+          fileSize: result.fileSize,
+          url,
+          tool: 'download_internet_file',
+        };
+      } finally {
+        signal?.removeEventListener('abort', cancelDownload);
       }
     } catch (error) {
       console.error('❌ [FileOperationService] downloadInternetFile failed:', error);
