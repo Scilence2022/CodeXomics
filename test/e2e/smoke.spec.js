@@ -211,6 +211,78 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     );
     expect(samQueries).toEqual({ cancelled: null, reads: ['read'] });
 
+    const quotedReadName = `read'"<em>`;
+    const qualityMarkup = '<img/id=codexomics-quality-probe>';
+    const readFixture = path.join(fixtureDirectory, 'read-details.sam');
+    const alignment = [
+      quotedReadName,
+      0,
+      'SMOKE',
+      1,
+      60,
+      `${qualityMarkup.length}M`,
+      '*',
+      0,
+      0,
+      'A'.repeat(qualityMarkup.length),
+      qualityMarkup,
+    ].join('\t');
+    await fs.writeFile(readFixture, alignment + '\n');
+    const readDetails = await genomeView.evaluate(async filePath => {
+      const api = window.electronAPI;
+      const query = await api.getSamReadsForRange(filePath, 'SMOKE', 0, 1, {}, globalThis.crypto.randomUUID());
+      const read = { ...query.reads[0], tags: { zz: '<em id=codexomics-read-tag-probe>sample</em>' } };
+      const genome = window.genomeBrowser;
+      const copy = genome.copySpecificReadSequence;
+      const select = genome.selectReadById;
+      const actions = [];
+      try {
+        genome.copySpecificReadSequence = (...args) => actions.push(args);
+        genome.selectReadById = id => actions.push(['select', id]);
+        genome.populateReadDetails(read);
+        const details = document.querySelector('#readDetailsContent');
+        const quality = details.querySelector('.quality-full-line');
+        const section = quality.closest('.read-sequence-section');
+        const toggle = section.querySelector('.toggle-read-sequence-btn');
+        toggle.click();
+        const expanded = quality.closest('.read-sequence-full').style.display === 'block';
+        toggle.click();
+        const collapsed = quality.closest('.read-sequence-full').style.display === 'none';
+        section.querySelector('[data-read-copy="quality"]').click();
+        genome.populateReadMutationDetails(read, {
+          type: 'substitution',
+          position: 2,
+          refSequence: 'A',
+          sequence: 'T',
+        });
+        document.querySelector('.read-mutation-view-btn').click();
+        return {
+          readName: details.querySelector('.read-name').textContent,
+          quality: quality.textContent,
+          tag: [...details.querySelectorAll('.read-attribute-value')].at(-1).textContent,
+          parsedMarkup: Boolean(details.querySelector('#codexomics-quality-probe, #codexomics-read-tag-probe')),
+          expanded,
+          collapsed,
+          actions,
+        };
+      } finally {
+        genome.copySpecificReadSequence = copy;
+        genome.selectReadById = select;
+      }
+    }, readFixture);
+    expect(readDetails).toEqual({
+      readName: quotedReadName,
+      quality: qualityMarkup,
+      tag: '<em id=codexomics-read-tag-probe>sample</em>',
+      parsedMarkup: false,
+      expanded: true,
+      collapsed: true,
+      actions: [
+        ['quality', quotedReadName],
+        ['select', quotedReadName],
+      ],
+    });
+
     const fasta = path.join(fixtureDirectory, 'refseq.fna.gz');
     const fastaText = '>REFSEQ\r\nACGT';
     await fs.writeFile(fasta, gzipSync(fastaText));
