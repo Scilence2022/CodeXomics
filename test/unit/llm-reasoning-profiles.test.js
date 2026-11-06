@@ -1,3 +1,4 @@
+/* eslint-disable no-new-func */
 /**
  * The ChatBox thinking level: which models expose one, how each provider
  * spells it in the request, and the composer control that sets it.
