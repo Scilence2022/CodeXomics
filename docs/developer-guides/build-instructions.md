@@ -9,7 +9,7 @@ This guide describes the supported development and packaging workflow for CodeXo
 | Node.js          | 22.12+ for installs and builds           |
 | npm              | 10 or newer                              |
 | Electron         | `43.8.7`                                 |
-| electron-builder | `25.x`                                   |
+| electron-builder | `26.18.0`                                |
 | Python           | 3.11 recommended for local MkDocs builds |
 
 CI installs dependencies on Node.js 22. It then runs standalone tests on Node.js 20 and 22. The desktop smoke and packaging jobs run on Node.js 22.
