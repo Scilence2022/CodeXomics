@@ -4005,7 +4005,7 @@ class GenomeBrowser {
   }
 
   // Helper method to create tracks by type
-  async createTrackByType(trackType, chromosome, sequence, tracksToShow) {
+  async createTrackByType(trackType, chromosome, sequence, tracksToShow, signal) {
     console.log(`🔧 [DEBUG] [createTrackByType] Called for trackType: ${trackType}`);
     // Skip if track is not visible
     const visibleTrackName = trackType === 'wigTracks' ? 'wigTracks' : trackType;
@@ -4046,7 +4046,7 @@ class GenomeBrowser {
 
       case 'reads':
         // Aligned reads track (async)
-        trackElement = await this.trackRenderer.createReadsTrack(chromosome);
+        trackElement = await this.trackRenderer.createReadsTrack(chromosome, signal);
         break;
 
       case 'wigTracks':
@@ -4102,13 +4102,10 @@ class GenomeBrowser {
 
   // Core genome display method
   async displayGenomeView(chromosome, sequence) {
-    // Prevent multiple simultaneous rendering operations that could cause track duplication
-    if (this._isRenderingView) {
-      console.log('[displayGenomeView] Already rendering, skipping duplicate call');
-      return;
-    }
-
-    this._isRenderingView = true;
+    this.genomeViewRenderController?.abort();
+    const controller = new AbortController();
+    this.genomeViewRenderController = controller;
+    const { signal } = controller;
 
     try {
       this.navigationManager?.cancelAlignedReadsRedraw();
@@ -4179,8 +4176,6 @@ class GenomeBrowser {
       });
       console.log('[displayGenomeView] Preserved heights map:', preservedHeights);
 
-      container.innerHTML = '';
-
       // Show navigation controls
       document.getElementById('genomeNavigation').style.display = 'block';
 
@@ -4229,7 +4224,8 @@ class GenomeBrowser {
 
       // Create tracks according to the tab's specific order
       for (const trackType of currentTabOrder) {
-        await this.createTrackByType(trackType, chromosome, sequence, tracksToShow);
+        await this.createTrackByType(trackType, chromosome, sequence, tracksToShow, signal);
+        signal.throwIfAborted();
       }
 
       // Also create any visible tracks that aren't in the saved order (for backward compatibility)
@@ -4247,7 +4243,8 @@ class GenomeBrowser {
       ];
       for (const trackType of defaultOrder) {
         if (!currentTabOrder.includes(trackType)) {
-          await this.createTrackByType(trackType, chromosome, sequence, tracksToShow);
+          await this.createTrackByType(trackType, chromosome, sequence, tracksToShow, signal);
+          signal.throwIfAborted();
         }
       }
 
@@ -4297,7 +4294,7 @@ class GenomeBrowser {
         this.addTrackResizeHandle(track.element, track.type);
       });
 
-      container.appendChild(browserContainer);
+      container.replaceChildren(browserContainer);
 
       // Apply saved track state (sizes) from previous sessions
       // Note: Track order is already applied during track creation
@@ -4319,9 +4316,12 @@ class GenomeBrowser {
       // stack. displayGenomeView is the single redraw funnel, so this keeps
       // highlights aligned across every pan / zoom / navigate.
       this.highlightManager?.renderHighlights();
+    } catch (error) {
+      if (!signal.aborted) throw error;
     } finally {
-      // Always clear the rendering flag
-      this._isRenderingView = false;
+      if (this.genomeViewRenderController === controller) {
+        this.genomeViewRenderController = null;
+      }
     }
   }
 

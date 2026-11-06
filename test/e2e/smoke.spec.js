@@ -703,6 +703,70 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     });
     expect(searchDetails.sidebar).toContain(searchMarkup);
     expect(searchDetails.preview).toContain(geneName);
+
+    await genomeView.waitForFunction(() => !window.genomeBrowser.genomeViewRenderController);
+    const concurrentRender = await genomeView.evaluate(async () => {
+      const genome = window.genomeBrowser;
+      const renderer = genome.trackRenderer;
+      const chromosome = genome.currentChromosome;
+      const sequence = genome.currentSequence[chromosome];
+      const viewer = document.getElementById('genomeViewer');
+      const committed = viewer.firstElementChild;
+      const previousPosition = genome.currentPosition;
+      const readsWereVisible = genome.visibleTracks.has('reads');
+      const createReadsTrack = renderer.createReadsTrack;
+      let notifyFirstRead;
+      const firstRead = new Promise(resolve => {
+        notifyFirstRead = resolve;
+      });
+      let releaseFirstRead;
+      const heldRead = new Promise(resolve => {
+        releaseFirstRead = resolve;
+      });
+      renderer.createReadsTrack = async (_chromosome, signal) => {
+        const start = genome.currentPosition.start;
+        if (start === 0) {
+          notifyFirstRead(signal);
+          await heldRead;
+        }
+        const track = document.createElement('div');
+        track.className = 'reads-track';
+        track.dataset.probeViewportStart = String(start);
+        return track;
+      };
+
+      try {
+        genome.visibleTracks.add('reads');
+        genome.currentPosition = { start: 0, end: 6 };
+        const earlierRender = genome.displayGenomeView(chromosome, sequence);
+        const earlierSignal = await firstRead;
+        const keptCommittedView = viewer.firstElementChild === committed;
+        genome.currentPosition = { start: 4, end: 10 };
+        await genome.displayGenomeView(chromosome, sequence);
+        const readViewport = () =>
+          Array.from(viewer.querySelectorAll('[data-probe-viewport-start]'), track => track.dataset.probeViewportStart);
+        const displayedBeforeEarlierCompletion = readViewport();
+        releaseFirstRead();
+        await earlierRender;
+        return {
+          keptCommittedView,
+          cancelled: earlierSignal?.aborted === true,
+          displayedBeforeEarlierCompletion,
+          displayedAfterEarlierCompletion: readViewport(),
+        };
+      } finally {
+        releaseFirstRead();
+        renderer.createReadsTrack = createReadsTrack;
+        genome.currentPosition = previousPosition;
+        if (!readsWereVisible) genome.visibleTracks.delete('reads');
+      }
+    });
+    expect(concurrentRender).toEqual({
+      keptCommittedView: true,
+      cancelled: true,
+      displayedBeforeEarlierCompletion: ['4'],
+      displayedAfterEarlierCompletion: ['4'],
+    });
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });
