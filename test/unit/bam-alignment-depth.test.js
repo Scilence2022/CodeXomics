@@ -134,3 +134,64 @@ describe('BAM alignment depth', () => {
     }
   });
 });
+
+describe('BAM display collection', () => {
+  it('preserves ordinary records in input order with no sampling metadata', async () => {
+    const reader = createReader();
+    reader.bamFile.streamRecordsForRange = async function* () {
+      yield [{ id: 'first', start: 1 }];
+      yield [{ id: 'second', start: 2 }];
+    };
+    reader.convertRecordsToReads = records => records;
+    const reads = await reader.getRecordsForRange('chr1', 0, 16);
+    expect(reads.map(read => read.id)).toEqual(['first', 'second']);
+    expect(reads._sourceSamplingInfo).toBeUndefined();
+    expect(reader.bamFile.getRecordsForRange).not.toHaveBeenCalled();
+  });
+
+  it('queries large ranges in windows and returns a spanning alignment only once', async () => {
+    const reader = createReader();
+    const spanning = { id: 'spanning', start: 999990 };
+    reader.bamFile.streamRecordsForRange = vi.fn(async function* (_reference, start) {
+      yield start === 0 ? [spanning] : [spanning, { id: 'next', start: 1000000 }];
+    });
+    reader.convertRecordsToReads = records => records;
+    const reads = await reader.getRecordsForRange('chr1', 0, 1000010);
+    expect(reads.map(read => read.id)).toEqual(['spanning', 'next']);
+    expect(reader.bamFile.streamRecordsForRange.mock.calls.map(call => call.slice(0, 3))).toEqual([
+      ['chr1', 0, 1000000],
+      ['chr1', 1000000, 1000010],
+    ]);
+  });
+
+  it('clips display windows to the known reference length and rejects unbounded coordinates', async () => {
+    const reader = createReader();
+    reader.references = [{ name: 'chr1', length: 16 }];
+    reader.bamFile.streamRecordsForRange = vi.fn(async function* () {
+      yield [];
+    });
+    await expect(reader.getRecordsForRange('chr1', 0, 9000000)).resolves.toEqual([]);
+    expect(reader.bamFile.streamRecordsForRange.mock.calls.map(call => call.slice(0, 3))).toEqual([['chr1', 0, 16]]);
+    await expect(reader.getRecordsForRange('chr1', 0, Infinity)).rejects.toThrow('safe integers');
+  });
+
+  it('counts the complete stream and fills the sample while retaining a sparse distant position', async () => {
+    const reader = createReader();
+    const totalRecords = 200123;
+    reader.bamFile.streamRecordsForRange = async function* () {
+      for (let offset = 0; offset < totalRecords; offset += 5000) {
+        yield Array.from({ length: Math.min(5000, totalRecords - offset) }, (_, index) => {
+          const id = offset + index;
+          return { id, start: id === totalRecords - 1 ? 9990 : 10 + (id % 17) };
+        });
+      }
+    };
+    reader.convertRecordsToReads = records => records;
+    const reads = await reader.getRecordsForRange('chr1', 0, 10000);
+    expect(reads).toHaveLength(100000);
+    expect(reads._sourceSamplingInfo).toEqual({ totalRecords, sampledRecords: 100000 });
+    expect(reads.some(read => read.start === 9990)).toBe(true);
+    expect(new Set(reads.map(read => read.id)).size).toBe(100000);
+    expect(reader.bamFile.getRecordsForRange).not.toHaveBeenCalled();
+  });
+});

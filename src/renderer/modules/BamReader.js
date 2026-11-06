@@ -36,6 +36,77 @@ try {
   }
 }
 
+const BAM_DISPLAY_THRESHOLD = 200000;
+const BAM_DISPLAY_SAMPLE_SIZE = 100000;
+const BAM_DISPLAY_STRATA = 100;
+const BAM_DISPLAY_FETCH_SPAN = 1000000;
+
+function addToReservoir(reservoir, record, count, capacity) {
+  if (reservoir.length < capacity) {
+    reservoir.push(record);
+  } else {
+    const slot = Math.floor(Math.random() * count);
+    if (slot < capacity) reservoir[slot] = record;
+  }
+}
+
+class BamDisplayCollector {
+  constructor(start, end) {
+    this.start = start;
+    this.stratumWidth = Math.max(1, Math.ceil((end - start) / BAM_DISPLAY_STRATA));
+    this.totalRecords = 0;
+    this.records = [];
+    this.strata = null;
+    this.fallback = [];
+    this.sampledCount = 0;
+  }
+
+  add(record) {
+    this.totalRecords++;
+    if (this.totalRecords <= BAM_DISPLAY_THRESHOLD) {
+      this.records.push(record);
+      return;
+    }
+    if (!this.strata) {
+      this.strata = Array.from({ length: BAM_DISPLAY_STRATA }, () => ({ count: 0, records: [] }));
+      const buffered = this.records;
+      this.records = [];
+      for (const previous of buffered) this.addToSample(previous);
+    }
+    this.addToSample(record);
+  }
+
+  addToSample(record) {
+    const index = Math.min(
+      BAM_DISPLAY_STRATA - 1,
+      Math.max(0, Math.floor((record.start - this.start) / this.stratumWidth))
+    );
+    const stratum = this.strata[index];
+    addToReservoir(stratum.records, record, ++stratum.count, BAM_DISPLAY_SAMPLE_SIZE / BAM_DISPLAY_STRATA);
+    // A second reservoir fills unused space when the alignment is sparse in some bins.
+    addToReservoir(this.fallback, record, ++this.sampledCount, BAM_DISPLAY_SAMPLE_SIZE);
+  }
+
+  finish() {
+    if (!this.strata) return this.records;
+    const sample = this.strata.flatMap(stratum => stratum.records);
+    if (sample.length < BAM_DISPLAY_SAMPLE_SIZE) {
+      const selected = new Set(sample);
+      for (const record of this.fallback) {
+        if (selected.has(record)) continue;
+        sample.push(record);
+        selected.add(record);
+        if (sample.length === BAM_DISPLAY_SAMPLE_SIZE) break;
+      }
+    }
+    for (let index = 0; index < sample.length; index++) {
+      const other = index + Math.floor(Math.random() * (sample.length - index));
+      [sample[index], sample[other]] = [sample[other], sample[index]];
+    }
+    return sample;
+  }
+}
+
 class BamReader {
   constructor() {
     this.filePath = null;
@@ -942,8 +1013,8 @@ class BamReader {
         throw new Error('Invalid chromosome parameter');
       }
 
-      if (typeof start !== 'number' || typeof end !== 'number') {
-        throw new Error('Start and end positions must be numbers');
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) {
+        throw new Error('Start and end positions must be safe integers');
       }
 
       if (start < 0) {
@@ -987,184 +1058,52 @@ class BamReader {
         `🔍 [BamReader] Querying region ${chromosome}:${start.toLocaleString()}-${end.toLocaleString()} ${this.hasIndex ? '(indexed)' : '(sequential scan)'}`
       );
 
-      let allRecords = [];
+      const collector = new BamDisplayCollector(start, end);
+      const collectReference = async reference => {
+        const referenceInfo = this.getReference(reference);
+        if (!referenceInfo && this.references.length > 0) return;
+        const referenceLength = referenceInfo?.length;
+        const referenceEnd =
+          Number.isSafeInteger(referenceLength) && referenceLength > 0 ? Math.min(end, referenceLength) : end;
+        // The BAM library keeps decoded batches until each query finishes.
+        for (let windowStart = start; windowStart < referenceEnd; windowStart += BAM_DISPLAY_FETCH_SPAN) {
+          const windowEnd = Math.min(referenceEnd, windowStart + BAM_DISPLAY_FETCH_SPAN);
+          for await (const batch of bamFile.streamRecordsForRange(reference, windowStart, windowEnd, { signal })) {
+            signal.throwIfAborted();
+            for (const record of batch) {
+              // A read overlapping a later window was already returned when it started.
+              if (windowStart === start || record.start >= windowStart) collector.add(record);
+            }
+          }
+        }
+      };
 
       if (settings.ignoreChromosome) {
-        console.log(
-          `🔍 [BamReader] IGNORE CHROMOSOME MODE: Fetching records from all chromosomes in position range ${start}-${end}`
-        );
-
         for (const ref of this.references) {
           try {
-            console.log(`🔍 [BamReader] Querying reference: ${ref.name}`);
-            const records = await bamFile.getRecordsForRange(ref.name, start, end, { signal });
+            await collectReference(ref.name);
+          } catch (error) {
             signal.throwIfAborted();
-            console.log(`🔍 [BamReader] Retrieved ${records.length} records from ${ref.name}`);
-            for (const record of records) allRecords.push(record);
-
-            // Log sample records for debugging
-            if (records.length > 0) {
-              const sampleRecord = records[0];
-              console.log(`🔍 [BamReader] Sample record from ${ref.name}:`, {
-                name: sampleRecord.name || sampleRecord.qname,
-                refName: sampleRecord.refName,
-                start: sampleRecord.start,
-                end: sampleRecord.end,
-                mappingQuality: sampleRecord.mq || sampleRecord.mapq,
-                flags: sampleRecord.flags,
-              });
-            }
-          } catch (refError) {
-            signal.throwIfAborted();
-            console.warn(`⚠️ [BamReader] Error querying reference ${ref.name}:`, refError.message);
-            // Continue with other references
+            console.warn(`Error querying BAM reference ${ref.name}:`, error.message);
           }
         }
       } else {
-        // Normal chromosome-specific query using @gmod/bam directly
-        console.log(`🔍 [BamReader] NORMAL MODE: Fetching records for range ${chromosome}:${start}-${end}`);
-        try {
-          allRecords = await bamFile.getRecordsForRange(chromosome, start, end, { signal });
-          signal.throwIfAborted();
-          console.log(`🔍 [BamReader] Direct query returned ${allRecords.length} records`);
-
-          // Log sample records for debugging
-          if (allRecords.length > 0) {
-            const sampleRecord = allRecords[0];
-            console.log(`🔍 [BamReader] Sample record:`, {
-              name: sampleRecord.name || sampleRecord.qname,
-              refName: sampleRecord.refName,
-              start: sampleRecord.start,
-              end: sampleRecord.end,
-              mappingQuality: sampleRecord.mq || sampleRecord.mapq,
-              flags: sampleRecord.flags,
-              strand: sampleRecord.strand,
-            });
-          }
-        } catch (queryError) {
-          console.error(`❌ [BamReader] Error in direct query:`, queryError);
-          throw queryError;
-        }
+        await collectReference(chromosome);
       }
-
-      console.log(`🔍 [BamReader] Retrieved ${allRecords.length} raw records from BAM file`);
+      signal.throwIfAborted();
+      const { totalRecords: totalRegionRecords } = collector;
+      const allRecords = collector.finish();
+      console.log(`Retrieved ${totalRegionRecords} raw BAM records; processing ${allRecords.length} for display`);
 
       // Warn if we got an unexpectedly large number of records for a small region
       const regionSize = end - start;
-      const recordsPerBp = allRecords.length / regionSize;
+      const recordsPerBp = totalRegionRecords / regionSize;
       if (recordsPerBp > 100) {
         console.warn(
           `⚠️ [BamReader] Very high read density: ${recordsPerBp.toFixed(1)} reads/bp for region ${chromosome}:${start}-${end}`
         );
         console.warn(`   This might indicate an issue with the BAM file or query region`);
         console.warn(`   Consider using a more specific region or checking the BAM file integrity`);
-      }
-
-      const totalRegionRecords = allRecords.length;
-
-      // Apply early sampling for extremely large datasets to prevent stack overflow
-      const EXTREME_DATASET_THRESHOLD = 200000; // 200k records threshold
-      const EARLY_SAMPLE_SIZE = 100000; // Sample down to 100k records
-
-      if (allRecords.length > EXTREME_DATASET_THRESHOLD) {
-        console.warn(`⚠️ [BamReader] Extremely large dataset detected (${allRecords.length} records)`);
-        console.warn(`   Applying early random sampling to prevent memory/stack overflow`);
-        console.warn(`   Sampling ${EARLY_SAMPLE_SIZE} records from ${allRecords.length} for processing`);
-
-        // Apply position-aware stratified sampling to reduce bias
-        console.log(`🎯 [BamReader] Applying position-aware stratified sampling...`);
-
-        // First, analyze position distribution
-        let minPos = Infinity;
-        let maxPos = -Infinity;
-        for (const record of allRecords) {
-          const position = record.start;
-          minPos = Math.min(minPos, position);
-          maxPos = Math.max(maxPos, position);
-        }
-        const positionRange = maxPos - minPos;
-
-        console.log(`📊 [BamReader] Position range: ${minPos}-${maxPos} (span: ${positionRange})`);
-
-        // Divide into position-based strata for more uniform sampling
-        const NUM_STRATA = 100; // Divide region into 100 strata
-        const strataSize = Math.max(1, Math.ceil(positionRange / NUM_STRATA));
-        const strata = new Array(NUM_STRATA).fill(null).map(() => []);
-
-        // Assign records to strata based on position
-        for (const record of allRecords) {
-          const strataIndex = Math.min(Math.floor((record.start - minPos) / strataSize), NUM_STRATA - 1);
-          strata[strataIndex].push(record);
-        }
-
-        // Calculate target samples per stratum
-        const sampledRecords = [];
-        const targetPerStratum = Math.ceil(EARLY_SAMPLE_SIZE / NUM_STRATA);
-
-        for (let s = 0; s < NUM_STRATA; s++) {
-          const stratumRecords = strata[s];
-          if (stratumRecords.length === 0) continue;
-
-          // Sample from this stratum
-          const sampleCount = Math.min(targetPerStratum, stratumRecords.length);
-
-          // Use Fisher-Yates shuffle for small arrays (more uniform than reservoir)
-          const shuffled = [...stratumRecords];
-          for (let i = 0; i < sampleCount; i++) {
-            const j = i + Math.floor(Math.random() * (shuffled.length - i));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-          }
-
-          sampledRecords.push(...shuffled.slice(0, sampleCount));
-
-          // Stop if we've reached our target
-          if (sampledRecords.length >= EARLY_SAMPLE_SIZE) break;
-        }
-
-        // If we have fewer samples than target, fill with remaining records
-        if (sampledRecords.length < EARLY_SAMPLE_SIZE) {
-          const sampledSet = new Set(sampledRecords);
-          const remaining = allRecords.filter(record => !sampledSet.has(record));
-          const needed = EARLY_SAMPLE_SIZE - sampledRecords.length;
-
-          // Shuffle remaining records and take what we need
-          for (let i = 0; i < Math.min(needed, remaining.length); i++) {
-            const j = i + Math.floor(Math.random() * (remaining.length - i));
-            [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
-          }
-
-          sampledRecords.push(...remaining.slice(0, needed));
-        }
-
-        // Final shuffle to remove any ordering bias
-        for (let i = 0; i < sampledRecords.length; i++) {
-          const j = i + Math.floor(Math.random() * (sampledRecords.length - i));
-          [sampledRecords[i], sampledRecords[j]] = [sampledRecords[j], sampledRecords[i]];
-        }
-
-        // Replace original array with sampled records
-        allRecords = sampledRecords.slice(0, EARLY_SAMPLE_SIZE);
-
-        // Verify position coverage
-        let sampledMinPos = Infinity;
-        let sampledMaxPos = -Infinity;
-        for (const record of allRecords) {
-          const position = record.start;
-          sampledMinPos = Math.min(sampledMinPos, position);
-          sampledMaxPos = Math.max(sampledMaxPos, position);
-        }
-        const coverageRatio = (sampledMaxPos - sampledMinPos) / positionRange;
-
-        console.log(`✅ [BamReader] Stratified sampling complete: ${allRecords.length} records selected`);
-        console.log(
-          `📊 [BamReader] Position coverage: ${(coverageRatio * 100).toFixed(1)}% (${sampledMinPos}-${sampledMaxPos})`
-        );
-
-        console.log(`✅ [BamReader] Early sampling complete: ${allRecords.length} records selected`);
-        console.log(`   Note: Additional sampling may be applied by ReadsManager if configured`);
-      } else if (allRecords.length > 100000) {
-        console.log(`ℹ️ [BamReader] Large dataset detected (${allRecords.length} records)`);
-        console.log(`   Random sampling will be applied by ReadsManager if enabled`);
       }
 
       // Log detailed statistics about the raw records using memory-efficient approach
@@ -1272,7 +1211,7 @@ class BamReader {
       );
       console.log(`🔍 [BamReader] === BAM QUERY DEBUG END ===`);
 
-      if (totalRegionRecords > EXTREME_DATASET_THRESHOLD) {
+      if (totalRegionRecords > BAM_DISPLAY_THRESHOLD) {
         reads._sourceSamplingInfo = { totalRecords: totalRegionRecords, sampledRecords: allRecords.length };
       }
       return reads;
