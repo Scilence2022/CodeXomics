@@ -27,6 +27,10 @@ class GenBankExporter {
     this.genomeBrowser = genomeBrowser;
   }
 
+  static hasPositionQualifiers(feature) {
+    return Object.keys(feature.qualifiers || {}).some(key => GENBANK_POSITION_QUALIFIERS.has(key.toLowerCase()));
+  }
+
   /**
    * Main export method - generates complete GenBank content
    *
@@ -387,7 +391,7 @@ class GenBankExporter {
   getExportQualifiers(feature) {
     const { qualifiers } = feature;
     if (feature.genbankQualifierCoordinateError) throw new SyntaxError(feature.genbankQualifierCoordinateError);
-    if (!Object.keys(qualifiers || {}).some(key => GENBANK_POSITION_QUALIFIERS.has(key.toLowerCase()))) {
+    if (!GenBankExporter.hasPositionQualifiers(feature)) {
       return qualifiers;
     }
     const shift = this.getUniformLocationShift(feature);
@@ -432,8 +436,7 @@ class GenBankExporter {
     );
   }
 
-  mapEditableLocation(expression, mapSpan, allowUncertain = false) {
-    if (!allowUncertain && /[<>:^]/.test(expression)) throw new SyntaxError(`Unsupported coordinate: ${expression}`);
+  mapEditableLocation(expression, mapSpan, { allowFuzzy, preserveRemote }) {
     return this.mapLocalLocation(
       expression.replace(/\s+/g, ''),
       (start, end, span) => {
@@ -447,6 +450,7 @@ class GenBankExporter {
         }
         const partialStart = left.startsWith('<');
         const partialEnd = (range ? right : left).startsWith('>');
+        if (!allowFuzzy && (partialStart || partialEnd)) throw new SyntaxError(`Unsupported fuzzy coordinate: ${span}`);
         const [first, last] = mapSpan(start, end, partialStart, partialEnd);
         if (!Number.isSafeInteger(first) || !Number.isSafeInteger(last) || first < 1 || last < first) {
           throw new RangeError(`Invalid remapped GenBank location: ${span}`);
@@ -455,23 +459,24 @@ class GenBankExporter {
         return range ? `${startMarker}${first}..${partialEnd ? '>' : ''}${last}` : `${startMarker}${first}`;
       },
       (type, parts) => `${type}(${parts.join(',')})`,
-      allowUncertain
+      preserveRemote
     );
   }
 
-  mapPositionQualifiers(qualifiers, mapSpan) {
+  mapPositionQualifiers(qualifiers, mapSpan, allowFuzzy = false) {
     let result;
+    const locationOptions = { allowFuzzy, preserveRemote: true };
     for (const [key, raw] of Object.entries(qualifiers || {})) {
       const name = key.toLowerCase();
       if (!GENBANK_POSITION_QUALIFIERS.has(name)) continue;
       const remap = value => {
         try {
           if (typeof value !== 'string') throw new SyntaxError('Expected a coordinate string');
-          if (name === 'rpt_unit_range') return this.mapEditableLocation(value, mapSpan);
+          if (name === 'rpt_unit_range') return this.mapEditableLocation(value, mapSpan, locationOptions);
           const match = /^(\(\s*pos\s*:\s*)(.+?)(\s*,\s*aa\s*:.*\))$/is.exec(value);
           if (!match) throw new SyntaxError('Expected a position followed by an amino acid');
           const [, prefix, location, suffix] = match;
-          return prefix + this.mapEditableLocation(location, mapSpan) + suffix;
+          return prefix + this.mapEditableLocation(location, mapSpan, locationOptions) + suffix;
         } catch (error) {
           if (!(error instanceof SyntaxError || error instanceof RangeError)) throw error;
           throw new SyntaxError(`Cannot remap /${key}: ${error.message}`, { cause: error });
@@ -540,7 +545,7 @@ class GenBankExporter {
           segments.push({ start: first, end: last });
           return [first, last];
         },
-        true
+        { allowFuzzy: true, preserveRemote: true }
       );
     } catch (error) {
       if (!(error instanceof SyntaxError || error instanceof RangeError)) throw error;
@@ -553,11 +558,11 @@ class GenBankExporter {
       return null;
     }
     if (segments.length === 0) return feature; // All segments belong to other records.
-    if (remapped === location && position > maxEnd) return feature;
+    if (remapped === location && position > maxEnd && !GenBankExporter.hasPositionQualifiers(feature)) return feature;
     let qualifiers = feature.qualifiers;
     let qualifierError;
     try {
-      qualifiers = this.mapPositionQualifiers(this.getExportQualifiers(feature), remapSpan);
+      qualifiers = this.mapPositionQualifiers(this.getExportQualifiers(feature), remapSpan, true);
     } catch (error) {
       if (!(error instanceof SyntaxError)) throw error;
       qualifierError = error.message;
