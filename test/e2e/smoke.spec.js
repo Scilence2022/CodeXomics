@@ -429,6 +429,70 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
         ['attachment', geneDetails.attachmentId, geneDetails.geneId],
       ],
     });
+
+    const vcf = path.join(fixtureDirectory, 'variants.vcf');
+    await fs.writeFile(
+      vcf,
+      '##fileformat=VCFv4.2\n' +
+        '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n' +
+        'SMOKE\t3\tstructural\tG\t<DEL>\t60\tPASS\tSVTYPE=DEL;SVLEN=-2;END=5\n' +
+        'SMOKE\t3\tpoint\tG\tA\t60\tPASS\t.\n'
+    );
+    const variantDetails = await genomeView.evaluate(async filePath => {
+      const genome = window.genomeBrowser;
+      const imported = await genome.fileManager.loadFile(filePath, { reportErrors: false });
+      const renderer = genome.trackRenderer;
+      const analyzer = new window.VariantAnalyzer(genome);
+      renderer.variantAnalyzer = analyzer;
+      const [symbolic, explicit] = genome.currentVariants.SMOKE;
+      const report = document.querySelector('#variantDetailsContent');
+      const symbolicAnalysis = await analyzer.analyzeVariant(symbolic);
+      renderer.displayVariantAnalysis(symbolicAnalysis);
+      const symbolicText = report.textContent;
+      const symbolicMarkup = Boolean(report.querySelector('del'));
+      renderer.displayVariantAnalysis(await analyzer.analyzeVariant(explicit));
+      const explicitText = report.textContent;
+      const explicitMarkup = Boolean(report.querySelector('#codexomics-gene-probe'));
+      const error = '<em id=codexomics-variant-error>file error</em>';
+      renderer.showVariantAnalysisError(error);
+      const errorText = report.querySelector('.error-details').textContent;
+      const errorMarkup = Boolean(report.querySelector('#codexomics-variant-error'));
+      genome.tabManager.restoreSidebarPanelStates({
+        sidebarPanels: {
+          variantDetailsSection: {
+            visible: true,
+            content: '<p id="codexomics-cached-variant" onclick="void 0">Saved report</p>',
+          },
+        },
+      });
+      const cached = document.querySelector('#codexomics-cached-variant');
+      return {
+        imported: imported.success,
+        symbolicText,
+        symbolicMarkup,
+        severity: symbolicAnalysis.impact.severity,
+        affectedGenes: symbolicAnalysis.affectedGenes.length,
+        explicitText,
+        explicitMarkup,
+        errorText,
+        errorMarkup,
+        cached: cached?.textContent,
+        cachedHandler: cached?.hasAttribute('onclick'),
+      };
+    }, vcf);
+    expect(variantDetails).toMatchObject({
+      imported: true,
+      symbolicMarkup: false,
+      severity: 'Unknown',
+      affectedGenes: 0,
+      explicitMarkup: false,
+      errorText: '<em id=codexomics-variant-error>file error</em>',
+      errorMarkup: false,
+      cached: 'Saved report',
+      cachedHandler: false,
+    });
+    expect(variantDetails.symbolicText).toContain('Alternative: <DEL>');
+    expect(variantDetails.explicitText).toContain(geneName);
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });

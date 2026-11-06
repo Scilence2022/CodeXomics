@@ -3097,9 +3097,11 @@ class TabManager {
         visible &&
         typeof content === 'string' &&
         content &&
-        !content.includes('class="read-mutation-details"')
+        !content.includes('class="read-mutation-details"') &&
+        window.SanitizeService
       ) {
-        variantPanel.innerHTML = content;
+        window.SanitizeService.safeSetInnerHTML(variantPanel, content);
+        variantPanel.querySelector('.retry-analysis')?.addEventListener('click', () => location.reload());
         variantPanel.style.display = 'block';
       } else {
         variantPanel.style.display = 'none';

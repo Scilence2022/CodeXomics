@@ -25,6 +25,18 @@ describe('shared algorithm contracts', () => {
     expect(Search.prototype.getReverseComplement('AryN')).toBe('NryT');
     expect(Variant.prototype.reverseComplement('AryN')).toBe('NryT');
   });
+  it.each(['<DEL:ME>', 'A,C', 'G[chr2:50[', 'N', '*', '.T'])(
+    'withholds sequence impact for the unresolved alternate allele %s',
+    async alt => {
+      const result = await new Variant({}).analyzeVariant({ chromosome: 'chr1', start: 4, ref: 'G', alt });
+      expect(result).toMatchObject({
+        basicInfo: { position: 'chr1:5', alternative: alt },
+        type: { lengthChange: null },
+        impact: { severity: 'Unknown' },
+        affectedGenes: [],
+      });
+    }
+  );
   it('normalizes nested params and primer aliases without modifying input', () => {
     const input = { z: undefined, b: [{ z: 2, a: 1 }], primerSequence: 'ATGC' };
     const output = Utils.normalizeParams(input);
