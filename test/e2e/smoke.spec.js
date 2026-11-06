@@ -234,6 +234,34 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
       digest: createHash('sha256').update(fastaText).digest('hex'),
       type: 'FASTA',
     });
+
+    const tabTitle = '<img id=codexomics-tab-probe src=missing> annotation & position';
+    const renderedTab = await genomeView.evaluate(title => {
+      const tab = window.genomeBrowser.tabManager.createTabElement('tab-security-test', title);
+      return {
+        title: tab.querySelector('.tab-title').textContent,
+        parsedMarkup: Boolean(tab.querySelector('#codexomics-tab-probe')),
+        closeButton: Boolean(tab.querySelector('.tab-close-button')),
+      };
+    }, tabTitle);
+    expect.soft(renderedTab).toEqual({ title: tabTitle, parsedMarkup: false, closeButton: true });
+
+    if (process.platform !== 'win32') {
+      const filename = '<img id=codexomics-filename-probe src=missing>.fa';
+      const injectedNamePath = path.join(fixtureDirectory, filename);
+      await fs.writeFile(injectedNamePath, fastaText);
+      const importedName = await genomeView.evaluate(async filePath => {
+        const result = await window.genomeBrowser.chatManager.loadGenomeFile({ filePath });
+        const details = document.querySelector('#fileInfo');
+        return {
+          success: result.success,
+          text: details.textContent,
+          parsedMarkup: Boolean(details.querySelector('#codexomics-filename-probe')),
+        };
+      }, injectedNamePath);
+      expect(importedName).toMatchObject({ success: true, parsedMarkup: false });
+      expect(importedName.text).toContain(filename);
+    }
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });

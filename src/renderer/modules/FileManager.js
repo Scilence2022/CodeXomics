@@ -2429,20 +2429,22 @@ Original error: ${error.message}`;
     const fileInfo = document.getElementById('fileInfo');
     if (this.currentFile) {
       const info = this.currentFile.info;
-      fileInfo.innerHTML = `
-                <div class="file-detail">
-                    <strong>Name:</strong> ${info.name}
-                </div>
-                <div class="file-detail">
-                    <strong>Size:</strong> ${(info.size / 1024).toFixed(2)} KB
-                </div>
-                <div class="file-detail">
-                    <strong>Type:</strong> ${info.extension}
-                </div>
-                <div class="file-detail">
-                    <strong>Sequences:</strong> ${Object.keys(this.genomeBrowser.currentSequence || {}).length}
-                </div>
-            `;
+      const rows = [
+        ['Name', info.name],
+        ['Size', `${(info.size / 1024).toFixed(2)} KB`],
+        ['Type', info.extension],
+        ['Sequences', Object.keys(this.genomeBrowser.currentSequence || {}).length],
+      ];
+      fileInfo.replaceChildren(
+        ...rows.map(([label, value]) => {
+          const row = document.createElement('div');
+          row.className = 'file-detail';
+          const heading = document.createElement('strong');
+          heading.textContent = `${label}:`;
+          row.append(heading, ` ${value}`);
+          return row;
+        })
+      );
     } else {
       fileInfo.innerHTML = '<p class="no-file">No file loaded</p>';
     }
