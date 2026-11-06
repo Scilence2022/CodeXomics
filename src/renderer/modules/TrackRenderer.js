@@ -4242,7 +4242,7 @@ class TrackRenderer {
     return trackContent;
   }
 
-  async createReadsTrack(chromosome) {
+  async createReadsTrack(chromosome, signal) {
     console.log('🔧 [DEBUG] [createReadsTrack] Entry point called for chromosome:', chromosome);
     // Check if we have multiple BAM files
     const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
@@ -4250,13 +4250,13 @@ class TrackRenderer {
 
     if (bamFiles.length > 1) {
       // Create multiple reads tracks
-      return this.createMultipleReadsTracks(chromosome, bamFiles);
+      return this.createMultipleReadsTracks(chromosome, bamFiles, signal);
     } else if (bamFiles.length === 1) {
       // Create single reads track with file-specific header
-      return this.createSingleReadsTrack(chromosome, bamFiles[0]);
+      return this.createSingleReadsTrack(chromosome, bamFiles[0], signal);
     } else {
       // Fallback to legacy mode
-      return this.createLegacyReadsTrack(chromosome);
+      return this.createLegacyReadsTrack(chromosome, signal);
     }
   }
 
@@ -4337,7 +4337,7 @@ class TrackRenderer {
     return trackContent;
   }
 
-  async createLegacyReadsTrack(chromosome) {
+  async createLegacyReadsTrack(chromosome, signal) {
     const { track, trackContent } = this.createTrackBase('reads', chromosome);
     const viewport = this.getCurrentViewport();
 
@@ -4413,11 +4413,18 @@ class TrackRenderer {
       console.log(`🔍 [DEBUG] showReference setting: ${settings.showReference}`);
 
       // Get reads for current region using ReadsManager with settings
-      const readsForCoverage = await this.getReadsForViewport(chromosome, viewport, {
-        ...settings,
-        enableSampling: false,
-        depthRequested: this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage'),
-      });
+      const readsForCoverage = await this.getReadsForViewport(
+        chromosome,
+        viewport,
+        {
+          ...settings,
+          enableSampling: false,
+          depthRequested: this.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage'),
+        },
+        null,
+        signal
+      );
+      signal?.throwIfAborted();
       const visibleReads = this.genomeBrowser.readsManager.applySampling(readsForCoverage, settings);
 
       console.log(`🎯 [TrackRenderer] Retrieved reads for sequence display check:`, {
@@ -4620,6 +4627,7 @@ class TrackRenderer {
         trackContent.appendChild(statsElement);
       }
     } catch (error) {
+      signal?.throwIfAborted();
       // Remove loading message
       if (trackContent.contains(loadingMsg)) {
         trackContent.removeChild(loadingMsg);
@@ -4651,7 +4659,7 @@ class TrackRenderer {
   /**
    * Create multiple reads tracks for multiple BAM files
    */
-  async createMultipleReadsTracks(chromosome, bamFiles) {
+  async createMultipleReadsTracks(chromosome, bamFiles, signal) {
     const tracksContainer = document.createElement('div');
     tracksContainer.className = 'multi-reads-tracks-container';
 
@@ -4659,7 +4667,8 @@ class TrackRenderer {
       const bamFile = bamFiles[i];
 
       if (this.genomeBrowser.multiFileManager.getTrackVisibility(bamFile.trackId)) {
-        const track = await this.createSingleReadsTrack(chromosome, bamFile);
+        const track = await this.createSingleReadsTrack(chromosome, bamFile, signal);
+        signal?.throwIfAborted();
         if (track) {
           tracksContainer.appendChild(track);
 
@@ -4873,7 +4882,7 @@ class TrackRenderer {
   /**
    * Create single reads track with file-specific header
    */
-  async createSingleReadsTrack(chromosome, bamFile) {
+  async createSingleReadsTrack(chromosome, bamFile, signal) {
     const viewport = this.getCurrentViewport();
 
     // CRITICAL FIX: Get and apply track settings for single reads track (instance-specific)
@@ -4936,8 +4945,10 @@ class TrackRenderer {
       }
 
       console.log('🔧 [DEBUG] [createSingleReadsTrack] About to call BAM getRecordsForRange...');
-      const reads = await this.getReadsForViewport(chromosome, viewport, settings, bamFile);
-      const depth = await this.getBamDepthForViewport(chromosome, viewport, settings, bamFile);
+      const reads = await this.getReadsForViewport(chromosome, viewport, settings, bamFile, signal);
+      signal?.throwIfAborted();
+      const depth = await this.getBamDepthForViewport(chromosome, viewport, settings, bamFile, signal);
+      signal?.throwIfAborted();
       console.log('🔧 [DEBUG] [createSingleReadsTrack] BAM getRecordsForRange completed, reads count:', reads.length);
 
       // Check the path we'll take based on reads count
@@ -5055,6 +5066,7 @@ class TrackRenderer {
         trackContent.appendChild(statsElement);
       }
     } catch (error) {
+      signal?.throwIfAborted();
       console.error(`❌ Error loading reads for ${bamFile.metadata.name}:`, error);
       console.error(`   Region: ${chromosome}:${viewport.start}-${viewport.end}`);
       console.error(`   BAM file has ${bamFile.reader.references?.length || 0} references`);

@@ -577,6 +577,12 @@ class NavigationManager {
 
   /** Apply the visible effects of a wheel zoom. Runs at most once per frame. */
   commitWheelZoom({ currentChr, sequence, zoomDirection }) {
+    if (
+      this.genomeBrowser.currentChromosome !== currentChr ||
+      this.genomeBrowser.currentSequence?.[currentChr] !== sequence
+    ) {
+      return;
+    }
     const { start, end } = this.genomeBrowser.currentPosition;
 
     this.genomeBrowser.updateStatistics(currentChr, sequence);
@@ -613,7 +619,7 @@ class NavigationManager {
     const readsTrack = document.querySelector('.reads-track');
     const hasAlignedReads = readsTrack && readsTrack.offsetParent !== null;
 
-    if (hasAlignedReads) {
+    if (hasAlignedReads && !this.genomeBrowser.genomeViewRenderController) {
       // For aligned reads track: update other tracks immediately, but delay reads redraw
       console.log('🔍 [WHEEL-ZOOM] Aligned reads detected - using delayed redraw');
 
@@ -627,7 +633,7 @@ class NavigationManager {
         this.updateAlignedReadsTrackOnly(currentChr);
       }, 300); // 300ms delay after last wheel event
     } else {
-      // No aligned reads track - use normal immediate redraw
+      // Start a full redraw if the visible tracks are being replaced.
       this.genomeBrowser.displayGenomeView(currentChr, sequence);
     }
   }
