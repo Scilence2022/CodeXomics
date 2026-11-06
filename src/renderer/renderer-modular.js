@@ -5898,7 +5898,7 @@ class GenomeBrowser {
 
       // Update tab manager about sidebar panel state change
       if (this.tabManager) {
-        this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', true, readDetailsSection.innerHTML);
+        this.tabManager.updateCurrentTabSidebarPanel('readDetailsSection', true, null);
       }
 
       // Scroll sidebar to bring read details section into view
@@ -5914,7 +5914,12 @@ class GenomeBrowser {
 
       // Update tab manager about sidebar panel state change
       if (this.tabManager) {
-        this.tabManager.updateCurrentTabSidebarPanel('variantDetailsSection', true, variantDetailsSection.innerHTML);
+        const isReadMutation = Boolean(variantDetailsSection.querySelector('.read-mutation-title'));
+        this.tabManager.updateCurrentTabSidebarPanel(
+          'variantDetailsSection',
+          true,
+          isReadMutation ? null : variantDetailsSection.innerHTML
+        );
       }
 
       // Scroll sidebar to bring variant details section into view
@@ -7065,7 +7070,8 @@ class GenomeBrowser {
     const variantContent = document.getElementById('variantDetailsContent');
     if (!variantContent) return;
 
-    const readName = this.escapeHtml(String(read.id || read.qname || 'Unknown Read'));
+    const readId = read.id || read.qname;
+    const readName = this.escapeHtml(String(readId || 'Unknown Read'));
     const position = this.escapeHtml(mutation.position.toLocaleString());
     const type = this.escapeHtml(mutation.type.charAt(0).toUpperCase() + mutation.type.slice(1));
     const reference = this.escapeHtml(mutation.refSequence || (mutation.type === 'insertion' ? '-' : 'N'));
@@ -7115,7 +7121,7 @@ class GenomeBrowser {
     variantContent.innerHTML = detailsHTML;
     variantContent
       .querySelector('.read-mutation-view-btn')
-      .addEventListener('click', () => this.selectReadById(read.id));
+      .addEventListener('click', () => this.selectReadById(readId));
   }
 
   interpretSamFlags(flags) {
@@ -11175,9 +11181,10 @@ class GenomeBrowser {
     notification.innerHTML = `
             <div class="notification-content">
                 <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                <span>${message}</span>
+                <span></span>
             </div>
         `;
+    notification.querySelector('span').textContent = message;
 
     // Add to page
     document.body.appendChild(notification);

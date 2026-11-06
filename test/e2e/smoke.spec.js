@@ -249,18 +249,34 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
         toggle.click();
         const collapsed = quality.closest('.read-sequence-full').style.display === 'none';
         section.querySelector('[data-read-copy="quality"]').click();
-        genome.populateReadMutationDetails(read, {
-          type: 'substitution',
-          position: 2,
-          refSequence: 'A',
-          sequence: 'T',
-        });
+        const mutation = { type: 'substitution', position: 2, refSequence: 'A', sequence: 'T' };
+        genome.selectMutation(read, mutation);
         document.querySelector('.read-mutation-view-btn').click();
+        document.querySelector('#readDetailsSection').style.display = 'block';
+        const state = { selectedRead: genome.selectedRead };
+        genome.tabManager.saveSidebarPanelStates(state);
+        const savedReadAsData = state.sidebarPanels.readDetailsSection.content === null;
+        const savedMutationAsData = state.sidebarPanels.variantDetailsSection.readMutation?.read.id === read.id;
+        state.sidebarPanels.readDetailsSection.content = '<em id=codexomics-legacy-read-probe>stored HTML</em>';
+        details.replaceChildren();
+        document.querySelector('#variantDetailsContent').replaceChildren();
+        genome.tabManager.restoreSidebarPanelStates(state);
+        details.querySelector('[data-read-copy="quality"]').click();
+        document.querySelector('.read-mutation-view-btn').click();
+        genome.showReadSelectionFeedback(read);
+        const notification = [...document.querySelectorAll('.notification-content span')].at(-1);
         return {
           readName: details.querySelector('.read-name').textContent,
-          quality: quality.textContent,
+          quality: details.querySelector('.quality-full-line').textContent,
           tag: [...details.querySelectorAll('.read-attribute-value')].at(-1).textContent,
-          parsedMarkup: Boolean(details.querySelector('#codexomics-quality-probe, #codexomics-read-tag-probe')),
+          parsedMarkup: Boolean(
+            details.querySelector(
+              '#codexomics-quality-probe, #codexomics-read-tag-probe, #codexomics-legacy-read-probe'
+            ) || notification.querySelector('em')
+          ),
+          notification: notification.textContent,
+          savedReadAsData,
+          savedMutationAsData,
           expanded,
           collapsed,
           actions,
@@ -275,9 +291,14 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
       quality: qualityMarkup,
       tag: '<em id=codexomics-read-tag-probe>sample</em>',
       parsedMarkup: false,
+      notification: `Selected read: ${quotedReadName} at 1-${qualityMarkup.length}`,
+      savedReadAsData: true,
+      savedMutationAsData: true,
       expanded: true,
       collapsed: true,
       actions: [
+        ['quality', quotedReadName],
+        ['select', quotedReadName],
         ['quality', quotedReadName],
         ['select', quotedReadName],
       ],
