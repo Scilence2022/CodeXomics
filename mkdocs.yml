@@ -52,7 +52,8 @@ exclude_docs: |
 validation:
   omitted_files: info
   absolute_links: warn
-  unrecognized_links: info
+  unrecognized_links: warn
+  anchors: warn
 
 markdown_extensions:
   - admonition

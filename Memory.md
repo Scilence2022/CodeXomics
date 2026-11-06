@@ -279,7 +279,7 @@ Do not treat `site/` as source.
 Validation and deployment:
 
 - `npm run docs:validate` checks canonical/public version alignment and runs `mkdocs build --strict`.
-- `.github/workflows/docs.yml` performs the same checks for relevant changes on `main` and can deploy through GitHub Pages when repository environment rules permit it.
+- `.github/workflows/docs.yml` runs the same checks on documentation pull requests and on `main`. The strict build rejects broken Markdown links and anchors. The workflow publishes to GitHub Pages from `main`.
 - `npm run docs:deploy` is the supported direct publication path. It builds from `docs/`, commits generated output to `gh-pages`, and pushes that branch. Never edit generated output directly.
 - The live site is `https://scilence2022.github.io/CodeXomics/`.
 
