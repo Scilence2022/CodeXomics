@@ -168,7 +168,6 @@ class GeneNotesManager {
     const note = this.getNote(geneId);
     const content = note?.content || '';
     const hasNote = content.trim() !== '';
-    const escapedGeneId = geneId.replace(/'/g, "\\'");
 
     return `
             <div class="gene-notes-section gene-user-notes-section">
@@ -193,7 +192,6 @@ class GeneNotesManager {
                         id="geneNoteTextarea" 
                         class="gene-notes-textarea" 
                         placeholder="Add your own notes about this gene..."
-                        onblur="window.genomeBrowser.saveGeneNote('${escapedGeneId}')"
                     >${this.escapeHtml(content)}</textarea>
                 </div>
             </div>

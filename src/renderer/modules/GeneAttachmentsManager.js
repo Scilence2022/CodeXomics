@@ -841,16 +841,6 @@ class GeneAttachmentsManager {
       .replace(/'/g, '&#39;');
   }
 
-  escapeInlineJsString(value) {
-    return String(value ?? '')
-      .replace(/\\/g, '\\\\')
-      .replace(/'/g, "\\'")
-      .replace(/\r/g, '\\r')
-      .replace(/\n/g, '\\n')
-      .replace(/</g, '\\x3c')
-      .replace(/>/g, '\\x3e');
-  }
-
   renderAttachmentsList(geneId) {
     const attachments = this.getAttachmentsForGene(geneId);
     if (attachments.length === 0) {
@@ -862,11 +852,9 @@ class GeneAttachmentsManager {
                 </div>
             `;
     }
-    const escapedGeneId = this.escapeInlineJsString(geneId);
     return attachments
       .map(attachment => {
         const icon = this.getFileIcon(attachment.extension);
-        const escapedId = this.escapeInlineJsString(attachment.id);
         const filename = this.escapeHtml(attachment.filename);
         const reportBadge =
           attachment.kind === 'dgr-research-report'
@@ -905,12 +893,10 @@ class GeneAttachmentsManager {
                         </div>
                         <div class="gene-attachment-actions">
                             <button class="gene-attachment-btn open-btn"
-                                    onclick="window.genomeBrowser.openGeneAttachment('${escapedId}', '${escapedGeneId}')"
                                     title="Open file">
                                 <i class="fas fa-external-link-alt"></i>
                             </button>
                             <button class="gene-attachment-btn delete-btn"
-                                    onclick="window.genomeBrowser.removeGeneAttachment('${escapedId}', '${escapedGeneId}')"
                                     title="Remove attachment">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -930,7 +916,6 @@ class GeneAttachmentsManager {
                 <div class="gene-attachments-header">
                     <h4><i class="fas fa-paperclip"></i> Attachments</h4>
                     <button class="btn btn-sm gene-add-attachment-btn"
-                            onclick="window.genomeBrowser.addGeneAttachment()"
                             title="Add attachment files">
                         <i class="fas fa-plus"></i> Add
                     </button>
