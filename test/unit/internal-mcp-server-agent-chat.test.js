@@ -80,6 +80,22 @@ describe('InternalMCPServer agent chat routing', () => {
     expect(server.pendingExecutions.size).toBe(0);
   });
 
+  it('keeps a delegated tool failure separate from successful IPC delivery', async () => {
+    const InternalMCPServer = require(modulePath);
+    const server = new InternalMCPServer();
+    const failure = { success: false, status: 'failed', error: 'Invalid operon JSON' };
+    const executeToolByName = vi.fn(async () => failure);
+    server.initialize({ chatManager: { executeToolByName } });
+    const [, handleCall] = ipcRenderer.on.mock.calls.find(([name]) => name === 'mcp-tool-call');
+
+    await handleCall(null, { requestId: 'failed-tool', method: 'loadOperonFile', parameters: {} });
+    expect(ipcRenderer.send).toHaveBeenCalledWith('mcp-tool-response', {
+      requestId: 'failed-tool',
+      success: true,
+      result: { success: false, result: failure, executedVia: 'ChatManager' },
+    });
+  });
+
   it('preserves the trusted MCP execution context across agent-chat delegation', async () => {
     const AgentChatTools = require('../../src/mcp-tools/utility/AgentChatTools.js');
     const executeToolOnClient = vi.fn(async () => ({ success: true }));

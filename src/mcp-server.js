@@ -196,6 +196,12 @@ class StandardClaudeMCPServer extends EventEmitter {
     this.emit('log', { level, message, data, timestamp: Date.now() });
   }
 
+  formatToolCallResult(toolName, result) {
+    const reply = { content: this.formatToolResultContent(toolName, result) };
+    if (result?.success === false) reply.isError = true;
+    return reply;
+  }
+
   formatToolResultContent(toolName, result) {
     const redactionOptions = {
       preserveApprovalToken: toolName === 'request_annotation_approval',
@@ -639,16 +645,19 @@ class StandardClaudeMCPServer extends EventEmitter {
         );
 
         const executionTime = Date.now() - startTime;
-        this.serverLog('info', `✅ Tool ${toolName} executed successfully in ${executionTime}ms`);
+        const reply = this.formatToolCallResult(toolName, result);
+        this.serverLog(reply.isError ? 'warn' : 'info', `Tool ${toolName} returned in ${executionTime}ms`);
 
         // In agent mode, notify client about completion
         if (this.mode === 'agent' && toolName !== 'codexomics_chat') {
-          this._notifyProtocolClient(mcpServer, 'info', `Tool ${toolName} completed in ${executionTime}ms`);
+          this._notifyProtocolClient(
+            mcpServer,
+            'info',
+            `Tool ${toolName} ${reply.isError ? 'reported a failure' : 'completed'} in ${executionTime}ms`
+          );
         }
 
-        return {
-          content: this.formatToolResultContent(toolName, result),
-        };
+        return reply;
       } catch (error) {
         this.serverLog('error', `❌ Tool ${toolName} execution failed:`, error);
 
@@ -1315,9 +1324,7 @@ class StandardClaudeMCPServer extends EventEmitter {
           );
           return {
             jsonrpc: '2.0',
-            result: {
-              content: this.formatToolResultContent(params.name, result),
-            },
+            result: this.formatToolCallResult(params.name, result),
             id,
           };
         } catch (error) {
@@ -1737,13 +1744,12 @@ class StandardClaudeMCPServer extends EventEmitter {
             );
 
             const executionTime = Date.now() - startTime;
-            this.serverLog('info', `✅ Tool ${toolName} executed in ${executionTime}ms`);
+            const reply = this.formatToolCallResult(toolName, result);
+            this.serverLog(reply.isError ? 'warn' : 'info', `Tool ${toolName} returned in ${executionTime}ms`);
 
             response = {
               jsonrpc: '2.0',
-              result: {
-                content: this.formatToolResultContent(toolName, result),
-              },
+              result: reply,
               id,
             };
           } catch (error) {

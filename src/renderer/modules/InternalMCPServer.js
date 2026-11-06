@@ -126,9 +126,9 @@ class InternalMCPServer {
           signal,
         });
         if (result !== undefined) {
-          console.log(`✅ [InternalMCPServer] Tool '${toolName}' executed via ChatManager`);
+          console.log(`[InternalMCPServer] Tool '${toolName}' returned via ChatManager`);
           return {
-            success: true,
+            success: result?.success !== false,
             result,
             executedVia: 'ChatManager',
           };
