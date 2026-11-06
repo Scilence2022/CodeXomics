@@ -5830,7 +5830,7 @@ class GenomeBrowser {
 
       // Update tab manager about sidebar panel state change
       if (syncTabState && this.tabManager) {
-        this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
+        this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, null);
       }
 
       // Scroll sidebar to bring gene details section into view
@@ -6173,14 +6173,16 @@ class GenomeBrowser {
     if (!geneDetailsContent) return;
 
     // Get basic gene information
-    const geneName = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || 'Unknown Gene';
+    const geneName = String(
+      gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || 'Unknown Gene'
+    );
     const geneType = gene.type;
-    const position = `${gene.start.toLocaleString()}-${gene.end.toLocaleString()}`;
+    const position = this.escapeHtml(`${gene.start.toLocaleString()}-${gene.end.toLocaleString()}`);
     const length = (gene.end - gene.start + 1).toLocaleString();
     const strand = gene.strand === -1 ? 'Reverse (-)' : 'Forward (+)';
 
     // Get current chromosome and sequence for sequence extraction
-    const currentChr = document.getElementById('chromosomeSelect').value;
+    const currentChr = this.currentChromosome || document.getElementById('chromosomeSelect').value;
     const fullSequence = this.currentSequence ? this.currentSequence[currentChr] : null;
 
     // Initialize unified citation system
@@ -6231,7 +6233,7 @@ class GenomeBrowser {
           // attribute, which makes it look like the app-only user notes.
           if (normalizedKey === 'note') return;
 
-          const displayLabel = index === 0 ? key.replace(/_/g, ' ') : '';
+          const displayLabel = index === 0 ? this.escapeHtml(key.replace(/_/g, ' ')) : '';
           const attrHtml = `
                         <div class="gene-attribute">
                             <div class="gene-attribute-label">${displayLabel}</div>
@@ -6286,15 +6288,15 @@ class GenomeBrowser {
     let html = `
             <div class="gene-details-info">
                 <div class="gene-basic-info">
-                    <div class="gene-name">${geneName}</div>
+                    <div class="gene-name">${this.escapeHtml(geneName)}</div>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <span class="gene-type-badge" style="margin-bottom: 0;">${geneType}</span>
+                        <span class="gene-type-badge" style="margin-bottom: 0;">${this.escapeHtml(geneType)}</span>
                         ${
                           operonInfo
                             ? `
                             <div class="gene-operon-tag" style="display: flex; align-items: center; gap: 6px; padding: 1px 8px; background: var(--bg-hover); border-radius: 4px; border: 1px solid var(--border-color); font-size: 11px; font-weight: 600; color: var(--text-color);">
-                                <div style="width: 8px; height: 8px; background: ${operonInfo.color}; border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);"></div>
-                                <span>Operon: ${operonInfo.operonName || operonInfo.name}</span>
+                                <div class="gene-operon-color" style="width: 8px; height: 8px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);"></div>
+                                <span>Operon: ${this.escapeHtml(String(operonInfo.operonName || operonInfo.name))}</span>
                             </div>
                         `
                             : ''
@@ -6310,24 +6312,24 @@ class GenomeBrowser {
     // Add Edit Annotation button above tabs
     html += `
             <div class="gene-actions" style="margin-bottom: 12px; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px;">
-                <button class="btn gene-edit-btn gene-action-btn" onclick="window.genomeBrowser.editGeneAnnotation()">
+                <button class="btn gene-edit-btn gene-action-btn">
                     <i class="fas fa-edit"></i> Edit Annotation
                 </button>
-                <button class="btn gene-zoom-btn gene-action-btn" onclick="window.genomeBrowser.zoomToGene()">
+                <button class="btn gene-zoom-btn gene-action-btn">
                     <i class="fas fa-search-plus"></i> Zoom to
                 </button>
                 <div id="deep-research-report-container" style="display: contents;"></div>
-                <button class="btn gene-deep-research-btn gene-action-btn" onclick="window.genomeBrowser.openDeepGeneResearch('${geneName}')" title="Open Deep Research for this gene">
+                <button class="btn gene-deep-research-btn gene-action-btn" title="Open Deep Research for this gene">
                     <i class="fas fa-search-plus"></i> Deep Research
                 </button>
     `;
 
     if (geneType === 'CDS' || geneType === 'gene') {
       html += `
-                <button class="btn gene-search-pdb-btn gene-action-btn" onclick="window.genomeBrowser.searchPDBStructures('${geneName}')" title="Search experimental structures in PDB">
+                <button class="btn gene-search-pdb-btn gene-action-btn" title="Search experimental structures in PDB">
                     <i class="fas fa-microscope"></i> Search PDB
                 </button>
-                <button class="btn gene-search-alphafold-btn gene-action-btn" onclick="window.genomeBrowser.searchAlphaFoldStructures('${geneName}')" title="Search AI-predicted structures in AlphaFold">
+                <button class="btn gene-search-alphafold-btn gene-action-btn" title="Search AI-predicted structures in AlphaFold">
                     <i class="fas fa-brain"></i> Search AlphaFold
                 </button>
             `;
@@ -6402,17 +6404,17 @@ class GenomeBrowser {
     // ---------------- Sequence Tab ----------------
     let sequenceTabHtml = '';
     if (fullSequence) {
-      sequenceTabHtml += this.createSequencesSection(gene, fullSequence, geneName, currentChr);
+      sequenceTabHtml += this.createSequencesSection(gene, fullSequence, currentChr);
     } else {
       sequenceTabHtml += renderTabEmptyState('Sequence data is not available for this chromosome.');
     }
     sequenceTabHtml += `<div class="gene-actions">
-                <button class="btn gene-copy-btn gene-action-btn" onclick="window.genomeBrowser.copyCDSSequence()">
+                <button class="btn gene-copy-btn gene-action-btn">
                     <i class="fas fa-copy"></i> Copy CDS Sequence
                 </button>`;
     if (geneType === 'CDS' || (gene.qualifiers && this.getQualifierValue(gene.qualifiers, 'translation'))) {
       sequenceTabHtml += `
-                <button class="btn gene-copy-translation-btn gene-action-btn" onclick="window.genomeBrowser.copyGeneTranslation()">
+                <button class="btn gene-copy-translation-btn gene-action-btn">
                     <i class="fas fa-copy"></i> Copy Translation
                 </button>
             `;
@@ -6496,6 +6498,39 @@ class GenomeBrowser {
     html += `</div>`; // Close gene-tabs-container
 
     geneDetailsContent.innerHTML = html;
+    const operonColor = geneDetailsContent.querySelector('.gene-operon-color');
+    if (operonColor) operonColor.style.backgroundColor = operonInfo.color;
+    const actions = [
+      ['.gene-edit-btn', () => this.editGeneAnnotation()],
+      ['.gene-zoom-btn', () => this.zoomToGene()],
+      ['.gene-deep-research-btn', () => this.openDeepGeneResearch(geneName)],
+      ['.gene-search-pdb-btn', () => this.searchPDBStructures(geneName)],
+      ['.gene-search-alphafold-btn', () => this.searchAlphaFoldStructures(geneName)],
+      ['.gene-copy-btn', () => this.copyCDSSequence()],
+      ['.gene-copy-translation-btn', () => this.copyGeneTranslation()],
+      ['.gene-add-attachment-btn', () => this.addGeneAttachment()],
+    ];
+    for (const [selector, handler] of actions) {
+      geneDetailsContent.querySelector(selector)?.addEventListener('click', handler);
+    }
+    geneDetailsContent.querySelector('#geneNoteTextarea')?.addEventListener('blur', () => this.saveGeneNote(geneId));
+    geneDetailsContent.querySelector('#geneAttachmentsList')?.addEventListener('click', event => {
+      const button = event.target.closest('.gene-attachment-btn');
+      const item = button?.closest('[data-attachment-id]');
+      if (!item) return;
+      const { attachmentId } = item.dataset;
+      if (button.classList.contains('open-btn')) this.openGeneAttachment(attachmentId, geneId);
+      if (button.classList.contains('delete-btn')) this.removeGeneAttachment(attachmentId, geneId);
+    });
+    for (const button of geneDetailsContent.querySelectorAll('.copy-sequence-btn')) {
+      Object.assign(button.dataset, {
+        geneName,
+        chr: currentChr,
+        start: String(gene.start),
+        end: String(gene.end),
+        strand: String(gene.strand),
+      });
+    }
 
     // Check for Deep Research Report presence and add button if exists.
     this.addGeneResearchReportButton(geneName);
@@ -6521,7 +6556,7 @@ class GenomeBrowser {
     if (this.tabManager) {
       const geneDetailsSection = document.getElementById('geneDetailsSection');
       if (geneDetailsSection && geneDetailsSection.style.display !== 'none') {
-        this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, geneDetailsSection.innerHTML);
+        this.tabManager.updateCurrentTabSidebarPanel('geneDetailsSection', true, null);
       }
     }
   }
@@ -7582,7 +7617,7 @@ class GenomeBrowser {
   /**
    * Create sequences section with CDS and translation
    */
-  createSequencesSection(gene, fullSequence, geneName, chromosome) {
+  createSequencesSection(gene, fullSequence, chromosome) {
     let html = `<div class="gene-sequences">`;
 
     // Get DNA sequence
@@ -7611,7 +7646,7 @@ class GenomeBrowser {
                         <button class="btn btn-sm toggle-sequence-btn" data-target="cds">
                             <i class="fas fa-expand"></i> Show Full Sequence
                         </button>
-                        <button class="btn btn-sm copy-sequence-btn" data-sequence-type="cds" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                        <button class="btn btn-sm copy-sequence-btn" data-sequence-type="cds">
                             <i class="fas fa-copy"></i> Copy
                         </button>
                     </div>
@@ -7636,7 +7671,7 @@ class GenomeBrowser {
                             <button class="btn btn-sm toggle-sequence-btn" data-target="translation">
                                 <i class="fas fa-expand"></i> Show Full Sequence
                             </button>
-                            <button class="btn btn-sm copy-sequence-btn" data-sequence-type="translation" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                            <button class="btn btn-sm copy-sequence-btn" data-sequence-type="translation">
                                 <i class="fas fa-copy"></i> Copy
                             </button>
                         </div>
@@ -7660,7 +7695,7 @@ class GenomeBrowser {
                         <button class="btn btn-sm toggle-sequence-btn" data-target="dna">
                             <i class="fas fa-expand"></i> Show Full Sequence
                         </button>
-                        <button class="btn btn-sm copy-sequence-btn" data-sequence-type="dna" data-gene-name="${geneName}" data-chr="${chromosome}" data-start="${gene.start}" data-end="${gene.end}" data-strand="${gene.strand}">
+                        <button class="btn btn-sm copy-sequence-btn" data-sequence-type="dna">
                             <i class="fas fa-copy"></i> Copy
                         </button>
                     </div>
@@ -7695,7 +7730,7 @@ class GenomeBrowser {
     let formatted = '';
     for (let i = 0; i < preview.length; i++) {
       const aa = preview[i];
-      formatted += `<span class="amino-acid">${aa}</span>`;
+      formatted += `<span class="amino-acid">${/[&<>]/.test(aa) ? this.escapeHtml(aa) : aa}</span>`;
     }
     if (sequence.length > maxLength) {
       formatted += '<span class="sequence-ellipsis">...</span>';
@@ -7747,7 +7782,7 @@ class GenomeBrowser {
       let colorizedSeq = '';
       for (let j = 0; j < lineSequence.length; j++) {
         const aa = lineSequence[j];
-        colorizedSeq += `<span class="amino-acid">${aa}</span>`;
+        colorizedSeq += `<span class="amino-acid">${/[&<>]/.test(aa) ? this.escapeHtml(aa) : aa}</span>`;
       }
 
       formatted += `

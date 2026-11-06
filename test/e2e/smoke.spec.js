@@ -355,6 +355,80 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
       expect(importedName).toMatchObject({ success: true, parsedMarkup: false });
       expect(importedName.text).toContain(filename);
     }
+
+    const geneName = "target's <em id=codexomics-gene-probe>gene</em> & note";
+    const geneFile = path.join(fixtureDirectory, 'gene-details.gbk');
+    await fs.writeFile(geneFile, original.replace('fixture_gene', geneName));
+    const geneDetails = await genomeView.evaluate(async filePath => {
+      const genome = window.genomeBrowser;
+      const imported = await genome.chatManager.loadGenomeFile({ filePath });
+      const gene = genome.currentAnnotations.SMOKE.find(feature => feature.type === 'gene');
+      const panel = document.querySelector('#geneDetailsSection');
+      const details = panel.querySelector('#geneDetailsContent');
+      const attachments = genome.geneAttachmentsManager;
+      const attachmentId = `attachment'"&id`;
+      const geneId = attachments.getGeneIdentifier(gene);
+      const originals = {
+        getAttachmentsForGene: attachments.getAttachmentsForGene,
+        openDeepGeneResearch: genome.openDeepGeneResearch,
+        saveGeneNote: genome.saveGeneNote,
+        openGeneAttachment: genome.openGeneAttachment,
+        copySpecificSequence: genome.copySpecificSequence,
+      };
+      const actions = [];
+      try {
+        attachments.getAttachmentsForGene = () => [{ id: attachmentId, filename: '<em>example</em>.txt' }];
+        genome.openDeepGeneResearch = name => actions.push(['research', name]);
+        genome.saveGeneNote = id => actions.push(['note', id]);
+        genome.openGeneAttachment = (id, target) => actions.push(['attachment', id, target]);
+        genome.copySpecificSequence = (type, name) => actions.push(['copy', type, name]);
+        genome.selectedGene = { gene, operonInfo: { name: '<em>operon</em>', color: '#00ff00' } };
+        genome.populateGeneDetails(gene, genome.selectedGene.operonInfo);
+        details.querySelector('.gene-tab-btn[data-tab="sequence"]').click();
+        panel.style.display = 'block';
+        const state = { selectedGene: genome.selectedGene };
+        genome.tabManager.saveSidebarPanelStates(state);
+        const storedAsData = state.sidebarPanels.geneDetailsSection.content === null;
+        state.sidebarPanels.geneDetailsSection.content = '<em id=codexomics-legacy-gene-probe>stored HTML</em>';
+        details.replaceChildren();
+        genome.tabManager.restoreSidebarPanelStates(state);
+        details.querySelector('.gene-deep-research-btn').click();
+        details.querySelector('.copy-sequence-btn').click();
+        details.querySelector('#geneNoteTextarea').dispatchEvent(new Event('blur'));
+        details.querySelector('.gene-attachment-item .open-btn').click();
+        return {
+          imported: imported.success,
+          name: details.querySelector('.gene-name').textContent,
+          parsedMarkup: Boolean(details.querySelector('#codexomics-gene-probe, #codexomics-legacy-gene-probe')),
+          storedAsData,
+          activeTab: details.querySelector('.gene-tab-btn.active').dataset.tab,
+          color: details.querySelector('.gene-operon-color').style.backgroundColor,
+          attachmentId,
+          geneId,
+          actions,
+        };
+      } finally {
+        attachments.getAttachmentsForGene = originals.getAttachmentsForGene;
+        genome.openDeepGeneResearch = originals.openDeepGeneResearch;
+        genome.saveGeneNote = originals.saveGeneNote;
+        genome.openGeneAttachment = originals.openGeneAttachment;
+        genome.copySpecificSequence = originals.copySpecificSequence;
+      }
+    }, geneFile);
+    expect(geneDetails).toMatchObject({
+      imported: true,
+      name: geneName,
+      parsedMarkup: false,
+      storedAsData: true,
+      activeTab: 'sequence',
+      color: 'rgb(0, 255, 0)',
+      actions: [
+        ['research', geneName],
+        ['copy', 'dna', geneName],
+        ['note', geneDetails.geneId],
+        ['attachment', geneDetails.attachmentId, geneDetails.geneId],
+      ],
+    });
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });

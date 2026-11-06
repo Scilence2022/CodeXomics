@@ -2931,10 +2931,10 @@ class TabManager {
     // Save gene details panel state
     const genePanel = document.getElementById('geneDetailsSection');
     if (genePanel && tabState.sidebarPanels.geneDetailsSection) {
-      tabState.sidebarPanels.geneDetailsSection.visible = genePanel.style.display !== 'none';
-      if (tabState.sidebarPanels.geneDetailsSection.visible) {
-        tabState.sidebarPanels.geneDetailsSection.content = genePanel.innerHTML;
-      }
+      const geneState = tabState.sidebarPanels.geneDetailsSection;
+      geneState.visible = genePanel.style.display !== 'none';
+      geneState.content = null;
+      geneState.activeTab = geneState.visible ? genePanel.querySelector('.gene-tab-btn.active')?.dataset.tab : null;
     }
 
     // Save primer details panel state
@@ -3040,8 +3040,14 @@ class TabManager {
     // Restore gene details panel
     const genePanel = document.getElementById('geneDetailsSection');
     if (genePanel && tabState.sidebarPanels.geneDetailsSection) {
-      if (tabState.sidebarPanels.geneDetailsSection.visible && tabState.sidebarPanels.geneDetailsSection.content) {
-        genePanel.innerHTML = tabState.sidebarPanels.geneDetailsSection.content;
+      const { visible, activeTab } = tabState.sidebarPanels.geneDetailsSection;
+      const selectedGene = visible ? tabState.selectedGene : null;
+      if (selectedGene?.gene) {
+        this.genomeBrowser.populateGeneDetails(selectedGene.gene, selectedGene.operonInfo);
+        const previousTab = [...genePanel.querySelectorAll('.gene-tab-btn')].find(
+          button => button.dataset.tab === activeTab
+        );
+        previousTab?.click();
         genePanel.style.display = 'block';
       } else {
         genePanel.style.display = 'none';
