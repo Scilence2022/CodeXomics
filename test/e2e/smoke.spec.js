@@ -493,6 +493,72 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     });
     expect(variantDetails.symbolicText).toContain('Alternative: <DEL>');
     expect(variantDetails.explicitText).toContain(geneName);
+
+    const searchMarkup = `"<em id=codexomics-search-probe>query</em>&`;
+    const searchDetails = await genomeView.evaluate(query => {
+      const genome = window.genomeBrowser;
+      const navigation = genome.navigationManager;
+      const advanced = genome.advancedSearchManager;
+      const gene = genome.currentAnnotations.SMOKE.find(feature => feature.type === 'gene');
+      const results = [
+        { type: 'gene', name: 'First', position: 0, end: 1, details: 'First result' },
+        { type: 'gene', name: gene.qualifiers.gene, position: 1, end: 8, details: query },
+      ];
+      const list = document.querySelector('#searchResultsList');
+      const originalNavigate = navigation.navigateToSearchResult;
+      const originalSearch = advanced.performSearch;
+      const originalHistory = advanced.searchHistory;
+      const clicks = [];
+      try {
+        navigation.navigateToSearchResult = index => {
+          clicks.push(index);
+          navigation.currentSearchIndex = index;
+        };
+        advanced.performSearch = type => clicks.push(type);
+        advanced.searchHistory = [{ query, type: 'gene' }];
+        navigation.populateSearchResults(results, query);
+        list.querySelector('[data-index="1"]').click();
+        const state = { searchResults: results, searchQuery: query };
+        genome.tabManager.saveSidebarPanelStates(state);
+        const savedAsData = state.sidebarPanels.searchResultsSection.content === null;
+        state.sidebarPanels.searchResultsSection.content = '<em id=codexomics-legacy-search-probe>old markup</em>';
+        list.replaceChildren();
+        genome.tabManager.restoreSidebarPanelStates(state);
+        const restoredIndex = list.querySelector('.search-result-item.selected').dataset.index;
+        list.querySelector('[data-index="0"]').click();
+        advanced.displayResults(results, 'gene');
+        advanced.updateHistoryDisplay();
+        const preview = document.querySelector('#geneResultsPreview');
+        const history = document.querySelector('#geneSearchHistory');
+        history.querySelector('.search-history-item').click();
+        return {
+          savedAsData,
+          restoredIndex,
+          clicks,
+          sidebar: list.textContent,
+          preview: preview.textContent,
+          history: history.textContent.trim(),
+          historyInput: document.querySelector('#geneSearchInput').value,
+          parsedMarkup: [list, preview, history].some(element =>
+            element.querySelector('#codexomics-search-probe, #codexomics-legacy-search-probe, #codexomics-gene-probe')
+          ),
+        };
+      } finally {
+        navigation.navigateToSearchResult = originalNavigate;
+        advanced.performSearch = originalSearch;
+        advanced.searchHistory = originalHistory;
+      }
+    }, searchMarkup);
+    expect(searchDetails).toMatchObject({
+      savedAsData: true,
+      restoredIndex: '1',
+      clicks: [1, 0, 'gene'],
+      history: searchMarkup,
+      historyInput: searchMarkup,
+      parsedMarkup: false,
+    });
+    expect(searchDetails.sidebar).toContain(searchMarkup);
+    expect(searchDetails.preview).toContain(geneName);
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });

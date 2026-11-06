@@ -1271,11 +1271,6 @@ class NavigationManager {
     // Populate search results panel
     this.populateSearchResults(results, searchQuery);
 
-    // Update tab manager with search results data
-    if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabSearchResults(results);
-    }
-
     if (results.length > 0) {
       // Navigate to first result automatically
       this.navigateToSearchResult(0);
@@ -1309,8 +1304,13 @@ class NavigationManager {
   populateSearchResults(results, searchQuery) {
     const searchResultsSection = document.getElementById('searchResultsSection');
     const searchResultsList = document.getElementById('searchResultsList');
+    const tabManager = this.genomeBrowser.tabManager;
+    tabManager?.updateCurrentTabSearchResults?.(results, searchQuery);
+    tabManager?.updateCurrentTabSidebarPanel('searchResultsSection', results.length > 0, null);
 
     if (results.length === 0) {
+      this.searchResults = [];
+      this.currentSearchIndex = 0;
       searchResultsList.innerHTML = '<p class="no-results">No search results</p>';
       searchResultsSection.style.display = 'none';
       // Restore original position when no results
@@ -1330,64 +1330,46 @@ class NavigationManager {
     // Ensure sidebar is visible when showing search results
     this.genomeBrowser.uiManager.showSidebarIfHidden();
 
-    // Update tab manager about search results panel state change
-    if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel(
-        'searchResultsSection',
-        true,
-        searchResultsSection.innerHTML
-      );
-      // Also update search results data
-      this.genomeBrowser.tabManager.updateCurrentTabSearchResults(results);
-    }
+    this.renderSearchResultsList(results, searchQuery);
+  }
 
-    // Create header
-    let html = `<div class="search-results-header">Found ${results.length} match${results.length > 1 ? 'es' : ''} for "${searchQuery}"</div>`;
-
-    // Create result items
+  renderSearchResultsList(results, searchQuery, selectedIndex = 0) {
+    const list = document.getElementById('searchResultsList');
+    this.searchResults = results;
+    this.currentSearchIndex =
+      Number.isInteger(selectedIndex) && selectedIndex >= 0 && selectedIndex < results.length ? selectedIndex : 0;
+    const fragment = document.createDocumentFragment();
+    const addElement = (parent, tag, className, value) => {
+      const element = document.createElement(tag);
+      element.className = className;
+      element.textContent = value ?? '';
+      parent.appendChild(element);
+      return element;
+    };
+    const queryLabel = searchQuery ? ` for "${searchQuery}"` : '';
+    addElement(
+      fragment,
+      'div',
+      'search-results-header',
+      `Found ${results.length} match${results.length > 1 ? 'es' : ''}${queryLabel}`
+    );
     results.forEach((result, index) => {
-      html += `
-                <div class="search-result-item" data-index="${index}">
-                    <div class="search-result-header">
-                        <span class="search-result-name">${result.name}</span>
-                        <span class="search-result-type ${result.type}">${result.type}</span>
-                    </div>
-                    <div class="search-result-position">Position: ${result.position + 1}-${result.end}</div>
-                    <div class="search-result-details">${result.details}</div>
-                </div>
-            `;
-    });
-
-    searchResultsList.innerHTML = html;
-
-    // Add click handlers for navigation
-    searchResultsList.querySelectorAll('.search-result-item').forEach(item => {
-      item.addEventListener('click', e => {
-        const index = parseInt(e.currentTarget.dataset.index);
+      const item = addElement(fragment, 'div', 'search-result-item');
+      item.dataset.index = String(index);
+      item.classList.toggle('selected', index === this.currentSearchIndex);
+      const header = addElement(item, 'div', 'search-result-header');
+      addElement(header, 'span', 'search-result-name', result.name);
+      const badge = addElement(header, 'span', 'search-result-type', result.type);
+      if (typeof result.type === 'string' && /^[a-z]+$/.test(result.type)) badge.classList.add(result.type);
+      addElement(item, 'div', 'search-result-position', `Position: ${result.position + 1}-${result.end}`);
+      addElement(item, 'div', 'search-result-details', result.details);
+      item.addEventListener('click', () => {
         this.navigateToSearchResult(index);
-
-        // Highlight selected result
-        searchResultsList.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('selected'));
-        e.currentTarget.classList.add('selected');
+        list.querySelector('.search-result-item.selected')?.classList.remove('selected');
+        item.classList.add('selected');
       });
     });
-
-    // Highlight first result as selected
-    const firstItem = searchResultsList.querySelector('.search-result-item');
-    if (firstItem) {
-      firstItem.classList.add('selected');
-    }
-
-    // Update tab manager with final search results content
-    if (this.genomeBrowser.tabManager) {
-      this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel(
-        'searchResultsSection',
-        true,
-        searchResultsSection.innerHTML
-      );
-      // Also update search results data
-      this.genomeBrowser.tabManager.updateCurrentTabSearchResults(results);
-    }
+    list.replaceChildren(fragment);
   }
 
   // Navigate to a specific search result
@@ -1860,10 +1842,11 @@ class NavigationManager {
     const displayEnd = end.toLocaleString();
 
     tooltip.innerHTML = `
-            <div><strong>${chromosome}</strong></div>
+            <div><strong></strong></div>
             <div>${displayStart} - ${displayEnd}</div>
             <div>Range: ${range.toLocaleString()} bp</div>
         `;
+    tooltip.querySelector('strong').textContent = chromosome;
 
     // Auto-hide after drag ends
     if (!this.dragState.isDragging) {
@@ -2439,6 +2422,7 @@ class NavigationManager {
     // Update tab manager about search results panel state change
     if (this.genomeBrowser.tabManager) {
       this.genomeBrowser.tabManager.updateCurrentTabSidebarPanel('searchResultsSection', false, null);
+      this.genomeBrowser.tabManager.updateCurrentTabSearchResults?.([], '');
     }
 
     if (searchResultsList) {
@@ -2451,37 +2435,6 @@ class NavigationManager {
     // Clear search results array
     this.searchResults = [];
     this.currentSearchIndex = 0;
-  }
-
-  /**
-   * Re-attach event handlers for search result items
-   * This method can be called when content is restored from tab state
-   */
-  reattachSearchResultEventHandlers() {
-    const searchResultsList = document.getElementById('searchResultsList');
-    if (!searchResultsList) return;
-
-    // Find all search result items and re-attach click handlers
-    const searchResultItems = searchResultsList.querySelectorAll('.search-result-item');
-    searchResultItems.forEach(item => {
-      // Remove any existing click listeners to avoid duplicates
-      const newItem = item.cloneNode(true);
-      item.parentNode.replaceChild(newItem, item);
-
-      // Add click handler for navigation
-      newItem.addEventListener('click', e => {
-        const index = parseInt(e.currentTarget.dataset.index);
-        this.navigateToSearchResult(index);
-
-        // Highlight selected result
-        searchResultsList.querySelectorAll('.search-result-item').forEach(i => i.classList.remove('selected'));
-        e.currentTarget.classList.add('selected');
-      });
-    });
-
-    console.log(
-      `🔧 [NavigationManager] Re-attached event handlers for ${searchResultItems.length} search result items`
-    );
   }
 
   // Set global dragging behavior

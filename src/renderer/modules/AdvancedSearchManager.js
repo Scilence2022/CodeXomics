@@ -1102,6 +1102,7 @@ class AdvancedSearchManager {
       motif: 'fas fa-puzzle-piece',
       regex: 'fas fa-asterisk',
     };
+    const text = value => this.genomeBrowser.escapeHtml(String(value ?? ''));
 
     preview.innerHTML = `
             <div class="search-results-preview-header">
@@ -1114,14 +1115,14 @@ class AdvancedSearchManager {
                   .map(
                     (result, index) => `
                     <div class="search-results-preview-item" data-index="${index}">
-                        <div class="search-result-icon ${result.type}">
-                            <i class="${iconClass[result.type] || 'fas fa-circle'}"></i>
+                        <div class="search-result-icon ${Object.hasOwn(iconClass, result.type) ? result.type : ''}">
+                            <i class="${Object.hasOwn(iconClass, result.type) ? iconClass[result.type] : 'fas fa-circle'}"></i>
                         </div>
                         <div class="search-result-info">
-                            <div class="search-result-name">${result.name}</div>
-                            <div class="search-result-details">${result.details}</div>
+                            <div class="search-result-name">${text(result.name)}</div>
+                            <div class="search-result-details">${text(result.details)}</div>
                         </div>
-                        <div class="search-result-position">${result.position + 1}-${result.end}</div>
+                        <div class="search-result-position">${text(result.position + 1)}-${text(result.end)}</div>
                     </div>
                 `
                   )
@@ -1284,22 +1285,13 @@ class AdvancedSearchManager {
         return;
       }
 
-      container.innerHTML = relevantHistory
-        .map(
-          item => `
-                <div class="search-history-item" data-query="${item.query}" data-type="${item.type}">
-                    <i class="fas fa-${historyIcons[item.type] || 'search'}"></i>
-                    ${item.query}
-                </div>
-            `
-        )
-        .join('');
-
-      // Add click handlers
-      container.querySelectorAll('.search-history-item').forEach(item => {
+      const items = relevantHistory.map(({ query, type }) => {
+        const item = document.createElement('div');
+        item.className = 'search-history-item';
+        const icon = document.createElement('i');
+        icon.className = `fas fa-${Object.hasOwn(historyIcons, type) ? historyIcons[type] : 'search'}`;
+        item.append(icon, ` ${query}`);
         item.addEventListener('click', () => {
-          const query = item.dataset.query;
-          const type = item.dataset.type;
           const inputId = `${type}SearchInput`;
           const input = document.getElementById(inputId);
           if (input) {
@@ -1308,7 +1300,9 @@ class AdvancedSearchManager {
             this.performSearch(type);
           }
         });
+        return item;
       });
+      container.replaceChildren(...items);
     });
   }
 }
