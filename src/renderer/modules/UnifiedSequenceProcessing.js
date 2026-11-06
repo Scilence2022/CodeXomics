@@ -395,29 +395,32 @@ class UnifiedSequenceProcessing {
 
           // Search through specified fields
           for (const field of searchFields) {
-            const value = qualifiers[field];
-            if (!value) continue;
+            const raw = qualifiers[field];
+            const values = Array.isArray(raw) ? raw : [raw];
+            for (const value of values) {
+              if (typeof value !== 'string' || !value) continue;
 
-            const searchValue = caseSensitive ? value : value.toLowerCase();
-            let score = 0;
+              const searchValue = caseSensitive ? value : value.toLowerCase();
+              let score = 0;
 
-            if (caseSensitive ? searchValue === searchQuery : searchValue === searchQuery) {
-              // Exact match
-              score = 100;
-            } else if (partialMatch && searchValue.includes(searchQuery)) {
-              // Partial match
-              score = 50 + (searchQuery.length / searchValue.length) * 30;
-            } else if (fuzzyMatch) {
-              // Fuzzy match using Levenshtein distance
-              const distance = this.levenshteinDistance(searchValue, searchQuery);
-              const maxLength = Math.max(searchValue.length, searchQuery.length);
-              score = Math.max(0, 100 - (distance / maxLength) * 100);
-            }
+              if (caseSensitive ? searchValue === searchQuery : searchValue === searchQuery) {
+                // Exact match
+                score = 100;
+              } else if (partialMatch && searchValue.includes(searchQuery)) {
+                // Partial match
+                score = 50 + (searchQuery.length / searchValue.length) * 30;
+              } else if (fuzzyMatch) {
+                // Fuzzy match using Levenshtein distance
+                const distance = this.levenshteinDistance(searchValue, searchQuery);
+                const maxLength = Math.max(searchValue.length, searchQuery.length);
+                score = Math.max(0, 100 - (distance / maxLength) * 100);
+              }
 
-            if (score > matchScore) {
-              matchScore = score;
-              matchedField = field;
-              matchedValue = value;
+              if (score > matchScore) {
+                matchScore = score;
+                matchedField = field;
+                matchedValue = value;
+              }
             }
           }
 
