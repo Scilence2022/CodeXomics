@@ -188,6 +188,28 @@ function inferCapabilityFromOperation(operation = 'access') {
   return FILE_CAPABILITIES.READ;
 }
 
+function resolveFileAccessPath(targetPath) {
+  let ancestor = path.resolve(targetPath);
+  const missing = [];
+  while (true) {
+    try {
+      return path.join(fs.realpathSync(ancestor), ...missing.reverse());
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      try {
+        fs.lstatSync(ancestor);
+        throw new Error(`Cannot resolve existing file access path: ${ancestor}`);
+      } catch (statError) {
+        if (statError.code !== 'ENOENT') throw statError;
+      }
+      const parent = path.dirname(ancestor);
+      if (parent === ancestor) throw error;
+      missing.push(path.basename(ancestor));
+      ancestor = parent;
+    }
+  }
+}
+
 class PermissionBroker {
   constructor() {
     this.grants = new Map();
@@ -216,6 +238,7 @@ class PermissionBroker {
     const grant = {
       id: `grant-${Date.now()}-${this.nextGrantId++}`,
       path: resolvedPath,
+      physicalPath: resolveFileAccessPath(resolvedPath),
       source: options.source || 'unknown',
       reason: options.reason || '',
       capabilities: normalizeCapabilities(options.capabilities, defaultCapabilities),
@@ -281,6 +304,7 @@ class PermissionBroker {
     const resolvedPath = path.resolve(targetPath);
     const capability = options.capability || FILE_CAPABILITIES.READ;
     const now = Date.now();
+    let physicalPath;
 
     for (const [grantId, grant] of this.grants.entries()) {
       if (grant.expiresAt && grant.expiresAt <= now) {
@@ -297,7 +321,11 @@ class PermissionBroker {
         ? isSubPath(grant.path, resolvedPath)
         : path.resolve(grant.path) === resolvedPath;
       if (pathMatches) {
-        return grant;
+        physicalPath ||= resolveFileAccessPath(resolvedPath);
+        const physicalMatches = grant.recursive
+          ? isSubPath(grant.physicalPath, physicalPath)
+          : grant.physicalPath === physicalPath;
+        if (physicalMatches) return grant;
       }
     }
 
@@ -388,7 +416,9 @@ function assertAllowedFileAccess(app, targetPath, options = {}) {
     }
   }
 
-  const allowed = allowedRoots.some(root => isSubPath(root, resolvedPath));
+  const candidateRoots = allowedRoots.filter(root => isSubPath(root, resolvedPath));
+  const physicalPath = candidateRoots.length ? resolveFileAccessPath(resolvedPath) : null;
+  const allowed = candidateRoots.some(root => isSubPath(resolveFileAccessPath(root), physicalPath));
   if (!allowed) {
     throw new Error(`Blocked ${operation} outside approved application directories: ${resolvedPath}`);
   }

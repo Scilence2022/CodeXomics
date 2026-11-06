@@ -9,6 +9,7 @@ const APP_ROOT = path.join(__dirname, '..', '..');
 
 test('genome view opens a GenBank file and isolates companion data after replacement', async () => {
   const fixtureDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'codexomics-smoke-'));
+  const outsideDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'codexomics-outside-'));
   let app;
   try {
     const fixture = path.join(fixtureDirectory, 'smoke.gbk');
@@ -35,6 +36,7 @@ test('genome view opens a GenBank file and isolates companion data after replace
       bootstrap,
       `const { app } = require('electron');
 app.setPath('userData', ${JSON.stringify(fixtureDirectory)});
+app.setPath('temp', ${JSON.stringify(fixtureDirectory)});
 app.setAppPath(${JSON.stringify(APP_ROOT)});
 require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
 `
@@ -139,8 +141,17 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     expect(expired.export).toMatchObject({ success: false, error: expect.stringMatching(/deadline/) });
     expect(expired.annotation).toMatchObject({ success: false, error: expect.stringMatching(/deadline/) });
     await expect(fs.stat(fixture + '.expired-export')).rejects.toMatchObject({ code: 'ENOENT' });
+    const directoryLink = path.join(fixtureDirectory, 'outside-link');
+    await fs.symlink(outsideDirectory, directoryLink, process.platform === 'win32' ? 'junction' : 'dir');
+    const escapedWrite = await genomeView.evaluate(
+      destination => window.electronAPI.writeFile(destination, 'outside'),
+      path.join(directoryLink, 'export.gbk')
+    );
+    expect(escapedWrite).toMatchObject({ success: false, error: expect.stringMatching(/Blocked write file/) });
+    await expect(fs.stat(path.join(outsideDirectory, 'export.gbk'))).rejects.toMatchObject({ code: 'ENOENT' });
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });
+    await fs.rm(outsideDirectory, { recursive: true, force: true });
   }
 });

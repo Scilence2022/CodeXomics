@@ -84,6 +84,53 @@ describe('security-utils', () => {
     expect(securityUtils.assertAllowedFileAccess(app, approvedChild)).toBe(path.resolve(approvedChild));
   });
 
+  it('blocks symlinks that escape application roots or dialog-approved directories', () => {
+    const outside = path.join(rootDir, 'outside');
+    const approved = path.join(rootDir, 'approved');
+    const documents = app.getPath('documents');
+    fs.mkdirSync(outside);
+    fs.mkdirSync(approved);
+    fs.writeFileSync(path.join(outside, 'private.txt'), 'private');
+    const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+    fs.symlinkSync(outside, path.join(documents, 'escape'), linkType);
+    fs.symlinkSync(outside, path.join(approved, 'escape'), linkType);
+    securityUtils.rememberApprovedPath(approved);
+
+    for (const root of [documents, approved]) {
+      expect(() => securityUtils.assertAllowedFileAccess(app, path.join(root, 'escape', 'private.txt'))).toThrow(
+        /Blocked access/
+      );
+      expect(() =>
+        securityUtils.assertAllowedFileAccess(app, path.join(root, 'escape', 'new', 'export.gbk'), {
+          operation: 'write file',
+        })
+      ).toThrow(/Blocked write file/);
+    }
+    const inside = path.join(documents, 'inside');
+    fs.mkdirSync(inside);
+    fs.symlinkSync(inside, path.join(documents, 'alias'), linkType);
+    const allowed = path.join(documents, 'alias', 'export.gbk');
+    expect(securityUtils.assertAllowedFileAccess(app, allowed, { operation: 'write file' })).toBe(allowed);
+  });
+
+  it('keeps an approved alias tied to the target originally selected by the user', () => {
+    const original = path.join(rootDir, 'original');
+    const redirected = path.join(rootDir, 'redirected');
+    const selected = path.join(rootDir, 'selected');
+    fs.mkdirSync(original);
+    fs.mkdirSync(redirected);
+    const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+    fs.symlinkSync(original, selected, linkType);
+    securityUtils.rememberApprovedPath(selected);
+    const child = path.join(selected, 'export.gbk');
+    expect(securityUtils.assertAllowedFileAccess(app, child, { operation: 'write file' })).toBe(child);
+    fs.unlinkSync(selected);
+    fs.symlinkSync(redirected, selected, linkType);
+    expect(() => securityUtils.assertAllowedFileAccess(app, child, { operation: 'write file' })).toThrow(
+      /Blocked write file/
+    );
+  });
+
   it('treats dialog-approved files as exact file grants, not parent directory grants', () => {
     const selectedFile = path.join(rootDir, 'outside', 'selected.gbk');
     const siblingFile = path.join(rootDir, 'outside', 'sibling.gbk');
