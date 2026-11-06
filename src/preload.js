@@ -86,6 +86,7 @@ const allowedInvokeChannels = [
   'bam-reader:initialize',
   'bam-reader:get-records-for-range',
   'bam-reader:get-depth-for-range',
+  'bam-reader:cancel-range-query',
   'bam-reader:destroy',
   'blast:detect-installation',
   'blast:run-command',
@@ -595,10 +596,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   bamReader: {
     initialize: (filePath, options) => ipcRenderer.invoke('bam-reader:initialize', filePath, options),
-    getRecordsForRange: (readerId, chromosome, start, end, settings) =>
-      ipcRenderer.invoke('bam-reader:get-records-for-range', readerId, chromosome, start, end, settings),
-    getDepthForRange: (readerId, chromosome, start, end, viewport, settings) =>
-      ipcRenderer.invoke('bam-reader:get-depth-for-range', readerId, chromosome, start, end, viewport, settings),
+    getRecordsForRange: (readerId, chromosome, start, end, settings, requestId) =>
+      ipcRenderer.invoke('bam-reader:get-records-for-range', readerId, chromosome, start, end, settings, requestId),
+    getDepthForRange: (readerId, chromosome, start, end, viewport, settings, requestId) =>
+      ipcRenderer.invoke(
+        'bam-reader:get-depth-for-range',
+        readerId,
+        chromosome,
+        start,
+        end,
+        viewport,
+        settings,
+        requestId
+      ),
+    cancelRangeQuery: (readerId, requestId) => ipcRenderer.invoke('bam-reader:cancel-range-query', readerId, requestId),
     destroy: readerId => ipcRenderer.invoke('bam-reader:destroy', readerId),
   },
 

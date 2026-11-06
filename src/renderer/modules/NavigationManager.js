@@ -607,10 +607,7 @@ class NavigationManager {
    * Handle aligned reads track zoom with delayed redraw
    */
   handleAlignedReadsZoom(currentChr, sequence) {
-    // Clear any existing timeout for aligned reads redraw
-    if (this.alignedReadsRedrawTimeout) {
-      clearTimeout(this.alignedReadsRedrawTimeout);
-    }
+    this.cancelAlignedReadsRedraw();
 
     // Check if aligned reads track exists and is visible
     const readsTrack = document.querySelector('.reads-track');
@@ -625,13 +622,21 @@ class NavigationManager {
 
       // Delay aligned reads track redraw until scrolling stops
       this.alignedReadsRedrawTimeout = setTimeout(() => {
+        this.alignedReadsRedrawTimeout = null;
         console.log('🔍 [WHEEL-ZOOM] Redrawing aligned reads track after zoom delay');
-        this.updateAlignedReadsTrackOnly(currentChr, sequence);
+        this.updateAlignedReadsTrackOnly(currentChr);
       }, 300); // 300ms delay after last wheel event
     } else {
       // No aligned reads track - use normal immediate redraw
       this.genomeBrowser.displayGenomeView(currentChr, sequence);
     }
+  }
+
+  cancelAlignedReadsRedraw() {
+    clearTimeout(this.alignedReadsRedrawTimeout);
+    this.alignedReadsRedrawTimeout = null;
+    this.alignedReadsRedraw?.abort();
+    this.alignedReadsRedraw = null;
   }
 
   /**
@@ -766,65 +771,85 @@ class NavigationManager {
   /**
    * Update only aligned reads track after zoom delay
    */
-  updateAlignedReadsTrackOnly(currentChr, sequence) {
+  async updateAlignedReadsTrackOnly(currentChr) {
+    if (this.genomeBrowser.currentChromosome !== currentChr) return;
+    this.cancelAlignedReadsRedraw();
+    const controller = new AbortController();
+    this.alignedReadsRedraw = controller;
+    const { signal } = controller;
     const viewport = {
       start: this.genomeBrowser.currentPosition.start,
       end: this.genomeBrowser.currentPosition.end,
     };
+    const isCurrent = track => {
+      const { currentChromosome, currentPosition } = this.genomeBrowser;
+      return (
+        !signal.aborted &&
+        track.isConnected &&
+        currentChromosome === currentChr &&
+        currentPosition?.start === viewport.start &&
+        currentPosition.end === viewport.end
+      );
+    };
 
     try {
       // Find all reads tracks and update them
-      const readsTracks = document.querySelectorAll('.reads-track .track-content');
-      readsTracks.forEach(async (readsTrackContent, index) => {
-        try {
-          console.log(`🔍 [WHEEL-ZOOM] Updating reads track ${index + 1}/${readsTracks.length}`);
+      const readsTracks = document.querySelectorAll('.reads-track > .track-content');
+      await Promise.all(
+        Array.from(readsTracks, async (readsTrackContent, index) => {
+          try {
+            console.log(`🔍 [WHEEL-ZOOM] Updating reads track ${index + 1}/${readsTracks.length}`);
 
-          // Get the parent reads track to identify which BAM file this belongs to
-          const readsTrack = readsTrackContent.closest('.reads-track');
-          const fileId = readsTrack?.dataset?.fileId;
+            // Get the parent reads track to identify which BAM file this belongs to
+            const readsTrack = readsTrackContent.closest('.reads-track');
+            const fileId = readsTrack?.dataset?.fileId;
 
-          if (fileId) {
-            // Find the specific BAM file
-            const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
-            const bamFile = bamFiles.find(f => f.metadata.id === fileId);
+            if (fileId) {
+              // Find the specific BAM file
+              const bamFiles = this.genomeBrowser.multiFileManager.getBamFiles();
+              const bamFile = bamFiles.find(f => f.metadata.id === fileId);
 
-            if (bamFile) {
-              // Create only the track content (without header)
-              const newTrackContent = await this.genomeBrowser.trackRenderer.createSingleReadsTrackContent(
+              if (bamFile) {
+                // Create only the track content (without header)
+                const newTrackContent = await this.genomeBrowser.trackRenderer.createSingleReadsTrackContent(
+                  currentChr,
+                  bamFile,
+                  viewport,
+                  signal
+                );
+                if (newTrackContent && isCurrent(readsTrackContent)) {
+                  readsTrackContent.innerHTML = '';
+                  readsTrackContent.appendChild(newTrackContent);
+                }
+              }
+            } else {
+              // Fallback for tracks without fileId (legacy reads tracks)
+              console.log(`🔍 [WHEEL-ZOOM] No fileId found, using legacy reads track content method`);
+              const newTrackContent = await this.genomeBrowser.trackRenderer.createLegacyReadsTrackContent(
                 currentChr,
-                bamFile,
                 viewport
               );
-              if (newTrackContent) {
+              if (newTrackContent && isCurrent(readsTrackContent)) {
+                // Copy the inner content from the new track content to the existing track content
                 readsTrackContent.innerHTML = '';
-                readsTrackContent.appendChild(newTrackContent);
+                while (newTrackContent.firstChild) {
+                  readsTrackContent.appendChild(newTrackContent.firstChild);
+                }
+                // Copy styles
+                readsTrackContent.style.height = newTrackContent.style.height;
               }
             }
-          } else {
-            // Fallback for tracks without fileId (legacy reads tracks)
-            console.log(`🔍 [WHEEL-ZOOM] No fileId found, using legacy reads track content method`);
-            const newTrackContent = await this.genomeBrowser.trackRenderer.createLegacyReadsTrackContent(
-              currentChr,
-              viewport
-            );
-            if (newTrackContent) {
-              // Copy the inner content from the new track content to the existing track content
-              readsTrackContent.innerHTML = '';
-              while (newTrackContent.firstChild) {
-                readsTrackContent.appendChild(newTrackContent.firstChild);
-              }
-              // Copy styles
-              readsTrackContent.style.height = newTrackContent.style.height;
-            }
+          } catch (error) {
+            if (!signal.aborted) console.error(`🔍 [WHEEL-ZOOM] Error updating reads track ${index + 1}:`, error);
           }
-        } catch (error) {
-          console.error(`🔍 [WHEEL-ZOOM] Error updating reads track ${index + 1}:`, error);
-        }
-      });
+        })
+      );
 
       console.log('🔍 [WHEEL-ZOOM] Aligned reads track redraw completed');
     } catch (error) {
       console.error('🔍 [WHEEL-ZOOM] Error updating aligned reads track:', error);
+    } finally {
+      if (this.alignedReadsRedraw === controller) this.alignedReadsRedraw = null;
     }
   }
 
@@ -2983,11 +3008,7 @@ class NavigationManager {
    * Clean up NavigationManager resources
    */
   destroy() {
-    // Clear any pending aligned reads redraw timeout
-    if (this.alignedReadsRedrawTimeout) {
-      clearTimeout(this.alignedReadsRedrawTimeout);
-      this.alignedReadsRedrawTimeout = null;
-    }
+    this.cancelAlignedReadsRedraw();
 
     // Remove event listeners
     document.removeEventListener('mousemove', this.handleDocumentMouseMove);
