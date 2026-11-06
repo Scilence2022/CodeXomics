@@ -24,6 +24,19 @@ describe('Aligned reads reference and coverage interactions', () => {
     };
   }
 
+  it('only reports a missing chromosome after checking beyond the BAM reference preview', () => {
+    const renderer = new TrackRenderer(createGenomeBrowser());
+    const references = Array.from({ length: 20 }, (_, index) => ({ name: String(index + 1) }));
+    const viewport = { start: 29_000_000, end: 29_001_000 };
+
+    const known = renderer.describeEmptyBamViewport('20', viewport, references);
+    expect(known).toContain('No reads found in region 20:29000000-29001000');
+    expect(known).not.toContain('not found in BAM references');
+    expect(renderer.describeEmptyBamViewport('21', viewport, references)).toContain(
+      'Current chromosome "21" not found in BAM references'
+    );
+  });
+
   it('selects a partial reference interval by dragging across the reference band', () => {
     const genomeBrowser = createGenomeBrowser();
     const renderer = new TrackRenderer(genomeBrowser);
