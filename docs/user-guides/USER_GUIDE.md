@@ -946,7 +946,7 @@ A: AI provides helpful insights but should be validated. Use benchmark tests to 
 
 - [Developer Guide](../developer-guides/DEVELOPER_GUIDE.md) - Create plugins and contribute
 - [Developer Guide](../developer-guides/DEVELOPER_GUIDE.md) - Technical documentation
-- [Release Notes](../release-notes/) - What's new in each version
+- [Current Release Notes](../release-notes/RELEASE_NOTES_v0.723.md) - What's new in the current release
 
 **Join the Community:**
 

@@ -9,7 +9,7 @@
 5. [Workflow](#workflow)
 6. [API Reference](#api-reference)
 7. [Implementation Analysis](#implementation-analysis)
-8. [Issues & Improvements](#issues--improvements)
+8. [Issues & Improvements](#issues-improvements)
 9. [Best Practices](#best-practices)
 
 ---

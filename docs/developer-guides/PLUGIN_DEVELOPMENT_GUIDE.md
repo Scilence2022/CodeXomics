@@ -8,11 +8,11 @@ Welcome to the **CodeXomics Plugin Development Guide**! This guide helps you cre
 2. [Getting Started](#getting-started)
 3. [Plugin Architecture](#plugin-architecture)
 4. [Development Environment](#development-environment)
-5. [Creating Your First Plugin](#creating-your-first-plugin)
+5. [Basic Plugin Template](#basic-plugin-template)
 6. [Plugin API Reference](#plugin-api-reference)
 7. [Advanced Features](#advanced-features)
-8. [Testing & Debugging](#testing--debugging)
-9. [Publishing & Distribution](#publishing--distribution)
+8. [Testing & Debugging](#testing-debugging)
+9. [Publishing & Distribution](#publishing-distribution)
 10. [Best Practices](#best-practices)
 
 ## 🎯 Overview
