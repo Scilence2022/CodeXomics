@@ -6,8 +6,7 @@
 
 // Import electron ipcRenderer for IPC communication without redeclaring the preload global.
 const pluginManagementIpcRenderer =
-  (typeof window !== 'undefined' && window.ipcRenderer) ||
-  (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
+  (typeof window !== 'undefined' && window.ipcRenderer) || (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
 
 // Expose ipcRenderer globally for use in other modules
 // This is needed for renderer-modular.js and other modules that need IPC communication
@@ -2075,7 +2074,7 @@ class PluginManagementUI {
           : `src/renderer/modules/Plugins/UserInstalled/${pluginData.id}`;
 
         // Copy plugin files to installation directory
-        await this._installPluginFiles(filePath, installPath, pluginData);
+        await this._installPluginFiles(pluginData.sourcePath, installPath, pluginData);
 
         // Register plugin with PluginManagerV2
         await this.pluginManager.registerPlugin(pluginData.id, pluginData.manifest);
@@ -2239,8 +2238,10 @@ class PluginManagementUI {
   _validatePluginStructure(pluginData) {
     const errors = [];
 
-    if (!pluginData.id) {
-      errors.push('Plugin ID is required');
+    if (typeof pluginData.id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(pluginData.id)) {
+      errors.push(
+        'Plugin ID must start with a letter or number and contain only letters, numbers, dots, underscores or hyphens'
+      );
     }
 
     if (!pluginData.name) {
@@ -2269,20 +2270,23 @@ class PluginManagementUI {
    * @private
    */
   async _installPluginFiles(sourcePath, installPath, pluginData) {
-    // Ensure installation directory exists
-    await ipcRenderer.invoke('ensure-directory', installPath);
+    const installStep = async (channel, ...args) => {
+      const result = await ipcRenderer.invoke(channel, ...args);
+      if (!result?.success) throw new Error(result?.error || `Plugin installation step failed: ${channel}`);
+    };
+    await installStep('ensure-directory', installPath);
 
     // Copy files based on plugin type
     if (pluginData.type === 'directory') {
       // Copy entire directory
-      await ipcRenderer.invoke('copy-plugin-directory', sourcePath, installPath);
+      await installStep('copy-plugin-directory', sourcePath, installPath);
     } else if (pluginData.type === 'javascript') {
       // Copy JavaScript file and create manifest
-      await ipcRenderer.invoke('copy-plugin-file', sourcePath, `${installPath}/${pluginData.manifest.main}`);
+      await installStep('copy-plugin-file', sourcePath, `${installPath}/${pluginData.manifest.main}`);
 
       // Create plugin.json manifest
       const manifestPath = `${installPath}/plugin.json`;
-      await ipcRenderer.invoke('write-plugin-file', manifestPath, JSON.stringify(pluginData.manifest, null, 2));
+      await installStep('write-plugin-file', manifestPath, JSON.stringify(pluginData.manifest, null, 2));
     }
   }
 

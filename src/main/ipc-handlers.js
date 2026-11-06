@@ -30,7 +30,9 @@ const {
 
   rememberApprovedDialogPaths,
   getDefaultWritableRoots,
-  getUserPluginRoots,
+  findUserPluginRoot,
+  assertInsideRoot,
+  resolveFileAccessPath,
   assertAllowedFileAccess,
   grantReadOnlyFileLoadPath,
   assertPluginPath,
@@ -1331,13 +1333,10 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('ensure-directory', async (event, dirPath) => {
     try {
-      // Allow the default writable roots plus the user-installed plugin roots,
-      // since this handler is used to set up the UserInstalled plugins directory
-      // (which is otherwise only reachable through assertPluginPath).
-      const safeDirPath = assertAllowedFileAccess(app, dirPath, {
-        operation: 'create directory',
-        allowedRoots: [...getDefaultWritableRoots(app), ...getUserPluginRoots(app)],
-      });
+      const safeDirPath =
+        typeof dirPath === 'string' && findUserPluginRoot(app, dirPath)
+          ? assertPluginPath(app, dirPath, 'plugin directory')
+          : assertAllowedFileAccess(app, dirPath, { operation: 'create directory' });
       if (!fs.existsSync(safeDirPath)) {
         fs.mkdirSync(safeDirPath, { recursive: true });
         console.log('Created directory:', safeDirPath);
@@ -1698,20 +1697,21 @@ function registerIpcHandlers(deps) {
       ];
 
       for (const dirInfo of dirsToScan) {
-        if (!fs.existsSync(dirInfo.path)) {
+        const directory = dirInfo.type === 'user' ? assertPluginPath(app, dirInfo.path) : dirInfo.path;
+        if (!fs.existsSync(directory)) {
           continue;
         }
 
-        const items = fs.readdirSync(dirInfo.path, { withFileTypes: true });
+        const items = fs.readdirSync(directory, { withFileTypes: true });
 
         for (const item of items) {
-          const itemPath = path.join(dirInfo.path, item.name);
+          const itemPath = path.join(directory, item.name);
 
           // Check for plugin directories with plugin.json
           if (item.isDirectory()) {
-            const manifestPath = path.join(itemPath, 'plugin.json');
-            if (fs.existsSync(manifestPath)) {
-              try {
+            try {
+              const manifestPath = assertInsideRoot(itemPath, path.join(itemPath, 'plugin.json'), 'plugin manifest');
+              if (fs.existsSync(manifestPath)) {
                 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
                 plugins.push({
                   id: manifest.id || item.name,
@@ -1727,9 +1727,9 @@ function registerIpcHandlers(deps) {
                   functions: manifest.functions || [],
                   main: manifest.main || 'index.js',
                 });
-              } catch (error) {
-                console.error(`Failed to parse manifest for ${item.name}:`, error);
               }
+            } catch (error) {
+              console.error(`Failed to read manifest for ${item.name}:`, error);
             }
           }
           // Check for standalone .js files that might be plugins
@@ -1801,27 +1801,33 @@ function registerIpcHandlers(deps) {
    */
   ipcMain.handle('load-plugin-metadata', async (event, pluginPath) => {
     try {
-      let safePluginPath;
-      try {
-        safePluginPath = assertPluginPath(app, pluginPath, 'plugin metadata path');
-      } catch (pluginPathError) {
-        safePluginPath = assertAllowedFileAccess(app, pluginPath, {
-          operation: 'load plugin metadata',
-          mustExist: true,
-        });
-      }
+      const safePluginPath =
+        typeof pluginPath === 'string' && findUserPluginRoot(app, pluginPath)
+          ? assertPluginPath(app, pluginPath, 'plugin metadata path')
+          : assertAllowedFileAccess(app, pluginPath, {
+              operation: 'load plugin metadata',
+              mustExist: true,
+            });
       const stats = fs.statSync(safePluginPath);
 
       if (stats.isDirectory()) {
         // Try to load plugin.json
-        const manifestPath = path.join(safePluginPath, 'plugin.json');
+        const manifestPath = assertInsideRoot(
+          safePluginPath,
+          path.join(safePluginPath, 'plugin.json'),
+          'plugin manifest'
+        );
         if (fs.existsSync(manifestPath)) {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           return { success: true, metadata: manifest };
         }
 
         // Try to load from package.json
-        const packagePath = path.join(safePluginPath, 'package.json');
+        const packagePath = assertInsideRoot(
+          safePluginPath,
+          path.join(safePluginPath, 'package.json'),
+          'plugin package'
+        );
         if (fs.existsSync(packagePath)) {
           const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
           return {
@@ -1917,9 +1923,13 @@ function registerIpcHandlers(deps) {
     try {
       const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
         operation: 'copy plugin source',
+        capability: FILE_CAPABILITIES.READ,
         mustExist: true,
       });
       const safeDestPath = assertPluginPath(app, destPath, 'plugin destination');
+      if (isSubPathSafe(resolveFileAccessPath(safeSourcePath), resolveFileAccessPath(safeDestPath))) {
+        throw new Error('Plugin destination must be outside the source directory');
+      }
       // Recursive directory copy
       const copyRecursive = (src, dest) => {
         if (!fs.existsSync(dest)) {
@@ -1929,8 +1939,8 @@ function registerIpcHandlers(deps) {
         const entries = fs.readdirSync(src, { withFileTypes: true });
 
         for (const entry of entries) {
-          const srcPath = path.join(src, entry.name);
-          const destPath = path.join(dest, entry.name);
+          const srcPath = assertInsideRoot(safeSourcePath, path.join(src, entry.name), 'plugin source');
+          const destPath = assertInsideRoot(safeDestPath, path.join(dest, entry.name), 'plugin destination');
 
           if (entry.isDirectory()) {
             copyRecursive(srcPath, destPath);
@@ -1955,6 +1965,7 @@ function registerIpcHandlers(deps) {
     try {
       const safeSourcePath = assertAllowedFileAccess(app, sourcePath, {
         operation: 'copy plugin file source',
+        capability: FILE_CAPABILITIES.READ,
         mustExist: true,
       });
       const safeDestPath = assertPluginPath(app, destPath, 'plugin destination file');

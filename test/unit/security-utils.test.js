@@ -269,7 +269,7 @@ describe('security-utils', () => {
     expect(() => securityUtils.assertPluginPath(app, blockedPath)).toThrow(/escapes user plugin directory/);
   });
 
-  it('permits the user-installed plugin directory only when plugin roots are added to allowedRoots', () => {
+  it('permits the source-tree plugin directory through the dedicated plugin boundary', () => {
     const pluginRoots = securityUtils.getUserPluginRoots(app);
     const userInstalled = pluginRoots.find(root => root.endsWith(path.join('Plugins', 'UserInstalled')));
     expect(userInstalled).toBeDefined();
@@ -280,11 +280,40 @@ describe('security-utils', () => {
       /Blocked create directory/
     );
 
-    // The ensure-directory handler widens allowedRoots to include the plugin roots.
-    const allowedRoots = [...securityUtils.getDefaultWritableRoots(app), ...pluginRoots];
-    expect(
-      securityUtils.assertAllowedFileAccess(app, userInstalled, { operation: 'create directory', allowedRoots })
-    ).toBe(path.resolve(userInstalled));
+    expect(securityUtils.findUserPluginRoot(app, userInstalled)).toBe(userInstalled);
+    expect(securityUtils.assertPluginPath(app, userInstalled)).toBe(path.resolve(userInstalled));
+  });
+
+  it('rejects a plugin root redirected to another directory', () => {
+    const outside = path.join(rootDir, 'outside');
+    const pluginRoot = path.join(app.getPath('userData'), 'plugins');
+    fs.mkdirSync(outside);
+    fs.symlinkSync(outside, pluginRoot, process.platform === 'win32' ? 'junction' : 'dir');
+    expect(() => securityUtils.assertPluginPath(app, path.join(pluginRoot, 'index.js'))).toThrow(
+      /escapes user plugin directory/
+    );
+  });
+
+  it('confines joined paths and archive entries to the selected plugin directory', () => {
+    const pluginRoot = path.join(app.getPath('userData'), 'plugins');
+    const installPath = path.join(pluginRoot, 'demo');
+    const sibling = path.join(pluginRoot, 'another-plugin');
+    fs.mkdirSync(installPath, { recursive: true });
+    fs.mkdirSync(sibling);
+    fs.mkdirSync(path.join(installPath, 'assets'));
+    const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+    fs.symlinkSync(path.join(installPath, 'assets'), path.join(installPath, 'local'), linkType);
+    fs.symlinkSync(sibling, path.join(installPath, 'escape'), linkType);
+
+    expect(securityUtils.safePluginJoin(app, installPath, 'local/index.js')).toBe(
+      path.join(installPath, 'local', 'index.js')
+    );
+    expect(() => securityUtils.safePluginJoin(app, installPath, 'escape/index.js')).toThrow(/escapes allowed root/);
+    const zip = {
+      getEntries: () => [{ entryName: 'escape/index.js', isDirectory: false, getData: () => Buffer.from('test') }],
+    };
+    expect(() => securityUtils.safeExtractAdmZip(app, zip, installPath)).toThrow(/escapes allowed root/);
+    expect(fs.readdirSync(sibling)).toEqual([]);
   });
 
   it('rejects archive entries that escape the extraction root', () => {
