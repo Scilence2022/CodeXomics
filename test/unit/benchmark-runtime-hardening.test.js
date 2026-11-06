@@ -24,12 +24,22 @@ describe('benchmark runtime hardening', () => {
     expect(methodSource).not.toMatch(/\brequire\(['"]os['"]\)/);
   });
 
-  it('downloads to the working directory only after approving it through main IPC', () => {
-    const source = readSource('src/renderer/modules/chat/services/FileOperationService.js');
+  it('downloads to the working directory only after approving it through main IPC', async () => {
+    const { sandbox } = loadScript('src/renderer/modules/chat/services/FileOperationService.js');
+    const approveWorkingDirectory = vi.fn().mockResolvedValueOnce({ success: false }).mockResolvedValueOnce({
+      success: true,
+      path: '/approved',
+    });
+    const downloadInternetFile = vi.fn().mockResolvedValue({ success: true, filePath: '/approved/genome.gbk' });
+    sandbox.window.electronAPI = { approveWorkingDirectory, downloadInternetFile };
+    const service = new sandbox.window.FileOperationService(null, { currentWorkingDirectory: '/working' });
+    const parameters = { url: 'https://example.test/genome.gbk' };
 
-    expect(source).toContain('usingWorkingDirectoryDestination');
-    expect(source).toContain('window.electronAPI?.approveWorkingDirectory');
-    expect(source).toContain('window.electronAPI.downloadInternetFile');
+    expect(await service.downloadInternetFile(parameters)).toMatchObject({ success: false });
+    expect(downloadInternetFile).not.toHaveBeenCalled();
+    expect(await service.downloadInternetFile(parameters)).toMatchObject({ success: true });
+    expect(approveWorkingDirectory).toHaveBeenCalledWith('/working');
+    expect(downloadInternetFile).toHaveBeenCalledWith({ ...parameters, destinationPath: '/approved' });
   });
 
   it('writes BLAST FASTA content through the main-process API', async () => {

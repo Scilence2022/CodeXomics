@@ -57,6 +57,7 @@ const allowedInvokeChannels = [
   'open-markdown-viewer',
   'openFolderInExplorer',
   'download-internet-file',
+  'cancel-internet-download',
   'read-plugin-file',
   'save-refined-annotation',
   'scan-plugin-directory',
@@ -634,6 +635,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Utility Tools APIs
   downloadInternetFile: options => ipcRenderer.invoke('download-internet-file', options),
+  cancelInternetDownload: requestId => ipcRenderer.invoke('cancel-internet-download', requestId),
   openMarkdownViewer: options => ipcRenderer.invoke('open-markdown-viewer', options),
 
   // Dynamic tool registry APIs
