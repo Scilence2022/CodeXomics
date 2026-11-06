@@ -125,6 +125,10 @@ function setupEnvironmentVariables() {
   console.log('[Main] Current BLASTDB:', process.env.BLASTDB);
 }
 
+function isGenBankFilePath(filePath) {
+  return /\.(?:gbk|gb|genbank|gbff)(?:\.gz)?$/i.test(filePath);
+}
+
 /**
  * Open a GenBank file in the main window.
  * @param {string} filePath - Path to the GenBank file to open
@@ -133,8 +137,7 @@ function openGenBankFile(filePath) {
   console.log('[Main] Opening GenBank file:', filePath);
 
   // Validate file extension
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext !== '.gbk' && ext !== '.gb' && ext !== '.genbank' && ext !== '.gbff') {
+  if (!isGenBankFilePath(filePath)) {
     console.warn('[Main] File is not a GenBank file:', filePath);
     return;
   }
@@ -457,14 +460,7 @@ app.on('open-file', (event, filePath) => {
 });
 
 // Handle files passed as command-line arguments on Windows/Linux
-const commandLineFiles = process.argv.slice(1).filter(arg => {
-  return (
-    !arg.startsWith('--') &&
-    !arg.includes('electron') &&
-    arg !== '.' &&
-    (arg.endsWith('.gbk') || arg.endsWith('.gb') || arg.endsWith('.genbank') || arg.endsWith('.gbff'))
-  );
-});
+const commandLineFiles = process.argv.slice(1).filter(arg => !arg.startsWith('--') && isGenBankFilePath(arg));
 
 if (commandLineFiles.length > 0) {
   console.log('[Main] Command-line GenBank files:', commandLineFiles);

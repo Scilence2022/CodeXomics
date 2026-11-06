@@ -3,16 +3,17 @@
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { gzipSync } = require('node:zlib');
 const { test, expect, _electron: electron } = require('@playwright/test');
 
 const APP_ROOT = path.join(__dirname, '..', '..');
 
-test('genome view opens a GenBank file and isolates companion data after replacement', async () => {
+test('genome view opens compressed GenBank at launch and isolates companion data after replacement', async () => {
   const fixtureDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'codexomics-smoke-'));
   const outsideDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'codexomics-outside-'));
   let app;
   try {
-    const fixture = path.join(fixtureDirectory, 'smoke.gbk');
+    const fixture = path.join(fixtureDirectory, 'smoke.gbk.gz');
     const original =
       'LOCUS       SMOKE                     12 bp    DNA     linear   UNK 01-JAN-2000\n' +
       'FEATURES             Location/Qualifiers\n' +
@@ -22,10 +23,10 @@ test('genome view opens a GenBank file and isolates companion data after replace
       'ORIGIN\n' +
       '        1 acgtacgtacgt\n' +
       '//\n';
-    await fs.writeFile(fixture, original);
+    await fs.writeFile(fixture, gzipSync(original));
     const legacyDirectory = path.join(fixtureDirectory, '.codexomics');
     await fs.mkdir(legacyDirectory);
-    const legacyPath = path.join(legacyDirectory, 'smoke.gbk.CodeXomics');
+    const legacyPath = path.join(legacyDirectory, 'smoke.gbk.gz.CodeXomics');
     const legacyData = JSON.stringify({
       _originalPath: await fs.realpath(fixture),
       geneNotes: { fixture: { content: 'old notes' } },
@@ -87,7 +88,7 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     expect(originalBinding.notes.fixture.content).toBe('old notes');
 
     const replacement = original.replace('acgtacgtacgt', 'tgcatgcatgca');
-    await fs.writeFile(fixture + '.replacement', replacement);
+    await fs.writeFile(fixture + '.replacement', gzipSync(replacement));
     await fs.rename(fixture + '.replacement', fixture);
 
     const staleSave = await genomeView.evaluate(async () => {
@@ -120,7 +121,7 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
       const genome = window.genomeBrowser;
       await genome.sidecarManager.set(genome.loadedGenomePath, 'geneNotes', { replacement: { content: 'new notes' } });
     });
-    await fs.writeFile(fixture, original);
+    await fs.writeFile(fixture, gzipSync(original));
     expect(await reopen()).toEqual({ ...originalBinding, status: 'loaded' });
     expect(await fs.readFile(legacyPath, 'utf8')).toBe(legacyData);
     const expired = await genomeView.evaluate(async destination => {
