@@ -949,14 +949,12 @@ class FileManager {
   }
 
   async parseGenBank() {
+    const data = this.currentFile?.data;
     console.log('🔬 Starting GenBank parsing...');
-    console.log('📄 Current file data length:', this.currentFile?.data?.length || 'No data');
-    if (!this.currentFile?.data) {
+    console.log('📄 Current file data length:', data?.length || 'No data');
+    if (!data) {
       throw new Error('No file data available for GenBank parsing');
     }
-
-    const lines = this.currentFile.data.split('\n');
-    console.log(`📄 Total lines to parse: ${lines.length}`);
 
     const sequences = {};
     const annotations = {};
@@ -973,25 +971,25 @@ class FileManager {
     let readingLocation = false;
     let translationParts = [];
 
-    // Progress tracking for large files
-    const totalLines = lines.length;
-    let processedLines = 0;
-    const updateInterval = Math.max(1000, Math.floor(totalLines / 100)); // Update every 1% or 1000 lines
+    const updateInterval = Math.max(64 * 1024, Math.floor(data.length / 100));
+    const yieldDuringParsing = data.length >= 32 * 1024 * 1024;
+    let nextProgress = updateInterval;
 
     this.genomeBrowser.updateStatus('Parsing GenBank file...');
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    for (let offset = 0; offset < data.length; ) {
+      const newline = data.indexOf('\n', offset);
+      const lineEnd = newline === -1 ? data.length : newline;
+      const line = data.slice(offset, lineEnd);
       const trimmed = line.trim();
+      offset = lineEnd + 1;
 
-      // Update progress for large files
-      processedLines++;
-      if (processedLines % updateInterval === 0) {
-        const progress = Math.round((processedLines / totalLines) * 100);
+      if (offset >= nextProgress) {
+        nextProgress = offset + updateInterval;
+        const progress = Math.min(100, Math.round((offset / data.length) * 100));
         this.genomeBrowser.updateStatus(`Parsing GenBank file... ${progress}%`);
 
-        // Allow UI to update for large files
-        if (totalLines > 500000) {
+        if (yieldDuringParsing) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
       }

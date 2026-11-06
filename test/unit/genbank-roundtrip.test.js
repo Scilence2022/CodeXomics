@@ -151,7 +151,7 @@ describe('GenBank round trip', () => {
     );
   });
 
-  it('refuses an ambiguous unversioned reference while allowing exact versions', async () => {
+  it('reads CRLF records without a final newline and rejects ambiguous accessions', async () => {
     const browser = await parse(
       [
         'LOCUS       FIRST 3 bp DNA linear',
@@ -166,7 +166,7 @@ describe('GenBank round trip', () => {
         'ORIGIN',
         '        1 ccc',
         '//',
-      ].join('\n')
+      ].join('\r\n')
     );
     const exporter = new GenBankExporter(browser);
     expect(exporter.getLoadedReferenceSequence('AB0002.2')).toBe('CCC');
