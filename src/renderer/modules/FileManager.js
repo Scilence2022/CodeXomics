@@ -7,6 +7,13 @@ const fileManagerGenomeFormats =
     ? require('../../shared/genome-file-formats')
     : globalThis.genomeFileFormats;
 
+const fileManagerImportExtensions = {
+  annotation: ['.gff', '.gff3', '.gtf', '.bed'],
+  variant: ['.vcf'],
+  reads: ['.sam', '.bam'],
+  track: ['.wig', '.bw', '.bigwig'],
+};
+
 class FileManager {
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
@@ -33,6 +40,24 @@ class FileManager {
           .filter(Boolean)
           .pop() || '',
     };
+  }
+
+  getInputExtension(info) {
+    const extension = info.extension.toLowerCase();
+    if (extension !== '.gz') return extension;
+    return (
+      info.name
+        .slice(0, -3)
+        .match(/\.[^.]+$/)?.[0]
+        .toLowerCase() || '.gz'
+    );
+  }
+
+  assertImportGroup(extension, group) {
+    const extensions = fileManagerImportExtensions[group];
+    if (!extensions?.includes(extension)) {
+      throw new Error(`Expected a ${group} file (${extensions?.join(', ')})`);
+    }
   }
 
   async openFile() {
@@ -644,16 +669,9 @@ class FileManager {
 
       // Check file size and warn for very large files (excluding SAM/BAM which use dynamic loading)
       const fileSizeMB = fileInfo.info.size / (1024 * 1024);
-      let extension = fileInfo.info.extension.toLowerCase();
-
-      // Handle gzipped files - check original extension
-      let isGzipped = false;
-      if (extension === '.gz') {
-        isGzipped = true;
-        const fileName = fileInfo.info.name;
-        const baseName = fileName.replace(/\.gz$/i, '');
-        extension = baseName.includes('.') ? '.' + baseName.split('.').pop().toLowerCase() : '.gz';
-      }
+      const extension = this.getInputExtension(fileInfo.info);
+      const isGzipped = fileInfo.info.extension.toLowerCase() === '.gz';
+      if (options.expectedFileGroup) this.assertImportGroup(extension, options.expectedFileGroup);
 
       const genomeFormat = fileManagerGenomeFormats.getGenomeFileFormat(extension);
       const expectedFormat = options.expectedGenomeFormat;
@@ -771,7 +789,7 @@ class FileManager {
     }
   }
 
-  async loadFileRegular(filePath, options = {}, extension = this.currentFile.info.extension.toLowerCase()) {
+  async loadFileRegular(filePath, options = {}, extension = this.getInputExtension(this.currentFile.info)) {
     // Set up progress listener for streaming reads
     const progressHandler = (event, progressData) => {
       const { progress, totalRead, fileSize } = progressData;
@@ -884,20 +902,9 @@ class FileManager {
   }
 
   async parseFile(options = {}) {
-    let extension = this.currentFile.info.extension.toLowerCase();
+    const extension = this.getInputExtension(this.currentFile.info);
+    const isGzipped = this.currentFile.info.extension.toLowerCase() === '.gz';
     console.log('🔍 parseFile() called with extension:', extension, 'and options:', options);
-
-    // Handle gzipped files - extract the original extension
-    let isGzipped = false;
-    if (extension === '.gz') {
-      isGzipped = true;
-      // Get the original extension from the filename (e.g., .gbk.gz -> .gbk)
-      const fileName = this.currentFile.info.name;
-      const baseName = fileName.replace(/\.gz$/i, '');
-      const originalExtension = baseName.includes('.') ? '.' + baseName.split('.').pop().toLowerCase() : '';
-      console.log('📦 Detected gzipped file, original extension:', originalExtension);
-      extension = originalExtension || '.gz';
-    }
 
     const genomeFormat = fileManagerGenomeFormats.getGenomeFileFormat(extension);
     if (genomeFormat === 'fasta') return this.parseFasta(options);
@@ -2190,6 +2197,8 @@ Original error: ${error.message}`;
       }
     }
 
+    if (Object.keys(wigTracks).length === 0) throw new Error('No WIG track or step declaration found');
+
     // Store WIG tracks data - merge with existing tracks instead of replacing
     const existingWIGTracks = this.genomeBrowser.currentWIGTracks || {};
 
@@ -2564,6 +2573,8 @@ Original error: ${error.message}`;
           if (!fileInfo.success) {
             throw new Error(fileInfo.error);
           }
+          const extension = this.getInputExtension(fileInfo.info);
+          this.assertImportGroup(extension, 'track');
 
           // Create temporary file object for parsing
           this.currentFile = {
@@ -2574,7 +2585,6 @@ Original error: ${error.message}`;
 
           // Parse file based on extension - handle both WIG and BigWig
           const tracksBefore = Object.keys(this.genomeBrowser.currentWIGTracks || {}).length;
-          const extension = fileInfo.info.extension.toLowerCase();
           if (extension === '.bw' || extension === '.bigwig') {
             await this.parseBigWig();
           } else {

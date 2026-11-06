@@ -173,6 +173,70 @@ describe('file import outcomes', () => {
     expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ['loadAnnotationFile', 'genome.gbk.gz', '.gz', 'annotation'],
+    ['loadVariantFile', 'track.wig', '.wig', 'variant'],
+    ['loadReadsFile', 'variants.vcf', '.vcf', 'reads'],
+    ['loadWigTracks', 'annotation.gff3', '.gff3', 'track'],
+  ])('rejects mismatched extensions before %s reads or changes the workspace', async (tool, name, extension, group) => {
+    const { browser, service } = createImportFixture(async () => ({
+      success: true,
+      info: { name, extension, size: 40 },
+    }));
+    await expect(service[tool]({ filePath: `/${name}` })).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining(`Expected a ${group} file`),
+    });
+    expect(browser.loadedGenomePath).toBe('/previous.gbk');
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports unrecognized WIG content without adding a track', async () => {
+    const { browser, manager, service } = createImportFixture(async channel =>
+      channel === 'get-file-info'
+        ? { success: true, info: { name: 'bad.wig', extension: '.wig', size: 32 } }
+        : { success: true, data: 'unrecognized track contents' }
+    );
+    const original = { stable: { name: 'stable' } };
+    browser.currentWIGTracks = original;
+    await expect(service.loadWigTracks({ filePath: '/bad.wig' })).resolves.toMatchObject({
+      success: false,
+      error: 'No WIG track or step declaration found',
+    });
+    expect(browser.currentWIGTracks).toBe(original);
+    expect(manager.currentFile.path).toBe('/previous.gbk');
+  });
+
+  it('loads valid compressed WIG files in a batch and reports mismatched members', async () => {
+    const { browser, manager, service } = createImportFixture(async (channel, filePath) => {
+      if (channel === 'get-file-info') {
+        return { success: true, info: { name: filePath.slice(1), extension: '.gz', size: 32 } };
+      }
+      return { success: true, data: 'fixedStep chrom=chr1 start=1 step=1\n2\n' };
+    });
+    browser.updateFileInfo = vi.fn();
+    browser.hideWelcomeScreen = vi.fn();
+    manager.autoEnableTracksForFileType = vi.fn();
+    const select = document.createElement('select');
+    select.id = 'chromosomeSelect';
+    document.body.append(select);
+    try {
+      await expect(service.loadWigTracks({ filePaths: ['/variants.vcf.gz', '/track.wig.gz'] })).resolves.toMatchObject({
+        success: false,
+        status: 'partial',
+        successCount: 1,
+        results: [
+          { file: 'variants.vcf.gz', status: 'error', error: expect.stringContaining('Expected a track file') },
+          { file: 'track.wig.gz', status: 'success', tracks: 1 },
+        ],
+      });
+      expect(browser.currentWIGTracks.Default_Track.data.chr1).toEqual([{ start: 0, end: 1, value: 2 }]);
+      expect(ipcRenderer.invoke).not.toHaveBeenCalledWith('read-file', '/variants.vcf.gz');
+    } finally {
+      select.remove();
+    }
+  });
+
   it('reports malformed operon data and honors an explicit format for files with another extension', async () => {
     let data = '{bad json';
     const { browser, service } = createImportFixture(async channel =>
