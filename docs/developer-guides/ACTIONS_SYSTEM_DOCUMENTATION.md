@@ -433,6 +433,9 @@ Sequence extraction can resolve remote positions against other records in
 the loaded GenBank file. A versioned reference requires an exact match. An
 unversioned accession requires a unique match. GenBank export preserves the
 source accession and version when the record's sequence is unchanged.
+Gene and protein tracks display the local pieces of mixed locations.
+Selecting a displayed piece opens the original annotation. Protein details
+use the full CDS location and report unavailable reference sequences.
 
 An edit wholly within one exact local segment can resize that segment.
 For an affected CDS, GenBank and protein exports verify the edited
