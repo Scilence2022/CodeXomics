@@ -588,6 +588,7 @@ class FileManager {
       currentAnnotations: browser.currentAnnotations,
       currentChromosome: browser.currentChromosome,
       sourceFeatures: browser.sourceFeatures,
+      genbankRecords: browser.genbankRecords,
       loadedOperons: browser.loadedOperons,
       mappedOperons: browser.mappedOperons,
       operonMappingChromosome: browser.operonMappingChromosome,
@@ -918,6 +919,7 @@ class FileManager {
     if (!Object.values(sequences).some(Boolean)) throw new Error('No sequence records found in FASTA file');
     this.genomeBrowser.currentAnnotations = {};
     this.genomeBrowser.sourceFeatures = {};
+    this.genomeBrowser.genbankRecords = null;
 
     // Bind the genome source directly, as parseGenBank does: a file opened in a new window can be
     // parsed before TabManager exists, and onGenomeLoaded is then never called.
@@ -959,6 +961,9 @@ class FileManager {
     const sequences = {};
     const annotations = {};
     const topology = {};
+    const identifiersByLocus = new Map();
+    let identifiers = null;
+    let readingAccessions = false;
     let currentSeq = null;
     let currentData = '';
     let inOrigin = false;
@@ -995,6 +1000,11 @@ class FileManager {
       if (line.startsWith('LOCUS')) {
         const parts = line.split(/\s+/);
         currentSeq = parts[1];
+        // A duplicate LOCUS overwrites the sequence in the existing importer.
+        // Exclude that name from accession resolution to avoid selecting either record.
+        identifiers = identifiersByLocus.has(currentSeq) ? null : { accessions: [], version: null };
+        identifiersByLocus.set(currentSeq, identifiers);
+        readingAccessions = false;
         topology[currentSeq] = parts.some(part => part.toLowerCase() === 'circular') ? 'circular' : 'linear';
         console.log(`Found LOCUS: ${currentSeq}`);
         sequences[currentSeq] = '';
@@ -1002,6 +1012,19 @@ class FileManager {
         features = [];
         currentFeature = null;
         currentQualifierKey = null;
+        continue;
+      }
+
+      if (identifiers && (line.startsWith('ACCESSION ') || (readingAccessions && /^ {12}\S/.test(line)))) {
+        const tokens = line.startsWith('ACCESSION ') ? trimmed.split(/\s+/).slice(1) : trimmed.split(/\s+/);
+        identifiers.accessions.push(...tokens.filter(token => /^[a-z][a-z0-9_]*$/i.test(token)));
+        readingAccessions = true;
+        continue;
+      }
+      readingAccessions = false;
+      if (identifiers && line.startsWith('VERSION ')) {
+        const version = trimmed.split(/\s+/)[1];
+        if (/^[a-z][a-z0-9_]*\.\d+$/i.test(version)) identifiers.version = version;
         continue;
       }
 
@@ -1179,6 +1202,13 @@ class FileManager {
     this.genomeBrowser.loadedGenomeSourceSha256 = this.currentFile?.sourceSha256 || null;
     this.genomeBrowser.currentSequence = sequences;
     this.genomeBrowser.currentAnnotations = annotations;
+    const genbankRecords = new Map();
+    for (const [chromosome, record] of identifiersByLocus) {
+      if (record && sequences[chromosome]) {
+        genbankRecords.set(chromosome, { ...record, sequence: sequences[chromosome] });
+      }
+    }
+    this.genomeBrowser.genbankRecords = genbankRecords;
 
     // A committed autonomous-annotation ChangeSet is materialized in the
     // per-genome sidecar overlay. Replay it before any chromosome, tab, or

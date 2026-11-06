@@ -110,11 +110,14 @@ class GenBankExporter {
     // DEFINITION line
     content += this.generateDefinition(chromosome, sourceFeatures, originalAnnotations);
 
-    // ACCESSION line
-    content += this.generateAccession(chromosome, sourceFeatures, originalAnnotations);
-
-    // VERSION line
-    content += this.generateVersion(chromosome, sourceFeatures, originalAnnotations);
+    const sourceRecord = this.genomeBrowser.genbankRecords?.get(chromosome);
+    if (sourceRecord?.sequence === sequence) {
+      if (sourceRecord.accessions.length) {
+        const lines = this.wrapQualifierValue(sourceRecord.accessions.join(' '), 67);
+        content += `ACCESSION   ${lines.join('\n            ')}\n`;
+      }
+      if (sourceRecord.version) content += `VERSION     ${sourceRecord.version}\n`;
+    }
 
     // KEYWORDS line
     content += this.generateKeywords(sourceFeatures, originalAnnotations);
@@ -212,39 +215,6 @@ class GenBankExporter {
       originalAnnotations.find(f => f.type === 'source')?.qualifiers?.note ||
       `${chromosome} - Modified by CodeXomics Action Manager`;
     return `DEFINITION  ${definition}\n`;
-  }
-
-  /**
-   * Generate ACCESSION line with safe array handling
-   */
-  generateAccession(chromosome, sourceFeatures, originalAnnotations) {
-    // Safe array handling - prevents "find is not a function" errors
-    const dbXrefArray = Array.isArray(sourceFeatures.db_xref) ? sourceFeatures.db_xref : [];
-    const originalDbXref = originalAnnotations.find(f => f.type === 'source')?.qualifiers?.db_xref;
-    const originalDbXrefArray = Array.isArray(originalDbXref) ? originalDbXref : [];
-
-    const accession =
-      dbXrefArray.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
-      originalDbXrefArray.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
-      chromosome;
-
-    return `ACCESSION   ${accession}\n`;
-  }
-
-  /**
-   * Generate VERSION line
-   */
-  generateVersion(chromosome, sourceFeatures, originalAnnotations) {
-    const dbXrefArray = Array.isArray(sourceFeatures.db_xref) ? sourceFeatures.db_xref : [];
-    const originalDbXref = originalAnnotations.find(f => f.type === 'source')?.qualifiers?.db_xref;
-    const originalDbXrefArray = Array.isArray(originalDbXref) ? originalDbXref : [];
-
-    const version =
-      dbXrefArray.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
-      originalDbXrefArray.find(ref => ref.startsWith('taxon:'))?.replace('taxon:', '') ||
-      chromosome;
-
-    return `VERSION     ${version}\n`;
   }
 
   /**
@@ -402,12 +372,13 @@ class GenBankExporter {
     return this.mapPositionQualifiers(qualifiers, (start, end) => [start + shift, end + shift]);
   }
 
-  mapLocalLocation(expression, mapSpan, mapGroup, preserveRemote = false, depth = 0) {
+  mapLocalLocation(expression, mapSpan, mapGroup, mapRemote, depth = 0) {
     if (depth > 32) throw new SyntaxError('GenBank location nesting exceeds the supported limit');
     const span = /^[<>]?(\d+)(?:\.\.[<>]?(\d+))?$/.exec(expression);
     if (span) return mapSpan(Number(span[1]), Number(span[2] || span[1]), expression);
-    if (preserveRemote && /^[a-z][a-z0-9_.]*:[<>]?\d+(?:\.\.[<>]?\d+|\^\d+)?$/i.test(expression)) {
-      return expression;
+    const remote = /^([a-z][a-z0-9_.]*):([<>]?\d+(?:\.\.[<>]?\d+|\^\d+)?)$/i.exec(expression);
+    if (mapRemote && remote) {
+      return mapRemote(remote[1], remote[2], expression);
     }
 
     const operator = /^(join|order|complement)\((.+)\)$/i.exec(expression);
@@ -432,7 +403,7 @@ class GenBankExporter {
     parts.push(body.slice(start));
     return mapGroup(
       type,
-      parts.map(part => this.mapLocalLocation(part, mapSpan, mapGroup, preserveRemote, depth + 1))
+      parts.map(part => this.mapLocalLocation(part, mapSpan, mapGroup, mapRemote, depth + 1))
     );
   }
 
@@ -459,7 +430,7 @@ class GenBankExporter {
         return range ? `${startMarker}${first}..${partialEnd ? '>' : ''}${last}` : `${startMarker}${first}`;
       },
       (type, parts) => `${type}(${parts.join(',')})`,
-      preserveRemote
+      preserveRemote ? (_accession, _span, original) => original : undefined
     );
   }
 
@@ -627,19 +598,39 @@ class GenBankExporter {
     return result.protein.slice(0, -1);
   }
 
+  getLoadedReferenceSequence(accession) {
+    const identifier = accession.toUpperCase();
+    const versioned = /\.\d+$/.test(identifier);
+    const matches = [];
+    for (const record of this.genomeBrowser.genbankRecords?.values() || []) {
+      const matchesIdentifier = versioned
+        ? record.version?.toUpperCase() === identifier
+        : record.accessions.some(value => value.toUpperCase() === identifier);
+      if (matchesIdentifier) matches.push(record.sequence);
+    }
+    if (matches.length !== 1) {
+      const reason = matches.length ? 'multiple loaded records match' : 'the referenced record is unavailable';
+      throw new Error(`Cannot extract local sequence for reference ${accession}: ${reason}`);
+    }
+    return matches[0];
+  }
+
   extractLocationSequence(sequence, feature, reverseComplement) {
-    return this.mapLocalLocation(
-      this.formatLocation(feature),
-      (start, end, expression) => {
-        if (start < 1 || end < start || end > sequence.length) throw new Error(`Out-of-range location: ${expression}`);
-        return sequence.slice(start - 1, end);
-      },
-      (type, parts) => {
-        if (type.toLowerCase() === 'complement') return reverseComplement(parts[0]);
-        if (type.toLowerCase() === 'join') return parts.join('');
-        throw new Error('Cannot extract local sequence for an order location');
-      }
-    );
+    const extract = (location, bases) =>
+      this.mapLocalLocation(
+        location,
+        (start, end, expression) => {
+          if (start < 1 || end < start || end > bases.length) throw new Error(`Out-of-range location: ${expression}`);
+          return bases.slice(start - 1, end);
+        },
+        (type, parts) => {
+          if (type.toLowerCase() === 'complement') return reverseComplement(parts[0]);
+          if (type.toLowerCase() === 'join') return parts.join('');
+          throw new Error('Cannot extract local sequence for an order location');
+        },
+        (accession, span) => extract(span, this.getLoadedReferenceSequence(accession))
+      );
+    return extract(this.formatLocation(feature), sequence);
   }
 
   /**

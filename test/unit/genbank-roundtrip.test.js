@@ -102,6 +102,76 @@ describe('GenBank round trip', () => {
     ).toThrow(/Cannot extract local sequence/);
   });
 
+  it('resolves only the requested loaded GenBank accession version across export and reopen', async () => {
+    const fixture = [
+      'LOCUS       LOCAL 5 bp DNA linear',
+      'ACCESSION   AB0001',
+      'VERSION     AB0001.1',
+      'FEATURES             Location/Qualifiers',
+      '     CDS             complement(join(2..3,AB0002.2:2..4))',
+      'ORIGIN',
+      '        1 attta',
+      '//',
+      'LOCUS       REMOTE 5 bp DNA linear',
+      'ACCESSION   AB0002',
+      'VERSION     AB0002.2',
+      'ORIGIN',
+      '        1 gccca',
+      '//',
+      '',
+    ].join('\n');
+    const browser = await parse(fixture);
+    const exporter = new GenBankExporter(browser);
+    const manager = new ExportManager(browser);
+    const [feature] = browser.currentAnnotations.LOCAL;
+    const extract = (candidate = feature) => manager.extractFeatureSequence(browser.currentSequence.LOCAL, candidate);
+    expect(extract()).toBe('GGGAA');
+    expect(extract({ ...feature, location: feature.location.replace('AB0002.2', 'AB0002') })).toBe('GGGAA');
+    expect(() => extract({ ...feature, location: feature.location.replace('AB0002.2', 'AB0002.1') })).toThrow(
+      /AB0002.1: the referenced record is unavailable/
+    );
+    const write = getSequence =>
+      exporter.exportGenBank({
+        chromosomes: ['LOCAL', 'REMOTE'],
+        getSequence,
+        getFeatures: chromosome => browser.currentAnnotations[chromosome],
+      });
+    const reopened = await parse(write(chromosome => browser.currentSequence[chromosome]));
+    const [reopenedCds] = reopened.currentAnnotations.LOCAL.filter(item => item.type === 'CDS');
+    expect(new ExportManager(reopened).extractFeatureSequence(reopened.currentSequence.LOCAL, reopenedCds)).toBe(
+      'GGGAA'
+    );
+    const edited = await parse(
+      write(chromosome => (chromosome === 'REMOTE' ? 'AAAAA' : browser.currentSequence.LOCAL))
+    );
+    const [editedCds] = edited.currentAnnotations.LOCAL.filter(item => item.type === 'CDS');
+    expect(() => new ExportManager(edited).extractFeatureSequence(edited.currentSequence.LOCAL, editedCds)).toThrow(
+      /AB0002.2: the referenced record is unavailable/
+    );
+  });
+
+  it('refuses an ambiguous unversioned reference while allowing exact versions', async () => {
+    const browser = await parse(
+      [
+        'LOCUS       FIRST 3 bp DNA linear',
+        'ACCESSION   AB0002',
+        'VERSION     AB0002.1',
+        'ORIGIN',
+        '        1 aaa',
+        '//',
+        'LOCUS       SECOND 3 bp DNA linear',
+        'ACCESSION   AB0002',
+        'VERSION     AB0002.2',
+        'ORIGIN',
+        '        1 ccc',
+        '//',
+      ].join('\n')
+    );
+    const exporter = new GenBankExporter(browser);
+    expect(exporter.getLoadedReferenceSequence('AB0002.2')).toBe('CCC');
+    expect(() => exporter.getLoadedReferenceSequence('AB0002')).toThrow(/multiple loaded records match/);
+  });
+
   it('detects an edit to a segment that begins on a continuation line', async () => {
     const browser = await parse(
       [
