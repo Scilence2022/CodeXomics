@@ -45,6 +45,9 @@ describe('which models expose a thinking control', () => {
     ['google', 'gemini-3.5-flash', ['off', 'low', 'medium', 'high']],
     ['openai', 'gpt-5.5', ['low', 'medium', 'high']],
     ['deepseek', 'deepseek-chat', ['off', 'low', 'medium', 'high']],
+    ['deepseek', 'deepseek-reasoner', ['low', 'medium', 'high']],
+    ['zhongkeyu', 'deepseek-v4.1-flash', ['off', 'low', 'medium', 'high']],
+    ['zhongkeyu', 'gpt-5.6-sol', ['low', 'medium', 'high']],
     ['siliconflow', 'Qwen/Qwen3.5-39B-A17B', ['off', 'low', 'medium', 'high']],
     ['openrouter', 'anthropic/claude-sonnet-4.6', ['off', 'low', 'medium', 'high']],
   ])('%s %s offers %j', (providerKey, model, levels) => {
@@ -55,7 +58,7 @@ describe('which models expose a thinking control', () => {
     ['anthropic', 'claude-3-5-sonnet-20241022'],
     ['openai', 'gpt-5.5-instant'],
     ['openai', 'gpt-realtime-2'],
-    ['deepseek', 'deepseek-reasoner'],
+    ['zhongkeyu', 'some-chat-model'],
     ['siliconflow', 'Qwen/Qwen3-235B-A22B-Thinking-2507'],
     ['minimax', 'MiniMax-M2.7'],
     ['local', 'qwen3:8b'],
@@ -144,14 +147,31 @@ describe('OpenAI-compatible requests', () => {
   it('maps the level onto OpenRouter, DeepSeek and SiliconFlow', () => {
     expect(build('openrouter', 'openai/gpt-5.5', 'off').reasoning).toEqual({ enabled: false });
     expect(build('openrouter', 'openai/gpt-5.5', 'medium').reasoning).toEqual({ effort: 'medium' });
-    expect(build('deepseek', 'deepseek-chat', 'high').thinking).toEqual({ type: 'enabled' });
-    expect(build('deepseek', 'deepseek-chat', 'off').thinking).toEqual({ type: 'disabled' });
+    expect(build('deepseek', 'deepseek-chat', 'high')).toMatchObject({
+      thinking: { type: 'enabled' },
+      reasoning_effort: 'high',
+    });
+    const off = build('deepseek', 'deepseek-chat', 'off');
+    expect(off.thinking).toEqual({ type: 'disabled' });
+    expect(off).not.toHaveProperty('reasoning_effort');
     expect(build('deepseek', 'deepseek-reasoner', 'off')).not.toHaveProperty('thinking');
+    expect(build('deepseek', 'deepseek-reasoner', 'low')).toMatchObject({ reasoning_effort: 'low' });
     expect(build('siliconflow', 'Qwen/Qwen3-8B', 'low')).toMatchObject({
       enable_thinking: true,
       thinking_budget: 2048,
     });
     expect(build('siliconflow', 'Qwen/Qwen3-8B', 'off')).toMatchObject({ enable_thinking: false });
+  });
+
+  it('maps a relay by model family', () => {
+    expect(build('zhongkeyu', 'deepseek-v4.1-flash', 'medium')).toMatchObject({
+      thinking: { type: 'enabled' },
+      reasoning_effort: 'medium',
+      max_tokens: 12288,
+    });
+    expect(build('zhongkeyu', 'deepseek-v4.1-flash', 'off').thinking).toEqual({ type: 'disabled' });
+    // A relay keeps max_tokens; only OpenAI's own API wants max_completion_tokens.
+    expect(build('zhongkeyu', 'gpt-5.6-sol', 'low')).toMatchObject({ reasoning_effort: 'low', max_tokens: 8192 });
   });
 
   it('applies the level to the streaming request too', () => {
@@ -254,7 +274,11 @@ describe('ChatBox thinking control', () => {
         values[key] = value;
       }),
     };
-    return { selector: new ChatModelSelector({ llmConfigManager, chatBoxSettingsManager }), chatBoxSettingsManager };
+    return {
+      selector: new ChatModelSelector({ llmConfigManager, chatBoxSettingsManager }),
+      chatBoxSettingsManager,
+      llmConfigManager,
+    };
   }
 
   const options = select => Array.from(select.options).map(option => [option.value, option.disabled]);
@@ -284,8 +308,37 @@ describe('ChatBox thinking control', () => {
     expect(selector.reasoningSelect.title).toContain('does not apply');
   });
 
-  it('hides for a model without one', () => {
-    createSelector({ chatboxLLMProvider: 'local', chatboxLLMModel: 'qwen3:8b' });
+  it('shows as fixed, and says why, for a model without one', () => {
+    const { selector } = createSelector({ chatboxLLMProvider: 'local', chatboxLLMModel: 'qwen3:8b' });
+
+    expect(document.getElementById('chatReasoningPicker').hidden).toBe(false);
+    expect(selector.reasoningSelect.disabled).toBe(true);
+    expect(selector.reasoningSelect.options[0].textContent).toBe('Thinking: fixed');
+    expect(selector.reasoningSelect.title).toContain('qwen3:8b has no thinking level');
+  });
+
+  it('is enabled again once a model with a thinking control is selected', () => {
+    const { selector, chatBoxSettingsManager } = createSelector({
+      chatboxLLMProvider: 'local',
+      chatboxLLMModel: 'qwen3:8b',
+    });
+    chatBoxSettingsManager.values.chatboxLLMProvider = 'anthropic';
+    chatBoxSettingsManager.values.chatboxLLMModel = 'claude-sonnet-4-6';
+
+    selector.refresh();
+
+    expect(selector.reasoningSelect.disabled).toBe(false);
+    expect(selector.reasoningSelect.options).toHaveLength(5);
+  });
+
+  it('hides only when no model resolves at all', () => {
+    const { selector, llmConfigManager } = createSelector();
+    Object.values(llmConfigManager.providers).forEach(provider => {
+      provider.enabled = false;
+    });
+
+    selector.refresh();
+
     expect(document.getElementById('chatReasoningPicker').hidden).toBe(true);
   });
 

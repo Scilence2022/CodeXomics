@@ -14,8 +14,9 @@
  * and both offer models entered through "Other (specify below)".
  *
  * Beside it sits the thinking-level control (`chatboxReasoningEffort`, also on
- * the Agent Settings → Generation tab). It appears only for a model that exposes
- * a thinking control, and offers only the levels that model accepts.
+ * the Agent Settings → Generation tab). It offers only the levels the selected
+ * model accepts, and shows as disabled ("Thinking: fixed") for a model without
+ * a thinking control.
  */
 const REASONING_LEVEL_LABELS = {
   default: 'Thinking: default',
@@ -230,11 +231,28 @@ class ChatModelSelector {
         ? llmConfig.getReasoningProfile(effective.providerKey, effective.model)
         : null;
 
-    if (this.reasoningPicker) this.reasoningPicker.hidden = !profile;
-    if (!profile) return;
+    // Hidden only while no model resolves at all. A model without a thinking
+    // control still shows the control, disabled, so its absence is explained
+    // rather than looking like a missing feature.
+    if (this.reasoningPicker) this.reasoningPicker.hidden = !effective;
+    if (!effective) return;
+
+    const { shortLabel } = this.describe(effective.providerKey, effective.model);
+    select.innerHTML = '';
+    if (!profile) {
+      select.appendChild(this.createOption('default', 'Thinking: fixed'));
+      select.value = 'default';
+      select.disabled = true;
+      select.title =
+        `${shortLabel} has no thinking level CodeXomics can set: the model or endpoint decides ` +
+        'whether it thinks. Pick a model with a thinking control to adjust it.';
+      if (this.reasoningPicker) this.reasoningPicker.title = select.title;
+      return;
+    }
+    select.disabled = false;
+    if (this.reasoningPicker) this.reasoningPicker.title = '';
 
     const stored = this.getStoredReasoningLevel();
-    select.innerHTML = '';
     for (const [level, label] of Object.entries(REASONING_LEVEL_LABELS)) {
       const option = this.createOption(level, label);
       if (level !== 'default' && !profile.levels.includes(level)) {
@@ -247,7 +265,6 @@ class ChatModelSelector {
     // the model's default), so the control shows what will actually happen.
     const applies = stored === 'default' || profile.levels.includes(stored);
     select.value = applies ? stored : 'default';
-    const { shortLabel } = this.describe(effective.providerKey, effective.model);
     select.title = [
       `Thinking level for ${shortLabel}.`,
       profile.note,
