@@ -15010,8 +15010,11 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     };
   }
 
-  async findIntergenicRegions(params) {
+  async findIntergenicRegions(params = {}) {
     const { chromosome, minLength = 100 } = params;
+    if (!Number.isSafeInteger(minLength) || minLength < 1) {
+      throw new Error('minLength must be a positive integer');
+    }
 
     const chr = chromosome || this.app.currentChromosome;
     if (!chr) {
@@ -15023,26 +15026,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     }
 
     const annotations = this.app.currentAnnotations[chr];
-    const genes = annotations.filter(f => f.type === 'gene' || f.type === 'CDS').sort((a, b) => a.start - b.start);
-    const intergenicRegions = [];
-
-    for (let i = 0; i < genes.length - 1; i++) {
-      const currentGene = genes[i];
-      const nextGene = genes[i + 1];
-      const intergenicStart = currentGene.end + 1;
-      const intergenicEnd = nextGene.start - 1;
-      const length = intergenicEnd - intergenicStart + 1;
-
-      if (length >= minLength) {
-        intergenicRegions.push({
-          start: intergenicStart,
-          end: intergenicEnd,
-          length: length,
-          upstreamGene: currentGene.qualifiers?.gene || currentGene.qualifiers?.locus_tag || 'Unknown',
-          downstreamGene: nextGene.qualifiers?.gene || nextGene.qualifiers?.locus_tag || 'Unknown',
-        });
-      }
-    }
+    const microbe =
+      typeof module !== 'undefined' && module.exports ? require('./MicrobeGenomicsFunctions') : window.MicrobeFns;
+    const intergenicRegions = microbe.collectIntergenicGaps(annotations, minLength);
 
     return {
       chromosome: chr,

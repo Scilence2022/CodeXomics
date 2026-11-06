@@ -1,0 +1,28 @@
+name: find_intergenic_regions
+version: 1.0.0
+description: 'Find coordinate-ordered gaps between annotated gene and CDS spans on one chromosome. Returns 1-based inclusive coordinates for internal gaps only, excluding chromosome ends and gaps across a circular origin. Flanking gene names are reported in coordinate order.'
+category: annotation
+subcategory: annotation_search
+keywords: ['intergenic', 'between genes', 'intergenic regions', 'gene gaps']
+
+execution:
+  type: client-side
+  requires_data: true
+
+parameters:
+  type: object
+  properties:
+    chromosome:
+      type: string
+      description: Chromosome or contig to query. Defaults to the currently selected chromosome.
+    minLength:
+      type: integer
+      description: Minimum gap length in base pairs.
+      minimum: 1
+      default: 100
+  required: []
+
+sample_usages:
+  - user_query: Find intergenic regions of at least 150 bp on the current chromosome.
+    tool_call: 'find_intergenic_regions(minLength=150)'
+    expected_result: Total count and combined length of qualifying gaps, with details for the first 20.

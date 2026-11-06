@@ -93,7 +93,7 @@ categories:
       - 'change_tracking'
       - 'operon_analysis'
       - 'autonomous_curation'
-    tools_count: 24
+    tools_count: 30
 
   file_operations:
     name: 'File Operations'
