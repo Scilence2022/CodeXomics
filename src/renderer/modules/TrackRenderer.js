@@ -4680,6 +4680,17 @@ class TrackRenderer {
     return tracksContainer;
   }
 
+  describeEmptyBamViewport(chromosome, viewport, references = []) {
+    const message = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
+    if (!references.length) {
+      return message + '\n⚠️ BAM file has no reference sequences - file may be corrupted';
+    }
+    const preview = references.slice(0, 10).map(ref => ref.name);
+    const summary = `${message}\n💡 Available references: ${preview.join(', ')}`;
+    if (references.some(ref => ref.name === chromosome)) return summary;
+    return `${summary}\n❓ Current chromosome "${chromosome}" not found in BAM references`;
+  }
+
   /**
    * Create single reads track content without header (for zoom updates)
    */
@@ -4737,20 +4748,7 @@ class TrackRenderer {
       this.updateSamplingDisplayBasedOnReadsCount(sampledReads.length, isSampled);
 
       if (sampledReads.length === 0 && !depth?.alignedBases.some(count => count > 0)) {
-        // Try to provide helpful diagnostic information
-        let diagnosticMessage = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
-
-        if (bamFile.reader.references?.length === 0) {
-          diagnosticMessage += `\n⚠️ BAM file has no reference sequences - file may be corrupted`;
-        } else if (bamFile.reader.references?.length > 0) {
-          const availableRefs = bamFile.reader.references.slice(0, 10).map(ref => ref.name);
-          diagnosticMessage += `\n💡 Available references: ${availableRefs.join(', ')}`;
-
-          if (!availableRefs.includes(chromosome)) {
-            diagnosticMessage += `\n❓ Current chromosome "${chromosome}" not found in BAM references`;
-          }
-        }
-
+        const diagnosticMessage = this.describeEmptyBamViewport(chromosome, viewport, bamFile.reader.references);
         const noReadsMsg = this.createNoDataMessage(diagnosticMessage, 'no-reads-message');
         trackContent.appendChild(noReadsMsg);
       } else {
@@ -4960,20 +4958,7 @@ class TrackRenderer {
       this.updateSamplingDisplayBasedOnReadsCount(sampledReads.length, isSampled, track);
 
       if (sampledReads.length === 0 && !depth?.alignedBases.some(count => count > 0)) {
-        // Try to provide helpful diagnostic information
-        let diagnosticMessage = `No reads found in region ${chromosome}:${viewport.start}-${viewport.end}`;
-
-        if (bamFile.reader.references?.length === 0) {
-          diagnosticMessage += `\n⚠️ BAM file has no reference sequences - file may be corrupted`;
-        } else if (bamFile.reader.references?.length > 0) {
-          const availableRefs = bamFile.reader.references.slice(0, 10).map(ref => ref.name);
-          diagnosticMessage += `\n💡 Available references: ${availableRefs.join(', ')}`;
-
-          if (!availableRefs.includes(chromosome)) {
-            diagnosticMessage += `\n❓ Current chromosome "${chromosome}" not found in BAM references`;
-          }
-        }
-
+        const diagnosticMessage = this.describeEmptyBamViewport(chromosome, viewport, bamFile.reader.references);
         const noReadsMsg = this.createNoDataMessage(diagnosticMessage, 'no-reads-message');
         trackContent.appendChild(noReadsMsg);
         trackContent.style.height = '80px'; // Default height for empty track
