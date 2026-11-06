@@ -212,7 +212,7 @@ _This first beta release is designed for testing, feedback, and community valida
 ## 🌐 **Project Resources**
 
 - **🏠 Main Repository:** https://github.com/Scilence2022/CodeXomics
-- **📚 Documentation Hub:** [Complete guides and references](docs/)
+- **📚 Documentation Hub:** [Complete guides and references](../index.md)
 - **👥 User Guide:** [742-line comprehensive manual](../user-guides/USER_GUIDE.md)
 - **💻 Developer Guide:** [831-line development guide](../developer-guides/DEVELOPER_GUIDE.md)
 - **🐛 Issue Tracker:** https://github.com/Scilence2022/CodeXomics/issues
@@ -278,7 +278,7 @@ _This first beta release represents our initial milestone in developing an AI-in
 
 ## 📄 **License & Open Source**
 
-**MIT License** - See [LICENSE](LICENSE) file for details
+**MIT License** - See the repository's [LICENSE](https://github.com/Scilence2022/CodeXomics/blob/main/LICENSE).
 
 _CodeXomics is proudly open source, enabling the global research community to build upon and improve this pioneering platform._
 
