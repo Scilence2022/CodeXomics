@@ -827,7 +827,8 @@ class NavigationManager {
               console.log(`🔍 [WHEEL-ZOOM] No fileId found, using legacy reads track content method`);
               const newTrackContent = await this.genomeBrowser.trackRenderer.createLegacyReadsTrackContent(
                 currentChr,
-                viewport
+                viewport,
+                signal
               );
               if (newTrackContent && isCurrent(readsTrackContent)) {
                 // Copy the inner content from the new track content to the existing track content

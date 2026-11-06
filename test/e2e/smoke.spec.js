@@ -326,11 +326,34 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
         await api.cancelSamRegionQuery(id);
         const cancelled = await pending;
         const next = await api.getSamReadsForRange(smallSam, 'SMOKE', 0, 1, {}, id);
-        return { cancelled, reads: next.reads.map(read => read.id) };
+
+        const ReadsManager = window.genomeBrowser.readsManager.constructor;
+        const manager = new ReadsManager({});
+        await manager.initializeWithStreamingSAM(sam);
+        const controller = new AbortController();
+        const oldViewport = manager.getReadsForRegion('SMOKE', 0, 1, {}, controller.signal).then(
+          () => null,
+          error => error.name
+        );
+        controller.abort();
+        const replacement = await manager.getReadsForRegion('SMOKE', 10, 11);
+        return {
+          cancelled,
+          reads: next.reads.map(read => read.id),
+          cancelledViewport: await oldViewport,
+          replacement,
+          cachedQueries: manager.cache.size,
+        };
       },
       { sam, smallSam }
     );
-    expect(samQueries).toEqual({ cancelled: null, reads: ['read'] });
+    expect(samQueries).toEqual({
+      cancelled: null,
+      reads: ['read'],
+      cancelledViewport: 'AbortError',
+      replacement: [],
+      cachedQueries: 1,
+    });
 
     const quotedReadName = `read'"<em>`;
     const qualityMarkup = '<img/id=codexomics-quality-probe>';

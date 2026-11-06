@@ -793,7 +793,8 @@ class TrackRenderer {
         chromosome,
         viewport.start,
         viewport.end,
-        samSettings()
+        samSettings(),
+        signal
       );
     }
 
@@ -816,7 +817,8 @@ class TrackRenderer {
           chromosome,
           sourceStart,
           sourceEnd,
-          samSettings(segment.displayStart - segment.sourceStart)
+          samSettings(segment.displayStart - segment.sourceStart),
+          signal
         );
       }
 
@@ -4261,7 +4263,7 @@ class TrackRenderer {
   /**
    * Create legacy reads track content without header (for zoom updates)
    */
-  async createLegacyReadsTrackContent(chromosome, viewport = null) {
+  async createLegacyReadsTrackContent(chromosome, viewport = null, signal) {
     viewport = viewport || this.getCurrentViewport();
     const trackContent = this.createTrackContent(this.trackConfig.reads.defaultHeight, chromosome);
 
@@ -4309,7 +4311,8 @@ class TrackRenderer {
       trackContent.style.height = '100px'; // Default height for empty track
     } else {
       // Get reads for current region using ReadsManager with settings
-      const visibleReads = await this.getReadsForViewport(chromosome, viewport, settings);
+      const visibleReads = await this.getReadsForViewport(chromosome, viewport, settings, null, signal);
+      signal?.throwIfAborted();
 
       // Update sampling display based on whether sampling was applied
       const isSampled = visibleReads._samplingInfo !== undefined;
