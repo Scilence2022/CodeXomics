@@ -510,6 +510,65 @@ describe('Track Creation Methods', () => {
   });
 });
 
+describe('Gene SVG sizing', () => {
+  it('uses the mounted track width for geometry and label fitting, including after a resize', () => {
+    let notifyResize;
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback) {
+          notifyResize = width => callback([{ contentRect: { width } }]);
+        }
+        observe() {}
+        disconnect() {
+          disconnect();
+        }
+      }
+    );
+    vi.stubGlobal('GeneShapeCreators', require('../../src/renderer/modules/tracks/GeneShapeCreators.js'));
+
+    const container = document.createElement('div');
+    try {
+      const viewport = { start: 0, end: 1000 };
+      const genomeBrowser = {
+        currentChromosome: 'chr1',
+        currentSequence: {},
+        getGeneOperonInfo: () => ({ color: '#3498db' }),
+        getQualifierValue: (qualifiers, key) => qualifiers[key],
+      };
+      const renderer = new TrackRenderer(genomeBrowser);
+      renderer.isCircularModeEnabled = () => false;
+      renderer.getCurrentViewport = () => viewport;
+      const settings = { geneHeight: 24, fontSize: 24 };
+      const rows = [[{ start: 101, end: 140, type: 'CDS', strand: 1, qualifiers: { gene: 'elaD' } }]];
+      const layout = renderer.calculateGeneTrackLayout(rows, settings);
+      renderer.renderGeneElementsSVG(container, rows, viewport, [], layout, settings);
+      notifyResize(0);
+      expect(disconnect).not.toHaveBeenCalled();
+      document.body.append(container);
+
+      notifyResize(1200);
+      const svg = container.querySelector('svg');
+      expect(svg.style.height).toBe('26px');
+      expect(svg.querySelector('.svg-gene-element').getAttribute('transform')).toBe('translate(120, 2)');
+      expect(svg.querySelector('text').textContent).toBe('elaD');
+      expect(Number(svg.querySelector('text').getAttribute('x'))).toBeCloseTo(24);
+
+      notifyResize(700);
+      expect(svg.querySelector('.svg-gene-element').getAttribute('transform')).toBe('translate(70, 2)');
+      expect(svg.querySelector('text')).toBeNull();
+
+      container.remove();
+      notifyResize(0);
+      expect(disconnect).toHaveBeenCalledOnce();
+    } finally {
+      container.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe('Primer Track Rendering', () => {
   let content;
 

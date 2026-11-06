@@ -831,10 +831,6 @@
     transform-origin: left center;
   }
 
-  .svg-gene-element text {
-    font-size: 10px !important;
-  }
-
   .gene-actions {
     flex-direction: column;
   }

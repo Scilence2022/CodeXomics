@@ -2,14 +2,28 @@
  * GeneShapeCreators Module Validation Tests
  *
  * Validates the extracted GeneShapeCreators module from TrackRenderer.js.
- * Tests that all 24 static methods load correctly, shape type detection
+ * Tests that the static methods load correctly, shape type detection
  * works, and SVG generation produces valid output.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import GeneShapeCreators from '../../src/renderer/modules/tracks/GeneShapeCreators.js';
 
 const MODULE_PATH = path.join(process.cwd(), 'src/renderer/modules/tracks/GeneShapeCreators.js');
+
+describe('Standard gene outlines', () => {
+  it.each([1, -1])('keeps both clipped edges inside a one-pixel glyph on strand %s', strand => {
+    const points = [];
+    const addPoint = (x, y) => points.push([x, y]);
+    const outline = { moveTo: addPoint, lineTo: addPoint, closePath() {} };
+    GeneShapeCreators.traceStandardGeneShape(outline, { strand }, 1, 24, true, true);
+
+    expect(points.every(([x, y]) => x >= 0 && x <= 1 && y >= 0 && y <= 24)).toBe(true);
+    expect(points).toContainEqual([0.5, 4]);
+    expect(points).toContainEqual([0.5, 20]);
+  });
+});
 
 describe('GeneShapeCreators Module', () => {
   let content;
@@ -57,8 +71,7 @@ describe('GeneShapeCreators Module', () => {
     'createRRNAShape',
     'createMRNAShape',
     'createCommentShape',
-    'createJaggedTrianglePath',
-    'createJaggedArrowPath',
+    'traceStandardGeneShape',
     'createJaggedPromoterPath',
     'createJaggedTerminatorPath',
     'createJaggedRegulatoryPath',
@@ -66,7 +79,6 @@ describe('GeneShapeCreators Module', () => {
     'createJaggedRNAPath',
     'createJaggedCommentPath',
     'createSVGGeneText',
-    'updateSVGTextForResize',
     'addSVGGeneInteraction',
   ];
 
@@ -95,9 +107,9 @@ describe('GeneShapeCreators Module', () => {
       expect(trContent.includes('GeneShapeCreators')).toBe(true);
     });
 
-    it('should no longer define createJaggedTrianglePath inline', () => {
-      // After extraction, this should only appear as GeneShapeCreators.createJaggedTrianglePath
-      const inlineDefCount = (trContent.match(/(?<!GeneShapeCreators\.)(createJaggedTrianglePath)\s*\(/g) || []).length;
+    it('should no longer define traceStandardGeneShape inline', () => {
+      // After extraction, this should only appear as GeneShapeCreators.traceStandardGeneShape
+      const inlineDefCount = (trContent.match(/(?<!GeneShapeCreators\.)(traceStandardGeneShape)\s*\(/g) || []).length;
       expect(inlineDefCount).toBe(0);
     });
   });

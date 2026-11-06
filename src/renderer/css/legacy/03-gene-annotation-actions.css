@@ -415,15 +415,6 @@ path.svg-gene-element.selected.border-highlight text {
   font-variant: normal;
 }
 
-.genes-svg-container text[data-resize-protected='true'] {
-  vector-effect: non-scaling-stroke !important;
-  transform: scale(1, 1) !important;
-  transform-origin: center center !important;
-  font-stretch: normal !important;
-  white-space: nowrap !important;
-  text-rendering: geometricPrecision !important;
-}
-
 .genes-svg-container,
 .reads-svg-container {
   shape-rendering: optimizeSpeed;

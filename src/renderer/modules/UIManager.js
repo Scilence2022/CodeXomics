@@ -1731,17 +1731,6 @@ class UIManager {
     // Re-render the gene track with proper SVG dimensions
     this.genomeBrowser.trackRenderer.renderGeneElements(trackContent, visibleGenes, viewport, operons, geneSettings);
 
-    // Update SVG text elements to handle the new container width properly
-    const svgContainer = trackContent.querySelector('.genes-svg-container');
-    if (svgContainer) {
-      // Force layout recalculation to get accurate width
-      trackContent.style.width = '100%';
-      const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
-
-      // Update text elements for proper sizing after resize
-      this.genomeBrowser.trackRenderer.updateSVGTextForResize(svgContainer, containerWidth);
-    }
-
     console.log('🧬 Gene track SVG refreshed with', visibleGenes.length, 'genes');
   }
 
