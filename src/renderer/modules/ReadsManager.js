@@ -13,7 +13,7 @@ class ReadsManager {
     this.regionSize = 50000; // Size of each cached region (50kb)
     this.currentFile = null;
     this.isStreaming = false;
-    this.sourceGeneration = 0;
+    this.sourceController = new AbortController();
 
     // Statistics
     this.stats = {
@@ -24,11 +24,16 @@ class ReadsManager {
     };
   }
 
+  changeReadSource() {
+    this.sourceController.abort();
+    this.sourceController = new AbortController();
+  }
+
   /**
    * Initialize reads manager with SAM file data
    */
   async initializeWithSAMData(fileData, filePath) {
-    this.sourceGeneration++;
+    this.changeReadSource();
     this.rawReadsData = fileData;
     this.currentFile = filePath;
     this.isStreaming = false;
@@ -105,23 +110,25 @@ class ReadsManager {
     this.stats.cacheMisses++;
 
     // Use appropriate loading method based on mode
-    const sourceGeneration = this.sourceGeneration;
+    const { signal } = this.sourceController;
     let reads;
-    if (this.isBamMode && this.bamReader) {
-      // Use BAM reader for binary BAM files - pass sampling settings to BAM loading
-      reads = await this.loadReadsForRegionBAM(chromosome, start, end, settings);
-    } else if (this.isStreaming) {
-      // Use streaming mode for very large files
-      reads = await this.loadReadsForRegionStream(chromosome, start, end, settings);
-    } else {
-      // Use in-memory mode for normal files
-      reads = await this.loadReadsForRegion(chromosome, start, end, settings);
+    try {
+      if (this.isBamMode && this.bamReader) {
+        // Use BAM reader for binary BAM files - pass sampling settings to BAM loading
+        reads = await this.loadReadsForRegionBAM(chromosome, start, end, settings);
+      } else if (this.isStreaming) {
+        reads = await this.loadReadsForRegionStream(chromosome, start, end, settings, signal);
+      } else {
+        reads = await this.loadReadsForRegion(chromosome, start, end, settings, signal);
+      }
+    } catch (error) {
+      if (signal.aborted) return [];
+      throw error;
     }
 
+    if (signal.aborted) return [];
     // Apply sampling if enabled and threshold is exceeded
     const sampledReads = this.applySampling(reads, settings);
-
-    if (sourceGeneration !== this.sourceGeneration) return [];
     this.cacheRegion(regionKey, reads);
 
     console.log(
@@ -246,7 +253,7 @@ class ReadsManager {
   /**
    * Load reads for a specific region from the raw SAM data
    */
-  async loadReadsForRegion(chromosome, start, end, settings = {}) {
+  async loadReadsForRegion(chromosome, start, end, settings = {}, signal) {
     const { SamRegion } =
       typeof module !== 'undefined' && module.exports ? require('../../shared/alignment-depth') : window.alignmentDepth;
     const sourceStart = this.getSamSourceStart(start, settings);
@@ -259,7 +266,10 @@ class ReadsManager {
       const lineEnd = newline < 0 ? text.length : newline;
       region.addLine(text.slice(cursor, lineEnd));
       cursor = lineEnd + 1;
-      if (++lines % 10000 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+      if (++lines % 10000 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        signal?.throwIfAborted();
+      }
     }
     this.stats.loadedRegions++;
     return this.readsFromSamResult(region.summarize());
@@ -394,7 +404,7 @@ class ReadsManager {
    * Dispose of resources
    */
   dispose() {
-    this.sourceGeneration++;
+    this.changeReadSource();
     this.rawReadsData = null;
     this.cache.clear();
     this.currentFile = null;
@@ -408,7 +418,7 @@ class ReadsManager {
    * This method processes SAM data in chunks to avoid memory issues
    */
   async initializeWithStreamingSAM(filePath) {
-    this.sourceGeneration++;
+    this.changeReadSource();
     this.currentFile = filePath;
     this.cache.clear();
     this.stats.totalReads = 0;
@@ -428,7 +438,7 @@ class ReadsManager {
    * This method uses the BamReader to handle binary BAM files efficiently
    */
   async initializeWithBAMReader(bamReader) {
-    this.sourceGeneration++;
+    this.changeReadSource();
     this.bamReader = bamReader;
     this.currentFile = bamReader.filePath;
     this.cache.clear();
@@ -582,17 +592,30 @@ class ReadsManager {
   /**
    * Load reads for a specific region using file streaming (for very large files)
    */
-  async loadReadsForRegionStream(chromosome, start, end, settings = {}) {
+  async loadReadsForRegionStream(chromosome, start, end, settings = {}, signal) {
     if (!this.currentFile) throw new Error('No SAM file loaded for streaming');
-    const result = await window.electronAPI.getSamReadsForRange(
-      this.currentFile,
-      chromosome,
-      this.getSamSourceStart(start, settings),
-      end,
-      settings
-    );
-    this.stats.loadedRegions++;
-    return this.readsFromSamResult(result);
+    const api = window.electronAPI;
+    const requestId = globalThis.crypto.randomUUID();
+    const cancel = () => {
+      api.cancelSamRegionQuery(requestId).catch(error => console.warn('Could not cancel the SAM query:', error));
+    };
+    signal?.throwIfAborted();
+    signal?.addEventListener('abort', cancel, { once: true });
+    try {
+      const result = await api.getSamReadsForRange(
+        this.currentFile,
+        chromosome,
+        this.getSamSourceStart(start, settings),
+        end,
+        settings,
+        requestId
+      );
+      signal?.throwIfAborted();
+      this.stats.loadedRegions++;
+      return this.readsFromSamResult(result);
+    } finally {
+      signal?.removeEventListener('abort', cancel);
+    }
   }
 }
 
