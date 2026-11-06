@@ -910,20 +910,38 @@ class BamReader {
    * @private
    */
 
+  async queryBackend(method, args, querySignal) {
+    const backend = window.electronAPI.bamReader;
+    const backendId = this.backendId;
+    if (!querySignal) return backend[method](backendId, ...args);
+    querySignal.throwIfAborted();
+    const requestId = globalThis.crypto.randomUUID();
+    const cancel = () => {
+      backend.cancelRangeQuery(backendId, requestId).catch(() => {
+        // Reset may already have disposed of this backend and cancelled its queries.
+      });
+    };
+    querySignal.addEventListener('abort', cancel, { once: true });
+    try {
+      return await backend[method](backendId, ...args, requestId);
+    } finally {
+      querySignal.removeEventListener('abort', cancel);
+    }
+  }
+
   /**
    * Accumulate aligned bases in viewport bins without converting or sampling
    * the records used for the reads display. All coordinates are half-open.
    */
-  async getDepthForRange(chromosome, start, end, viewport, settings = {}) {
-    const { signal } = this.queryController;
+  async getDepthForRange(chromosome, start, end, viewport, settings = {}, querySignal) {
+    const sourceSignal = this.queryController.signal;
+    const signal = querySignal ? AbortSignal.any([sourceSignal, querySignal]) : sourceSignal;
+    signal.throwIfAborted();
     if (this.usesIpcBackend) {
-      const depth = await window.electronAPI.bamReader.getDepthForRange(
-        this.backendId,
-        chromosome,
-        start,
-        end,
-        viewport,
-        settings
+      const depth = await this.queryBackend(
+        'getDepthForRange',
+        [chromosome, start, end, viewport, settings],
+        querySignal
       );
       signal.throwIfAborted();
       return depth;
@@ -967,20 +985,16 @@ class BamReader {
    * @param {Object} settings - Optional settings including ignoreChromosome
    * @returns {Promise<Array>} Array of BAM records
    */
-  async getRecordsForRange(chromosome, start, end, settings = {}) {
-    const { signal } = this.queryController;
+  async getRecordsForRange(chromosome, start, end, settings = {}, querySignal) {
+    const sourceSignal = this.queryController.signal;
+    const signal = querySignal ? AbortSignal.any([sourceSignal, querySignal]) : sourceSignal;
+    signal.throwIfAborted();
     if (this.usesIpcBackend) {
       if (!this.backendId) {
         throw new Error('BAM reader not initialized. Call initialize() first.');
       }
 
-      const result = await window.electronAPI.bamReader.getRecordsForRange(
-        this.backendId,
-        chromosome,
-        start,
-        end,
-        settings
-      );
+      const result = await this.queryBackend('getRecordsForRange', [chromosome, start, end, settings], querySignal);
       signal.throwIfAborted();
       this.applyBackendState(result.state);
       const reads = result.reads || [];

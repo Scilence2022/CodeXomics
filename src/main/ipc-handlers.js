@@ -640,6 +640,7 @@ function registerIpcHandlers(deps) {
   } = deps;
   const bamReaders = new Map();
   const bamReaderOwners = new WeakSet();
+  const bamRangeQueries = new WeakMap();
   const samQueriesBySender = new WeakMap();
   const getMainGenomeTarget = () =>
     (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow || null;
@@ -667,6 +668,26 @@ function registerIpcHandlers(deps) {
       throw new Error('BAM reader is not available for this window');
     }
     return entry.reader;
+  };
+
+  const runBamRangeQuery = async (event, readerId, requestId, operation) => {
+    const reader = getOwnedBamReader(event, readerId);
+    if (requestId === undefined) return operation(reader);
+    if (typeof requestId !== 'string' || !/^[a-f0-9-]{36}$/.test(requestId)) {
+      throw new Error('Invalid BAM query identifier');
+    }
+    const queries = bamRangeQueries.get(reader);
+    if (queries.has(requestId)) throw new Error('A BAM query already has this identifier');
+    const controller = new AbortController();
+    queries.set(requestId, controller);
+    try {
+      return await operation(reader, controller.signal);
+    } catch (error) {
+      if (controller.signal.aborted) return null;
+      throw error;
+    } finally {
+      queries.delete(requestId);
+    }
   };
 
   const resolveGeneResearchReportPath = (geneSymbol, options = {}) => {
@@ -2549,6 +2570,7 @@ function registerIpcHandlers(deps) {
         reader,
         ownerWebContentsId,
       });
+      bamRangeQueries.set(reader, new Map());
 
       if (!bamReaderOwners.has(sender)) {
         bamReaderOwners.add(sender);
@@ -2582,28 +2604,33 @@ function registerIpcHandlers(deps) {
     }
   });
 
-  ipcMain.handle('bam-reader:get-records-for-range', async (event, readerId, chromosome, start, end, settings = {}) => {
-    try {
-      const reader = getOwnedBamReader(event, readerId);
-      const reads = await reader.getRecordsForRange(chromosome, start, end, settings);
-      return toIpcSafeValue({
-        reads: toIpcSafeValue(reads),
-        sourceSamplingInfo: reads._sourceSamplingInfo || null,
-        state: getBamReaderState(reader),
+  ipcMain.handle(
+    'bam-reader:get-records-for-range',
+    (event, readerId, chromosome, start, end, settings = {}, requestId) => {
+      return runBamRangeQuery(event, readerId, requestId, async (reader, signal) => {
+        const reads = await reader.getRecordsForRange(chromosome, start, end, settings, signal);
+        signal?.throwIfAborted();
+        return toIpcSafeValue({
+          reads: toIpcSafeValue(reads),
+          sourceSamplingInfo: reads._sourceSamplingInfo || null,
+          state: getBamReaderState(reader),
+        });
       });
-    } catch (error) {
-      console.error('Failed to query BAM reader:', error);
-      throw new Error(`Failed to query BAM reader: ${error.message}`);
     }
-  });
+  );
 
   ipcMain.handle(
     'bam-reader:get-depth-for-range',
-    async (event, readerId, chromosome, start, end, viewport, settings = {}) => {
-      const reader = getOwnedBamReader(event, readerId);
-      return reader.getDepthForRange(chromosome, start, end, viewport, settings);
-    }
+    (event, readerId, chromosome, start, end, viewport, settings = {}, requestId) =>
+      runBamRangeQuery(event, readerId, requestId, (reader, signal) =>
+        reader.getDepthForRange(chromosome, start, end, viewport, settings, signal)
+      )
   );
+
+  ipcMain.handle('bam-reader:cancel-range-query', (event, readerId, requestId) => {
+    const reader = getOwnedBamReader(event, readerId);
+    bamRangeQueries.get(reader).get(requestId)?.abort();
+  });
 
   ipcMain.handle('bam-reader:destroy', async (event, readerId) => {
     try {

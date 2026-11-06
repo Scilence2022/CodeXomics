@@ -79,6 +79,36 @@ describe('BAM alignment depth', () => {
     expect(reader.isInitialized).toBe(false);
   });
 
+  it('aborts one BAM scan without resetting the reader or cancelling another range', async () => {
+    const reader = createReader();
+    const superseded = new AbortController();
+    const viewport = { start: 0, end: 16 };
+    const originalStream = reader.bamFile.streamRecordsForRange;
+    let entered;
+    const scanStarted = new Promise(resolve => {
+      entered = resolve;
+    });
+    reader.bamFile.streamRecordsForRange = async function* (reference, start, end, options) {
+      if (start === 0) {
+        await new Promise((_, reject) => {
+          options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true });
+          entered();
+        });
+      }
+      yield* originalStream(reference, start, end, options);
+    };
+    const previous = reader.getDepthForRange('chr1', 0, 16, viewport, settings, superseded.signal);
+    await scanStarted;
+    const current = reader.getDepthForRange('chr1', 1, 16, viewport, settings);
+    superseded.abort();
+    await expect(previous).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(current).resolves.toEqual({
+      binSize: 1,
+      alignedBases: [0, 1, 1, 1, 1, 2, 2, 1, 0, 0, 1, 1, 1, 0, 0, 0],
+    });
+    expect(reader.isInitialized).toBe(true);
+  });
+
   it('releases a remote BAM initialization that completed after reset', async () => {
     const reader = new BamReader();
     let finish;

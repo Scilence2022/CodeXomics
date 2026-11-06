@@ -772,7 +772,7 @@ class TrackRenderer {
     return adjustedRead;
   }
 
-  async getReadsForViewport(chromosome, viewport, settings = {}, bamFile = null) {
+  async getReadsForViewport(chromosome, viewport, settings = {}, bamFile = null, signal) {
     viewport = { ...viewport, start: Math.floor(viewport.start), end: Math.ceil(viewport.end) };
     const sequenceLength = this.getSequenceLength(chromosome);
 
@@ -786,7 +786,7 @@ class TrackRenderer {
       if (bamFile?.reader) {
         const bamStart = Math.max(0, viewport.start);
         const bamEnd = Math.max(bamStart + 1, viewport.end);
-        return await bamFile.reader.getRecordsForRange(chromosome, bamStart, bamEnd, settings);
+        return await bamFile.reader.getRecordsForRange(chromosome, bamStart, bamEnd, settings, signal);
       }
 
       return await this.genomeBrowser.readsManager.getReadsForRegion(
@@ -810,7 +810,7 @@ class TrackRenderer {
 
       let segmentReads;
       if (bamFile?.reader) {
-        segmentReads = await bamFile.reader.getRecordsForRange(chromosome, sourceStart, sourceEnd, settings);
+        segmentReads = await bamFile.reader.getRecordsForRange(chromosome, sourceStart, sourceEnd, settings, signal);
       } else {
         segmentReads = await this.genomeBrowser.readsManager.getReadsForRegion(
           chromosome,
@@ -4683,7 +4683,7 @@ class TrackRenderer {
   /**
    * Create single reads track content without header (for zoom updates)
    */
-  async createSingleReadsTrackContent(chromosome, bamFile, viewport = null) {
+  async createSingleReadsTrackContent(chromosome, bamFile, viewport = null, signal) {
     viewport = viewport || this.getCurrentViewport();
 
     // Create track content
@@ -4720,8 +4720,10 @@ class TrackRenderer {
         availableReferences: bamFile.reader.references?.slice(0, 5).map(ref => ref.name) || [],
       });
 
-      const reads = await this.getReadsForViewport(chromosome, viewport, settings, bamFile);
-      const depth = await this.getBamDepthForViewport(chromosome, viewport, settings, bamFile);
+      const reads = await this.getReadsForViewport(chromosome, viewport, settings, bamFile, signal);
+      signal?.throwIfAborted();
+      const depth = await this.getBamDepthForViewport(chromosome, viewport, settings, bamFile, signal);
+      signal?.throwIfAborted();
 
       console.log(`📊 [TrackRenderer] BAM query result (content only):`, {
         readsFound: reads.length,
@@ -4844,6 +4846,7 @@ class TrackRenderer {
         trackContent.appendChild(statsElement);
       }
     } catch (error) {
+      if (signal?.aborted) return null;
       console.error('🔍 [TrackRenderer] Error creating reads track content:', error);
 
       // Show error message

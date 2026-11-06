@@ -4111,6 +4111,7 @@ class GenomeBrowser {
     this._isRenderingView = true;
 
     try {
+      this.navigationManager?.cancelAlignedReadsRedraw();
       // Create EcoCyc-like studio view
       const container = document.getElementById('genomeViewer');
 

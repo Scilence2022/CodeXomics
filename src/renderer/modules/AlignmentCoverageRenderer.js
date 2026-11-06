@@ -4,7 +4,7 @@ class AlignmentCoverageRenderer {
     this.trackRenderer = trackRenderer;
   }
 
-  async getBamDepthForViewport(chromosome, viewport, settings, bamFile) {
+  async getBamDepthForViewport(chromosome, viewport, settings, bamFile, signal) {
     if (!this.trackRenderer.isReadsComponentVisible(settings, 'showCoverage', 'readsCoverage')) return null;
     viewport = { ...viewport, start: Math.floor(viewport.start), end: Math.ceil(viewport.end) };
     const { reader } = bamFile;
@@ -27,7 +27,8 @@ class AlignmentCoverageRenderer {
           sourceStart,
           sourceEnd,
           { start: viewport.start, end: viewport.end, offset: displayStart - sourceStart },
-          settings
+          settings,
+          signal
         );
         if (!depth) {
           depth = segment;
@@ -39,6 +40,7 @@ class AlignmentCoverageRenderer {
       }
       return depth;
     } catch (error) {
+      signal?.throwIfAborted();
       console.warn('Could not load BAM alignment depth:', error.message);
       return null;
     }

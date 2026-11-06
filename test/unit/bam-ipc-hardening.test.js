@@ -19,7 +19,7 @@ describe('BAM IPC hardening', () => {
   it('returns only IPC-safe BAM initialization data from main process handlers', () => {
     const source = fs.readFileSync(IPC_HANDLERS, 'utf8');
     const handlerStart = source.indexOf("ipcMain.handle('bam-reader:initialize'");
-    const handlerEnd = source.indexOf("ipcMain.handle('bam-reader:get-records-for-range'", handlerStart);
+    const handlerEnd = source.indexOf("'bam-reader:get-records-for-range'", handlerStart);
     const handler = source.slice(handlerStart, handlerEnd);
 
     expect(handler).toContain('const state = getBamReaderState(reader)');
@@ -29,7 +29,7 @@ describe('BAM IPC hardening', () => {
 
   it('sanitizes queried BAM reads and state before IPC serialization', () => {
     const source = fs.readFileSync(IPC_HANDLERS, 'utf8');
-    const handlerStart = source.indexOf("ipcMain.handle('bam-reader:get-records-for-range'");
+    const handlerStart = source.indexOf("'bam-reader:get-records-for-range'");
     const handlerEnd = source.indexOf("ipcMain.handle('bam-reader:destroy'", handlerStart);
     const handler = source.slice(handlerStart, handlerEnd);
 
