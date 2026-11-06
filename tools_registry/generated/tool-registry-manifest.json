@@ -1,17 +1,17 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-11-04T08:40:57.895Z",
-  "registryHash": "3867b790c98f68fcb69c021097610e3ec358d0f1ac5032c09f8aafe89a08acde",
+  "generatedAt": "2026-11-06T06:05:08.997Z",
+  "registryHash": "ab54d12b0f2b8e208ed6f11b2606c33d91c8fb5acfeaacb01c6b7e63698d450f",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 213,
-    "appTools": 213,
+    "tools": 214,
+    "appTools": 214,
     "userTools": 0,
-    "uniqueTools": 213,
+    "uniqueTools": 214,
     "categories": 18,
     "builtInTools": 181,
     "diagnostics": 0
@@ -116,7 +116,7 @@
           "operon_analysis",
           "autonomous_curation"
         ],
-        "tools_count": 24
+        "tools_count": 30
       },
       "file_operations": {
         "name": "File Operations",
@@ -1027,6 +1027,66 @@
       "builtin": {
         "name": "edit_annotation",
         "method": "editAnnotation",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "find_intergenic_regions",
+      "version": "1.0.0",
+      "description": "Find coordinate-ordered gaps between annotated gene and CDS spans on one chromosome. Returns 1-based inclusive coordinates for internal gaps only, excluding chromosome ends and gaps across a circular origin. Flanking gene names are reported in coordinate order.",
+      "category": "annotation",
+      "subcategory": "annotation_search",
+      "keywords": [
+        "intergenic",
+        "between genes",
+        "intergenic regions",
+        "gene gaps"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome or contig to query. Defaults to the currently selected chromosome."
+          },
+          "minLength": {
+            "type": "integer",
+            "description": "Minimum gap length in base pairs.",
+            "minimum": 1,
+            "default": 100
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Find intergenic regions of at least 150 bp on the current chromosome.",
+          "tool_call": "find_intergenic_regions(minLength=150)",
+          "expected_result": "Total count and combined length of qualifying gaps, with details for the first 20."
+        }
+      ],
+      "source": "app_registry",
+      "sourceFile": "annotation/find_intergenic_regions.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "findIntergenicRegions"
+      },
+      "priority": 1,
+      "builtin": {
+        "name": "find_intergenic_regions",
+        "method": "findIntergenicRegions",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,
@@ -27704,6 +27764,66 @@
       "builtin": {
         "name": "edit_annotation",
         "method": "editAnnotation",
+        "category": "annotation",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "find_intergenic_regions": {
+      "name": "find_intergenic_regions",
+      "version": "1.0.0",
+      "description": "Find coordinate-ordered gaps between annotated gene and CDS spans on one chromosome. Returns 1-based inclusive coordinates for internal gaps only, excluding chromosome ends and gaps across a circular origin. Flanking gene names are reported in coordinate order.",
+      "category": "annotation",
+      "subcategory": "annotation_search",
+      "keywords": [
+        "intergenic",
+        "between genes",
+        "intergenic regions",
+        "gene gaps"
+      ],
+      "execution": {
+        "type": "client-side",
+        "requires_data": true
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chromosome": {
+            "type": "string",
+            "description": "Chromosome or contig to query. Defaults to the currently selected chromosome."
+          },
+          "minLength": {
+            "type": "integer",
+            "description": "Minimum gap length in base pairs.",
+            "minimum": 1,
+            "default": 100
+          }
+        },
+        "required": []
+      },
+      "sample_usages": [
+        {
+          "user_query": "Find intergenic regions of at least 150 bp on the current chromosome.",
+          "tool_call": "find_intergenic_regions(minLength=150)",
+          "expected_result": "Total count and combined length of qualifying gaps, with details for the first 20."
+        }
+      ],
+      "source": "app_registry",
+      "sourceFile": "annotation/find_intergenic_regions.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "findIntergenicRegions"
+      },
+      "priority": 1,
+      "builtin": {
+        "name": "find_intergenic_regions",
+        "method": "findIntergenicRegions",
         "category": "annotation",
         "type": "built-in",
         "priority": 1,

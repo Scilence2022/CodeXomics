@@ -642,23 +642,55 @@ class MicrobeGenomicsFunctions {
     const gb = window.genomeBrowser;
     if (!gb || !gb.currentAnnotations[chromosome]) return [];
 
-    const genes = gb.currentAnnotations[chromosome]
-      .filter(f => f.type === 'CDS' || f.type === 'gene')
-      .sort((a, b) => a.start - b.start);
+    return this.collectIntergenicGaps(gb.currentAnnotations[chromosome], minLength).map(({ start, end, length }) => ({
+      chromosome,
+      start,
+      end,
+      length,
+    }));
+  }
 
-    const intergenic = [];
-    for (let i = 0; i < genes.length - 1; i++) {
-      const gap = genes[i + 1].start - genes[i].end - 1;
-      if (gap >= minLength) {
-        intergenic.push({
-          chromosome: chromosome,
-          start: genes[i].end + 1,
-          end: genes[i + 1].start - 1,
-          length: gap,
+  static collectIntergenicGaps(annotations, minLength) {
+    const genes = [];
+    for (const feature of annotations) {
+      if (feature?.type !== 'CDS' && feature?.type !== 'gene') continue;
+      let start = Number(feature.start);
+      let end = Number(feature.end);
+      if (feature.genbankLocalSegments) {
+        start = Infinity;
+        end = -Infinity;
+        for (const segment of feature.genbankLocalSegments) {
+          start = Math.min(start, segment.start);
+          end = Math.max(end, segment.end);
+        }
+      } else if (feature.genbankLocationSpan && feature.genbankLocationBounds) {
+        const offset = start - feature.genbankLocationBounds[0];
+        start = feature.genbankLocationSpan[0] + offset;
+        end = feature.genbankLocationSpan[1] + offset;
+      }
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start) continue;
+      genes.push({ start, end, name: feature.qualifiers?.gene || feature.qualifiers?.locus_tag || 'Unknown' });
+    }
+    genes.sort((a, b) => a.start - b.start || b.end - a.end);
+
+    const gaps = [];
+    let left = genes[0];
+    for (let index = 1; index < genes.length; index++) {
+      const right = genes[index];
+      const length = right.start - left.end - 1;
+      if (length > 0 && length >= minLength) {
+        gaps.push({
+          start: left.end + 1,
+          end: right.start - 1,
+          length,
+          upstreamGene: left.name,
+          downstreamGene: right.name,
         });
       }
+      // A nested feature must not move the occupied boundary backwards.
+      if (right.end > left.end) left = right;
     }
-    return intergenic;
+    return gaps;
   }
 
   /* --------------------------------------------------------- */

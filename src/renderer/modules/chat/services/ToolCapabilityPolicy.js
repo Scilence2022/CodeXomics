@@ -258,6 +258,7 @@ class ToolCapabilityPolicy {
           'get_track_status',
           'get_annotation',
           'list_annotations',
+          'find_intergenic_regions',
           'search_annotations',
           'assess_annotation_quality',
           'list_annotation_quality_candidates',

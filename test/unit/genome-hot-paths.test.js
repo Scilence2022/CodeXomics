@@ -5,7 +5,46 @@ const require = createRequire(import.meta.url);
 const TrackRenderer = require('../../src/renderer/modules/TrackRenderer.js');
 const UnifiedSequenceProcessing = require('../../src/renderer/modules/UnifiedSequenceProcessing.js');
 const MicrobeGenomicsFunctions = require('../../src/renderer/modules/MicrobeGenomicsFunctions.js');
+const ChatManager = require('../../src/renderer/modules/ChatManager.js');
 const PrimerDesigner = require('../../src/renderer/modules/PrimerDesigner.js');
+
+describe('intergenic annotation gaps', () => {
+  it('keeps the occupied boundary through nested features and ignores remote-only coordinates', async () => {
+    const annotations = [
+      { type: 'gene', start: 50, end: 55, qualifiers: { gene: 'nested' } },
+      { type: 'gene', start: 10, end: 100, qualifiers: { gene: 'left' } },
+      { type: 'CDS', start: 70, end: 80 },
+      {
+        type: 'CDS',
+        start: 1000,
+        end: 1300,
+        genbankLocalSegments: [{ start: 111, end: 130 }],
+        qualifiers: { locus_tag: 'right' },
+      },
+      { type: 'gene', start: 104, end: 109, genbankLocalSegments: [] },
+    ];
+    const app = { currentChromosome: 'chr1', currentAnnotations: { chr1: annotations } };
+    const result = await ChatManager.prototype.findIntergenicRegions.call({ app }, { minLength: 10 });
+    expect(result).toEqual({
+      chromosome: 'chr1',
+      minLength: 10,
+      regionsFound: 1,
+      totalIntergenicLength: 10,
+      regions: [{ start: 101, end: 110, length: 10, upstreamGene: 'left', downstreamGene: 'right' }],
+    });
+    expect(annotations[0].start).toBe(50);
+  });
+
+  it('uses the full compound envelope when a legacy annotation stores a shorter primary interval', () => {
+    const features = [
+      { type: 'gene', start: 20, end: 40, genbankLocationBounds: [15, 35, 1], genbankLocationSpan: [15, 90] },
+      { type: 'CDS', start: 101, end: 110 },
+    ];
+    expect(MicrobeGenomicsFunctions.collectIntergenicGaps(features, 1)).toMatchObject([
+      { start: 96, end: 100, length: 5 },
+    ]);
+  });
+});
 
 describe('genome track calculations', () => {
   const renderer = new TrackRenderer({});
