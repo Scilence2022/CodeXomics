@@ -948,7 +948,11 @@ class GenomeNavigationBar {
 
     this.rulerModeToggle.innerHTML = `<i class="fas ${current.icon}"></i>`;
     this.rulerModeToggle.dataset.mode = this.rulerDisplayMode;
-    this.rulerModeToggle.title = `Rulers: ${current.label} (${current.detail}). Click for ${next.label}.`;
-    this.rulerModeToggle.setAttribute('aria-label', this.rulerModeToggle.title);
+    // Same hint contract as TrackRenderer.setTrackControlHint: data-tooltip
+    // drives the styled hint, title stays as the native fallback.
+    const hint = `Rulers: ${current.label} (${current.detail}). Click for ${next.label}.`;
+    this.rulerModeToggle.title = hint;
+    this.rulerModeToggle.dataset.tooltip = hint;
+    this.rulerModeToggle.setAttribute('aria-label', hint);
   }
 }

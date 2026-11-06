@@ -520,7 +520,8 @@
 /* Consistent functional hints for every track-title-bar control. Native
  * `title` attributes remain in the markup as a fallback; this layer makes the
  * hint immediate and visually consistent in Electron and across themes. */
-.track-btn[data-tooltip]::after {
+.track-btn[data-tooltip]::after,
+.ruler-mode-toggle-btn[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   top: calc(100% + 7px);
@@ -550,7 +551,9 @@
 }
 
 .track-btn[data-tooltip]:hover::after,
-.track-btn[data-tooltip]:focus-visible::after {
+.track-btn[data-tooltip]:focus-visible::after,
+.ruler-mode-toggle-btn[data-tooltip]:hover::after,
+.ruler-mode-toggle-btn[data-tooltip]:focus-visible::after {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
@@ -574,6 +577,28 @@
 .floating-header-btn[data-tooltip]:hover::after,
 .floating-header-btn[data-tooltip]:focus-visible::after {
   transform: translateY(0);
+}
+
+/* The ruler controls sit at the right end of short bars: tracks start right
+ * below the coordinate ruler, and the overview ruler clips its overflow. Their
+ * hints therefore open to the left, inside their own bar, instead of dropping
+ * under the next track or past the window edge. */
+.coordinate-ruler-selection-btn[data-tooltip]::after,
+.ruler-mode-toggle-btn[data-tooltip]::after {
+  top: 50%;
+  right: calc(100% + 8px);
+  left: auto;
+  max-width: none;
+  padding: 4px 8px;
+  white-space: nowrap;
+  transform: translate(4px, -50%);
+}
+
+.coordinate-ruler-selection-btn[data-tooltip]:hover::after,
+.coordinate-ruler-selection-btn[data-tooltip]:focus-visible::after,
+.ruler-mode-toggle-btn[data-tooltip]:hover::after,
+.ruler-mode-toggle-btn[data-tooltip]:focus-visible::after {
+  transform: translate(0, -50%);
 }
 
 .track-btn:hover {

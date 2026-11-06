@@ -90,6 +90,15 @@ describe('GenomeNavigationBar ruler display mode', () => {
     expect(toggles()[0].dataset.mode).toBe('compact');
   });
 
+  it('gives the mode control a styled hint naming the current and next mode', () => {
+    const toggle = toggles()[0];
+    expect(toggle.dataset.tooltip).toBe('Rulers: Compact (slim overview and coordinate ruler). Click for Minimal.');
+    expect(toggle.getAttribute('aria-label')).toBe(toggle.dataset.tooltip);
+
+    toggle.click();
+    expect(toggle.dataset.tooltip).toContain('Rulers: Minimal');
+  });
+
   it('has no sequence selection mode on the overview ruler', () => {
     expect(navigationBar.selectionMode).toBeUndefined();
     expect(typeof GenomeNavigationBar.prototype.applySequenceSelection).toBe('undefined');
