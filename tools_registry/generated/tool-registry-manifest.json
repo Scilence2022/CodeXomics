@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-11-06T07:00:49.509Z",
-  "registryHash": "78cf095e9db471a74a972e58e1b753c72aeb47df2665e2ca78d254c1a989b8f6",
+  "generatedAt": "2026-11-06T14:38:54.627Z",
+  "registryHash": "c5d1dd5463fdd3b0fc0d991c4ed1f9106d3d6f5b9292ab76eb09d32e1e8d6e74",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -26802,6 +26802,9 @@
     },
     {
       "name": "download_internet_file",
+      "aliases": [
+        "utility_download_internet_file"
+      ],
       "version": "1.0.0",
       "description": "Download a file from the internet (URL) to a local path. Useful for downloading reports, data files, images, or any other files accessible via HTTP/HTTPS URLs.",
       "category": "utility",
@@ -26832,7 +26835,7 @@
           },
           "destinationPath": {
             "type": "string",
-            "description": "The local directory path where the file should be saved. If not provided, defaults to the system Downloads folder.",
+            "description": "The local directory path where the file should be saved. Defaults to the current working directory.",
             "required": false
           },
           "filename": {
@@ -26850,7 +26853,7 @@
           "user_query": "Download the genome file from https://example.com/genome.fasta",
           "tool_call": "download_internet_file(url='https://example.com/genome.fasta')",
           "thought": "User wants to download a file from a URL. The download_internet_file tool is perfect for this.",
-          "expected_result": "The genome.fasta file is downloaded to the Downloads folder"
+          "expected_result": "The genome.fasta file is downloaded to the current working directory"
         },
         {
           "user_query": "Save the report from this URL to my project folder: https://server.com/research_report.md",
@@ -53542,6 +53545,9 @@
     },
     "download_internet_file": {
       "name": "download_internet_file",
+      "aliases": [
+        "utility_download_internet_file"
+      ],
       "version": "1.0.0",
       "description": "Download a file from the internet (URL) to a local path. Useful for downloading reports, data files, images, or any other files accessible via HTTP/HTTPS URLs.",
       "category": "utility",
@@ -53572,7 +53578,7 @@
           },
           "destinationPath": {
             "type": "string",
-            "description": "The local directory path where the file should be saved. If not provided, defaults to the system Downloads folder.",
+            "description": "The local directory path where the file should be saved. Defaults to the current working directory.",
             "required": false
           },
           "filename": {
@@ -53590,7 +53596,7 @@
           "user_query": "Download the genome file from https://example.com/genome.fasta",
           "tool_call": "download_internet_file(url='https://example.com/genome.fasta')",
           "thought": "User wants to download a file from a URL. The download_internet_file tool is perfect for this.",
-          "expected_result": "The genome.fasta file is downloaded to the Downloads folder"
+          "expected_result": "The genome.fasta file is downloaded to the current working directory"
         },
         {
           "user_query": "Save the report from this URL to my project folder: https://server.com/research_report.md",
@@ -57409,7 +57415,8 @@
     "change_directory": "set_working_directory",
     "cd": "set_working_directory",
     "set_dir": "set_working_directory",
-    "change_working_dir": "set_working_directory"
+    "change_working_dir": "set_working_directory",
+    "utility_download_internet_file": "download_internet_file"
   },
   "diagnostics": []
 }

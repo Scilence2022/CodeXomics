@@ -25,7 +25,7 @@ class UtilityTools {
             destinationPath: {
               type: 'string',
               description:
-                'Local directory path where the file should be saved. If not provided, saves to the current workspace downloads folder.',
+                'The local directory path where the file should be saved. Defaults to the current working directory.',
             },
             filename: {
               type: 'string',

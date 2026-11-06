@@ -21,6 +21,9 @@ describe('tool registry consistency validation', () => {
     expect(collectLlmPolicyNames()).toContain('load_genome_file');
     expect(collectLlmPolicyNames().length).toBeGreaterThan(190);
     expect(report.comparisons['LLMContextService.shouldAllowToolExecution'].staleExceptions).toEqual([]);
+    expect(report.comparisons['LLMContextService.shouldAllowToolExecution'].allowedExceptions).not.toContain(
+      'utility_download_internet_file'
+    );
     expect(report.counts.registryTools).toBeGreaterThanOrEqual(178);
     expect(report.comparisons['ToolNames.js'].allowedExceptions).toEqual(KNOWN_EXCEPTIONS.toolNamesMissingRegistry);
     expect(report.comparisons['src/mcp-tools schemas'].allowedExceptions).toEqual(KNOWN_EXCEPTIONS.mcpMissingRegistry);
@@ -51,5 +54,21 @@ describe('tool registry consistency validation', () => {
       expect.objectContaining({ alias: 'chained', message: expect.stringContaining('missing') }),
       expect.objectContaining({ alias: 'constructor', message: expect.stringContaining('Invalid') }),
     ]);
+  });
+
+  it('publishes the same download destination contract through the registry and MCP', () => {
+    const UtilityTools = require('../../src/mcp-tools/utility/UtilityTools');
+    const ToolExecutionService = require('../../src/renderer/modules/chat/services/ToolExecutionService');
+    const manifest = require('../../tools_registry/generated/tool-registry-manifest.json');
+    const canonicalName = 'download_internet_file';
+    const alias = 'utility_download_internet_file';
+    const registered = manifest.tools.find(tool => tool.name === canonicalName);
+    const mcp = new UtilityTools({}).tools[canonicalName];
+
+    expect(registered.aliases).toContain(alias);
+    expect(ToolExecutionService.legacyAliases[alias]).toBe(canonicalName);
+    const destinationDescription = registered.parameters.properties.destinationPath.description;
+    expect(destinationDescription).toContain('current working directory');
+    expect(mcp.parameters.properties.destinationPath.description).toBe(destinationDescription);
   });
 });

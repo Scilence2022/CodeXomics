@@ -41,6 +41,7 @@ class ToolExecutionService {
     load_tracks: 'load_wig_tracks',
     load_operon: 'load_operon_file',
     load_operons: 'load_operon_file',
+    utility_download_internet_file: 'download_internet_file',
     // Primer library tools (renamed away from "annotation" framing)
     add_primer_annotation: 'save_primer',
     list_primer_annotations: 'list_primers',
