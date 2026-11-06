@@ -474,7 +474,14 @@ class ActionManager {
     for (const feature of currentFeatures) {
       const [start, end] = feature.genbankLocationSpan || [feature.start, feature.end];
       const offset = feature.genbankLocationSpan ? feature.start - feature.genbankLocationBounds[0] : 0;
-      if (removeContainedForReplace && start + offset >= modification.start && end + offset <= modification.end) {
+      const specialLocation =
+        feature.genbankLocationBounds && /[<>:]/.test(feature.genbankLocation || feature.location);
+      if (
+        removeContainedForReplace &&
+        !specialLocation &&
+        start + offset >= modification.start &&
+        end + offset <= modification.end
+      ) {
         continue;
       }
 
@@ -4821,10 +4828,10 @@ class ActionManager {
       sortedModifications.length === 1 &&
       feature.genbankLocationBounds &&
       !feature.genbankLocationEdited &&
-      /\b(?:join|order)\(/i.test(location)
+      /\b(?:join|order)\(|[<>:]/i.test(location)
     ) {
       this.genbankExporter ||= new GenBankExporter(this.genomeBrowser);
-      const remapped = this.genbankExporter.remapDisjointCompoundLocation(feature, sortedModifications[0]);
+      const remapped = this.genbankExporter.remapDisjointLocation(feature, sortedModifications[0]);
       if (remapped) return remapped;
     }
     let adjustedStart = feature.start;
