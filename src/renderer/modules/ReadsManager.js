@@ -80,7 +80,8 @@ class ReadsManager {
   /**
    * Get reads for a specific region (main entry point)
    */
-  async getReadsForRegion(chromosome, start, end, settings = {}) {
+  async getReadsForRegion(chromosome, start, end, settings = {}, querySignal) {
+    querySignal?.throwIfAborted();
     if (!this.rawReadsData && !this.isStreaming && !this.isBamMode) {
       console.warn('No SAM/BAM data loaded');
       return [];
@@ -110,22 +111,25 @@ class ReadsManager {
     this.stats.cacheMisses++;
 
     // Use appropriate loading method based on mode
-    const { signal } = this.sourceController;
+    const sourceSignal = this.sourceController.signal;
+    const signal = querySignal ? AbortSignal.any([sourceSignal, querySignal]) : sourceSignal;
     let reads;
     try {
       if (this.isBamMode && this.bamReader) {
         // Use BAM reader for binary BAM files - pass sampling settings to BAM loading
-        reads = await this.loadReadsForRegionBAM(chromosome, start, end, settings);
+        reads = await this.loadReadsForRegionBAM(chromosome, start, end, settings, querySignal ? signal : undefined);
       } else if (this.isStreaming) {
         reads = await this.loadReadsForRegionStream(chromosome, start, end, settings, signal);
       } else {
         reads = await this.loadReadsForRegion(chromosome, start, end, settings, signal);
       }
     } catch (error) {
+      querySignal?.throwIfAborted();
       if (signal.aborted) return [];
       throw error;
     }
 
+    querySignal?.throwIfAborted();
     if (signal.aborted) return [];
     // Apply sampling if enabled and threshold is exceeded
     const sampledReads = this.applySampling(reads, settings);
@@ -472,7 +476,7 @@ class ReadsManager {
   /**
    * Load reads for a specific region using BAM reader
    */
-  async loadReadsForRegionBAM(chromosome, start, end, settings = {}) {
+  async loadReadsForRegionBAM(chromosome, start, end, settings = {}, signal) {
     console.log(`🧬 [ReadsManager] === READS MANAGER BAM LOADING DEBUG START ===`);
     console.log(`🧬 [ReadsManager] loadReadsForRegionBAM called with:`, {
       chromosome,
@@ -517,7 +521,13 @@ class ReadsManager {
         settings,
       });
 
-      const reads = await this.bamReader.getRecordsForRange(chromosome, bamSearchStart, bamSearchEnd + 1, settings);
+      const reads = await this.bamReader.getRecordsForRange(
+        chromosome,
+        bamSearchStart,
+        bamSearchEnd + 1,
+        settings,
+        signal
+      );
 
       console.log(`✅ [ReadsManager] Retrieved ${reads.length.toLocaleString()} reads from BAM file`);
       console.log(`🔍 [ReadsManager] Settings used: ignoreChromosome=${settings.ignoreChromosome}`);
@@ -583,6 +593,7 @@ class ReadsManager {
       console.log(`🧬 [ReadsManager] === READS MANAGER BAM LOADING DEBUG END ===`);
       return reads;
     } catch (error) {
+      signal?.throwIfAborted();
       console.error('❌ [ReadsManager] Error loading BAM reads:', error);
       console.error('❌ [ReadsManager] Error stack:', error.stack);
       throw error;
