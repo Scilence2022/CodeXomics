@@ -369,7 +369,7 @@ function assertInsideRoot(rootPath, targetPath, label = 'path') {
 
   const root = path.resolve(rootPath);
   const target = path.resolve(targetPath);
-  if (!isSubPath(root, target)) {
+  if (!isSubPath(root, target) || !isSubPath(resolveFileAccessPath(root), resolveFileAccessPath(target))) {
     throw new Error(`${label} escapes allowed root`);
   }
   return target;
@@ -467,11 +467,16 @@ function getUserPluginRoots(app) {
   return [...roots];
 }
 
+function findUserPluginRoot(app, targetPath) {
+  return getUserPluginRoots(app).find(root => isSubPath(root, targetPath));
+}
+
 function assertPluginPath(app, targetPath, label = 'plugin path') {
-  const roots = getUserPluginRoots(app);
   const resolvedPath = path.resolve(targetPath);
-  const allowed = roots.some(root => isSubPath(root, resolvedPath));
-  if (!allowed) {
+  const root = findUserPluginRoot(app, resolvedPath);
+  // Anchor the plugin directory to its configured name under the physical parent.
+  const physicalRoot = root && path.join(resolveFileAccessPath(path.dirname(root)), path.basename(root));
+  if (!physicalRoot || !isSubPath(physicalRoot, resolveFileAccessPath(resolvedPath))) {
     throw new Error(`${label} escapes user plugin directory`);
   }
   return resolvedPath;
@@ -497,9 +502,9 @@ function assertSafeArchiveEntry(entryName) {
 }
 
 function safePluginJoin(app, rootPath, relativePath, label = 'plugin file') {
-  assertSafeArchiveEntry(relativePath);
+  const entryName = assertSafeArchiveEntry(relativePath);
   const root = assertPluginPath(app, rootPath, 'plugin root');
-  return assertInsideRoot(root, path.join(root, relativePath), label);
+  return assertInsideRoot(root, path.join(root, entryName), label);
 }
 
 function safeExtractAdmZip(app, zip, installPath) {
@@ -536,12 +541,14 @@ module.exports = {
   rememberApprovedDialogPaths,
   inferCapabilityFromOperation,
   isSubPath,
+  resolveFileAccessPath,
   assertInsideRoot,
   getDefaultWritableRoots,
   assertAllowedFileAccess,
   grantReadOnlyFileLoadPath,
   sanitizePluginId,
   getUserPluginRoots,
+  findUserPluginRoot,
   assertPluginPath,
   assertSafeArchiveEntry,
   safePluginJoin,

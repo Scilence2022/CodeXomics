@@ -169,6 +169,27 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     expect(written).toMatchObject({ success: true, filePath: exportPath, fileSize: 10 });
     expect(await fs.readFile(exportPath, 'utf8')).toBe('new export');
     if (process.platform !== 'win32') expect((await fs.stat(exportPath)).mode & 0o777).toBe(0o640);
+
+    const pluginSource = path.join(fixtureDirectory, 'plugin-source');
+    const pluginDestination = path.join(fixtureDirectory, 'plugins', 'smoke-plugin');
+    await fs.mkdir(path.join(pluginSource, 'assets'), { recursive: true });
+    await fs.writeFile(path.join(pluginSource, 'assets', 'index.js'), 'module.exports = {};');
+    await fs.mkdir(pluginDestination, { recursive: true });
+    await fs.symlink(
+      outsideDirectory,
+      path.join(pluginDestination, 'assets'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
+    const copyPlugin = () =>
+      genomeView.evaluate(({ source, destination }) => window.electronAPI.copyPluginDirectory(source, destination), {
+        source: pluginSource,
+        destination: pluginDestination,
+      });
+    expect(await copyPlugin()).toMatchObject({ success: false, error: expect.stringMatching(/escapes allowed root/) });
+    await expect(fs.stat(path.join(outsideDirectory, 'index.js'))).rejects.toMatchObject({ code: 'ENOENT' });
+    await fs.unlink(path.join(pluginDestination, 'assets'));
+    expect(await copyPlugin()).toEqual({ success: true });
+    expect(await fs.readFile(path.join(pluginDestination, 'assets', 'index.js'), 'utf8')).toBe('module.exports = {};');
   } finally {
     if (app) await app.close();
     await fs.rm(fixtureDirectory, { recursive: true, force: true });
