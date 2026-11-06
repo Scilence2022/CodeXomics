@@ -1,15 +1,41 @@
 /**
  * GenomeNavigationBar - Interactive ruler-style navigation for the genome viewer
+ *
+ * The viewer has two rulers:
+ * - this primary ruler: a whole-chromosome overview used only for navigation
+ *   (click to jump, drag/resize the viewport box, double-click to zoom);
+ * - the secondary coordinate ruler (TrackRenderer.createCoordinateRulerBar):
+ *   the viewport axis aligned with the tracks, which owns sequence selection.
+ *
+ * Their visibility is one persisted setting, `ui.rulerDisplayMode`:
+ * - 'full':    primary expanded, secondary shown
+ * - 'compact': primary collapsed, secondary shown (default)
+ * - 'minimal': primary collapsed, secondary hidden
  */
 /* eslint-disable no-unused-vars */
 class GenomeNavigationBar {
+  static RULER_DISPLAY_MODES = ['full', 'compact', 'minimal'];
+  static DEFAULT_RULER_DISPLAY_MODE = 'compact';
+  static RULER_DISPLAY_CONFIG_KEY = 'ui.rulerDisplayMode';
+  static RULER_DISPLAY_LABELS = {
+    full: { label: 'Full', icon: 'fa-ruler-combined', detail: 'overview and coordinate rulers' },
+    compact: { label: 'Compact', icon: 'fa-ruler-horizontal', detail: 'slim overview and coordinate ruler' },
+    minimal: { label: 'Minimal', icon: 'fa-minus', detail: 'slim overview only' },
+  };
+
+  static normalizeRulerDisplayMode(mode) {
+    return GenomeNavigationBar.RULER_DISPLAY_MODES.includes(mode)
+      ? mode
+      : GenomeNavigationBar.DEFAULT_RULER_DISPLAY_MODE;
+  }
+
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
     this.container = null;
     this.canvas = null;
     this.ctx = null;
     this.isVisible = false;
-    this.isRulerCollapsed = false; // Track if ruler is collapsed (hidden)
+    this.rulerDisplayMode = GenomeNavigationBar.DEFAULT_RULER_DISPLAY_MODE;
     this.height = 60; // Height of the navigation bar
     this.collapsedHeight = 28; // Height when collapsed
     this.majorTickHeight = 20;
@@ -27,18 +53,23 @@ class GenomeNavigationBar {
     this.tempRange = null; // Temporary range during drag/resize operations
     this.handleWidth = 8; // Width of resize handles
 
-    // Sequence selection state
-    this.isSelecting = false;
-    this.selectionStart = null;
-    this.selectionEnd = null;
-    this.selectionMode = false; // Toggle for selection mode vs navigation mode
-
     this.initialize();
+  }
+
+  /** The primary ruler is drawn slim in every mode except 'full'. */
+  get isRulerCollapsed() {
+    return this.rulerDisplayMode !== 'full';
+  }
+
+  get currentHeight() {
+    return this.isRulerCollapsed ? this.collapsedHeight : this.height;
   }
 
   initialize() {
     this.createNavigationBar();
     this.setupEventListeners();
+    this.applyRulerDisplayLayout();
+    this.applySavedRulerDisplayMode();
   }
 
   createNavigationBar() {
@@ -67,66 +98,16 @@ class GenomeNavigationBar {
     this.rangeIndicator = document.createElement('div');
     this.rangeIndicator.className = 'range-indicator';
 
-    // Create selection mode toggle button
-    this.selectionToggle = document.createElement('button');
-    this.selectionToggle.className = 'selection-toggle-btn';
-    this.selectionToggle.innerHTML = '<i class="fas fa-mouse-pointer"></i>';
-    this.selectionToggle.title = 'Toggle sequence selection mode';
-    this.selectionToggle.style.cssText = `
-            position: absolute;
-            top: 2px;
-            right: 28px;
-            width: 24px;
-            height: 24px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            background: #ffffff;
-            cursor: pointer;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: #64748b;
-            transition: all 0.2s ease;
-        `;
-
-    // Create ruler visibility toggle button
-    this.visibilityToggle = document.createElement('button');
-    this.visibilityToggle.className = 'ruler-visibility-toggle-btn';
-    this.visibilityToggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
-    this.visibilityToggle.title = 'Hide ruler';
-    this.visibilityToggle.style.cssText = `
+    // Single ruler display control: cycles Full -> Compact -> Minimal. It is
+    // the only place to show/hide the secondary coordinate ruler, so it works
+    // even for FASTA files that have no Genes & Features track.
+    this.rulerModeToggle = document.createElement('button');
+    this.rulerModeToggle.type = 'button';
+    this.rulerModeToggle.className = 'ruler-mode-toggle-btn';
+    this.rulerModeToggle.style.cssText = `
             position: absolute;
             top: 2px;
             right: 2px;
-            width: 24px;
-            height: 24px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            background: #ffffff;
-            cursor: pointer;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: #64748b;
-            transition: all 0.2s ease;
-        `;
-
-    // Create secondary (detailed coordinate) ruler visibility toggle.
-    // The detailed ruler is now a standalone bar above the tracks; this is the
-    // single place to show/hide it, so it works even for FASTA files that have
-    // no Genes & Features track.
-    this.secondaryRulerToggle = document.createElement('button');
-    this.secondaryRulerToggle.className = 'secondary-ruler-toggle-btn';
-    this.secondaryRulerToggle.innerHTML = '<i class="fas fa-ruler-horizontal"></i>';
-    this.secondaryRulerToggle.title = 'Show/Hide detailed coordinate ruler';
-    this.secondaryRulerToggle.style.cssText = `
-            position: absolute;
-            top: 2px;
-            right: 54px;
             width: 24px;
             height: 24px;
             border: 1px solid #cbd5e1;
@@ -151,9 +132,7 @@ class GenomeNavigationBar {
     this.container.appendChild(this.canvas);
     this.container.appendChild(this.positionIndicator);
     this.container.appendChild(this.rangeIndicator);
-    this.container.appendChild(this.selectionToggle);
-    this.container.appendChild(this.visibilityToggle);
-    this.container.appendChild(this.secondaryRulerToggle);
+    this.container.appendChild(this.rulerModeToggle);
     this.container.appendChild(this.tooltip);
 
     // Insert the navigation bar above the genome viewer
@@ -180,14 +159,11 @@ class GenomeNavigationBar {
     this.canvas.addEventListener('mouseleave', e => this.handleMouseLeave(e));
     this.canvas.addEventListener('dblclick', e => this.handleDoubleClick(e));
 
-    // Selection mode toggle
-    this.selectionToggle.addEventListener('click', e => this.toggleSelectionMode(e));
-
-    // Visibility toggle
-    this.visibilityToggle.addEventListener('click', e => this.toggleRulerVisibility(e));
-
-    // Secondary (detailed coordinate) ruler visibility toggle
-    this.secondaryRulerToggle.addEventListener('click', e => this.toggleSecondaryRulerFromNav(e));
+    // Ruler display mode (Full / Compact / Minimal)
+    this.rulerModeToggle.addEventListener('click', e => {
+      e.preventDefault();
+      this.cycleRulerDisplayMode();
+    });
 
     // Keyboard navigation
     this.canvas.addEventListener('keydown', e => this.handleKeyDown(e));
@@ -199,7 +175,7 @@ class GenomeNavigationBar {
   resizeCanvas() {
     const rect = this.container.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    const currentHeight = this.isRulerCollapsed ? this.collapsedHeight : this.height;
+    const currentHeight = this.currentHeight;
 
     this.canvas.width = rect.width * dpr;
     this.canvas.height = currentHeight * dpr;
@@ -218,11 +194,9 @@ class GenomeNavigationBar {
     this.resizeCanvas();
     this.draw();
 
-    // Keep the secondary-ruler toggle button in sync with the persisted state.
-    const trackRenderer = this.genomeBrowser && this.genomeBrowser.trackRenderer;
-    if (trackRenderer && trackRenderer.elementVisibilityStates) {
-      this.updateSecondaryRulerToggleAppearance(trackRenderer.elementVisibilityStates.genesRuler !== false);
-    }
+    // show() runs before the tracks are rebuilt, so the coordinate ruler bar
+    // created next picks up the current display mode.
+    this.syncSecondaryRuler();
 
     console.log(`GenomeNavigationBar: Showing navigation for ${chromosome} (${sequenceLength} bp)`);
   }
@@ -243,7 +217,7 @@ class GenomeNavigationBar {
     if (!this.ctx || !this.isVisible || this.sequenceLength === 0) return;
 
     const width = this.canvas.width / (window.devicePixelRatio || 1);
-    const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
+    const height = this.currentHeight;
 
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -309,14 +283,6 @@ class GenomeNavigationBar {
 
     // Draw current view range indicator
     this.drawRangeIndicator();
-
-    // Draw sequence selection if in selection mode or has final selection
-    if (
-      (this.selectionMode && this.selectionStart !== null && this.selectionEnd !== null) ||
-      (this.finalSelectionStart && this.finalSelectionEnd)
-    ) {
-      this.drawSelectionIndicator();
-    }
 
     // Draw ruler border
     this.ctx.strokeStyle = '#cbd5e1';
@@ -451,7 +417,7 @@ class GenomeNavigationBar {
       const startX = range.start * scale;
       const endX = range.end * scale;
       const rangeWidth = endX - startX;
-      const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
+      const height = this.currentHeight;
 
       // Draw highlighted range
       this.ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
@@ -477,7 +443,7 @@ class GenomeNavigationBar {
    */
   drawRangeSegment(startX, endX) {
     const rangeWidth = endX - startX;
-    const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
+    const height = this.currentHeight;
 
     // Draw highlighted range
     this.ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
@@ -495,7 +461,7 @@ class GenomeNavigationBar {
   }
 
   drawResizeHandles(startX, endX) {
-    const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
+    const height = this.currentHeight;
     const halfH = height / 2;
     const hw = this.handleWidth;
 
@@ -514,68 +480,12 @@ class GenomeNavigationBar {
     this.ctx.fillRect(endX - hw / 2 + 1, halfH + 2, hw - 2, halfH - 4);
   }
 
-  /**
-   * Draw sequence selection indicator
-   */
-  drawSelectionIndicator() {
-    // Use either active selection or final selection
-    let start;
-    let end;
-    if (this.selectionStart && this.selectionEnd) {
-      // Active selection during drag
-      start = Math.min(this.selectionStart, this.selectionEnd);
-      end = Math.max(this.selectionStart, this.selectionEnd);
-    } else if (this.finalSelectionStart && this.finalSelectionEnd) {
-      // Final selection after completion
-      start = this.finalSelectionStart;
-      end = this.finalSelectionEnd;
-    } else {
-      return; // No selection to draw
-    }
-
-    const width = this.canvas.width / (window.devicePixelRatio || 1);
-    const height = this.isRulerCollapsed ? this.collapsedHeight : this.height;
-    const scale = width / this.sequenceLength;
-
-    const startX = start * scale;
-    const endX = (end + 1) * scale;
-    const selectionWidth = endX - startX;
-
-    // Draw selection background
-    this.ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-    this.ctx.fillRect(startX, 0, selectionWidth, height);
-
-    // Draw selection border
-    this.ctx.strokeStyle = '#ef4444';
-    this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(startX, 0, selectionWidth, height);
-
-    // Draw selection handles
-    const handleWidth = 6;
-    this.ctx.fillStyle = '#ef4444';
-    this.ctx.fillRect(startX - handleWidth / 2, height - 20, handleWidth, 20);
-    this.ctx.fillRect(endX - handleWidth / 2, height - 20, handleWidth, 20);
-
-    // Draw handle borders
-    this.ctx.strokeStyle = '#b91c1c';
-    this.ctx.lineWidth = 1;
-    this.ctx.strokeRect(startX - handleWidth / 2, height - 20, handleWidth, 20);
-    this.ctx.strokeRect(endX - handleWidth / 2, height - 20, handleWidth, 20);
-
-    // Draw selection label
-    const length = end - start + 1;
-    this.ctx.fillStyle = '#b91c1c';
-    this.ctx.font = 'bold 10px Inter, sans-serif';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText(`${length.toLocaleString()} bp`, startX + selectionWidth / 2, 15);
-  }
-
   getInteractionType(x, y) {
     if (!this.genomeBrowser.currentPosition) return 'none';
 
     const width = this.canvas.width / (window.devicePixelRatio || 1);
     const scale = width / this.sequenceLength;
-    const halfH = this.height / 2;
+    const halfH = this.currentHeight / 2;
 
     const range = this.tempRange || this.genomeBrowser.currentPosition;
     const startX = range.start * scale;
@@ -625,49 +535,32 @@ class GenomeNavigationBar {
     const y = e.clientY - rect.top;
     const interactionType = this.getInteractionType(x, y);
 
-    if (this.selectionMode) {
-      // Handle sequence selection mode
-      this.isSelecting = true;
-      this.selectionStart = this.getPositionFromEvent(e);
-      this.selectionEnd = this.selectionStart;
-
-      // Clear previous final selection when starting new selection
-      this.finalSelectionStart = null;
-      this.finalSelectionEnd = null;
-
-      this.canvas.style.cursor = 'crosshair';
-      this.container.classList.add('selecting');
-      this.canvas.classList.add('selecting');
+    if (interactionType === 'resize-left' || interactionType === 'resize-right') {
+      this.isResizing = true;
+      this.resizeHandle = interactionType === 'resize-left' ? 'left' : 'right';
+      this.dragStartX = x;
+      this.dragStartRange = { ...this.genomeBrowser.currentPosition };
+      this.tempRange = { ...this.genomeBrowser.currentPosition };
+      this.canvas.style.cursor = 'ew-resize';
+      // Add visual feedback
+      this.container.classList.add('resizing', 'active-resize');
+      this.canvas.classList.add('resizing');
       e.preventDefault();
-    } else {
-      // Handle navigation mode (original behavior)
-      if (interactionType === 'resize-left' || interactionType === 'resize-right') {
-        this.isResizing = true;
-        this.resizeHandle = interactionType === 'resize-left' ? 'left' : 'right';
-        this.dragStartX = x;
-        this.dragStartRange = { ...this.genomeBrowser.currentPosition };
-        this.tempRange = { ...this.genomeBrowser.currentPosition };
-        this.canvas.style.cursor = 'ew-resize';
-        // Add visual feedback
-        this.container.classList.add('resizing', 'active-resize');
-        this.canvas.classList.add('resizing');
-        e.preventDefault();
-      } else if (interactionType === 'drag') {
-        this.isDragging = true;
-        this.dragStartX = x;
-        this.dragStartRange = { ...this.genomeBrowser.currentPosition };
-        this.tempRange = { ...this.genomeBrowser.currentPosition };
-        this.canvas.style.cursor = 'grabbing';
-        // Add visual feedback
-        this.container.classList.add('dragging', 'active-drag');
-        this.canvas.classList.add('dragging');
-        e.preventDefault();
-      } else if (interactionType === 'navigate') {
-        // Handle single click navigation
-        const position = this.getPositionFromEvent(e);
-        if (position !== null) {
-          this.navigateToPosition(position);
-        }
+    } else if (interactionType === 'drag') {
+      this.isDragging = true;
+      this.dragStartX = x;
+      this.dragStartRange = { ...this.genomeBrowser.currentPosition };
+      this.tempRange = { ...this.genomeBrowser.currentPosition };
+      this.canvas.style.cursor = 'grabbing';
+      // Add visual feedback
+      this.container.classList.add('dragging', 'active-drag');
+      this.canvas.classList.add('dragging');
+      e.preventDefault();
+    } else if (interactionType === 'navigate') {
+      // Handle single click navigation
+      const position = this.getPositionFromEvent(e);
+      if (position !== null) {
+        this.navigateToPosition(position);
       }
     }
   }
@@ -677,14 +570,7 @@ class GenomeNavigationBar {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (this.isSelecting && this.selectionStart !== null) {
-      // Handle sequence selection mode
-      this.selectionEnd = this.getPositionFromEvent(e);
-      if (this.selectionEnd !== null) {
-        this.draw();
-        this.showSelectionTooltip(e, this.selectionStart, this.selectionEnd);
-      }
-    } else if (this.isResizing && this.tempRange) {
+    if (this.isResizing && this.tempRange) {
       const width = rect.width;
       const scale = this.sequenceLength / width;
       const deltaX = x - this.dragStartX;
@@ -753,33 +639,7 @@ class GenomeNavigationBar {
   }
 
   handleMouseUp(e) {
-    if (this.isSelecting) {
-      // Handle sequence selection completion
-      if (this.selectionStart !== null && this.selectionEnd !== null) {
-        const startPos = Math.min(this.selectionStart, this.selectionEnd);
-        const endPos = Math.max(this.selectionStart, this.selectionEnd);
-
-        // Apply sequence selection to the genome browser
-        this.applySequenceSelection(startPos, endPos);
-
-        // Keep the selection indicator visible after selection
-        this.finalSelectionStart = startPos;
-        this.finalSelectionEnd = endPos;
-
-        console.log(`GenomeNavigationBar: Sequence selected ${startPos}-${endPos} (${endPos - startPos + 1} bp)`);
-      }
-
-      // Reset selection state but keep final selection for display
-      this.isSelecting = false;
-      this.selectionStart = null;
-      this.selectionEnd = null;
-
-      // Remove visual feedback classes
-      this.container.classList.remove('selecting');
-      this.canvas.classList.remove('selecting');
-
-      this.draw();
-    } else if (this.isResizing || this.isDragging) {
+    if (this.isResizing || this.isDragging) {
       // Apply the temporary range to the CodeXomics
       if (this.tempRange) {
         this.genomeBrowser.currentPosition = {
@@ -900,7 +760,7 @@ class GenomeNavigationBar {
     const x = e.clientX - rect.left;
 
     this.tooltip.style.left = `${x}px`;
-    this.tooltip.style.top = `${this.height + 5}px`;
+    this.tooltip.style.top = `${this.currentHeight + 5}px`;
     this.tooltip.style.display = 'block';
 
     if (endPos !== null) {
@@ -922,7 +782,7 @@ class GenomeNavigationBar {
     const x = e.clientX - rect.left;
 
     this.tooltip.style.left = `${x}px`;
-    this.tooltip.style.top = `${this.height + 5}px`;
+    this.tooltip.style.top = `${this.currentHeight + 5}px`;
     this.tooltip.style.display = 'block';
 
     const rangeSize = Math.round(endPos - startPos);
@@ -981,204 +841,114 @@ class GenomeNavigationBar {
   }
 
   /**
-   * Toggle sequence selection mode
+   * Read the saved ruler display mode once the config has loaded. The
+   * constructor runs before ConfigManager finishes initializing, so the bar
+   * starts in the default mode and switches here without persisting.
    */
-  toggleSelectionMode(e) {
-    e.preventDefault();
-    this.selectionMode = !this.selectionMode;
+  async applySavedRulerDisplayMode() {
+    const configManager = this.genomeBrowser && this.genomeBrowser.configManager;
+    if (!configManager || typeof configManager.get !== 'function') return;
 
-    if (this.selectionMode) {
-      this.selectionToggle.style.background = '#ef4444';
-      this.selectionToggle.style.color = '#ffffff';
-      this.selectionToggle.style.borderColor = '#ef4444';
-      this.canvas.style.cursor = 'crosshair';
-      this.genomeBrowser.showNotification(
-        'Sequence selection mode enabled. Click and drag on the ruler to select a region.',
-        'info'
-      );
-    } else {
-      this.selectionToggle.style.background = '#ffffff';
-      this.selectionToggle.style.color = '#64748b';
-      this.selectionToggle.style.borderColor = '#cbd5e1';
-      this.canvas.style.cursor = 'crosshair';
-      this.genomeBrowser.showNotification('Navigation mode enabled.', 'info');
-
-      // Clear final selection when exiting selection mode
-      this.finalSelectionStart = null;
-      this.finalSelectionEnd = null;
-      this.draw(); // Redraw to remove selection indicator
-    }
-
-    console.log(`GenomeNavigationBar: Selection mode ${this.selectionMode ? 'enabled' : 'disabled'}`);
-  }
-
-  /**
-   * Toggle ruler visibility (collapse/expand)
-   */
-  toggleRulerVisibility(e) {
-    e.preventDefault();
-    this.isRulerCollapsed = !this.isRulerCollapsed;
-
-    if (this.isRulerCollapsed) {
-      // Update toggle button to "show" state
-      this.visibilityToggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
-      this.visibilityToggle.title = 'Show ruler';
-      this.container.style.height = this.collapsedHeight + 'px';
-    } else {
-      // Update toggle button to "hide" state
-      this.visibilityToggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
-      this.visibilityToggle.title = 'Hide ruler';
-      this.container.style.height = this.height + 'px';
-    }
-
-    // Resize the canvas and redraw
-    this.resizeCanvas();
-    this.draw();
-
-    console.log(`GenomeNavigationBar: Ruler ${this.isRulerCollapsed ? 'collapsed' : 'expanded'}`);
-  }
-
-  /**
-   * Toggle the standalone detailed coordinate ruler (the "secondary ruler")
-   * that sits above the tracks. Delegates the persisted state to TrackRenderer.
-   */
-  toggleSecondaryRulerFromNav(e) {
-    if (e) e.preventDefault();
-
-    const trackRenderer = this.genomeBrowser && this.genomeBrowser.trackRenderer;
-    if (!trackRenderer || typeof trackRenderer.toggleCoordinateRulerVisibility !== 'function') {
-      console.warn('GenomeNavigationBar: TrackRenderer not available for secondary ruler toggle');
-      return;
-    }
-
-    const visible = trackRenderer.toggleCoordinateRulerVisibility();
-    this.updateSecondaryRulerToggleAppearance(visible);
-
-    console.log(`GenomeNavigationBar: Secondary ruler ${visible ? 'shown' : 'hidden'}`);
-  }
-
-  /**
-   * Reflect the secondary-ruler visibility state on the toggle button.
-   */
-  updateSecondaryRulerToggleAppearance(visible) {
-    if (!this.secondaryRulerToggle) return;
-    if (visible) {
-      this.secondaryRulerToggle.style.background = '#ffffff';
-      this.secondaryRulerToggle.style.color = '#64748b';
-      this.secondaryRulerToggle.title = 'Hide detailed coordinate ruler';
-    } else {
-      this.secondaryRulerToggle.style.background = '#e2e8f0';
-      this.secondaryRulerToggle.style.color = '#94a3b8';
-      this.secondaryRulerToggle.title = 'Show detailed coordinate ruler';
-    }
-  }
-
-  /**
-   * Apply sequence selection to genome browser
-   */
-  applySequenceSelection(startPos, endPos) {
-    // Clear any existing selection
-    this.genomeBrowser.clearSequenceSelection();
-
-    const selectionStart = Math.min(startPos, endPos) + 1;
-    const selectionEnd = Math.max(startPos, endPos) + 1;
-    const selection = {
-      chromosome: this.currentChromosome,
-      start: selectionStart,
-      end: selectionEnd,
-      active: true,
-      coordinateSystem: 'one-based-inclusive',
-      source: 'ruler',
-      length: selectionEnd - selectionStart + 1,
-      wrapsOrigin: false,
-      segments: [{ start: selectionStart, end: selectionEnd }],
-    };
-    this.genomeBrowser.currentSequenceSelection = selection;
-    this.genomeBrowser.sequenceSelection = { ...selection };
-
-    // Highlight the selected region in Genes & Features track
-    this.highlightSelectedRegion(selectionStart, selectionEnd);
-
-    // Update copy button state
-    this.genomeBrowser.updateCopyButtonState();
-
-    // Show notification
-    this.genomeBrowser.showNotification(
-      `Sequence selected: ${this.currentChromosome}:${selectionStart}-${selectionEnd} (${selection.length} bp)`,
-      'success'
-    );
-
-    // Update status bar with selection information
-    const statusMessage = `🔵 Sequence Selected: ${this.currentChromosome}:${selectionStart.toLocaleString()}-${selectionEnd.toLocaleString()} (${selection.length.toLocaleString()} bp)`;
-
-    if (this.genomeBrowser.uiManager) {
-      this.genomeBrowser.uiManager.updateStatus(statusMessage);
-    } else {
-      const statusElement = document.getElementById('statusText');
-      if (statusElement) {
-        statusElement.textContent = statusMessage;
-        statusElement.style.color = '#3b82f6';
-        statusElement.style.fontWeight = 'bold';
-
-        // Reset to normal after 5 seconds
-        setTimeout(() => {
-          statusElement.style.color = '';
-          statusElement.style.fontWeight = '';
-          statusElement.textContent = 'Ready';
-        }, 5000);
+    try {
+      if (typeof configManager.waitForInitialization === 'function') {
+        await configManager.waitForInitialization();
       }
+      const saved = configManager.get(GenomeNavigationBar.RULER_DISPLAY_CONFIG_KEY, null);
+      if (saved !== null) {
+        this.setRulerDisplayMode(saved, { persist: false });
+      }
+    } catch (error) {
+      console.warn('GenomeNavigationBar: Could not load saved ruler display mode:', error);
+    }
+  }
+
+  /** Advance Full -> Compact -> Minimal -> Full. */
+  cycleRulerDisplayMode() {
+    const modes = GenomeNavigationBar.RULER_DISPLAY_MODES;
+    const next = modes[(modes.indexOf(this.rulerDisplayMode) + 1) % modes.length];
+    this.setRulerDisplayMode(next);
+  }
+
+  /**
+   * Apply a ruler display mode to both rulers and, by default, persist it.
+   * Unknown values fall back to the default mode.
+   */
+  setRulerDisplayMode(mode, { persist = true } = {}) {
+    this.rulerDisplayMode = GenomeNavigationBar.normalizeRulerDisplayMode(mode);
+    this.applyRulerDisplayLayout();
+
+    if (persist) {
+      this.persistRulerDisplayMode();
+    }
+
+    return this.rulerDisplayMode;
+  }
+
+  /**
+   * Save the mode right away. ConfigManager.set() only writes after
+   * ui.autoSaveInterval (30 s) of quiet and nothing flushes it on quit, so a
+   * change followed by a quick restart would otherwise be lost. This is a
+   * rare, deliberate click, so the immediate write is cheap.
+   */
+  persistRulerDisplayMode() {
+    const configManager = this.genomeBrowser && this.genomeBrowser.configManager;
+    if (!configManager) return;
+
+    const key = GenomeNavigationBar.RULER_DISPLAY_CONFIG_KEY;
+    let pending = null;
+    if (typeof configManager.setAndSaveImmediate === 'function') {
+      pending = configManager.setAndSaveImmediate(key, this.rulerDisplayMode);
+    } else if (typeof configManager.set === 'function') {
+      pending = configManager.set(key, this.rulerDisplayMode);
+    }
+
+    Promise.resolve(pending).catch(error =>
+      console.warn('GenomeNavigationBar: Could not save ruler display mode:', error)
+    );
+  }
+
+  /** Lay out the primary ruler, the secondary ruler and the toggle for the current mode. */
+  applyRulerDisplayLayout() {
+    if (this.container) {
+      this.container.style.height = `${this.currentHeight}px`;
+    }
+    this.updateRulerModeToggleAppearance();
+    this.syncSecondaryRuler();
+
+    if (this.isVisible) {
+      this.resizeCanvas();
+      this.draw();
     }
   }
 
   /**
-   * Highlight selected region in Genes & Features track
+   * Push the secondary-ruler visibility into TrackRenderer, which owns the
+   * coordinate ruler bar. Updates the bar on screen and the state the next
+   * rebuilt bar reads.
    */
-  highlightSelectedRegion(startPos, endPos) {
-    // Find features that overlap with the selection
-    if (this.genomeBrowser.currentAnnotations && this.genomeBrowser.currentAnnotations[this.currentChromosome]) {
-      const annotations = this.genomeBrowser.currentAnnotations[this.currentChromosome];
-      const overlappingFeatures = annotations.filter(feature => feature.start <= endPos && feature.end >= startPos);
+  syncSecondaryRuler() {
+    const trackRenderer = this.genomeBrowser && this.genomeBrowser.trackRenderer;
+    if (!trackRenderer) return;
 
-      // Clear previous highlights
-      document.querySelectorAll('.feature-highlighted').forEach(el => {
-        el.classList.remove('feature-highlighted');
-      });
+    if (!trackRenderer.elementVisibilityStates) trackRenderer.elementVisibilityStates = {};
+    trackRenderer.elementVisibilityStates.genesRuler = this.rulerDisplayMode !== 'minimal';
 
-      // Highlight overlapping features
-      overlappingFeatures.forEach(feature => {
-        const featureElements = document.querySelectorAll(`[data-feature-id="${feature.id}"]`);
-        featureElements.forEach(el => {
-          el.classList.add('feature-highlighted');
-        });
-      });
-
-      console.log(`GenomeNavigationBar: Highlighted ${overlappingFeatures.length} features in selected region`);
+    if (typeof trackRenderer.applyCoordinateRulerVisibility === 'function') {
+      trackRenderer.applyCoordinateRulerVisibility();
     }
   }
 
-  /**
-   * Show selection tooltip
-   */
-  showSelectionTooltip(e, startPos, endPos) {
-    if (startPos === null || endPos === null) return;
+  updateRulerModeToggleAppearance() {
+    if (!this.rulerModeToggle) return;
 
-    const rect = this.canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const labels = GenomeNavigationBar.RULER_DISPLAY_LABELS;
+    const modes = GenomeNavigationBar.RULER_DISPLAY_MODES;
+    const current = labels[this.rulerDisplayMode];
+    const next = labels[modes[(modes.indexOf(this.rulerDisplayMode) + 1) % modes.length]];
 
-    const start = Math.min(startPos, endPos);
-    const end = Math.max(startPos, endPos);
-    const length = end - start + 1;
-
-    this.tooltip.innerHTML = `
-            <div style="font-weight: bold; margin-bottom: 4px;">Sequence Selection</div>
-            <div>Start: ${(start + 1).toLocaleString()}</div>
-            <div>End: ${(end + 1).toLocaleString()}</div>
-            <div>Length: ${length.toLocaleString()} bp</div>
-        `;
-
-    this.tooltip.style.left = x + 10 + 'px';
-    this.tooltip.style.top = y - 60 + 'px';
-    this.tooltip.style.display = 'block';
+    this.rulerModeToggle.innerHTML = `<i class="fas ${current.icon}"></i>`;
+    this.rulerModeToggle.dataset.mode = this.rulerDisplayMode;
+    this.rulerModeToggle.title = `Rulers: ${current.label} (${current.detail}). Click for ${next.label}.`;
+    this.rulerModeToggle.setAttribute('aria-label', this.rulerModeToggle.title);
   }
 }

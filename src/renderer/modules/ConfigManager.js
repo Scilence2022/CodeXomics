@@ -220,6 +220,8 @@ class ConfigManager {
         sidebarWidth: 300,
         chatPanelVisible: false,
         chatPanelWidth: 350,
+        // Genome rulers: 'full' | 'compact' | 'minimal' (see GenomeNavigationBar)
+        rulerDisplayMode: 'compact',
         trackHeights: {
           genes: 200,
           gcContent: 100,
