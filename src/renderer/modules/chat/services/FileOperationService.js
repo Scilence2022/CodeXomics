@@ -750,15 +750,23 @@ class FileOperationService {
   }
 
   async loadOperonFile(parameters = {}) {
+    const context = parameters.__executionContext;
     try {
       const filePath = parameters.filePath || parameters.file_path || parameters.path;
       const { showFileDialog = false, format = 'auto' } = parameters;
+      context?.signal?.throwIfAborted();
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         await this.validateFilePath(filePath, 'Operon file', 'load_operon_file');
-        await this.app.fileManager.loadOperonFile(filePath);
+        const result = await this.app.fileManager.loadOperonFile(filePath, {
+          format,
+          reportErrors: false,
+          signal: context?.signal,
+          requestDeadline: context?.requestDeadline,
+        });
+        if (!result?.success) return { ...result, success: false, filePath, fileType: 'operon' };
         return {
-          success: true,
+          ...result,
           message: `Successfully loaded operon file: ${filePath}`,
           filePath,
           fileType: 'operon',
@@ -777,7 +785,12 @@ class FileOperationService {
       }
     } catch (error) {
       console.error('❌ [FileOperationService] loadOperonFile failed:', error);
-      return { success: false, error: error.message, fileType: 'operon' };
+      return {
+        success: false,
+        status: context?.signal?.aborted ? 'cancelled' : 'failed',
+        error: error?.message || String(error),
+        fileType: 'operon',
+      };
     }
   }
 
