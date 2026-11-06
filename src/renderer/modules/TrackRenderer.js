@@ -3835,6 +3835,7 @@ class TrackRenderer {
   classifyVariantType(variant) {
     const ref = (variant.ref || '').toUpperCase();
     const alt = (variant.alt || '').toUpperCase();
+    if (alt.startsWith('<') || alt.includes('[') || alt.includes(']')) return 'SV';
 
     // Check for structural variants
     if (variant.type) {
@@ -3947,6 +3948,12 @@ class TrackRenderer {
       return;
     }
 
+    const header = variantSection.querySelector('h3');
+    if (header) {
+      header.textContent = 'Variant Details';
+      header.classList.remove('read-mutation-title');
+    }
+
     // Show loading content
     variantContent.innerHTML = `
             <div class="variant-loading">
@@ -4005,7 +4012,7 @@ class TrackRenderer {
                     </span>
                     <span class="stat-item">
                         <i class="fas fa-exclamation-triangle"></i>
-                        ${analysis.impact.severity} impact
+                        ${this.genomeBrowser.escapeHtml(String(analysis.impact.severity))} impact
                     </span>
                 </div>
             </div>
@@ -4039,12 +4046,14 @@ class TrackRenderer {
                 </div>
                 <h4>Analysis Failed</h4>
                 <p>Unable to complete variant analysis:</p>
-                <div class="error-details">${errorMessage}</div>
-                <button class="btn btn-sm retry-analysis" onclick="location.reload()">
+                <div class="error-details"></div>
+                <button class="btn btn-sm retry-analysis">
                     <i class="fas fa-redo"></i> Retry
                 </button>
             </div>
         `;
+    variantContent.querySelector('.error-details').textContent = errorMessage;
+    variantContent.querySelector('.retry-analysis').addEventListener('click', () => location.reload());
   }
 
   /**

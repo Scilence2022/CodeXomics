@@ -116,10 +116,25 @@ class VariantAnalyzer {
     try {
       console.log('Analyzing variant:', variant);
 
+      const type = this.classifyVariantType(variant);
+      if (type.lengthChange === null) {
+        return {
+          basicInfo: this.getBasicVariantInfo(variant),
+          location: { region: 'Unresolved', description: 'Position is the reported VCF anchor.' },
+          type,
+          impact: {
+            severity: 'Unknown',
+            description: 'Sequence impact requires a resolved reference and one explicit alternate allele.',
+            details: [],
+          },
+          affectedGenes: [],
+        };
+      }
+
       const analysis = {
         basicInfo: this.getBasicVariantInfo(variant),
         location: await this.getVariantLocation(variant),
-        type: this.classifyVariantType(variant),
+        type,
         impact: null,
         affectedGenes: [],
       };
@@ -182,6 +197,13 @@ class VariantAnalyzer {
    * Classify variant type
    */
   classifyVariantType(variant) {
+    const symbolic = /^<([A-Z0-9_.:-]+)>$/i.exec(variant.alt);
+    if (symbolic) {
+      return { type: 'Symbolic', description: `Symbolic alternate allele (${symbolic[1]})`, lengthChange: null };
+    }
+    if (!/^[ACGT]+$/i.test(variant.ref) || !/^[ACGT]+$/i.test(variant.alt)) {
+      return { type: 'Complex', description: 'Unresolved or multiple alternate alleles', lengthChange: null };
+    }
     const refLen = variant.ref.length;
     const altLen = variant.alt.length;
 
@@ -609,36 +631,41 @@ class VariantAnalyzer {
    */
   generateVariantReport(analysis) {
     const { basicInfo, location, type, impact, affectedGenes } = analysis;
+    const text = value => this.genomeBrowser.escapeHtml(String(value ?? ''));
+    const severityClass = value =>
+      String(value)
+        .toLowerCase()
+        .replace(/[^a-z-]/g, '');
 
     let html = `
             <div class="variant-analysis-report">
                 <div class="variant-basic-info">
                     <h4>📍 Basic Information</h4>
                     <div class="info-grid">
-                        <div><strong>Position:</strong> ${basicInfo.position}</div>
-                        <div><strong>Reference:</strong> ${basicInfo.reference}</div>
-                        <div><strong>Alternative:</strong> ${basicInfo.alternative}</div>
-                        <div><strong>Quality:</strong> ${basicInfo.quality}</div>
-                        <div><strong>Type:</strong> ${type.description}</div>
+                        <div><strong>Position:</strong> ${text(basicInfo.position)}</div>
+                        <div><strong>Reference:</strong> ${text(basicInfo.reference)}</div>
+                        <div><strong>Alternative:</strong> ${text(basicInfo.alternative)}</div>
+                        <div><strong>Quality:</strong> ${text(basicInfo.quality)}</div>
+                        <div><strong>Type:</strong> ${text(type.description)}</div>
                     </div>
                 </div>
 
                 <div class="variant-location">
                     <h4>🎯 Genomic Location</h4>
-                    <p><strong>Region:</strong> ${location.region}</p>
-                    <p>${location.description}</p>
+                    <p><strong>Region:</strong> ${text(location.region)}</p>
+                    <p>${text(location.description)}</p>
                 </div>
 
                 <div class="variant-impact">
                     <h4>⚡ Predicted Impact</h4>
-                    <div class="impact-summary ${impact.severity.toLowerCase()}">
+                    <div class="impact-summary ${severityClass(impact.severity)}">
                         <div class="impact-severity">
-                            <span class="severity-badge ${impact.severity.toLowerCase()}">${impact.severity}</span>
-                            <span class="impact-description">${impact.description}</span>
+                            <span class="severity-badge ${severityClass(impact.severity)}">${text(impact.severity)}</span>
+                            <span class="impact-description">${text(impact.description)}</span>
                         </div>
                     </div>
                     <div class="impact-details">
-                        ${impact.details.map(detail => `<div class="impact-detail">${detail}</div>`).join('')}
+                        ${impact.details.map(detail => `<div class="impact-detail">${text(detail)}</div>`).join('')}
                     </div>
                 </div>
         `;
@@ -660,18 +687,18 @@ class VariantAnalyzer {
         html += `
                     <div class="gene-item">
                         <div class="gene-header">
-                            <strong>${geneName}</strong> 
-                            <span class="gene-type">${gene.type}</span>
+                            <strong>${text(geneName)}</strong>
+                            <span class="gene-type">${text(gene.type)}</span>
                         </div>
-                        ${product ? `<div class="gene-product">${product}</div>` : ''}
-                        <div class="gene-position">${gene.start}-${gene.end} (${gene.strand || '+'})</div>
+                        ${product ? `<div class="gene-product">${text(product)}</div>` : ''}
+                        <div class="gene-position">${text(gene.start)}-${text(gene.end)} (${text(gene.strand || '+')})</div>
                 `;
 
         if (gene.impact) {
           html += `
                         <div class="gene-impact">
-                            <span class="severity-badge ${gene.impact.severity.toLowerCase()}">${gene.impact.severity}</span>
-                            <span>${gene.impact.description}</span>
+                            <span class="severity-badge ${severityClass(gene.impact.severity)}">${text(gene.impact.severity)}</span>
+                            <span>${text(gene.impact.description)}</span>
                         </div>
                     `;
         }
