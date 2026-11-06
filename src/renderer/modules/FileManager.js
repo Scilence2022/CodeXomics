@@ -200,30 +200,48 @@ class FileManager {
     }
   }
 
-  async loadOperonFile(filePath) {
+  async loadOperonFile(filePath, { format = 'auto', reportErrors = true, signal, requestDeadline } = {}) {
+    if (this.isLoadingFile) {
+      return { success: false, status: 'busy', error: 'Another file import is in progress', filePath };
+    }
+    this.isLoadingFile = true;
+    const browser = this.genomeBrowser;
+    const previous = {
+      loadedOperons: browser.loadedOperons,
+      mappedOperons: browser.mappedOperons,
+      operonMappingChromosome: browser.operonMappingChromosome,
+      currentFile: browser.currentFile,
+    };
     console.log('🔬 FileManager.loadOperonFile() called with path:', filePath);
     this.genomeBrowser.showLoading(true);
     this.genomeBrowser.updateStatus('Loading operon file...');
 
+    const checkCancellation = () => {
+      signal?.throwIfAborted();
+      if (Number.isFinite(requestDeadline) && requestDeadline <= Date.now()) {
+        const error = new Error('The request deadline elapsed before the operon import committed');
+        error.name = 'AbortError';
+        throw error;
+      }
+    };
     try {
+      checkCancellation();
       // Get file info
       const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
+      checkCancellation();
       if (!fileInfo.success) {
         throw new Error(fileInfo.error);
       }
 
       // Read file content
       const fileContent = await ipcRenderer.invoke('read-file', filePath);
+      checkCancellation();
       if (!fileContent.success) {
         throw new Error(fileContent.error);
       }
 
-      console.log('📄 File content loaded successfully');
-      console.log('📄 Content length:', fileContent.data ? fileContent.data.length : 'undefined');
-      console.log('📄 Content preview:', fileContent.data ? fileContent.data.substring(0, 200) : 'undefined');
-
       // Parse operon data based on file extension
-      const extension = fileInfo.info.extension.toLowerCase();
+      const extension = format === 'auto' ? fileInfo.info.extension.toLowerCase() : `.${format}`;
       console.log('📄 File extension:', extension);
       let operonData;
 
@@ -246,6 +264,7 @@ class FileManager {
       }
 
       // Store operon data in genome browser
+      checkCancellation();
       this.genomeBrowser.loadedOperons = operonData;
 
       // Clear operon mapping cache to force re-mapping with new operons
@@ -283,11 +302,20 @@ class FileManager {
         console.log('📋 No genome loaded - operons will be shown when genome is loaded');
         this.updateOperonPanel();
       }
+      return { success: true, status: 'loaded', filePath, count: operonData.length };
     } catch (error) {
+      Object.assign(browser, previous);
+      const message = error?.message || String(error);
+      if (signal?.aborted || error?.name === 'AbortError') {
+        this.genomeBrowser.updateStatus('Operon import cancelled');
+        return { success: false, status: 'cancelled', error: message, filePath };
+      }
       console.error('Error loading operon file:', error);
       this.genomeBrowser.updateStatus('Error loading operon file');
-      this.genomeBrowser.showNotification(`Error loading operon file: ${error.message}`, 'error');
+      if (reportErrors) this.genomeBrowser.showNotification(`Error loading operon file: ${message}`, 'error');
+      return { success: false, status: 'failed', error: message, filePath };
     } finally {
+      this.isLoadingFile = false;
       this.genomeBrowser.showLoading(false);
     }
   }

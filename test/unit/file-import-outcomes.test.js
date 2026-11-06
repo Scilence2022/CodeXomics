@@ -19,6 +19,7 @@ function createImportFixture(ipc) {
     currentAnnotations: { previous: [{ type: 'gene' }] },
     loadedOperons: [{ name: 'operon' }],
     showLoading: vi.fn(),
+    showNotification: vi.fn(),
     updateStatus: vi.fn(),
     populateChromosomeSelect: vi.fn(),
   };
@@ -90,6 +91,48 @@ describe('file import outcomes', () => {
     expect(browser.loadedGenomePath).toBe('/previous.gbk');
     expect(browser.loadedGenomeSourceSha256).toBe('old-digest');
     expect(browser.populateChromosomeSelect).not.toHaveBeenCalled();
+  });
+
+  it('reports malformed operon data and honors an explicit format for files with another extension', async () => {
+    let data = '{bad json';
+    const { browser, service } = createImportFixture(async channel =>
+      channel === 'get-file-info'
+        ? { success: true, info: { name: 'regulon.txt', extension: '.txt' } }
+        : { success: true, data }
+    );
+    const parameters = { filePath: '/regulon.txt', format: 'json' };
+
+    await expect(service.loadOperonFile(parameters)).resolves.toMatchObject({
+      success: false,
+      status: 'failed',
+      error: expect.stringContaining('JSON parsing error'),
+    });
+    expect(browser.loadedOperons).toEqual([{ name: 'operon' }]);
+    expect(browser.showNotification).not.toHaveBeenCalled();
+
+    data = '[{"name":"new-operon","start":1,"end":5}]';
+    await expect(service.loadOperonFile(parameters)).resolves.toMatchObject({
+      success: true,
+      status: 'loaded',
+      count: 1,
+      format: 'json',
+    });
+    expect(browser.loadedOperons).toMatchObject([{ name: 'new-operon', start: 1, end: 5 }]);
+  });
+
+  it('does not publish operons when the calling request is cancelled while reading', async () => {
+    const controller = new AbortController();
+    const { browser, manager, service } = createImportFixture(async channel => {
+      if (channel === 'get-file-info') return { success: true, info: { extension: '.json', name: 'operons.json' } };
+      controller.abort(new Error('MCP request cancelled'));
+      return { success: true, data: '[{"name":"too-late"}]' };
+    });
+
+    await expect(
+      service.loadOperonFile({ filePath: '/operons.json', __executionContext: { signal: controller.signal } })
+    ).resolves.toMatchObject({ success: false, status: 'cancelled', error: 'MCP request cancelled' });
+    expect(browser.loadedOperons).toEqual([{ name: 'operon' }]);
+    expect(manager.isLoadingFile).toBe(false);
   });
 
   it('applies display sampling on each read-cache hit and separates filter settings', async () => {
