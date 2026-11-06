@@ -4,13 +4,14 @@ const fs = require('node:fs/promises');
 const { createHash } = require('node:crypto');
 const { pipeline } = require('node:stream/promises');
 const { createGunzip } = require('node:zlib');
+const { getGenomeFileFormat } = require('../shared/genome-file-formats');
 
 const MAX_FILE_BYTES = 500 * 1024 * 1024;
 const MAX_GZIP_BYTES = 256 * 1024 * 1024;
 const fingerprints = new Map();
 
 function isGenomeSource(filePath) {
-  return /\.(?:fa|fasta|gb|gbk|gbff|genbank)(?:\.gz)?$/i.test(filePath);
+  return getGenomeFileFormat(filePath) !== null;
 }
 
 function statVersion(stats) {

@@ -20,7 +20,7 @@ parameters:
   properties:
     filePath:
       type: 'string'
-      description: 'Direct file path to genome file (FASTA/GenBank format)'
+      description: 'Direct path to a FASTA (.fa, .fasta, .fas, .fna) or GenBank (.gb, .gbk, .gbff, .genbank) file, optionally gzip compressed.'
       required: false
       examples: ['/path/to/genome.fasta', 'genome.gb', '/Users/user/data/ecoli.genbank']
     showFileDialog:
@@ -30,7 +30,7 @@ parameters:
       default: false
     fileType:
       type: 'string'
-      description: 'File type hint for better handling'
+      description: 'Expected genome format. Auto detects the format from the filename.'
       required: false
       default: 'auto'
       enum: ['auto', 'fasta', 'genbank']

@@ -13,13 +13,14 @@ class FileTools {
       load_genome_file: {
         name: 'load_genome_file',
         description:
-          'Load a genome file (GenBank, FASTA, EMBL) into the browser. Use showFileDialog=true to open file picker.',
+          'Load a genome file (GenBank or FASTA) into the browser. Use showFileDialog=true to open the file picker.',
         parameters: {
           type: 'object',
           properties: {
             filePath: {
               type: 'string',
-              description: 'Absolute path to genome file (.gbk, .gb, .fasta, .fa, .embl)',
+              description:
+                'Absolute path to a FASTA (.fa, .fasta, .fas, .fna) or GenBank (.gb, .gbk, .gbff, .genbank) file, optionally gzip compressed.',
             },
             showFileDialog: {
               type: 'boolean',
@@ -28,7 +29,8 @@ class FileTools {
             },
             fileType: {
               type: 'string',
-              description: 'File type hint (auto, genbank, fasta, embl)',
+              description: 'Expected genome format. Auto detects the format from the filename.',
+              enum: ['auto', 'fasta', 'genbank'],
               default: 'auto',
             },
           },

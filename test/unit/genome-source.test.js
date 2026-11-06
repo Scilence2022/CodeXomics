@@ -3,9 +3,16 @@ import { mkdtemp, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { readGenomeSource } from '../../src/main/genome-source.js';
+import { isGenomeSource, readGenomeSource } from '../../src/main/genome-source.js';
 
 describe('genome source fingerprint', () => {
+  it('recognizes nucleotide FASTA aliases and their gzip suffixes', () => {
+    expect(isGenomeSource('/data/reference.fas')).toBe(true);
+    expect(isGenomeSource('/data/reference.FNA.GZ')).toBe(true);
+    expect(isGenomeSource('/data/reference.fna.gz.tmp')).toBe(false);
+    expect(isGenomeSource('/data/reference.vcf.gz')).toBe(false);
+  });
+
   it('shares the decoded content identity across plain and recompressed sources', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'codexomics-source-'));
     try {

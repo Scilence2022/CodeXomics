@@ -20,6 +20,7 @@ const mcp = require('./main/mcp-lifecycle');
 const { registerIpcHandlers } = require('./main/ipc-handlers');
 const { registerProjectIpcHandlers } = require('./main/project-ipc');
 const { registerRendererContentSecurityPolicy, rememberApprovedPath } = require('./main/security-utils');
+const { isGenomeSource } = require('./main/genome-source');
 const logging = require('./main/logging');
 const { initUpdater } = require('./main/updater');
 
@@ -125,20 +126,16 @@ function setupEnvironmentVariables() {
   console.log('[Main] Current BLASTDB:', process.env.BLASTDB);
 }
 
-function isGenBankFilePath(filePath) {
-  return /\.(?:gbk|gb|genbank|gbff)(?:\.gz)?$/i.test(filePath);
-}
-
 /**
- * Open a GenBank file in the main window.
- * @param {string} filePath - Path to the GenBank file to open
+ * Open a genome file in the main window.
+ * @param {string} filePath - Path to the genome file to open
  */
-function openGenBankFile(filePath) {
-  console.log('[Main] Opening GenBank file:', filePath);
+function openGenomeFile(filePath) {
+  console.log('[Main] Opening genome file:', filePath);
 
   // Validate file extension
-  if (!isGenBankFilePath(filePath)) {
-    console.warn('[Main] File is not a GenBank file:', filePath);
+  if (!isGenomeSource(filePath)) {
+    console.warn('[Main] File is not a supported genome source:', filePath);
     return;
   }
 
@@ -456,14 +453,14 @@ app.whenReady().then(async () => {
 app.on('open-file', (event, filePath) => {
   event.preventDefault();
   console.log('[Main] macOS open-file event:', filePath);
-  openGenBankFile(filePath);
+  openGenomeFile(filePath);
 });
 
 // Handle files passed as command-line arguments on Windows/Linux
-const commandLineFiles = process.argv.slice(1).filter(arg => !arg.startsWith('--') && isGenBankFilePath(arg));
+const commandLineFiles = process.argv.slice(1).filter(arg => !arg.startsWith('--') && isGenomeSource(arg));
 
 if (commandLineFiles.length > 0) {
-  console.log('[Main] Command-line GenBank files:', commandLineFiles);
+  console.log('[Main] Command-line genome files:', commandLineFiles);
   commandLineFiles.forEach(filePath => {
     rememberApprovedPath(filePath);
     fileOpenQueue.push(filePath);

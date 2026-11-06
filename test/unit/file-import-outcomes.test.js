@@ -160,6 +160,19 @@ describe('file import outcomes', () => {
     expect(browser.selectChromosome).toHaveBeenCalledWith('first');
   });
 
+  it('rejects another data type before a direct genome import reads or changes the workspace', async () => {
+    const { browser, service } = createImportFixture(async () => ({
+      success: true,
+      info: { name: 'variants.vcf', extension: '.vcf', size: 40 },
+    }));
+    await expect(service.loadGenomeFile({ filePath: '/variants.vcf' })).resolves.toMatchObject({
+      success: false,
+      error: 'Expected a FASTA or GenBank genome file',
+    });
+    expect(browser.loadedGenomePath).toBe('/previous.gbk');
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(1);
+  });
+
   it('reports malformed operon data and honors an explicit format for files with another extension', async () => {
     let data = '{bad json';
     const { browser, service } = createImportFixture(async channel =>

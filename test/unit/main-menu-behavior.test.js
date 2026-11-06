@@ -337,8 +337,11 @@ describe('Main-menu renderer routes', () => {
     );
     const browser = Object.create(context.Browser.prototype);
     const className = service === 'uiManager' ? 'UIManager' : service[0].toUpperCase() + service.slice(1);
-    const implementation = { window: {}, module: { exports: {} }, console };
-    vm.runInNewContext(
+    const implementation = vm.createContext({ window: {}, console });
+    if (className === 'FileManager') {
+      vm.runInContext(source('src/shared/genome-file-formats.js'), implementation);
+    }
+    vm.runInContext(
       source(`src/renderer/modules/${className}.js`) + `\nglobalThis.Service = ${className};`,
       implementation
     );
