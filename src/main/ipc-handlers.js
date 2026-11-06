@@ -639,6 +639,7 @@ function registerIpcHandlers(deps) {
     checkPortAvailable,
   } = deps;
   const bamReaders = new Map();
+  const bamReaderOwners = new WeakSet();
   const samQueriesBySender = new WeakMap();
   const getMainGenomeTarget = () =>
     (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow || null;
@@ -2532,21 +2533,29 @@ function registerIpcHandlers(deps) {
       const reader = new BamReader();
       const result = await reader.initialize(safeFilePath, safeOptions);
       const readerId = crypto.randomUUID();
-      const ownerWebContentsId = event.sender.id;
+      const sender = event.sender;
+      if (sender.isDestroyed()) {
+        reader.reset();
+        throw new Error('BAM reader owner closed during initialization');
+      }
+      const ownerWebContentsId = sender.id;
 
       bamReaders.set(readerId, {
         reader,
         ownerWebContentsId,
       });
 
-      event.sender.once('destroyed', () => {
-        for (const [storedReaderId, entry] of bamReaders.entries()) {
-          if (entry.ownerWebContentsId === ownerWebContentsId) {
-            entry.reader.reset();
-            bamReaders.delete(storedReaderId);
+      if (!bamReaderOwners.has(sender)) {
+        bamReaderOwners.add(sender);
+        sender.once('destroyed', () => {
+          for (const [storedReaderId, entry] of bamReaders.entries()) {
+            if (entry.ownerWebContentsId === ownerWebContentsId) {
+              entry.reader.reset();
+              bamReaders.delete(storedReaderId);
+            }
           }
-        }
-      });
+        });
+      }
 
       const state = getBamReaderState(reader);
       return toIpcSafeValue({

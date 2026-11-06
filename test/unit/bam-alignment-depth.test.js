@@ -58,4 +58,79 @@ describe('BAM alignment depth', () => {
     expect(depth.binSize).toBe(3);
     expect(depth.alignedBases).toEqual([2, ...new Array(832).fill(3), 2]);
   });
+
+  it('aborts a BAM depth scan when its reader is reset without returning partial bins', async () => {
+    const reader = createReader();
+    let entered;
+    const streamPending = new Promise(resolve => {
+      entered = resolve;
+    });
+    reader.bamFile.streamRecordsForRange = async function* (_reference, _start, _end, { signal }) {
+      yield [{ start: 1, CIGAR: '5M', flags: 0, mq: 60 }];
+      await new Promise((_, reject) => {
+        signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+        entered();
+      });
+    };
+    const pending = reader.getDepthForRange('chr1', 0, 16, { start: 0, end: 16 }, settings);
+    await streamPending;
+    reader.reset();
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    expect(reader.isInitialized).toBe(false);
+  });
+
+  it('releases a remote BAM initialization that completed after reset', async () => {
+    const reader = new BamReader();
+    let finish;
+    const destroy = vi.fn(async () => ({ success: true }));
+    vi.stubGlobal('electronAPI', {
+      bamReader: {
+        initialize: () =>
+          new Promise(resolve => {
+            finish = resolve;
+          }),
+        destroy,
+      },
+    });
+    try {
+      const pending = reader.initializeViaIpc('/first.bam');
+      reader.reset();
+      finish({ readerId: 'old-reader', state: { isInitialized: true } });
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+      expect(destroy).toHaveBeenCalledWith('old-reader');
+      expect(reader.backendId).toBeNull();
+      expect(reader.isInitialized).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('does not apply a late IPC query response to a reset reader', async () => {
+    const reader = new BamReader();
+    reader.usesIpcBackend = true;
+    reader.backendId = 'old-reader';
+    reader.isInitialized = true;
+    let finish;
+    const destroy = vi.fn(async () => ({ success: true }));
+    vi.stubGlobal('electronAPI', {
+      bamReader: {
+        initialize: vi.fn(),
+        destroy,
+        getRecordsForRange: () =>
+          new Promise(resolve => {
+            finish = resolve;
+          }),
+      },
+    });
+    try {
+      const pending = reader.getRecordsForRange('chr1', 0, 16);
+      reader.reset();
+      finish({ reads: [{ id: 'obsolete-read' }], state: { isInitialized: true } });
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+      expect(destroy).toHaveBeenCalledWith('old-reader');
+      expect(reader.isInitialized).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

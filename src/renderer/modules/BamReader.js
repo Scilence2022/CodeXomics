@@ -58,6 +58,7 @@ class BamReader {
     };
     this.backendId = null;
     this.usesIpcBackend = useIpcBamBackend || (!BamFile && hasIpcBamBackend());
+    this.queryController = new AbortController();
   }
 
   applyBackendState(state = {}) {
@@ -87,7 +88,15 @@ class BamReader {
     }
 
     this.reset();
-    const result = await window.electronAPI.bamReader.initialize(filePath, options);
+    const { signal } = this.queryController;
+    const api = window.electronAPI.bamReader;
+    const result = await api.initialize(filePath, options);
+    if (signal.aborted) {
+      await api.destroy(result.readerId).catch(error => {
+        console.warn('Failed to release an obsolete BAM reader:', error.message);
+      });
+      signal.throwIfAborted();
+    }
     this.backendId = result.readerId;
     this.applyBackendState(result.state);
 
@@ -835,10 +844,21 @@ class BamReader {
    * the records used for the reads display. All coordinates are half-open.
    */
   async getDepthForRange(chromosome, start, end, viewport, settings = {}) {
+    const { signal } = this.queryController;
     if (this.usesIpcBackend) {
-      return window.electronAPI.bamReader.getDepthForRange(this.backendId, chromosome, start, end, viewport, settings);
+      const depth = await window.electronAPI.bamReader.getDepthForRange(
+        this.backendId,
+        chromosome,
+        start,
+        end,
+        viewport,
+        settings
+      );
+      signal.throwIfAborted();
+      return depth;
     }
-    if (!this.isInitialized || !this.bamFile) throw new Error('BAM reader is not initialized');
+    const bamFile = this.bamFile;
+    if (!this.isInitialized || !bamFile) throw new Error('BAM reader is not initialized');
     const { start: viewStart, end: viewEnd, offset = 0 } = viewport;
     if (
       ![start, end, viewStart, viewEnd, offset].every(Number.isSafeInteger) ||
@@ -855,7 +875,8 @@ class BamReader {
     const depth = new AlignmentDepth(viewStart, viewEnd);
     const refs = settings.ignoreChromosome ? this.references.map(ref => ref.name) : [chromosome];
     for (const reference of refs) {
-      for await (const records of this.bamFile.streamRecordsForRange(reference, start, end)) {
+      for await (const records of bamFile.streamRecordsForRange(reference, start, end, { signal })) {
+        signal.throwIfAborted();
         for (const record of records) {
           if (AlignmentDepth.allowsRecord(record.flags, record.mq ?? record.mapq ?? 0, settings)) {
             depth.addAlignment(record.start, record.CIGAR || record.cigar || '', start, end, offset);
@@ -863,6 +884,7 @@ class BamReader {
         }
       }
     }
+    signal.throwIfAborted();
     return depth.summarize();
   }
 
@@ -875,6 +897,7 @@ class BamReader {
    * @returns {Promise<Array>} Array of BAM records
    */
   async getRecordsForRange(chromosome, start, end, settings = {}) {
+    const { signal } = this.queryController;
     if (this.usesIpcBackend) {
       if (!this.backendId) {
         throw new Error('BAM reader not initialized. Call initialize() first.');
@@ -887,6 +910,7 @@ class BamReader {
         end,
         settings
       );
+      signal.throwIfAborted();
       this.applyBackendState(result.state);
       const reads = result.reads || [];
       if (result.sourceSamplingInfo) reads._sourceSamplingInfo = result.sourceSamplingInfo;
@@ -908,7 +932,8 @@ class BamReader {
         bamFilePath: this.filePath,
       });
 
-      if (!this.isInitialized || !this.bamFile) {
+      const bamFile = this.bamFile;
+      if (!this.isInitialized || !bamFile) {
         throw new Error('BAM reader not initialized. Call initialize() first.');
       }
 
@@ -972,7 +997,8 @@ class BamReader {
         for (const ref of this.references) {
           try {
             console.log(`🔍 [BamReader] Querying reference: ${ref.name}`);
-            const records = await this.bamFile.getRecordsForRange(ref.name, start, end);
+            const records = await bamFile.getRecordsForRange(ref.name, start, end, { signal });
+            signal.throwIfAborted();
             console.log(`🔍 [BamReader] Retrieved ${records.length} records from ${ref.name}`);
             for (const record of records) allRecords.push(record);
 
@@ -989,6 +1015,7 @@ class BamReader {
               });
             }
           } catch (refError) {
+            signal.throwIfAborted();
             console.warn(`⚠️ [BamReader] Error querying reference ${ref.name}:`, refError.message);
             // Continue with other references
           }
@@ -997,7 +1024,8 @@ class BamReader {
         // Normal chromosome-specific query using @gmod/bam directly
         console.log(`🔍 [BamReader] NORMAL MODE: Fetching records for range ${chromosome}:${start}-${end}`);
         try {
-          allRecords = await this.bamFile.getRecordsForRange(chromosome, start, end);
+          allRecords = await bamFile.getRecordsForRange(chromosome, start, end, { signal });
+          signal.throwIfAborted();
           console.log(`🔍 [BamReader] Direct query returned ${allRecords.length} records`);
 
           // Log sample records for debugging
@@ -1236,6 +1264,7 @@ class BamReader {
       const queryTime = performance.now() - startTime;
 
       // Update performance statistics
+      signal.throwIfAborted();
       this.updatePerformanceStats(queryTime);
 
       console.log(
@@ -1248,6 +1277,7 @@ class BamReader {
       }
       return reads;
     } catch (error) {
+      signal.throwIfAborted();
       const queryTime = performance.now() - startTime;
       console.error(`❌ [BamReader] Failed to get reads for region (${queryTime.toFixed(1)}ms):`, error);
       console.error(`❌ [BamReader] Error stack:`, error.stack);
@@ -1749,6 +1779,8 @@ class BamReader {
    * Reset BAM reader state
    */
   reset() {
+    this.queryController.abort();
+    this.queryController = new AbortController();
     const backendId = this.backendId;
     if (this.usesIpcBackend && backendId && hasIpcBamBackend()) {
       window.electronAPI.bamReader.destroy(backendId).catch(error => {
