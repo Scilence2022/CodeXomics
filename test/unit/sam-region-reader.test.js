@@ -64,6 +64,21 @@ describe('SAM region scanning', () => {
     expect((await manager.getReadsForRegion('chr1', 0, 1)).map(read => read.id)).toEqual(['new']);
   });
 
+  it('evicts distant cache entries without scanning the SAM again for adjacent windows', async () => {
+    const manager = new ReadsManager({});
+    await manager.initializeWithSAMData(makeLine('read', 0, 1, '1M', 'A'), '/sample.sam');
+    const settings = { viewportCoordinates: true };
+    const reads = await manager.getReadsForRegion('chr1', 0, 1, settings);
+    await manager.getReadsForRegion('chr1', 100, 101, settings);
+    const missesBeforeNavigation = manager.stats.cacheMisses;
+
+    manager.onNavigationChange('chr1', 0, 1);
+
+    expect(manager.stats.cacheMisses).toBe(missesBeforeNavigation);
+    expect(manager.cache.size).toBe(1);
+    expect(await manager.getReadsForRegion('chr1', 0, 1, settings)).toBe(reads);
+  });
+
   it('cancels the active IPC scan when the SAM source changes', async () => {
     const manager = new ReadsManager({});
     await manager.initializeWithStreamingSAM('/old.sam');

@@ -320,30 +320,6 @@ class ReadsManager {
   }
 
   /**
-   * Preload reads for adjacent regions (optional optimization)
-   */
-  async preloadAdjacentRegions(chromosome, start, end) {
-    const regionSize = end - start;
-    const buffer = regionSize; // Preload regions of same size on both sides
-
-    // Preload previous region
-    const prevStart = Math.max(0, start - buffer);
-    const prevEnd = start;
-
-    // Preload next region
-    const nextStart = end;
-    const nextEnd = end + buffer;
-
-    // Load in background without blocking
-    Promise.all([
-      this.getReadsForRegion(chromosome, prevStart, prevEnd),
-      this.getReadsForRegion(chromosome, nextStart, nextEnd),
-    ]).catch(error => {
-      console.warn('Error preloading adjacent regions:', error);
-    });
-  }
-
-  /**
    * Clear cache for memory management
    */
   clearCache() {
@@ -397,11 +373,6 @@ class ReadsManager {
       this.cache.delete(key);
       console.log(`Removed distant cache entry: ${key}`);
     });
-
-    // Optionally preload adjacent regions
-    if (this.rawReadsData) {
-      this.preloadAdjacentRegions(chromosome, start, end);
-    }
   }
 
   /**
