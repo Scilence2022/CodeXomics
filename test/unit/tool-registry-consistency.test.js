@@ -24,6 +24,8 @@ describe('tool registry consistency validation', () => {
     expect(report.counts.registryTools).toBeGreaterThanOrEqual(178);
     expect(report.comparisons['ToolNames.js'].allowedExceptions).toEqual(KNOWN_EXCEPTIONS.toolNamesMissingRegistry);
     expect(report.comparisons['src/mcp-tools schemas'].allowedExceptions).toEqual(KNOWN_EXCEPTIONS.mcpMissingRegistry);
+    expect(report.comparisons.builtInToolsMap.allowedExceptions).not.toContain('find_gene');
+    expect(report.comparisons['src/mcp-tools schemas'].allowedExceptions).not.toContain('find_gene');
   });
 
   it('requires aliases to resolve to one canonical target across YAML and runtime', () => {

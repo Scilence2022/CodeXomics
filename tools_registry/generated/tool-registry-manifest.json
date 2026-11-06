@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-11-06T06:14:42.083Z",
-  "registryHash": "17a02335da1b9cf663b442d3e83dbb8c15814f799cebb78cf898c653cb439f96",
+  "generatedAt": "2026-11-06T07:00:49.509Z",
+  "registryHash": "78cf095e9db471a74a972e58e1b753c72aeb47df2665e2ca78d254c1a989b8f6",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -14430,6 +14430,9 @@
     },
     {
       "name": "find_gene_by_name",
+      "aliases": [
+        "find_gene"
+      ],
       "version": "1.1.0",
       "description": "Search for a SPECIFIC GENE by its name or locus tag (e.g., lacZ, b0062, dnaA). Use this when you know the gene identifier. For searching by functional annotation or feature type (e.g., \"all kinase genes\", \"all tRNA\"), use search_features instead. For direct navigation to a known gene, try jump_to_gene first.",
       "category": "navigation",
@@ -41167,6 +41170,9 @@
     },
     "find_gene_by_name": {
       "name": "find_gene_by_name",
+      "aliases": [
+        "find_gene"
+      ],
       "version": "1.1.0",
       "description": "Search for a SPECIFIC GENE by its name or locus tag (e.g., lacZ, b0062, dnaA). Use this when you know the gene identifier. For searching by functional annotation or feature type (e.g., \"all kinase genes\", \"all tRNA\"), use search_features instead. For direct navigation to a known gene, try jump_to_gene first.",
       "category": "navigation",
@@ -57392,6 +57398,7 @@
     "remove_tab": "close_tab",
     "delete_tab": "close_tab",
     "dismiss_tab": "close_tab",
+    "find_gene": "find_gene_by_name",
     "goto_tab": "switch_to_tab",
     "select_tab": "switch_to_tab",
     "activate_tab": "switch_to_tab",

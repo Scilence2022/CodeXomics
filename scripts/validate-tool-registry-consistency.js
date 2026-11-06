@@ -18,7 +18,6 @@ const KNOWN_EXCEPTIONS = {
   builtInToolsMapMissingRegistry: [
     'advanced_blast_search',
     'batch_blast_search',
-    'find_gene',
     'get_blast_databases',
     'list_genome_windows',
     'switch_active_window',
@@ -122,7 +121,6 @@ const KNOWN_EXCEPTIONS = {
   ],
   mcpMissingRegistry: [
     'codexomics_chat',
-    'find_gene',
     'list_genome_windows',
     'render_protein_structure_results',
     'run_on_windows',
@@ -260,6 +258,13 @@ async function validateToolRegistryConsistency() {
   const registryBuiltInNames = unique(snapshot.tools.filter(tool => tool.isBuiltIn).map(tool => tool.name));
   const { aliases, errors: aliasErrors } = validateToolAliases(snapshot.tools, ToolExecutionService.legacyAliases);
   const validNames = new Set([...registryNames, ...aliases.keys()]);
+  const routedNames = surface => {
+    const allowed = new Set(registryNames);
+    for (const [alias, target] of aliases) {
+      if (ToolExecutionService.legacyAliases[alias] === target && surface.includes(target)) allowed.add(alias);
+    }
+    return allowed;
+  };
 
   const report = {
     success: true,
@@ -292,7 +297,7 @@ async function validateToolRegistryConsistency() {
     });
   }
 
-  pushComparison(report, 'builtInToolsMap', builtInNames, registryNames, 'builtInToolsMapMissingRegistry');
+  pushComparison(report, 'builtInToolsMap', builtInNames, routedNames(builtInNames), 'builtInToolsMapMissingRegistry');
   pushComparison(report, 'ToolNames.js', collectToolNamesConstants(), validNames, 'toolNamesMissingRegistry');
   pushComparison(
     report,
@@ -308,7 +313,8 @@ async function validateToolRegistryConsistency() {
     validNames,
     'llmPolicyMissingRegistry'
   );
-  pushComparison(report, 'src/mcp-tools schemas', collectMcpToolNames(), registryNames, 'mcpMissingRegistry');
+  const mcpNames = collectMcpToolNames();
+  pushComparison(report, 'src/mcp-tools schemas', mcpNames, routedNames(mcpNames), 'mcpMissingRegistry');
 
   report.success = report.errors.length === 0;
   return report;
