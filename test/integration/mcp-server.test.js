@@ -688,6 +688,30 @@ describe('MCP Server Structure', () => {
     expect(executionContext.commitNotAfter).toBeLessThan(executionContext.requestDeadline);
   });
 
+  it('returns tool failures with protocol-level error status on the HTTP and WebSocket compatibility endpoints', async () => {
+    const MCPServer = require(MCP_SERVER_PATH);
+    const server = Object.create(MCPServer.prototype);
+    const failure = { success: false, result: { success: false, status: 'failed', error: 'Invalid operon JSON' } };
+    const session = { valid: true, principal: 'admin', isAdmin: true, sessionId: 'admin-session' };
+    server.mode = 'tools';
+    server.serverLog = () => {};
+    server.authManager = { validateSession: () => session };
+    server.toolsIntegrator = { executeTool: vi.fn(async () => failure) };
+    server._withTimeout = vi.fn(async operation => operation());
+    const body = { jsonrpc: '2.0', method: 'tools/call', params: { name: 'load_operon_file', arguments: {} }, id: 1 };
+
+    const websocket = await server.handleWebSocketMessage(body, 'admin-session');
+    const response = { setHeader: vi.fn(), json: vi.fn() };
+    await server.handleMCPPostRequest({ path: '/message', body, mcpSession: session, get: () => undefined }, response);
+    const [http] = response.json.mock.calls[0];
+
+    for (const reply of [websocket, http]) {
+      expect(reply).toMatchObject({ id: 1, result: { isError: true } });
+      expect(reply.error).toBeUndefined();
+      expect(JSON.parse(reply.result.content[0].text)).toEqual(failure);
+    }
+  });
+
   it('preserves the 120-second agent deadline across the Electron IPC hop', async () => {
     vi.useFakeTimers();
     const MCPServer = require(MCP_SERVER_PATH);
@@ -936,6 +960,18 @@ describe('MCP Server Structure', () => {
       expect(firstLegacyReaderTools).not.toContain('create_annotation_changeset');
       expect(secondLegacyReaderTools).not.toContain('create_annotation_changeset');
       expect(server.sseTransports.size).toBe(2);
+
+      const failure = {
+        success: false,
+        result: { success: false, status: 'failed', error: 'Missing annotation' },
+      };
+      executeToolSpy.mockResolvedValueOnce(failure);
+      const failedLegacyTool = await firstLegacyClient.callTool({
+        name: 'resolve_annotation_target',
+        arguments: { identifier: 'missing' },
+      });
+      expect(failedLegacyTool.isError).toBe(true);
+      expect(JSON.parse(failedLegacyTool.content[0].text)).toEqual(failure);
 
       await firstLegacyClient.close();
       await vi.waitFor(() => expect(server.sseTransports.size).toBe(1));
