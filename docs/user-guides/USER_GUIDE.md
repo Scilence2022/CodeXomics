@@ -476,7 +476,8 @@ The conversation also keeps a detailed status message for each run, updated in p
 
 - Set beside the model selector in the ChatBox, or as a default under Agent Settings → Generation
 - _Default_ leaves the model's own behaviour; _Off_, _Low_, _Medium_ and _High_ set how much it reasons before answering
-- Shown only for models with a thinking control: Claude, Gemini 2.5 and later, OpenAI reasoning models, DeepSeek, Qwen3 hybrid models on SiliconFlow, and OpenRouter. Levels a model does not accept are greyed out — some models always think, so they have no _Off_
+- Adjustable for models with a thinking control: Claude, Gemini 2.5 and later, OpenAI reasoning models, DeepSeek (directly or through Zhongkeyu), Qwen3 hybrid models on SiliconFlow, and OpenRouter. Levels a model does not accept are greyed out — some models always think, so they have no _Off_
+- For any other model the control reads _Thinking: fixed_ and is disabled; hover it to see why
 - Higher levels give better plans on multi-step requests at the cost of latency and tokens; the output limit is raised automatically while thinking is on
 
 **Temperature Settings:**

@@ -131,6 +131,36 @@ class LLMReasoningProfiles {
     return /deepseek-v3\.[12]|deepseek-v4|glm-4\.[5-9]|glm-[5-9]/.test(id);
   }
 
+  static getOpenAIProfile(providerKey, model) {
+    if (!LLMReasoningProfiles.isOpenAIReasoningModel(model)) return null;
+    return {
+      provider: providerKey,
+      style: 'openai-effort',
+      levels: [...THINKING_LEVELS],
+      note: 'Reasoning models always think; the level sets the reasoning effort.',
+    };
+  }
+
+  /**
+   * DeepSeek's thinking mode: `thinking: {type}` turns it on or off and
+   * `reasoning_effort` sets its depth (measured on deepseek-v4.1-flash: low,
+   * medium and high used about 600, 880 and 2100 reasoning tokens on the same
+   * problem). deepseek-reasoner always thinks, so it has no Off.
+   */
+  static getDeepSeekProfile(providerKey, model) {
+    const id = String(model || '').toLowerCase();
+    if (!/deepseek/.test(id)) return null;
+    const alwaysThinks = /reasoner/.test(id);
+    return {
+      provider: providerKey,
+      style: 'deepseek',
+      levels: alwaysThinks ? [...THINKING_LEVELS] : ['off', ...THINKING_LEVELS],
+      note: alwaysThinks
+        ? 'This model always thinks; the level sets the reasoning effort.'
+        : 'Off turns thinking off; low, medium and high set the reasoning effort.',
+    };
+  }
+
   /**
    * What thinking control a model offers, or null when it has none the app can
    * set (fixed-thinking models such as deepseek-reasoner or MiniMax M2, local
@@ -160,14 +190,15 @@ class LLMReasoningProfiles {
         };
       }
       case 'openai':
+        return LLMReasoningProfiles.getOpenAIProfile(providerKey, model);
       case 'zhongkeyu':
-        if (!LLMReasoningProfiles.isOpenAIReasoningModel(model)) return null;
-        return {
-          provider: providerKey,
-          style: 'openai-effort',
-          levels: [...THINKING_LEVELS],
-          note: 'Reasoning models always think; the level sets the reasoning effort.',
-        };
+        // A relay serving several model families with the OpenAI request shape;
+        // it forwards each family's own thinking parameters (verified for
+        // DeepSeek V4: `thinking` and `reasoning_effort` both take effect).
+        return (
+          LLMReasoningProfiles.getDeepSeekProfile(providerKey, model) ||
+          LLMReasoningProfiles.getOpenAIProfile(providerKey, model)
+        );
       case 'openrouter':
         return {
           provider: providerKey,
@@ -176,14 +207,7 @@ class LLMReasoningProfiles {
           note: 'OpenRouter applies this to models that support reasoning and ignores it elsewhere.',
         };
       case 'deepseek':
-        if (/reasoner/i.test(String(model || ''))) return null;
-        if (!/deepseek/i.test(String(model || ''))) return null;
-        return {
-          provider: providerKey,
-          style: 'deepseek-toggle',
-          levels: ['off', ...THINKING_LEVELS],
-          note: 'DeepSeek thinking is on or off; low, medium and high all turn it on.',
-        };
+        return LLMReasoningProfiles.getDeepSeekProfile(providerKey, model);
       case 'siliconflow':
         if (!LLMReasoningProfiles.isSiliconFlowHybridModel(model)) return null;
         return {
@@ -248,8 +272,9 @@ class LLMReasoningProfiles {
       case 'openrouter':
         payload.reasoning = thinking ? { effort: resolved } : { enabled: false };
         break;
-      case 'deepseek-toggle':
+      case 'deepseek':
         payload.thinking = { type: thinking ? 'enabled' : 'disabled' };
+        if (thinking) payload.reasoning_effort = resolved;
         break;
       case 'siliconflow':
         payload.enable_thinking = thinking;
