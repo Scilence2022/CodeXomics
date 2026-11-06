@@ -191,7 +191,7 @@ function inferCapabilityFromOperation(operation = 'access') {
 function resolveFileAccessPath(targetPath) {
   let ancestor = path.resolve(targetPath);
   const missing = [];
-  while (true) {
+  for (;;) {
     try {
       return path.join(fs.realpathSync(ancestor), ...missing.reverse());
     } catch (error) {
