@@ -4816,6 +4816,17 @@ class ActionManager {
    * Adjust a single feature based on modifications
    */
   adjustSingleFeature(feature, sortedModifications) {
+    const location = feature.genbankLocation || feature.location;
+    if (
+      sortedModifications.length === 1 &&
+      feature.genbankLocationBounds &&
+      !feature.genbankLocationEdited &&
+      /\b(?:join|order)\(/i.test(location)
+    ) {
+      this.genbankExporter ||= new GenBankExporter(this.genomeBrowser);
+      const remapped = this.genbankExporter.remapDisjointCompoundLocation(feature, sortedModifications[0]);
+      if (remapped) return remapped;
+    }
     let adjustedStart = feature.start;
     let adjustedEnd = feature.end;
     let isValid = true;
