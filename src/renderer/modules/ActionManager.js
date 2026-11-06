@@ -4828,7 +4828,10 @@ class ActionManager {
       sortedModifications.length === 1 &&
       feature.genbankLocationBounds &&
       !feature.genbankLocationEdited &&
-      (/\b(?:join|order)\(|[<>:]/i.test(location) || (location && feature.type?.toLowerCase() === 'cds'))
+      location &&
+      (/\b(?:join|order)\(|[<>:]/i.test(location) ||
+        feature.type?.toLowerCase() === 'cds' ||
+        GenBankExporter.hasPositionQualifiers(feature))
     ) {
       this.genbankExporter ||= new GenBankExporter(this.genomeBrowser);
       const remapped = this.genbankExporter.remapLocationForEdit(feature, sortedModifications[0]);

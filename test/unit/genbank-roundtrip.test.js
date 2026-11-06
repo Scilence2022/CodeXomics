@@ -424,7 +424,7 @@ describe('GenBank round trip', () => {
     ).toThrow(/Cannot export (?:coordinate qualifiers|edited compound location)/);
   });
 
-  it.each([{ transl_except: '(pos:AB123.1:7..8,aa:Sec)' }, { rpt_unit_range: '3..7' }])(
+  it.each([{ transl_except: '(pos:<7..8,aa:Sec)' }, { rpt_unit_range: '3..7' }])(
     'rejects export when an edit cannot remap a coordinate qualifier %j',
     qualifiers => {
       const actions = createActionManager({});
@@ -445,6 +445,52 @@ describe('GenBank round trip', () => {
       expect(() => exporter.generateFeatures('fixture', 'A'.repeat(10), [edited], {})).toThrow(/Cannot remap \//);
     }
   );
+
+  it('retains remote qualifier references while shifting nearby local coordinates', () => {
+    const actions = createActionManager({});
+    const exporter = new GenBankExporter({});
+    const remote = '(pos:AB123.1:7..8,aa:Sec)';
+    const feature = {
+      type: 'CDS',
+      start: 2,
+      end: 8,
+      strand: 1,
+      location: 'join(2..4,7..8)',
+      genbankLocationBounds: [2, 8, 1],
+      qualifiers: { transl_except: [remote, '(pos:7..8,aa:TERM)'] },
+    };
+    const edited = actions.adjustSingleFeature(feature, [{ type: 'insert', position: 5, sequence: 'AA' }]);
+    expect(edited.qualifiers.transl_except).toEqual([remote, '(pos:9..10,aa:TERM)']);
+    expect(exporter.generateFeatures('fixture', 'A'.repeat(10), [edited], {})).toContain(remote);
+    expect(exporter.getExportQualifiers({ ...feature, start: 4, end: 10 }).transl_except).toEqual([
+      remote,
+      '(pos:9..10,aa:TERM)',
+    ]);
+  });
+
+  it('moves a fuzzy qualifier only when the edit is outside its possible span', () => {
+    const actions = createActionManager({});
+    const exporter = new GenBankExporter({});
+    const feature = {
+      type: 'tRNA',
+      start: 4,
+      end: 8,
+      strand: -1,
+      location: 'complement(4..8)',
+      genbankLocationBounds: [4, 8, -1],
+      qualifiers: { anticodon: '(pos:complement(5..>6),aa:Leu,seq:taa)' },
+    };
+    const shifted = actions.adjustSingleFeature(feature, [{ type: 'insert', position: 2, sequence: 'AA' }]);
+    expect(exporter.formatLocation(shifted)).toBe('complement(6..10)');
+    expect(shifted.qualifiers.anticodon).toBe('(pos:complement(7..>8),aa:Leu,seq:taa)');
+    const downstream = actions.adjustSingleFeature(shifted, [{ type: 'insert', position: 12, sequence: 'AA' }]);
+    expect(() => exporter.generateFeatures('fixture', 'A'.repeat(16), [downstream], {})).toThrow(
+      /Cannot remap \/anticodon: Edit may overlap fuzzy coordinate/
+    );
+    expect(() => exporter.getExportQualifiers({ ...feature, start: 6, end: 10 })).toThrow(
+      /Unsupported fuzzy coordinate/
+    );
+  });
 
   it('shifts an unchanged compound location uniformly and rejects an edit across its spans', () => {
     const exporter = new GenBankExporter({});
