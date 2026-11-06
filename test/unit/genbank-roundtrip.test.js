@@ -194,7 +194,6 @@ describe('GenBank round trip', () => {
   it.each([
     ['join(<2..4,7..8)', {}],
     ['join(2..4,AB123.1:7..8)', {}],
-    ['join(2..4,7..8)', { transl_except: '(pos:7..8,aa:Sec)' }],
   ])('requires review for gap edits to %s with unresolved coordinates', (location, qualifiers) => {
     const actions = createActionManager({});
     const exporter = new GenBankExporter({});
@@ -204,6 +203,95 @@ describe('GenBank round trip', () => {
     );
     expect(() => exporter.formatLocation(edited)).toThrow(/edited compound location/);
   });
+
+  it('round-trips repeated coordinate qualifiers after gap and upstream edits', async () => {
+    const browser = await parse(
+      [
+        'LOCUS       FIXTURE 30 bp DNA linear',
+        'FEATURES             Location/Qualifiers',
+        '     CDS             join(2..7,20..25)',
+        '                     /transl_except=(pos:5..7,aa:Sec)',
+        '                     /transl_except=(pos:join(20,21..22),aa:Trp)',
+        '     tRNA            complement(join(3..7,21..26))',
+        '                     /anticodon=(pos:complement(22..24),aa:Leu,seq:taa)',
+        '     repeat_region   join(2..7,20..25)',
+        '                     /rpt_unit_range=4..6',
+        '                     /rpt_unit_range=21..23',
+        'ORIGIN',
+        '        1 aaccggttta ggccttaacc ggatcccggt',
+        '//',
+      ].join('\n')
+    );
+    const actions = createActionManager(browser);
+    const data = { sequence: { ...browser.currentSequence }, annotations: { ...browser.currentAnnotations } };
+    for (const edit of [
+      { type: 'insert', position: 12, sequence: 'TTA' },
+      { type: 'delete', start: 1, end: 1 },
+    ]) {
+      actions.applySequenceModificationToGenomeData(data, 'FIXTURE', edit);
+      actions.applyFeatureModificationToGenomeData(data, 'FIXTURE', edit);
+    }
+    const exporter = new GenBankExporter(browser);
+    const reopened = await parse(
+      exporter.exportGenBank({
+        chromosomes: ['FIXTURE'],
+        getSequence: chr => data.sequence[chr],
+        getFeatures: chr => data.annotations[chr],
+      })
+    );
+    const byType = Object.fromEntries(reopened.currentAnnotations.FIXTURE.map(feature => [feature.type, feature]));
+    expect(byType.CDS.location).toBe('join(1..6,22..27)');
+    expect(byType.CDS.qualifiers.transl_except).toEqual(['(pos:4..6,aa:Sec)', '(pos:join(22,23..24),aa:Trp)']);
+    expect(byType.tRNA.location).toBe('complement(join(2..6,23..28))');
+    expect(byType.tRNA.qualifiers.anticodon).toBe('(pos:complement(24..26),aa:Leu,seq:taa)');
+    expect(byType.repeat_region.qualifiers.rpt_unit_range).toEqual(['3..5', '23..25']);
+    expect(browser.currentAnnotations.FIXTURE[0].qualifiers.transl_except[0]).toBe('(pos:5..7,aa:Sec)');
+  });
+
+  it.each([
+    ['complement(2..8)', 'complement(5..11)'],
+    ['complement(join(2..5,7..8))', 'complement(join(5..8,10..11))'],
+  ])('shifts coordinate qualifiers with legacy uniform offsets for %s', (location, remapped) => {
+    const exporter = new GenBankExporter({});
+    const feature = {
+      type: 'tRNA',
+      start: 5,
+      end: 11,
+      strand: -1,
+      location,
+      genbankLocationBounds: [2, 8, -1],
+      qualifiers: { anticodon: '(pos:complement(3..5),aa:Leu,seq:taa)' },
+    };
+    const content = exporter.generateFeatures('fixture', 'A'.repeat(12), [feature], {});
+    expect(content).toContain(remapped);
+    expect(content).toContain('(pos:complement(6..8),aa:Leu,seq:taa)');
+    expect(feature.qualifiers.anticodon).toBe('(pos:complement(3..5),aa:Leu,seq:taa)');
+    expect(() =>
+      exporter.generateFeatures('fixture', 'A'.repeat(12), [{ ...feature, genbankLocationEdited: true }], {})
+    ).toThrow(/Cannot export (?:coordinate qualifiers|edited compound location)/);
+  });
+
+  it.each([{ transl_except: '(pos:AB123.1:7..8,aa:Sec)' }, { rpt_unit_range: '3..7' }])(
+    'rejects export when an edit cannot remap a coordinate qualifier %j',
+    qualifiers => {
+      const actions = createActionManager({});
+      const exporter = new GenBankExporter({});
+      const edited = actions.adjustSingleFeature(
+        {
+          type: 'misc_feature',
+          start: 2,
+          end: 8,
+          strand: 1,
+          location: 'join(2..4,7..8)',
+          qualifiers,
+          genbankLocationBounds: [2, 8, 1],
+        },
+        [{ type: 'insert', position: 5, sequence: 'AA' }]
+      );
+      expect(exporter.formatLocation(edited)).toBe('join(2..4,9..10)');
+      expect(() => exporter.generateFeatures('fixture', 'A'.repeat(10), [edited], {})).toThrow(/Cannot remap \//);
+    }
+  );
 
   it('shifts an unchanged compound location uniformly and rejects an edit across its spans', () => {
     const exporter = new GenBankExporter({});
