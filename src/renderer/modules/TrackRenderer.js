@@ -318,8 +318,8 @@ class TrackRenderer {
       buttonsContainer.appendChild(layoutBtn);
 
       // The detailed (secondary) ruler is now a standalone bar shared by all
-      // tracks. Its show/hide toggle lives on the genome navigation bar (primary
-      // ruler) — see GenomeNavigationBar.toggleSecondaryRulerFromNav.
+      // tracks. Its visibility follows the ruler display mode on the genome
+      // navigation bar — see GenomeNavigationBar.setRulerDisplayMode.
 
       // Add circular mode toggle button
       const circularBtn = document.createElement('button');
@@ -10968,18 +10968,8 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   }
 
   /**
-   * Toggle visibility of the standalone coordinate ruler bar. Invoked from the
-   * genome navigation bar (primary ruler). Returns the new visibility state.
-   */
-  toggleCoordinateRulerVisibility() {
-    if (!this.elementVisibilityStates) this.elementVisibilityStates = {};
-    this.elementVisibilityStates.genesRuler = this.elementVisibilityStates.genesRuler === false;
-    this.applyCoordinateRulerVisibility();
-    return this.elementVisibilityStates.genesRuler;
-  }
-
-  /**
-   * Apply the persisted genesRuler visibility state to the standalone ruler bar.
+   * Apply the genesRuler visibility state to the standalone ruler bar. The
+   * state is set by GenomeNavigationBar from the persisted ruler display mode.
    */
   applyCoordinateRulerVisibility() {
     const visible = !this.elementVisibilityStates || this.elementVisibilityStates.genesRuler !== false;

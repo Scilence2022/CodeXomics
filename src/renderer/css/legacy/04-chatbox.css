@@ -1254,33 +1254,13 @@
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.7) !important;
 }
 
-.genome-navigation-bar.selecting .navigation-canvas {
-  cursor: crosshair !important;
-}
-
-.genome-navigation-bar.selecting .selection-toggle-btn {
-  background: #ef4444 !important;
-  color: #ffffff !important;
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3) !important;
-}
-
-.selection-toggle-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.selection-toggle-btn:active {
-  transform: scale(0.95);
-}
-
-.ruler-visibility-toggle-btn:hover {
+.ruler-mode-toggle-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   background: #f1f5f9;
 }
 
-.ruler-visibility-toggle-btn:active {
+.ruler-mode-toggle-btn:active {
   transform: scale(0.95);
 }
 
