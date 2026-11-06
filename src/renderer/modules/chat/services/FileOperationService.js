@@ -154,7 +154,7 @@ class FileOperationService {
       }
       // If none specified, leave as undefined so FileManager can show a popup if needed (for manual usage)
 
-      const options = mergeWithExisting !== undefined ? { mergeWithExisting } : {};
+      const options = { expectedFileGroup: 'annotation', mergeWithExisting };
 
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) {
@@ -667,7 +667,7 @@ class FileOperationService {
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         await this.validateFilePath(filePath, 'Variant file', 'load_variant_file');
-        await this.loadFileOrThrow(filePath);
+        await this.loadFileOrThrow(filePath, { expectedFileGroup: 'variant' });
         return {
           success: true,
           message: `Successfully loaded variant file: ${filePath}`,
@@ -698,7 +698,7 @@ class FileOperationService {
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) throw new Error('FileManager not available');
         await this.validateFilePath(filePath, 'Reads file', 'load_reads_file');
-        await this.loadFileOrThrow(filePath);
+        await this.loadFileOrThrow(filePath, { expectedFileGroup: 'reads' });
         return { success: true, message: `Successfully loaded reads file: ${filePath}`, filePath, fileType: 'reads' };
       } else {
         this.requireExplicitFilePathForBenchmark('load_reads_file');
@@ -731,7 +731,7 @@ class FileOperationService {
           const result = await this.app.fileManager.loadMultipleWIGFiles(pathsArray, { reportErrors: false });
           if (result?.success === false) return { ...result, filePaths: pathsArray, fileType: 'wig' };
         } else {
-          await this.loadFileOrThrow(pathsArray[0]);
+          await this.loadFileOrThrow(pathsArray[0], { expectedFileGroup: 'track' });
         }
         return {
           success: true,
