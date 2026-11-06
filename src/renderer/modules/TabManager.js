@@ -390,7 +390,7 @@ class TabManager {
 
     tab.innerHTML = `
             <span class="tab-index-badge" title="LLM tab_index ${tabIndex}" aria-label="LLM tab_index ${tabIndex}">${tabIndex}</span>
-            <span class="tab-title">${title}</span>
+            <span class="tab-title"></span>
             <div class="tab-position-visualization">
                 <div class="chromosome-track" title="Chromosome position indicator">
                     <div class="position-indicator"></div>
@@ -400,6 +400,7 @@ class TabManager {
                 <i class="fas fa-times"></i>
             </button>
         `;
+    tab.querySelector('.tab-title').textContent = title;
 
     // Add event listeners
     tab.addEventListener('click', e => {
