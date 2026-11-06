@@ -52,7 +52,7 @@ The current release is `v0.723`. Download installers from [GitHub Releases](http
 
 ## Install And Start
 
-For the fastest start, [download the latest release](https://github.com/Scilence2022/CodeXomics/releases). For a source checkout, use Node.js 20 or 22 and npm 10+:
+For the fastest start, [download the latest release](https://github.com/Scilence2022/CodeXomics/releases). For a source checkout, use Node.js 22.12+ and npm 10+:
 
 ```bash
 git clone https://github.com/Scilence2022/CodeXomics.git

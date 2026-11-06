@@ -18,7 +18,7 @@ Versioned documentation must agree on all of the following:
 - Semantic application version: `0.723.0` in `package.json`, `src/version.js`, `CHANGELOG.md`, and current release notes.
 - Display version: `v0.723` where the compact in-app label is being described.
 - Documentation release label: `v0.723.0` in `mkdocs.yml` and the public documentation release selector.
-- Runtime baseline: Node.js 20 or 22, npm 10+, and Electron `41.7.1`.
+- Runtime baseline: Electron `43.8.7`, Node.js 22.12+ and npm 10+ for installs and builds, with Node.js 20 and 22 exercised by the standalone tests.
 
 ## 2. Adding Or Changing Tools
 

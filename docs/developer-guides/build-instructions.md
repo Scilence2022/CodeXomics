@@ -6,13 +6,13 @@ This guide describes the supported development and packaging workflow for CodeXo
 
 | Component        | Supported baseline                       |
 | ---------------- | ---------------------------------------- |
-| Node.js          | 20.x or 22.x                             |
+| Node.js          | 22.12+ for installs and builds           |
 | npm              | 10 or newer                              |
-| Electron         | `41.7.1`                                 |
+| Electron         | `43.8.7`                                 |
 | electron-builder | `25.x`                                   |
 | Python           | 3.11 recommended for local MkDocs builds |
 
-Node.js 20 and 22 are exercised by CI. Use an active LTS release and avoid changing the Electron pin without testing both CI versions and an unpacked package build.
+CI installs dependencies on Node.js 22. It then runs standalone tests on Node.js 20 and 22. The desktop smoke and packaging jobs run on Node.js 22.
 
 ## Platform Requirements
 

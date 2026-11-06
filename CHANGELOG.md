@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Upgrade the desktop runtime to Electron 43.8.7. Source installs and packaging require Node.js 22.12 or later in the 22.x line. The standalone test suite remains covered on Node.js 20 and 22.
+
 ### Performance
 
 - Gate verbose renderer console output behind a debug flag. The renderer carried roughly 4,000 `console.log`/`debug`/`info` calls, many inside per-frame render loops and per-read draw loops; in Electron each one marshals its arguments to the DevTools protocol even with DevTools closed. Verbose channels are now no-ops unless debug logging is enabled — `warn` and `error` are never suppressed. Enabled automatically in development, and toggleable at runtime with `CodeXomicsDebug.enable()` / `.disable()`.
