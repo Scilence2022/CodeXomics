@@ -728,16 +728,28 @@ function registerIpcHandlers(deps) {
     };
   };
 
-  const writeFileAtomically = async (destinationPath, content, commitNotAfter) => {
+  const writeFileAtomically = async (
+    destinationPath,
+    content,
+    commitNotAfter,
+    { mode = 0o600, validateTarget } = {}
+  ) => {
     assertWriteDeadline(commitNotAfter);
-    const tempPath = `${destinationPath}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`;
+    const tempPath = path.join(
+      path.dirname(destinationPath),
+      `.codexomics-${process.pid}-${crypto.randomBytes(8).toString('hex')}.tmp`
+    );
     let handle;
+    let created = false;
     try {
       handle = await fs.promises.open(tempPath, 'wx', 0o600);
+      created = true;
       await handle.writeFile(content, 'utf8');
+      if (mode !== 0o600) await handle.chmod(mode);
       await handle.sync();
       await handle.close();
       handle = null;
+      validateTarget?.();
       assertWriteDeadline(commitNotAfter);
       await fs.promises.rename(tempPath, destinationPath);
 
@@ -749,38 +761,38 @@ function registerIpcHandlers(deps) {
         directoryHandle = await fs.promises.open(path.dirname(destinationPath), 'r');
         await directoryHandle.sync();
       } catch (syncError) {
-        console.warn(`[Sidecar] Could not fsync ${path.dirname(destinationPath)}: ${syncError.message}`);
+        console.warn(`[File write] Could not fsync ${path.dirname(destinationPath)}: ${syncError.message}`);
       } finally {
         await directoryHandle?.close().catch(() => undefined);
       }
     } catch (error) {
       if (handle) await handle.close().catch(() => undefined);
-      await fs.promises.rm(tempPath, { force: true }).catch(() => undefined);
+      if (created) await fs.promises.rm(tempPath, { force: true }).catch(() => undefined);
       throw error;
     }
   };
 
-  const sidecarWriteLocks = new Map();
-  const withSidecarWriteLock = async (genomePath, operation) => {
-    const previous = sidecarWriteLocks.get(genomePath) || Promise.resolve();
+  const fileWriteLocks = new Map();
+  const withFileWriteLock = async (filePath, operation) => {
+    const previous = fileWriteLocks.get(filePath) || Promise.resolve();
     let release;
     const gate = new Promise(resolve => {
       release = resolve;
     });
     const tail = previous.catch(() => undefined).then(() => gate);
-    sidecarWriteLocks.set(genomePath, tail);
+    fileWriteLocks.set(filePath, tail);
     await previous.catch(() => undefined);
     try {
       return await operation();
     } finally {
       release();
-      if (sidecarWriteLocks.get(genomePath) === tail) sidecarWriteLocks.delete(genomePath);
+      if (fileWriteLocks.get(filePath) === tail) fileWriteLocks.delete(filePath);
     }
   };
 
   const withGenomeSidecar = async (genomePath, expectedSha256, operation) => {
     const paths = resolveSidecarPaths(genomePath);
-    return withSidecarWriteLock(paths.safeGenomePath, async () => {
+    return withFileWriteLock(paths.safeGenomePath, async () => {
       const gzip = /\.gz$/i.test(paths.authorizedGenomePath);
       const source = await readGenomeSource(paths.safeGenomePath, { gzip });
       if (
@@ -2371,34 +2383,37 @@ function registerIpcHandlers(deps) {
   // Handle direct file write requests
   ipcMain.handle('write-file', async (event, filePath, content, commitNotAfter) => {
     try {
-      const path = require('path');
-      const safeFilePath = assertAllowedFileAccess(app, filePath, { operation: 'write file' });
-
+      const access = { operation: 'write file', resolvePhysical: true };
+      const destination = assertAllowedFileAccess(app, filePath, access);
+      const requestedPath = path.resolve(filePath);
+      const validateTarget = () => {
+        if (assertAllowedFileAccess(app, requestedPath, access) !== destination) {
+          throw new Error('The file write destination changed before export');
+        }
+      };
       assertWriteDeadline(commitNotAfter);
-
-      // Ensure directory exists
-      const directory = path.dirname(safeFilePath);
-      if (!fs.existsSync(directory)) {
-        fs.mkdirSync(directory, { recursive: true });
-      }
-
-      // Write the file
-      assertWriteDeadline(commitNotAfter);
-      fs.writeFileSync(safeFilePath, content, 'utf8');
-
-      // Verify file was written
-      if (fs.existsSync(safeFilePath)) {
-        const stats = fs.statSync(safeFilePath);
-        console.log(`File written successfully: ${safeFilePath} (${stats.size} bytes)`);
+      return await withFileWriteLock(destination, async () => {
+        assertWriteDeadline(commitNotAfter);
+        validateTarget();
+        await fs.promises.mkdir(path.dirname(destination), { recursive: true });
+        const previous = await fs.promises.stat(destination).catch(error => {
+          if (error.code === 'ENOENT') return null;
+          throw error;
+        });
+        if (previous && !previous.isFile()) throw new Error('The export destination is not a regular file');
+        if (previous) await fs.promises.access(destination, fs.constants.W_OK);
+        await writeFileAtomically(destination, content, commitNotAfter, {
+          mode: previous ? previous.mode & 0o777 : 0o666 & ~process.umask(),
+          validateTarget,
+        });
+        const { size } = await fs.promises.stat(destination);
         return {
           success: true,
-          filePath: safeFilePath,
-          fileName: path.basename(safeFilePath),
-          fileSize: stats.size,
+          filePath: requestedPath,
+          fileName: path.basename(requestedPath),
+          fileSize: size,
         };
-      } else {
-        throw new Error('File was not created successfully');
-      }
+      });
     } catch (error) {
       console.error('Error writing file:', error);
       return { success: false, error: error.message };

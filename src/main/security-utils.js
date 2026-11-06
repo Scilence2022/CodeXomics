@@ -325,7 +325,7 @@ class PermissionBroker {
         const physicalMatches = grant.recursive
           ? isSubPath(grant.physicalPath, physicalPath)
           : grant.physicalPath === physicalPath;
-        if (physicalMatches) return grant;
+        if (physicalMatches) return { ...grant, accessPath: physicalPath };
       }
     }
 
@@ -396,6 +396,7 @@ function assertAllowedFileAccess(app, targetPath, options = {}) {
     allowedRoots = getDefaultWritableRoots(app),
     allowApproved = true,
     mustExist = false,
+    resolvePhysical = false,
     capability = inferCapabilityFromOperation(operation),
   } = options;
 
@@ -412,7 +413,7 @@ function assertAllowedFileAccess(app, targetPath, options = {}) {
   if (allowApproved) {
     const grant = permissionBroker.findGrant(resolvedPath, { capability });
     if (grant) {
-      return resolvedPath;
+      return resolvePhysical ? grant.accessPath : resolvedPath;
     }
   }
 
@@ -423,7 +424,7 @@ function assertAllowedFileAccess(app, targetPath, options = {}) {
     throw new Error(`Blocked ${operation} outside approved application directories: ${resolvedPath}`);
   }
 
-  return resolvedPath;
+  return resolvePhysical ? physicalPath : resolvedPath;
 }
 
 function grantReadOnlyFileLoadPath(targetPath, options = {}) {
