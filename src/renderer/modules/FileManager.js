@@ -200,7 +200,17 @@ class FileManager {
     }
   }
 
-  async loadOperonFile(filePath, { format = 'auto', reportErrors = true, signal, requestDeadline } = {}) {
+  assertFileImportActive({ signal, requestDeadline }) {
+    signal?.throwIfAborted();
+    if (Number.isFinite(requestDeadline) && requestDeadline <= Date.now()) {
+      const error = new Error('The request deadline elapsed before the file import committed');
+      error.name = 'AbortError';
+      throw error;
+    }
+  }
+
+  async loadOperonFile(filePath, options = {}) {
+    const { format = 'auto', reportErrors = true, signal } = options;
     if (this.isLoadingFile) {
       return { success: false, status: 'busy', error: 'Another file import is in progress', filePath };
     }
@@ -216,26 +226,18 @@ class FileManager {
     this.genomeBrowser.showLoading(true);
     this.genomeBrowser.updateStatus('Loading operon file...');
 
-    const checkCancellation = () => {
-      signal?.throwIfAborted();
-      if (Number.isFinite(requestDeadline) && requestDeadline <= Date.now()) {
-        const error = new Error('The request deadline elapsed before the operon import committed');
-        error.name = 'AbortError';
-        throw error;
-      }
-    };
     try {
-      checkCancellation();
+      this.assertFileImportActive(options);
       // Get file info
       const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
-      checkCancellation();
+      this.assertFileImportActive(options);
       if (!fileInfo.success) {
         throw new Error(fileInfo.error);
       }
 
       // Read file content
       const fileContent = await ipcRenderer.invoke('read-file', filePath);
-      checkCancellation();
+      this.assertFileImportActive(options);
       if (!fileContent.success) {
         throw new Error(fileContent.error);
       }
@@ -264,7 +266,7 @@ class FileManager {
       }
 
       // Store operon data in genome browser
-      checkCancellation();
+      this.assertFileImportActive(options);
       this.genomeBrowser.loadedOperons = operonData;
 
       // Clear operon mapping cache to force re-mapping with new operons
@@ -625,9 +627,11 @@ class FileManager {
     browser.updateStatus('Loading file...');
 
     try {
+      this.assertFileImportActive(options);
       // Get file info
       console.log('📋 Getting file info for:', filePath);
       const fileInfo = await ipcRenderer.invoke('get-file-info', filePath);
+      this.assertFileImportActive(options);
       console.log('📋 File info result:', fileInfo);
       if (!fileInfo.success) {
         throw new Error(fileInfo.error);
@@ -664,6 +668,7 @@ class FileManager {
         }
       }
 
+      this.assertFileImportActive(options);
       const isGenome = ['.fa', '.fasta', '.gb', '.gbk', '.gbff', '.genbank'].includes(extension);
       this.isLoadingGenome = isGenome;
       if (isGenome) {
@@ -737,6 +742,10 @@ class FileManager {
       this.autoWorkingDirectory = previousWorkingDirectory;
       Object.assign(browser, previousGenome);
       const message = error?.message || String(error);
+      if (options.signal?.aborted || error?.name === 'AbortError') {
+        browser.updateStatus('File loading cancelled');
+        return { success: false, status: 'cancelled', error: message, filePath };
+      }
       console.error('Error loading file:', error);
       browser.updateStatus(`Error: ${message}`);
       if (options.reportErrors !== false) alert(`Failed to load file: ${message}`);
@@ -766,6 +775,7 @@ class FileManager {
     } finally {
       ipcRenderer.removeListener('file-read-progress', progressHandler);
     }
+    this.assertFileImportActive(options);
 
     // Check if this is a BigWig file by extension
     const isBigWigFile = filePath.toLowerCase().endsWith('.bw') || filePath.toLowerCase().endsWith('.bigwig');
@@ -879,14 +889,14 @@ class FileManager {
       case '.fasta':
       case '.fa':
         console.log('📂 Parsing as FASTA file');
-        await this.parseFasta();
+        await this.parseFasta(options);
         break;
       case '.gb':
       case '.gbk':
       case '.gbff':
       case '.genbank':
         console.log('📂 Parsing as GenBank file');
-        await this.parseGenBank();
+        await this.parseGenBank(options);
         break;
       case '.gff':
       case '.gtf':
@@ -918,14 +928,24 @@ class FileManager {
     }
   }
 
-  async parseFasta() {
-    const lines = this.currentFile.data.split('\n');
+  async parseFasta(options = {}) {
+    const data = this.currentFile.data;
     const sequences = {};
     let currentSeq = null;
     let currentData = '';
+    const updateInterval = Math.max(64 * 1024, Math.floor(data.length / 100));
+    let nextCheck = updateInterval;
 
-    for (const line of lines) {
-      const trimmed = line.trim();
+    for (let offset = 0; offset < data.length; ) {
+      const newline = data.indexOf('\n', offset);
+      const lineEnd = newline === -1 ? data.length : newline;
+      const trimmed = data.slice(offset, lineEnd).trim();
+      offset = lineEnd + 1;
+      if (offset >= nextCheck) {
+        nextCheck = offset + updateInterval;
+        if (data.length >= 32 * 1024 * 1024) await new Promise(resolve => setTimeout(resolve, 0));
+        this.assertFileImportActive(options);
+      }
       if (trimmed.startsWith('>')) {
         // Save previous sequence
         if (currentSeq) {
@@ -945,6 +965,7 @@ class FileManager {
     }
 
     if (!Object.values(sequences).some(Boolean)) throw new Error('No sequence records found in FASTA file');
+    this.assertFileImportActive(options);
     this.genomeBrowser.currentAnnotations = {};
     this.genomeBrowser.sourceFeatures = {};
     this.genomeBrowser.genbankRecords = null;
@@ -976,7 +997,7 @@ class FileManager {
     this.updateLoadedFilesList();
   }
 
-  async parseGenBank() {
+  async parseGenBank(options = {}) {
     const data = this.currentFile?.data;
     console.log('🔬 Starting GenBank parsing...');
     console.log('📄 Current file data length:', data?.length || 'No data');
@@ -1020,6 +1041,7 @@ class FileManager {
         if (yieldDuringParsing) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
+        this.assertFileImportActive(options);
       }
 
       // Parse LOCUS line for sequence name
@@ -1213,6 +1235,7 @@ class FileManager {
     console.log('Sequences:', Object.keys(sequences));
 
     if (!Object.values(sequences).some(Boolean)) throw new Error('No sequence records found in GenBank file');
+    this.assertFileImportActive(options);
 
     // Extract and store source feature information separately for metadata
     this.extractSourceFeatures(annotations);
@@ -1241,8 +1264,9 @@ class FileManager {
     // details UI observes the freshly parsed source annotations.
     const annotationService = this.genomeBrowser.chatManager?.services?.annotation;
     if (typeof annotationService?.restoreCommittedAnnotationOverlay === 'function') {
-      await annotationService.restoreCommittedAnnotationOverlay();
+      await annotationService.restoreCommittedAnnotationOverlay(() => this.assertFileImportActive(options));
     }
+    this.assertFileImportActive(options);
 
     // Log parsing results
     const totalFeatures = Object.values(annotations).reduce((sum, feats) => sum + feats.length, 0);

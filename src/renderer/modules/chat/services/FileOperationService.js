@@ -74,9 +74,11 @@ class FileOperationService {
 
   // 1. FILE LOADING OPERATIONS
   async loadGenomeFile(parameters = {}) {
+    const context = parameters.__executionContext;
     try {
       const filePath = parameters.filePath || parameters.file_path || parameters.path;
       const { showFileDialog = false } = parameters;
+      context?.signal?.throwIfAborted();
 
       if (filePath && (!showFileDialog || this.isBenchmarkAutomationMode())) {
         if (!this.app?.fileManager) {
@@ -85,7 +87,12 @@ class FileOperationService {
 
         await this.validateFilePath(filePath, 'Genome file', 'load_genome_file');
 
-        await this.loadFileOrThrow(filePath);
+        const result = await this.app.fileManager.loadFile(filePath, {
+          reportErrors: false,
+          signal: context?.signal,
+          requestDeadline: context?.requestDeadline,
+        });
+        if (result?.success === false) return { ...result, fileType: 'genome', tool: 'load_genome_file' };
 
         return {
           success: true,
@@ -116,7 +123,8 @@ class FileOperationService {
       console.error('❌ [FileOperationService] loadGenomeFile failed:', error);
       return {
         success: false,
-        error: error.message,
+        status: context?.signal?.aborted ? 'cancelled' : 'failed',
+        error: error?.message || String(error),
         fileType: 'genome',
         tool: 'load_genome_file',
       };

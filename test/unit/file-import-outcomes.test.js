@@ -93,6 +93,73 @@ describe('file import outcomes', () => {
     expect(browser.populateChromosomeSelect).not.toHaveBeenCalled();
   });
 
+  it('keeps the previous workspace when a GenBank import is cancelled during overlay replay', async () => {
+    const controller = new AbortController();
+    const { browser, manager, service } = createImportFixture(async channel =>
+      channel === 'get-file-info'
+        ? { success: true, info: { name: 'new.gbk', extension: '.gbk', size: 100 } }
+        : {
+            success: true,
+            data: 'LOCUS       new 4 bp DNA linear\nORIGIN\n        1 tgca\n//\n',
+            sourceSha256: 'new-digest',
+          }
+    );
+    browser.chatManager = {
+      services: {
+        annotation: {
+          async restoreCommittedAnnotationOverlay(beforePublish) {
+            expect(browser.loadedGenomePath).toBe('/new.gbk');
+            controller.abort(new Error('MCP request cancelled'));
+            expect(beforePublish).toThrow('MCP request cancelled');
+          },
+        },
+      },
+    };
+
+    await expect(
+      service.loadGenomeFile({ filePath: '/new.gbk', __executionContext: { signal: controller.signal } })
+    ).resolves.toMatchObject({ success: false, status: 'cancelled', error: 'MCP request cancelled' });
+    expect(manager.currentFile.path).toBe('/previous.gbk');
+    expect(browser.loadedGenomePath).toBe('/previous.gbk');
+    expect(browser.loadedGenomeSourceSha256).toBe('old-digest');
+    expect(browser.currentSequence).toEqual({ previous: 'ACGT' });
+    expect(browser.populateChromosomeSelect).not.toHaveBeenCalled();
+  });
+
+  it('does not publish a FASTA genome whose request deadline elapsed during the file read', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(100);
+    try {
+      const { browser, service } = createImportFixture(async channel => {
+        if (channel === 'get-file-info') {
+          return { success: true, info: { name: 'new.fa', extension: '.fa', size: 12 } };
+        }
+        now.mockReturnValue(200);
+        return { success: true, data: '>new\r\nACGT', sourceSha256: 'new-digest' };
+      });
+
+      await expect(
+        service.loadGenomeFile({ filePath: '/new.fa', __executionContext: { requestDeadline: 200 } })
+      ).resolves.toMatchObject({ success: false, status: 'cancelled', error: expect.stringContaining('deadline') });
+      expect(browser.loadedGenomePath).toBe('/previous.gbk');
+      expect(browser.currentSequence).toEqual({ previous: 'ACGT' });
+      expect(browser.populateChromosomeSelect).not.toHaveBeenCalled();
+      expect(ipcRenderer.removeListener).toHaveBeenCalledWith('file-read-progress', expect.any(Function));
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('imports all FASTA records with CRLF and a final line without a newline', async () => {
+    const { browser, manager } = createImportFixture(async () => {});
+    manager.currentFile = { path: '/new.fa', data: '>first label\r\nac\r\ngt\r\n>last\r\ntgca' };
+    browser.selectChromosome = vi.fn();
+    manager.updateLoadedFilesList = vi.fn();
+
+    await manager.parseFasta();
+    expect(browser.currentSequence).toEqual({ first: 'ACGT', last: 'TGCA' });
+    expect(browser.selectChromosome).toHaveBeenCalledWith('first');
+  });
+
   it('reports malformed operon data and honors an explicit format for files with another extension', async () => {
     let data = '{bad json';
     const { browser, service } = createImportFixture(async channel =>

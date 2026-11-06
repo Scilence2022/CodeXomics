@@ -40,7 +40,7 @@ describe('file operation IPC hardening', () => {
       'this.genomeBrowser.loadedGenomePath = this.currentFile?.path || this.currentFile?.info?.path || null;'
     );
     const assignIndex = source.indexOf('this.genomeBrowser.currentAnnotations = annotations;');
-    const replayIndex = source.indexOf('await annotationService.restoreCommittedAnnotationOverlay();');
+    const replayIndex = source.indexOf('await annotationService.restoreCommittedAnnotationOverlay(');
     const renderIndex = source.indexOf('this.genomeBrowser.populateChromosomeSelect();', assignIndex);
 
     expect(pathBindIndex).toBeGreaterThan(-1);

@@ -74,8 +74,8 @@ class AnnotationService {
     return this._getChangeSetService().resolveAnnotationTarget(params);
   }
 
-  async restoreCommittedAnnotationOverlay() {
-    return this._getChangeSetService().restoreCommittedAnnotationOverlay();
+  async restoreCommittedAnnotationOverlay(beforePublish) {
+    return this._getChangeSetService().restoreCommittedAnnotationOverlay(beforePublish);
   }
 
   async createAnnotationChangeset(params) {
