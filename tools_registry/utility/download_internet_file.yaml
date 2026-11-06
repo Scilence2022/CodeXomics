@@ -1,5 +1,6 @@
 # download_internet_file.yaml
 name: 'download_internet_file'
+aliases: ['utility_download_internet_file']
 version: '1.0.0'
 description: 'Download a file from the internet (URL) to a local path. Useful for downloading reports, data files, images, or any other files accessible via HTTP/HTTPS URLs.'
 category: 'utility'
@@ -23,7 +24,7 @@ parameters:
       required: true
     destinationPath:
       type: 'string'
-      description: 'The local directory path where the file should be saved. If not provided, defaults to the system Downloads folder.'
+      description: 'The local directory path where the file should be saved. Defaults to the current working directory.'
       required: false
     filename:
       type: 'string'
@@ -36,7 +37,7 @@ sample_usages:
   - user_query: 'Download the genome file from https://example.com/genome.fasta'
     tool_call: "download_internet_file(url='https://example.com/genome.fasta')"
     thought: 'User wants to download a file from a URL. The download_internet_file tool is perfect for this.'
-    expected_result: 'The genome.fasta file is downloaded to the Downloads folder'
+    expected_result: 'The genome.fasta file is downloaded to the current working directory'
   - user_query: 'Save the report from this URL to my project folder: https://server.com/research_report.md'
     tool_call: "download_internet_file(url='https://server.com/research_report.md', destinationPath='/path/to/project')"
     thought: 'User wants to download a file to a specific location'

@@ -108,7 +108,6 @@ const KNOWN_EXCEPTIONS = {
     'show_hide_features',
     'switch_tab',
     'toggle_annotation_track',
-    'utility_download_internet_file',
     'utility_set_chatbox_layout',
     'utility_set_chatbox_minimized',
     'utility_toggle_chatbox',
