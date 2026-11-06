@@ -9,6 +9,7 @@ const versionInfo = require(path.join(root, 'src/version.js'));
 
 const semanticVersion = packageJson.version;
 const displayVersion = versionInfo.displayVersion;
+const electronVersion = packageJson.devDependencies?.electron;
 const docsVersion = `v${semanticVersion}`;
 const releaseNotesPath = `docs/release-notes/RELEASE_NOTES_v${versionInfo.major}.${versionInfo.minor}.md`;
 
@@ -26,6 +27,10 @@ const checks = [
   ['mkdocs.yml', `default: ${docsVersion}`],
   [releaseNotesPath, `# CodeXomics ${docsVersion} Release Notes`],
   [releaseNotesPath, `**Application version:** \`${semanticVersion}\``],
+  ['README.md', `/badge/Electron-${electronVersion}-`],
+  ['Agents.md', `Electron \`${electronVersion}\``],
+  ['Memory.md', `Electron \`${electronVersion}\``],
+  ['docs/user-guides/GETTING_STARTED.md', `Electron \`${electronVersion}\``],
 ];
 
 const errors = [];
@@ -49,6 +54,15 @@ for (const [relativePath, expectedText] of checks) {
 const packageLock = JSON.parse(read('package-lock.json'));
 if (packageLock.version !== semanticVersion || packageLock.packages?.['']?.version !== semanticVersion) {
   errors.push('package-lock.json root versions do not match package.json');
+}
+if (!electronVersion || packageLock.packages?.['node_modules/electron']?.version !== electronVersion) {
+  errors.push('The Electron version in package-lock.json does not match the pinned runtime in package.json');
+}
+
+const buildInstructions = 'docs/developer-guides/build-instructions.md';
+const documentedBuildRuntime = read(buildInstructions).match(/^\|[ \t]*Electron[ \t]*\|[ \t]*`([^`]+)`/m)?.[1];
+if (documentedBuildRuntime !== electronVersion) {
+  errors.push(`${buildInstructions} must list Electron \`${electronVersion}\` in the supported toolchain table`);
 }
 
 const mkdocs = read('mkdocs.yml');
@@ -74,7 +88,7 @@ const currentDocs = [
   'mkdocs.yml',
 ].map(relativePath => [relativePath, read(relativePath)]);
 
-const staleVersions = ['0.7.0-beta', 'v0.7beta', 'Electron-42.4.0'];
+const staleVersions = ['0.7.0-beta', 'v0.7beta'];
 for (const [relativePath, content] of currentDocs) {
   for (const staleVersion of staleVersions) {
     if (content.includes(staleVersion)) {
@@ -92,4 +106,4 @@ if (errors.length > 0) {
 }
 
 console.log(`Documentation metadata is consistent for ${semanticVersion} (${displayVersion}).`);
-console.log(`Validated ${checks.length} release markers and all MkDocs navigation targets.`);
+console.log(`Validated release and runtime markers and all MkDocs navigation targets.`);
