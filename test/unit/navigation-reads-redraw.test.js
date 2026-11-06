@@ -14,8 +14,9 @@ describe('aligned reads redraw', () => {
           finishPrevious = resolve;
         });
       })
-      .mockImplementationOnce(async (_chromosome, _file, viewport) => {
-        const content = document.createElement('span');
+      .mockImplementation(async (_chromosome, _file, viewport) => {
+        const content = document.createElement('div');
+        content.className = 'track-content';
         content.textContent = `Range ${viewport.start}–${viewport.end}`;
         return content;
       });
@@ -48,6 +49,11 @@ describe('aligned reads redraw', () => {
       finishPrevious(stale);
       await previous;
       expect(content.textContent).toBe('Range 50–100');
+
+      navigation.genomeBrowser.currentPosition = { start: 70, end: 100 };
+      await navigation.updateAlignedReadsTrackOnly('chr1');
+      expect(createSingleReadsTrackContent).toHaveBeenCalledTimes(3);
+      expect(content.textContent).toBe('Range 70–100');
     } finally {
       track.remove();
     }

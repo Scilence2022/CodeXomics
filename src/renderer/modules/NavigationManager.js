@@ -794,7 +794,7 @@ class NavigationManager {
 
     try {
       // Find all reads tracks and update them
-      const readsTracks = document.querySelectorAll('.reads-track .track-content');
+      const readsTracks = document.querySelectorAll('.reads-track > .track-content');
       await Promise.all(
         Array.from(readsTracks, async (readsTrackContent, index) => {
           try {
