@@ -9,7 +9,7 @@
 
 This release completes the application updater and its signed release pipeline,
 and incorporates main-menu fixes and previously unreleased application improvements.
-The runtime remains Electron `41.7.1`, with Node.js 20 or 22 and npm 10+ for builds.
+Current source builds use Electron `43.8.7` and require Node.js 22.12+ and npm 10+. The standalone test matrix covers Node.js 20 and 22.
 
 ## Application Updates
 

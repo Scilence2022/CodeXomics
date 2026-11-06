@@ -12,7 +12,7 @@ Current version sources:
 - `src/version.js`: major `0`, minor `723`, patch `0`, prerelease `` (none)
 - Display version: `v0.723`
 - Documentation release label: `v0.723.0`
-- Runtime baseline: Node.js 20 or 22, npm 10+, Electron `41.7.1`
+- Runtime baseline: Electron `43.8.7`, Node.js 22.12+ and npm 10+ for installs and builds. Standalone tests run on Node.js 20 and 22.
 
 Core entry points:
 

@@ -17,7 +17,7 @@ Optional tools:
 - A local LLM server such as Ollama for offline or local model workflows.
 - BLAST+ for local sequence alignment. CodeXomics includes BLAST setup and management workflows.
 
-Building from source requires Node.js 20 or 22 and npm 10 or newer. The packaged application uses Electron `41.7.1`.
+Building from source requires Node.js 22.12+ and npm 10 or newer. The packaged application uses Electron `43.8.7`.
 
 ## Install
 
