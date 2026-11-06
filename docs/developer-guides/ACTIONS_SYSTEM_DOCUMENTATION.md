@@ -429,6 +429,11 @@ segments. Fuzzy boundaries such as `<100` and `>250` keep their markers when
 an edit is outside the possible feature span. An edit that may overlap an
 uncertain boundary requires review before export.
 
+Sequence extraction can resolve remote positions against other records in
+the loaded GenBank file. A versioned reference requires an exact match. An
+unversioned accession requires a unique match. GenBank export preserves the
+source accession and version when the record's sequence is unchanged.
+
 An edit wholly within one exact local segment can resize that segment.
 For an affected CDS, GenBank and protein exports verify the edited
 sequence before preserving the annotated translation. Automatic
