@@ -566,9 +566,9 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="actionsMenuBtn" class="btn btn-sm toggle-btn" title="Sequence Actions">
+                <button id="actionsMenuBtn" class="btn btn-sm toggle-btn" title="Sequence Editing">
                     <i class="fas fa-cut"></i>
-                    <span>Actions</span>
+                    <span>Sequence Editing</span>
                 </button>
                 <div class="actions-dropdown" id="actionsDropdown" style="display: none;">
                     <div class="dropdown-section">
@@ -590,7 +590,7 @@
                         </button>
                         <button id="pasteSequenceReverseBtn" class="dropdown-feature-btn" title="Paste Reverse Complement">
                             <i class="fas fa-exchange-alt"></i>
-                            Paste (Reverse)
+                            Paste Reverse Complement
                         </button>
                         <button id="deleteSequenceBtn" class="dropdown-feature-btn" title="Delete Sequence">
                             <i class="fas fa-trash"></i>
@@ -602,7 +602,7 @@
                         </button>
                         <button id="insertSequenceReverseBtn" class="dropdown-feature-btn" title="Insert Reverse Complement">
                             <i class="fas fa-plus-circle"></i>
-                            Insert (Reverse)
+                            Insert Reverse Complement
                         </button>
                     </div>
 
@@ -611,15 +611,15 @@
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
                             <i class="fas fa-list"></i>
-                            Action Management
+                            Edit Queue
                         </div>
-                        <button id="showActionListBtn" class="dropdown-feature-btn" title="Show Action List">
+                        <button id="showActionListBtn" class="dropdown-feature-btn" title="Show Edit Queue">
                             <i class="fas fa-list"></i>
-                            Action List
+                            Show Edit Queue
                         </button>
-                        <button id="executeActionsBtn" class="dropdown-feature-btn" title="Execute Actions">
+                        <button id="executeActionsBtn" class="dropdown-feature-btn" title="Run Edit Queue">
                             <i class="fas fa-play"></i>
-                            Execute All
+                            Run Edit Queue
                         </button>
                     </div>
 
@@ -628,15 +628,15 @@
                     <div class="dropdown-section">
                         <div class="dropdown-section-title">
                             <i class="fas fa-save"></i>
-                            Checkpoint System
+                            Session Checkpoints
                         </div>
                         <button id="createCheckpointBtn" class="dropdown-feature-btn" title="Create Checkpoint">
                             <i class="fas fa-save"></i>
                             Create Checkpoint
                         </button>
-                        <button id="rollbackBtn" class="dropdown-feature-btn" title="Rollback">
+                        <button id="rollbackBtn" class="dropdown-feature-btn" title="Manage Session Checkpoints">
                             <i class="fas fa-undo"></i>
-                            Rollback
+                            Manage Checkpoints
                         </button>
                     </div>
                 </div>
@@ -677,7 +677,7 @@
                         <input type="checkbox" id="trackSequenceLine" value="sequenceLine"> Single-line Sequence Track
                     </label>
                     <label class="track-checkbox">
-                        <input type="checkbox" id="trackActions" value="actions"> Actions
+                        <input type="checkbox" id="trackActions" value="actions"> Sequence Edits
                     </label>
                     <label class="track-checkbox">
                         <input type="checkbox" id="trackBlast" value="blast"> Blast Results
@@ -4280,7 +4280,7 @@ Supported formats:
     <div id="actionListModal" class="modal">
         <div class="modal-content action-list-modal resizable" data-min-width="800" data-max-width="1400">
             <div class="modal-header">
-                <h3><i class="fas fa-list"></i> Action List Manager</h3>
+                <h3><i class="fas fa-list"></i> Edit Queue</h3>
                 <div class="modal-controls">
                     <button class="reset-position-btn" title="Reset Position">
                         <i class="fas fa-crosshairs"></i>
@@ -4292,29 +4292,30 @@ Supported formats:
                 </div>
             </div>
             <div class="modal-body">
+                <p>Running the queue saves the result as a new GenBank file.</p>
                 <div class="action-list-controls">
                     <div class="control-group">
                         <button id="executeAllActionsBtn" class="btn btn-primary">
                             <i class="fas fa-play"></i>
-                            Execute All Actions
+                            Run Edit Queue
                         </button>
                         <button id="clearAllActionsBtn" class="btn btn-warning">
                             <i class="fas fa-trash"></i>
-                            Clear All Actions
+                            Clear Queue
                         </button>
                         <button id="exportActionsBtn" class="btn btn-secondary">
                             <i class="fas fa-download"></i>
-                            Export Actions
+                            Export Queue
                         </button>
                         <button id="importActionsBtn" class="btn btn-secondary">
                             <i class="fas fa-upload"></i>
-                            Import Actions
+                            Import Queue
                         </button>
                     </div>
                     <div class="action-stats">
                         <span class="stat-item">
                             <i class="fas fa-list-ul"></i>
-                            <span id="actionCount">0</span> Actions
+                            <span id="actionCount">0</span> Operations
                         </span>
                         <span class="stat-item">
                             <i class="fas fa-clock"></i>
@@ -4335,14 +4336,37 @@ Supported formats:
                     <div id="actionListContent" class="action-list-content">
                         <div class="empty-actions-message">
                             <i class="fas fa-inbox"></i>
-                            <p>No actions queued</p>
-                            <small>Use the Action menu to add sequence operations</small>
+                            <p>No sequence operations queued</p>
+                            <small>Use the Sequence Editing menu to queue operations</small>
                         </div>
                     </div>
                 </div>
 
+            </div>
+            <div class="modal-footer">
+                <button class="btn modal-close">Close</button>
+            </div>
+            <!-- Resize handles -->
+            <div class="resize-handle resize-handle-n"></div>
+            <div class="resize-handle resize-handle-s"></div>
+            <div class="resize-handle resize-handle-e"></div>
+            <div class="resize-handle resize-handle-w"></div>
+            <div class="resize-handle resize-handle-ne"></div>
+            <div class="resize-handle resize-handle-nw"></div>
+            <div class="resize-handle resize-handle-se"></div>
+            <div class="resize-handle resize-handle-sw"></div>
+        </div>
+    </div>
+
+    <div id="sessionCheckpointsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-save"></i> Session Checkpoints</h3>
+                <button class="modal-close" aria-label="Close session checkpoints">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Restore the edit queue, sequence clipboard and view for the loaded genome. Exported GenBank files are separate.</p>
                 <div class="checkpoint-controls">
-                    <h4><i class="fas fa-save"></i> Checkpoint Management</h4>
                     <div class="checkpoint-section">
                         <div class="checkpoint-create">
                             <input type="text" id="checkpointNameInput" placeholder="Checkpoint name..."
@@ -4357,7 +4381,7 @@ Supported formats:
                                 <div class="empty-checkpoints-message">
                                     <i class="fas fa-bookmark"></i>
                                     <p>No checkpoints created</p>
-                                    <small>Create checkpoints to save current state</small>
+                                    <small>Save a checkpoint to restore your edit queue and view later</small>
                                 </div>
                             </div>
                         </div>
@@ -4367,15 +4391,6 @@ Supported formats:
             <div class="modal-footer">
                 <button class="btn modal-close">Close</button>
             </div>
-            <!-- Resize handles -->
-            <div class="resize-handle resize-handle-n"></div>
-            <div class="resize-handle resize-handle-s"></div>
-            <div class="resize-handle resize-handle-e"></div>
-            <div class="resize-handle resize-handle-w"></div>
-            <div class="resize-handle resize-handle-ne"></div>
-            <div class="resize-handle resize-handle-nw"></div>
-            <div class="resize-handle resize-handle-se"></div>
-            <div class="resize-handle resize-handle-sw"></div>
         </div>
     </div>
 
@@ -5606,7 +5621,7 @@ Supported formats:
     <script defer src="modules/PluginImplementations.js"></script>
 
 
-    <!-- Action Management System -->
+    <!-- Edit Queue System -->
     <script defer src="modules/GenomeDataProxy.js"></script>
     <script defer src="modules/export/GenBankExporter.js"></script>
     <script defer src="modules/ActionManager.js"></script>

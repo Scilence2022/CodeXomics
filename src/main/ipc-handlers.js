@@ -2420,7 +2420,7 @@ function registerIpcHandlers(deps) {
   });
 
   // Handle direct file write requests
-  ipcMain.handle('write-file', async (event, filePath, content, commitNotAfter) => {
+  ipcMain.handle('write-file', async (event, filePath, content, commitNotAfter, sourceGenomePath) => {
     try {
       const access = { operation: 'write file', resolvePhysical: true };
       const destination = assertAllowedFileAccess(app, filePath, access);
@@ -2428,6 +2428,20 @@ function registerIpcHandlers(deps) {
       const validateTarget = () => {
         if (assertAllowedFileAccess(app, requestedPath, access) !== destination) {
           throw new Error('The file write destination changed before export');
+        }
+        if (sourceGenomePath) {
+          const source = assertAllowedFileAccess(app, sourceGenomePath, {
+            operation: 'read source genome',
+            resolvePhysical: true,
+          });
+          const sourceStat = fs.statSync(source, { throwIfNoEntry: false });
+          const outputStat = fs.statSync(destination, { throwIfNoEntry: false });
+          if (
+            source === destination ||
+            (sourceStat && outputStat && sourceStat.dev === outputStat.dev && sourceStat.ino === outputStat.ino)
+          ) {
+            throw new Error('Choose a different output file to preserve the source genome');
+          }
         }
       };
       assertWriteDeadline(commitNotAfter);

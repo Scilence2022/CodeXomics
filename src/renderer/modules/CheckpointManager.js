@@ -116,6 +116,19 @@ class CheckpointManager {
     const setupListeners = () => {
       console.log('🎯 Setting up CheckpointManager event listeners...');
 
+      document.getElementById('createCheckpointBtn')?.addEventListener('click', () => this.createManualCheckpoint());
+      document.getElementById('rollbackBtn')?.addEventListener('click', () => this.showCheckpointList());
+
+      const modal = document.getElementById('sessionCheckpointsModal');
+      const close = () => modal.classList.remove('show');
+      modal?.querySelectorAll('.modal-close').forEach(button => button.addEventListener('click', close));
+      modal?.addEventListener('click', event => {
+        if (event.target === modal) close();
+      });
+      modal?.addEventListener('keydown', event => {
+        if (event.key === 'Escape') close();
+      });
+
       // Modal checkpoint creation button
       const createCheckpointBtnModal = document.getElementById('createCheckpointBtnModal');
       if (createCheckpointBtnModal) {
@@ -251,6 +264,7 @@ class CheckpointManager {
       // Genome Browser State
       genomeBrowser: {
         currentFile: this.summarizeCurrentFile(this.genomeBrowser.currentFile),
+        genomeSourceSha256: this.genomeBrowser.loadedGenomeSourceSha256 || null,
         currentChromosome: this.genomeBrowser.currentChromosome,
         currentPosition: this.genomeBrowser.currentPosition,
         zoomLevel: this.genomeBrowser.zoomLevel,
@@ -410,31 +424,49 @@ class CheckpointManager {
    */
   async rollbackToCheckpoint(checkpointId) {
     try {
+      const genomePath = this.genomePath;
+      const source = this.genomeBrowser.currentSequence;
       const checkpoint = this.checkpoints.find(cp => cp.id === checkpointId);
       if (!checkpoint) {
         throw new Error(`Checkpoint with ID ${checkpointId} not found`);
       }
 
+      const sourceSha256 = checkpoint.state.genomeBrowser?.genomeSourceSha256;
+      if (sourceSha256 && sourceSha256 !== this.genomeBrowser.loadedGenomeSourceSha256) {
+        throw new Error('This checkpoint belongs to a different version of the genome file.');
+      }
+
+      const assertCanRestore = () => {
+        if (genomePath !== this.getCurrentGenomePath() || source !== this.genomeBrowser.currentSequence) {
+          throw new Error('The loaded genome changed. Open its checkpoints and try again.');
+        }
+        if (window.actionManager?.isExecuting) {
+          throw new Error('Wait for the edit queue to finish before restoring a checkpoint.');
+        }
+      };
+      assertCanRestore();
+
       // Show confirmation dialog
       const confirmed = await this.confirmRollback(checkpoint);
       if (!confirmed) return false;
+      assertCanRestore();
 
       // Create backup checkpoint before rollback
-      await this.createCheckpoint('Before Rollback', this.CHECKPOINT_TYPES.AUTO, {
+      await this.createCheckpoint('Before Restore', this.CHECKPOINT_TYPES.AUTO, {
         rollbackTo: checkpointId,
         rollbackName: checkpoint.name,
       });
 
-      // Restore state
+      assertCanRestore();
       await this.restoreSystemState(checkpoint.state);
 
-      this.genomeBrowser.showNotification(`Rolled back to checkpoint: ${checkpoint.name}`, 'success');
+      this.genomeBrowser.showNotification(`Restored session checkpoint: ${checkpoint.name}`, 'success');
       console.log(`✅ Rolled back to checkpoint: ${checkpoint.name}`);
 
       return true;
     } catch (error) {
       console.error('❌ Error rolling back to checkpoint:', error);
-      this.genomeBrowser.showNotification('Failed to rollback to checkpoint', 'error');
+      this.genomeBrowser.showNotification(`Could not restore checkpoint: ${error.message}`, 'error');
       return false;
     }
   }
@@ -446,7 +478,7 @@ class CheckpointManager {
     try {
       // Restore Genome Browser state
       if (state.genomeBrowser) {
-        await this.restoreGenomeBrowserState(state.genomeBrowser);
+        this.restoreGenomeBrowserState(state.genomeBrowser);
       }
 
       // Restore Action Manager state
@@ -464,6 +496,7 @@ class CheckpointManager {
         this.restoreFileManagerState(state.fileManager);
       }
 
+      this.genomeBrowser.displayGenomeView?.();
       console.log('✅ System state restored successfully');
     } catch (error) {
       console.error('❌ Error restoring system state:', error);
@@ -474,13 +507,7 @@ class CheckpointManager {
   /**
    * Restore genome browser state
    */
-  async restoreGenomeBrowserState(genomeBrowserState) {
-    // Restore current file if different
-    if (genomeBrowserState.currentFile && genomeBrowserState.currentFile !== this.genomeBrowser.currentFile) {
-      // This would need to trigger file loading
-      console.log('📁 File restoration needed:', genomeBrowserState.currentFile);
-    }
-
+  restoreGenomeBrowserState(genomeBrowserState) {
     // Restore position and zoom
     if (genomeBrowserState.currentChromosome) {
       this.genomeBrowser.currentChromosome = genomeBrowserState.currentChromosome;
@@ -494,14 +521,9 @@ class CheckpointManager {
       this.genomeBrowser.zoomLevel = genomeBrowserState.zoomLevel;
     }
 
-    if (genomeBrowserState.viewStart && genomeBrowserState.viewEnd) {
+    if (genomeBrowserState.viewStart != null && genomeBrowserState.viewEnd != null) {
       this.genomeBrowser.viewStart = genomeBrowserState.viewStart;
       this.genomeBrowser.viewEnd = genomeBrowserState.viewEnd;
-    }
-
-    // Trigger view refresh
-    if (this.genomeBrowser.displayGenomeView) {
-      this.genomeBrowser.displayGenomeView();
     }
   }
 
@@ -567,10 +589,10 @@ class CheckpointManager {
     this.updateCheckpointListUI();
     this.refresh();
 
-    // Show the action list modal which contains checkpoint management
-    const modal = document.getElementById('actionListModal');
+    const modal = document.getElementById('sessionCheckpointsModal');
     if (modal) {
       modal.classList.add('show');
+      modal.querySelector('#checkpointNameInput')?.focus();
     }
   }
 
@@ -586,7 +608,7 @@ class CheckpointManager {
                 <div class="empty-checkpoints-message">
                     <i class="fas fa-bookmark"></i>
                     <p>No checkpoints created</p>
-                    <small>Create checkpoints to save current state</small>
+                    <small>Save a checkpoint to restore your edit queue and view later</small>
                 </div>
             `;
       return;
@@ -609,6 +631,12 @@ class CheckpointManager {
     });
   }
 
+  escapeCheckpointText(value) {
+    const element = document.createElement('span');
+    element.textContent = value;
+    return element.innerHTML;
+  }
+
   /**
    * Render single checkpoint item
    */
@@ -622,14 +650,14 @@ class CheckpointManager {
                 <div class="checkpoint-info">
                     <div class="checkpoint-name">
                         <i class="fas ${typeIcon}"></i>
-                        ${checkpoint.name}
+                        ${this.escapeCheckpointText(checkpoint.name)}
                     </div>
                     <div class="checkpoint-time">
                         ${timeAgo} • ${sizeFormatted}
                     </div>
                 </div>
                 <div class="checkpoint-controls-item">
-                    <button id="rollback-${checkpoint.id}" class="btn btn-sm btn-primary" title="Rollback">
+                    <button id="rollback-${checkpoint.id}" class="btn btn-sm btn-primary" title="Restore Session">
                         <i class="fas fa-undo"></i>
                     </button>
                     <button id="info-${checkpoint.id}" class="btn btn-sm btn-secondary" title="Info">
@@ -691,13 +719,13 @@ class CheckpointManager {
    */
   async deleteCheckpoint(checkpointId) {
     try {
+      const genomePath = this.genomePath;
       const checkpoint = this.checkpoints.find(cp => cp.id === checkpointId);
       if (!checkpoint) return;
 
       const confirmed = await this.showDeleteConfirmModal(checkpoint.name);
       if (!confirmed) return;
 
-      const genomePath = this.genomePath;
       const result = await this.invokeStore('checkpoints:remove', { genomePath, ids: [checkpointId] });
       this.applyStoreList(genomePath, result.checkpoints);
 
@@ -730,16 +758,16 @@ class CheckpointManager {
 
     const info = `
             <strong>Checkpoint Information</strong><br><br>
-            <strong>Name:</strong> ${checkpoint.name}<br>
-            <strong>Type:</strong> ${checkpoint.type}<br>
+            <strong>Name:</strong> ${this.escapeCheckpointText(checkpoint.name)}<br>
+            <strong>Type:</strong> ${this.escapeCheckpointText(checkpoint.type)}<br>
             <strong>Created:</strong> ${checkpoint.timestamp.toLocaleString()}<br>
             <strong>Size:</strong> ${this.formatSize(checkpoint.size)}<br>
             <strong>ID:</strong> ${checkpoint.id}<br><br>
             <strong>State Summary:</strong><br>
-            • File: ${checkpoint.state.genomeBrowser?.currentFile?.path || checkpoint.state.genomeBrowser?.currentFile || 'None'}<br>
-            • Chromosome: ${checkpoint.state.genomeBrowser?.currentChromosome || 'None'}<br>
-            • Position: ${checkpoint.state.genomeBrowser?.currentPosition || 'None'}<br>
-            • Actions: ${checkpoint.state.actionManager?.actions?.length || 0}<br>
+            • File: ${this.escapeCheckpointText(checkpoint.state.genomeBrowser?.currentFile?.path || checkpoint.state.genomeBrowser?.currentFile || 'None')}<br>
+            • Chromosome: ${this.escapeCheckpointText(checkpoint.state.genomeBrowser?.currentChromosome || 'None')}<br>
+            • Position: ${this.escapeCheckpointText(checkpoint.state.genomeBrowser?.currentPosition || 'None')}<br>
+            • Queued operations: ${checkpoint.state.actionManager?.actions?.length || 0}<br>
         `;
 
     // Create and show info modal
@@ -912,8 +940,8 @@ class CheckpointManager {
   async confirmRollback(checkpoint) {
     return new Promise(resolve => {
       this.showConfirmModal(
-        'Confirm Rollback',
-        `Are you sure you want to rollback to checkpoint "${checkpoint.name}"?\n\nThis will restore the system state from ${checkpoint.timestamp.toLocaleString()}.\n\nCurrent state will be automatically saved as a backup.`,
+        'Restore Session Checkpoint',
+        `Restore the edit queue, clipboard and view from "${checkpoint.name}" (${checkpoint.timestamp.toLocaleString()})?\n\nThe current session will be saved as a checkpoint before restoring.`,
         resolve
       );
     });
@@ -932,26 +960,22 @@ class CheckpointManager {
       modal.innerHTML = `
                 <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header">
-                        <h3 id="checkpointConfirmTitle">${title}</h3>
+                        <h3 id="checkpointConfirmTitle"></h3>
                         <button class="modal-close">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <div id="checkpointConfirmMessage" style="white-space: pre-line; line-height: 1.5;">
-                            ${message}
-                        </div>
+                        <div id="checkpointConfirmMessage" style="white-space: pre-line; line-height: 1.5;"></div>
                     </div>
                     <div class="modal-footer">
-                        <button id="checkpointConfirmYes" class="btn btn-primary">Yes, Rollback</button>
+                        <button id="checkpointConfirmYes" class="btn btn-primary">Confirm</button>
                         <button class="btn btn-secondary modal-close">Cancel</button>
                     </div>
                 </div>
             `;
       document.body.appendChild(modal);
-    } else {
-      // Update content
-      modal.querySelector('#checkpointConfirmTitle').textContent = title;
-      modal.querySelector('#checkpointConfirmMessage').textContent = message;
     }
+    modal.querySelector('#checkpointConfirmTitle').textContent = title;
+    modal.querySelector('#checkpointConfirmMessage').textContent = message;
 
     // Set up event listeners
     const confirmBtn = modal.querySelector('#checkpointConfirmYes');

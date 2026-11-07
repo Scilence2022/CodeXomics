@@ -363,6 +363,14 @@ Tools → Export → GFF/BED
 - Network analysis data
 - Pathway visualizations
 
+### Sequence Editing
+
+Use **Sequence Editing** to queue operations on the loaded genome. Paste replaces an active selection or inserts at the sequence cursor. If neither is available, choose the destination range. **Paste Reverse Complement** reverse-complements the clipboard bases before pasting.
+
+Review the operations in **Edit Queue**. Positions refer to the source genome. CodeXomics adjusts downstream positions during execution and stops if an earlier edit makes a later target ambiguous. **Run Edit Queue** writes the result to a separate GenBank file and opens it in a new window when available.
+
+**Session Checkpoints** restore the pending queue, sequence clipboard and saved view for the loaded genome. To return to the original bases after a successful export, open the original genome file.
+
 ---
 
 ## AI Assistant

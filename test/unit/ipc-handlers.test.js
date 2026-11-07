@@ -1,7 +1,10 @@
 /**
  * IPC Handlers Module Structure Tests
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { createRequire } from 'node:module';
+import os from 'node:os';
+import vm from 'node:vm';
 import fs from 'fs';
 import path from 'path';
 
@@ -131,4 +134,49 @@ describe('IPC Handlers Module', () => {
     // Accept this as known issue, not a test failure
     expect(dups.length).toBeLessThanOrEqual(20);
   });
+});
+
+it('protects the loaded genome and aliases while writing a separate edit result', async () => {
+  const directory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'codexomics-edit-output-'));
+  try {
+    const handlers = new Map();
+    const requireMain = createRequire(IPC_PATH);
+    const module = { exports: {} };
+    const electron = {
+      ipcMain: { handle: (channel, handler) => handlers.set(channel, handler), on: vi.fn() },
+      app: { getPath: () => directory },
+    };
+    vm.runInNewContext(fs.readFileSync(IPC_PATH, 'utf8'), {
+      module,
+      __dirname: path.dirname(IPC_PATH),
+      process,
+      Buffer,
+      console: { ...console, error: vi.fn() },
+      require(name) {
+        if (name === 'electron') return electron;
+        if (name === './evo2-service') return { registerEvo2Ipc: vi.fn() };
+        if (name === './plugin-version-ipc') return { registerPluginVersionIpc: vi.fn() };
+        return requireMain(name);
+      },
+    }, { filename: IPC_PATH });
+    module.exports.registerIpcHandlers({ windowRegistry: new Map() });
+    const write = handlers.get('write-file');
+    const source = path.join(directory, 'source.gbk');
+    const alias = path.join(directory, 'alias.gbk');
+    const output = path.join(directory, 'edited.gbk');
+    await fs.promises.writeFile(source, 'original');
+    await fs.promises.link(source, alias);
+
+    for (const destination of [source, alias]) {
+      expect(await write({}, destination, 'edited', undefined, source)).toMatchObject({
+        success: false,
+        error: expect.stringContaining('preserve the source genome'),
+      });
+    }
+    expect(await fs.promises.readFile(source, 'utf8')).toBe('original');
+    expect(await write({}, output, 'edited', undefined, source)).toMatchObject({ success: true });
+    expect(await fs.promises.readFile(output, 'utf8')).toBe('edited');
+  } finally {
+    await fs.promises.rm(directory, { recursive: true, force: true });
+  }
 });

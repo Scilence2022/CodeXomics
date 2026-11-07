@@ -71,10 +71,10 @@ describe('Menu Builder Module', () => {
     expect(loadFileIndex).toBeGreaterThan(openNewWindowIndex);
   });
 
-  it('Action menu should include reverse-complement paste and insert items', () => {
-    expect(content).toContain("label: 'Paste (Reverse)'");
+  it('Sequence Editing menu should include reverse-complement paste and insert items', () => {
+    expect(content).toContain("label: 'Paste Reverse Complement'");
     expect(content).toContain("'action-paste-sequence-reverse'");
-    expect(content).toContain("label: 'Insert (Reverse)'");
+    expect(content).toContain("label: 'Insert Reverse Complement'");
     expect(content).toContain("'action-insert-sequence-reverse'");
   });
 
@@ -94,11 +94,11 @@ describe('Menu Builder Module', () => {
     expect(content.slice(chopchopIndex, chopchopIndex + 140)).toContain("accelerator: 'CmdOrCtrl+Alt+H'");
   });
 
-  it('top Actions dropdown should include reverse-complement paste and insert buttons', () => {
+  it('Sequence Editing dropdown should include reverse-complement paste and insert buttons', () => {
     expect(indexHtml).toContain('id="pasteSequenceReverseBtn"');
-    expect(indexHtml).toContain('Paste (Reverse)');
+    expect(indexHtml).toContain('Paste Reverse Complement');
     expect(indexHtml).toContain('id="insertSequenceReverseBtn"');
-    expect(indexHtml).toContain('Insert (Reverse)');
+    expect(indexHtml).toContain('Insert Reverse Complement');
     expect(rendererContent).toContain("ipcRenderer.on('action-paste-sequence-reverse'");
     expect(rendererContent).toContain('window.actionManager.handlePasteSequence(true)');
     expect(rendererContent).toContain("ipcRenderer.on('action-insert-sequence-reverse'");
