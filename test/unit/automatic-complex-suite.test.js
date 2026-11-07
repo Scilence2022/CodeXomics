@@ -63,6 +63,25 @@ describe('AutomaticComplexSuite', () => {
     expect(validateFilePath).toHaveBeenCalledWith(second, 'Benchmark fixture', 'load_wig_tracks');
   });
 
+  it('starts the track workflow with both changes needed and restores prior visibility afterward', async () => {
+    const test = suite.getTests().find(candidate => candidate.id === 'track_auto_complex_01');
+    const chatManager = {
+      getTrackStatus: () => ({ visibleTracks: ['gc'] }),
+      toggleTrack: vi.fn().mockResolvedValue({ success: true }),
+    };
+    const cleanups = [];
+    await test.setup({ chatManager, deferCleanup: cleanup => cleanups.push(cleanup) });
+    expect(chatManager.toggleTrack.mock.calls).toEqual([
+      [{ track_name: 'gc', visible: false }],
+      [{ track_name: 'variants', visible: true }],
+    ]);
+    for (const cleanup of cleanups.reverse()) await cleanup();
+    expect(chatManager.toggleTrack.mock.calls.slice(2)).toEqual([
+      [{ track_name: 'variants', visible: false }],
+      [{ track_name: 'gc', visible: true }],
+    ]);
+  });
+
   describe('Initialization and Config', () => {
     it('should initialize suite metadata correctly', () => {
       expect(suite.getName()).toBe('Automatic Complex Tests');

@@ -8121,22 +8121,42 @@ class ChatManager {
     if (/\b(?:select|highlight|choose|pick|activate)\b|(?:选择|选中|高亮)/.test(message)) {
       return requirement('selection', verbTool('select', 'highlight', 'switch', 'set'), 'select_sequence_region');
     }
-    const blastVisibility = message.match(
-      /\b(hide|show|toggle(?:\s+(?:off|on))?)\s+(?:the\s+)?blast(?:\s+results?)?\s+track\b/
-    )?.[1];
-    if (blastVisibility) {
+    const trackVisibility = message.match(
+      /\b(hide|show|toggle(?:\s+(?:off|on))?)\s+(?:the\s+)?(blast(?:\s+results?)?|gc(?:[\s_-]+content)?|variants?)\s+track\b/
+    );
+    if (trackVisibility) {
+      const [, action, requestedTrack] = trackVisibility;
+      const track = requestedTrack.startsWith('gc') ? 'gc' : requestedTrack.startsWith('blast') ? 'blast' : 'variants';
+      const names = {
+        gc: ['gc', 'gc_content', 'gccontent'],
+        blast: ['blast', 'blast_results'],
+        variants: ['variants'],
+      }[track];
       return requirement(
-        'blast_track_visibility',
+        `${track}_track_visibility`,
         (toolName, record) => {
           const parameters = record?.parameters || {};
           if (toolName !== 'toggle_track') return false;
-          if (!['blast', 'blast_results'].includes(parameters.track_name ?? parameters.trackName)) return false;
-          if (blastVisibility === 'toggle') return parameters.action === 'toggle' && parameters.visible === undefined;
-          const visible = blastVisibility === 'show' || blastVisibility === 'toggle on';
-          return parameters.visible === visible;
+          const name = String(parameters.track_name ?? parameters.trackName ?? '')
+            .toLowerCase()
+            .replace(/[\s-]+/g, '_');
+          if (!names.includes(name)) return false;
+          if (action === 'toggle') return parameters.action === 'toggle' && parameters.visible === undefined;
+          const visible = action === 'show' || action === 'toggle on';
+          return (
+            parameters.visible === visible ||
+            (parameters.visible === undefined && parameters.action === (visible ? 'show' : 'hide'))
+          );
         },
         'toggle_track'
       );
+    }
+    if (
+      /\b(?:check|get|inspect)\b/.test(message) &&
+      /\b(?:track status|(?:visibility )?status of (?:all )?tracks)\b/.test(message)
+    ) {
+      const capability = /\bagain\b/.test(message) ? 'track_status_recheck' : 'track_status';
+      return requirement(capability, toolName => toolName === 'get_track_status');
     }
     if (/\b(?:restore|expand)\s+(?:the\s+)?(?:minimized\s+)?chat\s*box\b/.test(message)) {
       return requirement(
@@ -8334,6 +8354,14 @@ class ChatManager {
     }
     if (/\bdesign\b|设计/.test(message)) {
       return requirement('design', verbTool('design', 'create'), 'design_primers');
+    }
+    if (
+      /\bsimulate_gel_electrophoresis\b|\bsimulate\s+(?:an?\s+)?(?:agarose\s+)?gel\s+electrophoresis\b/.test(message)
+    ) {
+      return requirement('simulate_gel_electrophoresis', toolName => toolName === 'simulate_gel_electrophoresis');
+    }
+    if (/\bvirtual_digest\b|\b(?:virtual(?: restriction)?|restriction) digest\b|虚拟酶切/.test(message)) {
+      return requirement('virtual_digest', toolName => toolName === 'virtual_digest');
     }
     if (
       /\b(?:run|execute|start|stop|pause|resume|simulate|retry)\b|(?:运行|执行|启动|停止|暂停|恢复|模拟|重试)/.test(
