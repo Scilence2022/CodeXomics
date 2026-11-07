@@ -840,8 +840,10 @@ class StrictAutomaticEvaluator {
         );
       }
       if (executionIndex === -1) {
-        executionIndex = pendingExecutions.findIndex(execution =>
-          this.toolMatches(execution?.tool_name || execution?.tool || execution?.name, call.tool_name)
+        executionIndex = pendingExecutions.findIndex(
+          execution =>
+            (!call.callId || !(execution?.call_id || execution?.tool_call_id)) &&
+            this.toolMatches(execution?.tool_name || execution?.tool || execution?.name, call.tool_name)
         );
       }
       if (executionIndex === -1) continue;
@@ -849,6 +851,7 @@ class StrictAutomaticEvaluator {
       call.executionObserved = true;
       call.executed = true;
       call.executionSuccess = this.getExecutionSuccess(execution, true);
+      call.executionError = execution?.error || null;
       call.success = call.executionSuccess;
       call.status =
         execution?.status ||
@@ -1101,7 +1104,9 @@ class StrictAutomaticEvaluator {
       ? sequence.unexpectedIndexes.filter(index => {
           const toolName = calls[index]?.tool_name;
           if (this.isReadOnlyTool(toolName)) return false;
-          if (expectedTools.some(expected => this.toolMatches(toolName, expected))) return false;
+          if (expectedTools.some(expected => this.toolMatches(toolName, expected))) {
+            return test.expectedResult?.allowRepeatedCalls === false;
+          }
           return !this.isCompletionToleratedExtra(calls[index], calls, expectedTools, expectedParameters);
         })
       : sequence.unexpectedIndexes;
@@ -1189,7 +1194,7 @@ class StrictAutomaticEvaluator {
         errors.push(`Schema invalid for observed call ${index + 1} '${calls[index].tool_name}': ${reasons}`);
       }
     });
-    if (assessmentMode === 'execution') {
+    if (assessmentMode === 'execution' || (assessmentMode === 'completion' && this.requireExecutionForCompletion)) {
       for (const match of expectedObservedCalls) {
         const call = calls[match.actualIndex];
         if (!call.executionObserved) {
@@ -1205,7 +1210,8 @@ class StrictAutomaticEvaluator {
         } else if (call.executionSuccess === false) {
           errors.push(
             `Execution failed for expected call ${match.expectedIndex + 1} ` +
-              `'${this.formatExpectedTool(match.expectedTool)}' (observed call ${match.actualIndex + 1})`
+              `'${this.formatExpectedTool(match.expectedTool)}' (observed call ${match.actualIndex + 1})` +
+              (call.executionError ? `: ${call.executionError}` : '')
           );
         }
       }

@@ -128,6 +128,14 @@ class ToolExecutionService {
   }
 
   async _dispatch(toolName, parameters, options = {}) {
+    if (this.chatManager?.benchmarkAutomationActive === true) {
+      if (['request_annotation_approval', 'reject_annotation_changeset'].includes(toolName)) {
+        throw new Error('Curator confirmation requires an interactive session. Leave the ChangeSet for human review.');
+      }
+      if (['execute_actions', 'action_execute_actions'].includes(toolName) && parameters.auto_save !== true) {
+        throw new Error('Sequence-edit export requires auto_save: true during an unattended benchmark.');
+      }
+    }
     {
       // --- PRIORITY 1: MULTI-AGENT SETTINGS (if handled exclusively) ---
       if (

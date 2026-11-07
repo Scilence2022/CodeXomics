@@ -70,6 +70,40 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
     return normalizedDir + filename;
   }
 
+  async requireFixture(filename) {
+    const filePath = this.buildFilePath(filename);
+    const info = await window.electronAPI.getSelectedFileInfo(filePath);
+    if (!info?.success || !info.info?.isFile) {
+      throw new Error(`Benchmark fixture unavailable: ${filePath}${info?.error ? ` (${info.error})` : ''}`);
+    }
+  }
+
+  async prepareSequenceEdit({ chatManager, signal, deferCleanup }) {
+    const actionManager = window.actionManager;
+    if (!actionManager || actionManager.isExecuting) {
+      throw new Error('Benchmark requires an idle Action Manager.');
+    }
+    const { chromosome, regions } = await chatManager.findIntergenicRegions({ minLength: 20 });
+    const gap = regions[0];
+    if (!gap) throw new Error('Benchmark requires an annotated chromosome with an intergenic gap.');
+    signal?.throwIfAborted();
+
+    const previousActions = actionManager.actions;
+    deferCleanup(() => {
+      actionManager.actions = previousActions;
+      actionManager.updateActionListUI();
+      actionManager.updateStats();
+      actionManager.notifyActionsTrackUpdate();
+    });
+    actionManager.actions = [];
+    const staged = await actionManager.insertSequence({
+      chromosome,
+      position: Math.floor((gap.start + gap.end) / 2),
+      sequence: 'ACGT',
+    });
+    if (!staged.success) throw new Error(`Could not queue the benchmark edit: ${staged.error}`);
+  }
+
   /**
    * Clean up target export files before tests to prevent false positives
    */
@@ -210,11 +244,12 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'data_loading',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: `Load WIG track file ${this.buildFilePath('another_sample.wig')}`,
+        instruction: `Load WIG track file ${this.buildFilePath('variable_sample.wig')}`,
+        setup: () => this.requireFixture('variable_sample.wig'),
         expectedResult: {
           tool_name: 'load_wig_tracks',
           parameters: {
-            filePaths: this.buildFilePath('another_sample.wig'), // Fixed: Use filePaths (plural) to match tool specification
+            filePaths: this.buildFilePath('variable_sample.wig'),
           },
         },
         maxScore: 5,
@@ -493,7 +528,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'navigation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Select and highlight the gene lacZ in the genome browser.',
+        instruction: 'Select lacZ as the active gene in the genome browser.',
         expectedResult: {
           tool_name: 'select_gene',
           parameters: {
@@ -1120,7 +1155,12 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'sequence_editing',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: `Execute all pending sequence editing actions in the queue and export the resulting gbk file to ${this.buildFilePath('exported_files/edited_genome_sequence.gbk')}`,
+        instruction: `Execute the pending sequence edits with automatic GenBank output to ${this.buildFilePath('exported_files/edited_genome_sequence.gbk')}`,
+        setup: context => this.prepareSequenceEdit(context),
+        verifyExecution: result =>
+          result?.executedActions === 1 &&
+          result.file_path === this.buildFilePath('exported_files/edited_genome_sequence.gbk'),
+        verificationError: 'Expected the queued intergenic edit to be exported as GenBank.',
         expectedResult: {
           tool_name: 'execute_actions',
           parameters: {
@@ -1276,12 +1316,15 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
       },
       {
         id: 'annot_auto_05',
-        name: 'Update Annotation',
+        name: 'Prepare Annotation Update for Review',
         type: 'function_call',
         category: 'annotation',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Update the annotation named "fakG" to change its description to "Updated fakG gene annotation".',
+        instruction:
+          'Update the description of annotation "fakG" to "Updated fakG gene annotation" using update_annotation to prepare a ChangeSet for human review only.',
+        verifyExecution: result => result?.applied === false && result.changeSet?.status === 'awaiting_approval',
+        verificationError: 'Expected an unapplied annotation ChangeSet awaiting curator approval.',
         expectedResult: {
           tool_name: 'update_annotation',
           parameters: {
@@ -1723,7 +1766,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'track_control',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Toggle off the BLAST track visibility.',
+        instruction: 'Hide the BLAST track.',
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
@@ -1939,7 +1982,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'system',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: 'Restore the ChatBox window if it is minimized.',
+        instruction: 'Restore the ChatBox to its expanded state.',
+        setup: async ({ chatManager }) => {
+          const state = await chatManager.setChatBoxMinimized({ action: 'minimize' });
+          if (!state.success) throw new Error(state.error);
+        },
         expectedResult: {
           tool_name: 'set_chatbox_minimized',
           parameters: {
@@ -2067,8 +2114,10 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         complexity: 'simple',
         evaluation: 'automatic',
         instruction: `View the ${this.buildFilePath('README.md')} file in the markdown viewer.`,
+        setup: () => this.requireFixture('README.md'),
         expectedResult: {
           tool_name: 'view_markdown_file',
+          allowRepeatedCalls: false,
           parameters: {
             filePath: this.buildFilePath('README.md'),
           },

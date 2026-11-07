@@ -203,6 +203,16 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
   const ToolExecutionService = loadToolExecutionServiceClass();
   const MockChatManager = loadChatManagerClass();
 
+  it('refuses interactive approval, rejection and save dialogs in an unattended benchmark', async () => {
+    const service = new ToolExecutionService({}, { benchmarkAutomationActive: true });
+    for (const tool of ['request_annotation_approval', 'reject_annotation_changeset']) {
+      await expect(service.execute(tool, { changeSetId: 'cs-test' })).rejects.toThrow('Curator confirmation');
+    }
+    for (const tool of ['execute_actions', 'action_execute_actions']) {
+      await expect(service.execute(tool, { auto_save: false })).rejects.toThrow('requires auto_save: true');
+    }
+  });
+
   it('should keep execution policies in dedicated hardcoded policy classes', () => {
     const contextSource = fs.readFileSync(
       path.join(process.cwd(), 'src/renderer/modules/chat/services/LLMContextService.js'),

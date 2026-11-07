@@ -185,9 +185,9 @@ describe('framework wiring for call-only and unattended mode', () => {
   const source = readSource('src/renderer/modules/LLMBenchmarkFramework.js');
 
   it('applies and restores both modes around each test', () => {
-    expect(source).toMatch(/const restoreCallOnly = this\.applyCallOnlyMode\(test\)/);
+    expect(source).toMatch(/restoreCallOnly = this\.applyCallOnlyMode\(test\)/);
     expect(source).toMatch(/window\.BlastManager\.setUnattended\(true\)/);
-    expect(source).toMatch(/restoreCallOnly\(\);\n\s*restoreUnattended\(\);/);
+    expect(source).toMatch(/restoreCallOnly\?\.\(\);\n\s*restoreUnattended\?\.\(\);/);
   });
 
   it('is a no-op for tests that did not opt in', () => {
