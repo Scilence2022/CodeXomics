@@ -119,6 +119,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
    * Initialize automatic simple test cases
    */
   initializeTests() {
+    const genBankExportPath = this.buildFilePath('exported_files/exported_data.gbk');
     return [
       // SYSTEM SETUP TASKS - Automatic + Simple (HIGHEST PRIORITY - Must be first)
       {
@@ -720,6 +721,9 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           parameters: {
             query: 'DNA Polymerase',
           },
+          completionAlternatives: {
+            search_annotations: { query: 'DNA Polymerase' },
+          },
         },
         maxScore: 5,
         bonusScore: 1,
@@ -738,6 +742,9 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'find_gene_by_name',
           parameters: {
             name: 'b0344',
+          },
+          completionAlternatives: {
+            get_annotation: { identifier: 'b0344' },
           },
         },
         maxScore: 5,
@@ -793,12 +800,19 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         category: 'file_export',
         complexity: 'simple',
         evaluation: 'automatic',
-        instruction: `Export data in GenBank format to file: ${this.buildFilePath('exported_files/exported_data.gbk')}`,
+        instruction: `Export data in GenBank format to file: ${genBankExportPath}`,
         expectedResult: {
           tool_name: 'export_genbank_format',
           parameters: {
-            filename: this.buildFilePath('exported_files/exported_data.gbk'),
+            filename: genBankExportPath,
           },
+          completionAlternatives: {
+            export_data: {
+              filename: genBankExportPath,
+              benchmarkAnyOf: [{ format: this.schemaDefault('genbank') }, { format: 'gb' }, { format: 'gbk' }],
+            },
+          },
+          allowRepeatedCalls: false,
         },
         maxScore: 5,
         bonusScore: 0, // Song's new evaluation: Fixed 5-point scale

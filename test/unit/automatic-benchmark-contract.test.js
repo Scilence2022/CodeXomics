@@ -6,6 +6,7 @@ import vm from 'vm';
 
 const require = createRequire(import.meta.url);
 const DynamicToolsSnapshotAdapter = require('../../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
+const StrictAutomaticEvaluator = require('../../src/renderer/modules/benchmark-suites/StrictAutomaticEvaluator.js');
 
 const ROOT = process.cwd();
 const SUITE_DIR = path.join(ROOT, 'src/renderer/modules/benchmark-suites');
@@ -189,7 +190,10 @@ describe('automatic benchmark contracts against the current tool registry', () =
 
     for (const suite of [suites.simple, suites.complex]) {
       for (const test of suite.getTests()) {
-        for (const step of expectedSteps(test)) {
+        const completionSteps = Object.entries(test.expectedResult?.completionAlternatives || {}).map(
+          ([toolName, parameters]) => ({ toolNames: [toolName], parameters })
+        );
+        for (const step of [...expectedSteps(test), ...completionSteps]) {
           stepCount += 1;
           const candidates = expandExpectedValue(step.parameters);
           for (const toolName of step.toolNames) {
@@ -220,5 +224,57 @@ describe('automatic benchmark contracts against the current tool registry', () =
     expect(invalid, `Audited ${stepCount} expected steps and ${alternativeCount} alternative tool contracts`).toEqual(
       []
     );
+  });
+
+  function evaluateRecordedCall(test, toolName, parameters, success = true, assessmentMode = 'completion') {
+    const evaluator = new StrictAutomaticEvaluator({
+      assessmentMode,
+      requireExecutionForCompletion: true,
+      validateToolCall: (name, args) => adapter.validateToolCall(name, args),
+    });
+    return evaluator.evaluate(test, {
+      llmInteractionData: {
+        response: {
+          functionCalls: [{ id: 'call-1', tool_name: toolName, parameters }],
+          toolExecutions: success === null ? [] : [{ tool_call_id: 'call-1', tool_name: toolName, success }],
+        },
+      },
+    });
+  }
+
+  it.each([
+    ['search_auto_02', 'search_annotations', { query: 'DNA Polymerase', limit: 50 }, { query: 'RNA Polymerase' }],
+    ['search_auto_03', 'get_annotation', { identifier: 'b0344' }, { identifier: 'b0343' }],
+  ])('accepts a successful alternative for %s and checks the lookup arguments', (id, toolName, args, wrongArgs) => {
+    const test = suites.simple.getTests().find(candidate => candidate.id === id);
+    expect(evaluateRecordedCall(test, toolName, args)).toMatchObject({
+      success: true,
+      score: 5,
+      details: { executionRequired: true },
+    });
+    expect(evaluateRecordedCall(test, toolName, wrongArgs).success).toBe(false);
+    expect(evaluateRecordedCall(test, toolName, args, false).success).toBe(false);
+    expect(evaluateRecordedCall(test, toolName, args, null).success).toBe(false);
+    expect(evaluateRecordedCall(test, toolName, args, true, 'contract').success).toBe(false);
+    expect(evaluateRecordedCall(test, test.expectedResult.tool_name, test.expectedResult.parameters).success).toBe(
+      true
+    );
+  });
+
+  it('accepts generic GenBank export only with the requested format and destination', () => {
+    const test = suites.simple.getTests().find(candidate => candidate.id === 'export_auto_02');
+    const { filename } = test.expectedResult.parameters;
+    const evaluateExport = (parameters, success = true) =>
+      evaluateRecordedCall(test, 'export_data', parameters, success);
+
+    for (const format of ['genbank', 'gb', 'gbk']) {
+      expect(evaluateExport({ filename, format, auto_save: true })).toMatchObject({ success: true, score: 5 });
+    }
+    expect(evaluateExport({ filename }).success).toBe(true);
+    expect(evaluateExport({ filename, format: 'fasta' }).success).toBe(false);
+    expect(evaluateExport({ filename, format: 'GENBANK' }).details.schemasExact).toBe(false);
+    expect(evaluateExport({ filename: '/tmp/wrong.gbk', format: 'genbank' }).success).toBe(false);
+    expect(evaluateExport({ filename, format: 'genbank' }, false).success).toBe(false);
+    expect(evaluateRecordedCall(test, 'export_genbank_format', { filename }).success).toBe(true);
   });
 });
