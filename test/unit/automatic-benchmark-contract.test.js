@@ -77,9 +77,9 @@ function expandExpectedValue(value) {
   if (!value || typeof value !== 'object') return [value];
 
   const branches = Array.isArray(value.benchmarkAnyOf) ? value.benchmarkAnyOf : [null];
-  // Default expectations permit omission. Exercise that valid call instead of sending the sentinel value.
+  // A null default represents an omitted filter, while concrete defaults can satisfy required fields.
   const ownEntries = Object.entries(value).filter(
-    ([key, item]) => key !== 'benchmarkAnyOf' && !isDefaultExpectation(item)
+    ([key, item]) => key !== 'benchmarkAnyOf' && !(isDefaultExpectation(item) && item.benchmarkDefaultValue === null)
   );
   const ownAlternatives = ownEntries.map(([key, item]) => [key, expandExpectedValue(item)]);
   const ownObjects = combineProperties(ownAlternatives);
