@@ -666,14 +666,17 @@ class DatabaseTools {
       const maxAttempts = 60;
       let status = 'RUNNING';
 
-      while (status === 'RUNNING' && attempts < maxAttempts) {
+      while ((status === 'RUNNING' || status === 'QUEUED') && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 5000));
         const statusResponse = await fetch(`https://www.ebi.ac.uk/Tools/services/rest/iprscan5/status/${jobId}`);
-        status = await statusResponse.text();
+        if (!statusResponse.ok) {
+          throw new Error(`InterPro status request failed (HTTP ${statusResponse.status}) for job ${jobId}`);
+        }
+        status = (await statusResponse.text()).trim();
         attempts++;
         if (status === 'FINISHED') break;
-        if (status === 'FAILED' || status === 'ERROR') {
-          throw new Error('InterPro analysis failed');
+        if (status !== 'RUNNING' && status !== 'QUEUED') {
+          throw new Error(`InterPro job ${jobId} returned status ${status || '(empty)'}`);
         }
       }
 

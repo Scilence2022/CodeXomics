@@ -1632,15 +1632,18 @@ class ProteinService {
           }
 
           const statusUrl = `https://www.ebi.ac.uk/Tools/services/rest/iprscan5/status/${jobId}`;
-          const statusResponse = await fetch(statusUrl);
-          status = await statusResponse.text();
+          const statusResponse = await fetch(statusUrl, { signal: this.getConversationAbortSignal() });
+          if (!statusResponse.ok) {
+            throw new Error(`InterPro status request failed (HTTP ${statusResponse.status}) for job ${jobId}`);
+          }
+          status = (await statusResponse.text()).trim();
 
           console.log(`⏳ [ChatManager] InterPro job status: ${status} (attempt ${attempts + 1}/${maxAttempts})`);
           attempts++;
 
           if (status === 'FINISHED') break;
-          if (status === 'FAILED' || status === 'ERROR') {
-            throw new Error('InterPro analysis failed');
+          if (status !== 'RUNNING' && status !== 'QUEUED') {
+            throw new Error(`InterPro job ${jobId} returned status ${status || '(empty)'}`);
           }
         }
 
@@ -1922,12 +1925,12 @@ class ProteinService {
   }
   async searchUniProtDatabase(parameters) {
     const {
-      query,
-      searchType = 'keyword',
       organism,
-      reviewedOnly = false,
-      limit = 20,
-      includeSequence = false,
+      query = parameters.search_query,
+      searchType = parameters.search_type ?? 'keyword',
+      reviewedOnly = parameters.reviewed_only ?? false,
+      limit = parameters.max_results ?? 20,
+      includeSequence = parameters.output_fields?.includes('sequence') ?? false,
     } = parameters;
     try {
       if (!query && !organism) {

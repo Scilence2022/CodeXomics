@@ -8159,6 +8159,14 @@ class ChatManager {
     ) {
       return requirement('open_tab', toolName => toolName === 'open_new_tab', 'open_new_tab');
     }
+    if (
+      /\badd\s+(?:(?:the|both|designed)\s+)*primers?\b|添加(?:两条|设计好的)?引物/.test(message) ||
+      (/\bsave\b|保存/.test(message) && /\bprimers?\b|引物/.test(contextMessage))
+    ) {
+      const save = requirement('save_primer', toolName => toolName === 'save_primer');
+      if (/\bboth\s+(?:designed\s+)?primers\b/.test(message)) save.count = 2;
+      return save;
+    }
     if (/\b(?:create|add)\b|(?:创建|添加)/.test(message) && /\bannotations?\b|注释/.test(contextMessage)) {
       return requirement(
         'create_annotation',
@@ -8206,9 +8214,6 @@ class ChatManager {
       )
     ) {
       return requirement('edit', verbTool('edit', 'update', 'replace', 'apply', 'set', 'configure'), 'edit_annotation');
-    }
-    if (/\bsave\b|保存/.test(message) && /\bprimers?\b|引物/.test(contextMessage)) {
-      return requirement('save_primer', toolName => toolName === 'save_primer', 'save_primer');
     }
     if (/\bsave\b|保存/.test(message) && /\bviews?\b|视图/.test(contextMessage)) {
       return requirement('save_view', toolName => toolName === 'save_view_state', 'save_view_state');

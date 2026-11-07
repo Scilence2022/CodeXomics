@@ -39,7 +39,7 @@ const GOLDEN_RUNS = {
     ['load_genome_file', { filePath: DIR + 'ECOLI.gbk' }],
     ['load_reads_file', { filePath: DIR + '1655_C10.sorted.bam' }],
     ['load_variant_file', { filePath: DIR + '1655_C10.mutations.vcf' }],
-    ['load_wig_tracks', { filePaths: [DIR + 'sample.wig', DIR + 'another_sample.wig'] }],
+    ['load_wig_tracks', { filePaths: [DIR + 'sample.wig', DIR + 'chipseq_test.wig'] }],
   ],
   nav_auto_01: [
     ['navigate_to_position', { start: 1230000, end: 1300000 }],
@@ -144,7 +144,28 @@ const GOLDEN_RUNS = {
   ],
   primer_auto_complex_02: [
     ['design_primers', { geneName: 'lysC', upstreamBp: 50 }],
-    ['save_primer', { name: 'lysC_F', chromosome: 'U00096', start: 4225000, end: 4225020, sequence: 'ATGCGTAAAGTC' }],
+    [
+      'save_primer',
+      {
+        name: 'lysC_F',
+        chromosome: 'U00096',
+        start: 4233338,
+        end: 4233356,
+        sequence: 'CGTTTCGCAAGTGGTGGAG',
+        strand: '-',
+      },
+    ],
+    [
+      'save_primer',
+      {
+        name: 'lysC_R',
+        chromosome: 'U00096',
+        start: 4231845,
+        end: 4231868,
+        sequence: 'CAATACGGCCCGAAATATAGCTTC',
+        strand: '+',
+      },
+    ],
     ['jump_to_gene', { geneName: 'lysC' }],
     ['toggle_track', { track_name: 'primers', visible: true }],
   ],
@@ -186,10 +207,10 @@ const GOLDEN_RUNS = {
   ],
   // Uses the abbreviated organism name and runs the PDB lookup early, both of which are legitimate.
   protein_auto_complex_02: [
-    ['search_uniprot_database', { search_query: 'DapA', organism: 'E. coli' }],
+    ['search_uniprot_database', { search_query: 'DapA', search_type: 'gene_name', organism: 'E. coli' }],
     ['search_pdb_structures', { geneName: 'dapA', organism: 'E. coli' }],
     ['get_uniprot_entry', { uniprot_id: 'P0A6L2', include_sequence: true }],
-    ['analyze_interpro_domains', { sequence: DAPA_SEQUENCE, analysis_type: 'domains' }],
+    ['analyze_interpro_domains', { sequence: DAPA_SEQUENCE, analysis_type: 'domains', applications: ['Pfam'] }],
   ],
   blast_auto_complex_01: [
     ['blast_create_db_from_genome', { chromosome: 'U00096', dbName: 'ecoli_nucl' }],
@@ -296,9 +317,9 @@ const WRONG_RUNS = [
     label: 'queries the human protein instead of the E. coli one',
     testId: 'protein_auto_complex_02',
     calls: [
-      ['search_uniprot_database', { search_query: 'DapA', organism: 'Homo sapiens' }],
+      ['search_uniprot_database', { search_query: 'DapA', search_type: 'gene_name', organism: 'Homo sapiens' }],
       ['get_uniprot_entry', { uniprot_id: 'P0A6L2' }],
-      ['analyze_interpro_domains', { sequence: DAPA_SEQUENCE, analysis_type: 'domains' }],
+      ['analyze_interpro_domains', { sequence: DAPA_SEQUENCE, analysis_type: 'domains', applications: ['Pfam'] }],
       ['search_pdb_structures', { geneName: 'dapA', organism: 'Homo sapiens' }],
     ],
   },

@@ -810,6 +810,7 @@ class StrictAutomaticEvaluator {
       callObserved: true,
       executionObserved,
       executionSuccess,
+      executionError: call?.executionError || call?.error || null,
       executed: executionObserved,
       success: executionSuccess,
       status:
@@ -1017,14 +1018,18 @@ class StrictAutomaticEvaluator {
         const candidates = calls
           .map((call, index) => ({ call, index }))
           .filter(item => !used.has(item.index) && this.toolMatches(item.call.tool_name, sequenceMatch.expectedTool));
-        const exactCandidate = candidates.find(item =>
+        const exactCandidates = candidates.filter(item =>
           this.parametersMatch(
             item.call.parameters,
             parametersFor(item.call, sequenceMatch.expectedIndex),
             item.call.tool_name
           )
         );
-        actualIndex = (exactCandidate || candidates[0] || { index: actualIndex }).index;
+        const successfulCandidate =
+          this.completionMode && this.requireExecutionForCompletion
+            ? exactCandidates.find(({ call }) => call.executionObserved && call.executionSuccess === true)
+            : null;
+        actualIndex = (successfulCandidate || exactCandidates[0] || candidates[0] || { index: actualIndex }).index;
       }
       used.add(actualIndex);
       const call = calls[actualIndex];
@@ -1141,15 +1146,19 @@ class StrictAutomaticEvaluator {
     // the task explicitly requires (e.g. saving a second primer when the
     // request says "add primers"): repeating a required capability is a
     // deviation, not a failure to complete the task.
+    const matchedIndexes = new Set(argumentMatches.filter(match => match.callObserved).map(match => match.actualIndex));
     const unexpectedIndexes = this.completionMode
-      ? sequence.unexpectedIndexes.filter(index => {
-          const toolName = calls[index]?.tool_name;
-          if (expectedTools.some(expected => this.toolMatches(toolName, expected))) {
-            return test.expectedResult?.allowRepeatedCalls === false;
-          }
-          if (this.isReadOnlyTool(toolName)) return false;
-          return !this.isCompletionToleratedExtra(calls[index], calls, expectedTools, expectedParameters);
-        })
+      ? calls
+          .map((_call, index) => index)
+          .filter(index => {
+            if (matchedIndexes.has(index)) return false;
+            const toolName = calls[index]?.tool_name;
+            if (expectedTools.some(expected => this.toolMatches(toolName, expected))) {
+              return test.expectedResult?.allowRepeatedCalls === false;
+            }
+            if (this.isReadOnlyTool(toolName)) return false;
+            return !this.isCompletionToleratedExtra(calls[index], calls, expectedTools, expectedParameters);
+          })
       : sequence.unexpectedIndexes;
     const unexpectedCalls = unexpectedIndexes.map(index => calls[index]);
     // Execution evidence must follow the parameter-matched call, not the

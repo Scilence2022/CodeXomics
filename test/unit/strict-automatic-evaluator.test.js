@@ -26,6 +26,32 @@ function simpleTest(parameters = { sequence: 'ATGC' }) {
 }
 
 describe('StrictAutomaticEvaluator', () => {
+  it('scores a successful retry of the same target and preserves failure when no valid retry succeeds', () => {
+    const evaluator = new StrictAutomaticEvaluator({
+      assessmentMode: 'completion',
+      requireExecutionForCompletion: true,
+    });
+    const test = {
+      expectedResult: {
+        tool_name: 'analyze_interpro_domains',
+        parameters: { uniprot_id: 'P0A6L2' },
+      },
+    };
+    const failed = {
+      tool_name: 'analyze_interpro_domains',
+      parameters: { uniprot_id: 'P0A6L2' },
+      executed: true,
+      success: false,
+      error: 'InterPro analysis timeout',
+    };
+    const retry = { ...failed, success: true, error: undefined };
+    const score = (...calls) => evaluator.evaluate(test, { actualResult: { executedFunctionCalls: calls } });
+
+    expect(score(failed, retry)).toMatchObject({ success: true, score: 5 });
+    expect(score(failed)).toMatchObject({ success: false, errors: [expect.stringContaining('timeout')] });
+    expect(score(failed, { ...retry, parameters: { uniprot_id: 'P04637' } }).success).toBe(false);
+  });
+
   it('requires a single unfiltered tool inventory when the case disallows repeated calls', () => {
     const evaluator = new StrictAutomaticEvaluator({
       assessmentMode: 'completion',
