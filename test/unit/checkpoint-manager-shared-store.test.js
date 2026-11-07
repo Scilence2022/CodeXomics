@@ -150,6 +150,61 @@ describe('CheckpointManager with the per-genome store', () => {
     expect(view.checkpoints).toHaveLength(1);
   });
 
+  it('opens session checkpoints separately from the edit queue via the toolbar', async () => {
+    document.body.innerHTML = `
+      <button id="rollbackBtn">Manage Checkpoints</button>
+      <div id="actionListModal" class="modal"></div>
+      <div id="sessionCheckpointsModal" class="modal">
+        <button class="modal-close">Close</button>
+        <div id="checkpointListContent"></div>
+      </div>
+    `;
+    const view = await createView(GENOME_A);
+    const modal = document.getElementById('sessionCheckpointsModal');
+    vi.spyOn(view, 'refresh').mockResolvedValue();
+
+    document.getElementById('rollbackBtn').click();
+    expect(modal.classList.contains('show')).toBe(true);
+    expect(document.getElementById('actionListModal').classList.contains('show')).toBe(false);
+
+    modal.querySelector('.modal-close').click();
+    expect(modal.classList.contains('show')).toBe(false);
+    document.body.innerHTML = '';
+  });
+
+  it('restores the zero-based viewport and renders after restoring the queue', async () => {
+    const view = await createView(GENOME_A);
+    const browser = view.genomeBrowser;
+    browser.viewStart = 0;
+    browser.viewEnd = 10;
+    window.actionManager = { getState: () => ({ actions: [{ id: 1 }] }), restoreState: vi.fn() };
+    const id = await view.createCheckpoint('At the start');
+    browser.viewStart = 5;
+    browser.displayGenomeView = vi.fn(() => {
+      expect(window.actionManager.restoreState).toHaveBeenCalledWith({ actions: [{ id: 1 }] });
+      expect(browser.viewStart).toBe(0);
+    });
+    vi.spyOn(view, 'confirmRollback').mockResolvedValue(true);
+
+    expect(await view.rollbackToCheckpoint(id)).toBe(true);
+    expect(browser.displayGenomeView).toHaveBeenCalledOnce();
+  });
+
+  it('rejects restoring a checkpoint after the genome changes during confirmation', async () => {
+    const view = await createView(GENOME_A);
+    const id = await view.createCheckpoint('On A');
+    vi.spyOn(view, 'confirmRollback').mockImplementation(async () => {
+      view.genomeBrowser.loadedGenomePath = GENOME_B;
+      return true;
+    });
+    const restore = vi.spyOn(view, 'restoreSystemState');
+
+    expect(await view.rollbackToCheckpoint(id)).toBe(false);
+    expect(restore).not.toHaveBeenCalled();
+    await view.refresh();
+    expect(view.checkpoints).toHaveLength(0);
+  });
+
   it('moves legacy localStorage checkpoints into the store grouped by genome', async () => {
     const legacyState = (genomePath, chromosome) => ({
       timestamp: '2026-11-03T08:00:00.000Z',

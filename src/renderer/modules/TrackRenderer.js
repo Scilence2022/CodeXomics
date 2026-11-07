@@ -80,7 +80,7 @@ class TrackRenderer {
       },
       actions: {
         defaultHeight: '120px',
-        header: 'Actions',
+        header: 'Sequence Edits',
         className: 'actions-track',
         requiresData: false,
         dataSource: 'actionManager',
@@ -9061,46 +9061,42 @@ class TrackRenderer {
     const actionManager = this.genomeBrowser.actionManager;
     if (!actionManager || !actionManager.actions || actionManager.actions.length === 0) {
       const noDataMsg = this.createNoDataMessage(
-        'No actions in queue. Use the Action menu to add sequence operations.',
+        'Use the Sequence Editing menu to queue operations.',
         'no-actions-message'
       );
       trackContent.appendChild(noDataMsg);
       return track;
     }
 
-    // Filter actions that have position information for current chromosome
-    // and assign execution order numbers based on position in the full actions list
     const chromosomeActions = [];
+    let actionsWithPosition = 0;
+    const genomeSource = actionManager.getCurrentGenomeSource();
     actionManager.actions.forEach((action, globalIndex) => {
-      // Only show actions with position information
-      if (!action.target || !action.details) return;
-
-      // Parse position from target (e.g., "chr1:1000-2000" or "chr1:1000-2000(+)")
-      const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-      if (!positionMatch) return;
-
-      const actionChr = positionMatch[1];
-
-      // Show all actions for current chromosome (not limited to viewport)
-      if (actionChr === chromosome) {
-        // Store the execution order (1-based index from full actions list)
-        action._actionOrder = globalIndex + 1;
-        chromosomeActions.push(action);
+      if (action.genomeSource && action.genomeSource !== genomeSource) return;
+      const position = actionManager.getActionCoordinates(action);
+      if (!position) return;
+      actionsWithPosition++;
+      if (position.chromosome === chromosome) {
+        chromosomeActions.push({
+          ...action,
+          _actionOrder: globalIndex + 1,
+          _sourceStart: position.start,
+          _sourceEnd: position.end,
+          _insertionPoint: actionManager.isInsertionPointAction(action),
+        });
       }
     });
 
-    // Separate actions into in-view and out-of-view
     const visibleActions = chromosomeActions.flatMap(action => {
-      const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-      const actionStart = parseInt(positionMatch[2]);
-      const actionEnd = parseInt(positionMatch[3]);
-
-      return this.getFeatureRangeDisplaySegments(actionStart, actionEnd, viewport).map(segment => ({
+      const start = action._sourceStart - 1;
+      const end = action._insertionPoint ? start : action._sourceEnd;
+      return this.getFeatureRangeDisplaySegments(start, end, viewport, {
+        chromosome,
+        includeZeroLength: action._insertionPoint,
+      }).map(segment => ({
         ...action,
-        _displayStart: segment.start,
-        _displayEnd: segment.end,
-        _sourceStart: actionStart,
-        _sourceEnd: actionEnd,
+        _displayStart: Math.max(viewport.start, segment.start),
+        _displayEnd: Math.min(viewport.end, segment.end),
       }));
     });
 
@@ -9113,15 +9109,11 @@ class TrackRenderer {
     if (chromosomeActions.length === 0) {
       // No actions for this chromosome at all
       const totalActions = actionManager.actions.length;
-      const actionsWithPosition = actionManager.actions.filter(action => {
-        return action.target && action.target.match(/(\w+):(\d+)-(\d+)/);
-      }).length;
-
       let message;
       if (totalActions === 0) {
-        message = 'No actions in queue. Use the Action menu to add sequence operations.';
+        message = 'Use the Sequence Editing menu to queue operations.';
       } else if (actionsWithPosition === 0) {
-        message = `${totalActions} action(s) in queue. Open Action List to view and manage actions.`;
+        message = `${totalActions} action(s) in queue. Open the Edit Queue to review operations.`;
       } else {
         message = `No actions for chromosome ${chromosome}. ${actionsWithPosition} positioned action(s) on other chromosomes.`;
       }
@@ -9148,7 +9140,7 @@ class TrackRenderer {
     // Handle in-view actions
     if (visibleActions.length > 0) {
       // Arrange visible actions in rows to prevent overlap
-      const actionRows = this.arrangeActionsInRows(visibleActions, viewport.start, viewport.end, settings);
+      const actionRows = this.arrangeActionsInRows(visibleActions);
 
       // Calculate layout
       const layout = this.calculateActionTrackLayout(actionRows, settings);
@@ -9233,9 +9225,7 @@ class TrackRenderer {
    * Create individual action item for out-of-view actions
    */
   createOutOfViewActionItem(action, viewport, chromosome) {
-    const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-    const actionStart = action._displayStart ?? parseInt(positionMatch[2]);
-    const actionEnd = action._displayEnd ?? parseInt(positionMatch[3]);
+    const { _sourceStart: actionStart, _sourceEnd: actionEnd } = action;
     const actionLength = actionEnd - actionStart + 1;
 
     const item = document.createElement('div');
@@ -9274,7 +9264,9 @@ class TrackRenderer {
             color: #6c757d;
             font-size: 10px;
         `;
-    position.textContent = `${actionStart.toLocaleString()}-${actionEnd.toLocaleString()} (${actionLength.toLocaleString()} bp)`;
+    position.textContent = action._insertionPoint
+      ? `Before base ${actionStart.toLocaleString()}`
+      : `${actionStart.toLocaleString()}-${actionEnd.toLocaleString()} (${actionLength.toLocaleString()} bp)`;
 
     info.appendChild(actionName);
     info.appendChild(position);
@@ -9310,11 +9302,7 @@ class TrackRenderer {
    * Navigate to an action's position
    */
   navigateToAction(action, chromosome) {
-    const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-    if (!positionMatch) return;
-
-    const actionStart = parseInt(positionMatch[2]);
-    const actionEnd = parseInt(positionMatch[3]);
+    const { _sourceStart: actionStart, _sourceEnd: actionEnd } = action;
     const center = Math.floor((actionStart + actionEnd) / 2);
 
     // Calculate a reasonable view range around the action
@@ -9406,23 +9394,11 @@ class TrackRenderer {
    * Create individual SVG action element
    */
   createSVGActionElement(action, viewport, rowIndex, layout, settings, defs, containerWidth) {
-    // Parse position from target
-    const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-    if (!positionMatch) return null;
-
-    const actionStart = parseInt(positionMatch[2]);
-    const actionEnd = parseInt(positionMatch[3]);
-
-    // Calculate position and dimensions
-    const left = ((actionStart - viewport.start) / (viewport.end - viewport.start)) * 100;
-    const width = ((actionEnd - actionStart) / (viewport.end - viewport.start)) * 100;
-
-    if (width <= 0) return null;
-
-    // Get positioning parameters
+    const span = viewport.end - viewport.start;
+    const pixelsPerBase = containerWidth / span;
     const y = layout.topPadding + rowIndex * (layout.actionHeight + layout.rowSpacing);
-    const x = (left / 100) * containerWidth;
-    const elementWidth = Math.max((width / 100) * containerWidth, 8);
+    const elementWidth = Math.min(containerWidth, Math.max((action._displayEnd - action._displayStart) * pixelsPerBase, 8));
+    const x = Math.min((action._displayStart - viewport.start) * pixelsPerBase, containerWidth - elementWidth);
     const elementHeight = layout.actionHeight;
 
     // Create SVG group for the action
@@ -10037,39 +10013,17 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
   /**
    * Arrange actions in rows to prevent overlap
    */
-  arrangeActionsInRows(actions, viewStart, viewEnd, settings) {
+  arrangeActionsInRows(actions) {
     const rows = [];
 
-    // Sort actions by start position
-    const sortedActions = [...actions].sort((a, b) => {
-      const aMatch = a.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-      const bMatch = b.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-      if (!aMatch || !bMatch) return 0;
-      return (a._displayStart ?? parseInt(aMatch[2])) - (b._displayStart ?? parseInt(bMatch[2]));
-    });
-
-    // Place actions in rows
+    const sortedActions = [...actions].sort((a, b) => a._displayStart - b._displayStart);
     sortedActions.forEach(action => {
-      const positionMatch = action.target.match(/([^:]+):(\d+)-(\d+)(?:\([+-]\))?/);
-      if (!positionMatch) return;
-
-      const actionStart = action._displayStart ?? parseInt(positionMatch[2]);
-      const actionEnd = action._displayEnd ?? parseInt(positionMatch[3]);
-
-      // Find first row where action fits
       let placed = false;
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        const canPlace = row.every(existingAction => {
-          const existingMatch = existingAction.target.match(/(\w+):(\d+)-(\d+)/);
-          if (!existingMatch) return true;
-
-          const existingStart = existingAction._displayStart ?? parseInt(existingMatch[2]);
-          const existingEnd = existingAction._displayEnd ?? parseInt(existingMatch[3]);
-
-          // Check if they don't overlap
-          return actionEnd < existingStart || actionStart > existingEnd;
-        });
+        const canPlace = row.every(existingAction =>
+          action._displayEnd < existingAction._displayStart || action._displayStart > existingAction._displayEnd
+        );
 
         if (canPlace) {
           row.push(action);
@@ -11624,7 +11578,7 @@ This action cannot be undone.`;
         break;
 
       case 'actions':
-        titleElement.textContent = 'Actions Track Settings';
+        titleElement.textContent = 'Sequence Edits Track Settings';
         bodyElement.innerHTML = this.createActionsSettingsContent(currentSettings);
         setTimeout(() => {
           this.setupActionsSettingsEventListeners(bodyElement);

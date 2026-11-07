@@ -1021,3 +1021,41 @@ describe('Other Track Settings Style Consistency & Tab Refactoring', () => {
     expect(content).toContain('setupDefaultSettingsEventListeners(bodyElement)');
   });
 });
+
+describe('Sequence Edits track', () => {
+  it('places a one-base edit and an append marker at their respective viewport positions', () => {
+    const renderer = Object.create(TrackRenderer.prototype);
+    const operations = [
+      { id: 1, target: 'chr1:2-2', type: 'delete_sequence', status: 'pending', position: 2 },
+      { id: 2, target: 'chr1:5', type: 'insert_sequence', status: 'pending', position: 5 },
+    ];
+    renderer.genomeBrowser = {
+      currentSequence: { chr1: 'ACGT' },
+      actionManager: {
+        actions: operations,
+        getCurrentGenomeSource: () => null,
+        getActionCoordinates: action => ({ chromosome: 'chr1', start: action.position, end: action.position }),
+        isInsertionPointAction: action => action.type === 'insert_sequence',
+      },
+    };
+    renderer.createTrackBase = () => ({
+      track: document.createElement('section'),
+      trackContent: document.createElement('div'),
+    });
+    renderer.getCurrentViewport = () => ({ start: 0, end: 4 });
+    renderer.isCircularModeEnabled = () => false;
+    renderer.getActionTrackSettings = () => ({});
+    renderer.createStatsElement = () => document.createElement('span');
+    renderer.restoreHeaderState = vi.fn();
+    renderer.renderActionElementsSVG = vi.fn();
+
+    renderer.createActionsTrack('chr1');
+
+    const visible = renderer.renderActionElementsSVG.mock.calls[0][1].flat();
+    expect(visible).toMatchObject([
+      { id: 1, _displayStart: 1, _displayEnd: 2 },
+      { id: 2, _displayStart: 4, _displayEnd: 4 },
+    ]);
+    expect(operations[0]).not.toHaveProperty('_actionOrder');
+  });
+});

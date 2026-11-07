@@ -4999,7 +4999,7 @@ class GenomeBrowser {
       { id: 'primers', name: 'Primers', category: 'primers' },
       { id: 'sequence', name: 'Bottom Sequence Panel', category: 'sequence' },
       { id: 'sequenceLine', name: 'Single-line Sequence', category: 'sequenceLine' },
-      { id: 'actions', name: 'Actions Track', category: 'actions' },
+      { id: 'actions', name: 'Sequence Edits', category: 'actions' },
       { id: 'blast', name: 'Blast Results', category: 'blast' },
     ];
 
@@ -8058,6 +8058,8 @@ class GenomeBrowser {
       end: gene.end,
       active: true,
       chromosome: currentChr,
+      strand: gene.strand,
+      wrapsOrigin: gene.wrapsOrigin,
       source: 'gene', // Mark that this selection came from a gene click
       geneName: gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.type,
     };

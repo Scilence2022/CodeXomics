@@ -1639,7 +1639,7 @@ function createMenu() {
       ],
     },
     {
-      label: 'Action',
+      label: 'Sequence Editing',
       submenu: [
         {
           label: 'Copy Sequence',
@@ -1669,13 +1669,13 @@ function createMenu() {
           },
         },
         {
-          label: 'Paste (Reverse)',
+          label: 'Paste Reverse Complement',
           click: () => {
             sendToCurrentMainWindow('action-paste-sequence-reverse');
           },
         },
         {
-          label: 'Del Sequence',
+          label: 'Delete Sequence',
           accelerator: 'CmdOrCtrl+Shift+D',
           click: () => {
             sendToCurrentMainWindow('action-delete-sequence');
@@ -1689,21 +1689,21 @@ function createMenu() {
           },
         },
         {
-          label: 'Insert (Reverse)',
+          label: 'Insert Reverse Complement',
           click: () => {
             sendToCurrentMainWindow('action-insert-sequence-reverse');
           },
         },
         { type: 'separator' },
         {
-          label: 'Show Action List',
+          label: 'Show Edit Queue',
           accelerator: 'CmdOrCtrl+Shift+L',
           click: () => {
             sendToCurrentMainWindow('show-action-list');
           },
         },
         {
-          label: 'Execute All Actions',
+          label: 'Run Edit Queue',
           accelerator: 'CmdOrCtrl+Shift+E',
           click: () => {
             sendToCurrentMainWindow('execute-all-actions');
@@ -1718,7 +1718,7 @@ function createMenu() {
           },
         },
         {
-          label: 'Rollback to Checkpoint',
+          label: 'Manage Session Checkpoints',
           accelerator: 'CmdOrCtrl+Alt+R',
           click: () => {
             sendToCurrentMainWindow('rollback-checkpoint');

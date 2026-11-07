@@ -409,7 +409,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File save dialog for exports
   showSaveDialog: options => ipcRenderer.invoke('show-save-dialog', options),
-  writeFile: (filePath, content, commitNotAfter) => ipcRenderer.invoke('write-file', filePath, content, commitNotAfter),
+  writeFile: (filePath, content, commitNotAfter, sourceGenomePath) =>
+    ipcRenderer.invoke('write-file', filePath, content, commitNotAfter, sourceGenomePath),
   captureScreenshot: options => ipcRenderer.invoke('screenshot:capture', options),
   openImageFile: options => ipcRenderer.invoke('open-image-file', options),
 

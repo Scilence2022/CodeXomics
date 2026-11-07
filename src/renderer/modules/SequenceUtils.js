@@ -251,15 +251,12 @@ class SequenceUtils {
     console.log('📌 [SequenceUtils] Setting cursor at position:', position);
 
     this.cursor.position = position;
+    this.cursor.chromosome = this.genomeBrowser.currentChromosome;
+    this.cursor.genome = this.genomeBrowser.currentSequence;
     this.cursor.visible = true;
 
     // Update cursor visual in the sequence display
     this.renderCursor();
-
-    // Notify ActionManager about cursor position change
-    if (this.genomeBrowser.actionManager) {
-      this.genomeBrowser.actionManager.cursorPosition = position;
-    }
   }
 
   /**
@@ -267,7 +264,9 @@ class SequenceUtils {
    * @returns {number} Absolute genome position or -1 if no cursor
    */
   getCursorPosition() {
-    return this.cursor.visible ? this.cursor.position : -1;
+    const sameGenome = this.cursor.genome === this.genomeBrowser.currentSequence;
+    const sameChromosome = this.cursor.chromosome === this.genomeBrowser.currentChromosome;
+    return this.cursor.visible && sameGenome && sameChromosome ? this.cursor.position : -1;
   }
 
   /**
@@ -295,6 +294,7 @@ class SequenceUtils {
     this.cursor.position = -1;
     this.cursor.visible = false;
     this.cursor.element = null;
+    this.cursor.genome = null;
 
     console.log('📌 [SequenceUtils] Cursor cleared');
   }
@@ -303,7 +303,7 @@ class SequenceUtils {
    * Render cursor at current position in sequence display
    */
   renderCursor() {
-    if (!this.cursor.visible || this.cursor.position < 0) {
+    if (this.getCursorPosition() < 0) {
       return;
     }
 
@@ -1720,7 +1720,7 @@ class SequenceUtils {
     this.attachSequenceClickHandlers(container);
 
     // Restore cursor if it was visible before render
-    if (this.cursor.visible && this.cursor.position >= 0) {
+    if (this.getCursorPosition() >= 0) {
       console.log('🔄 [SequenceUtils] Re-rendering cursor after full sequence render');
       this.renderCursor();
     }
@@ -2827,7 +2827,7 @@ class SequenceUtils {
     this.attachSequenceClickHandlers(container);
 
     // Restore cursor if it was visible before render
-    if (this.cursor.visible && this.cursor.position >= 0) {
+    if (this.getCursorPosition() >= 0) {
       console.log('🔄 [SequenceUtils] Re-rendering cursor after virtualized sequence render');
       this.renderCursor();
     }

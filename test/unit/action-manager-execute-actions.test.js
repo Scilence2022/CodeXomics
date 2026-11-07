@@ -717,3 +717,173 @@ describe('ActionManager manual selection coordinates', () => {
     );
   });
 });
+
+describe('Edit Queue regression coverage', () => {
+  it('pastes before the first base at the cursor even when the clipboard has a source region', async () => {
+    const { genomeBrowser, manager } = createManager('ACGT');
+    await manager.functionCopySequence({ chromosome: 'chr1', start: 3, end: 4 });
+    genomeBrowser.currentChromosome = 'chr1';
+    genomeBrowser.sequenceUtils = { getCursorPosition: () => 0 };
+
+    manager.handlePasteSequence();
+    expect(manager.actions.at(-1)).toMatchObject({ target: 'chr1:1', metadata: { pasteMode: 'insert' } });
+
+    expect((await manager.executeAllActionsInternal({ saveFile: '/tmp/cursor-paste.gbk' })).success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe('GTACGT');
+  });
+
+  it('asks for a paste destination when only the clipboard source is available', async () => {
+    const { manager } = createManager('ACGT');
+    await manager.functionCopySequence({ chromosome: 'chr1', start: 3, end: 4 });
+    manager.showSequenceSelectionModal = vi.fn();
+
+    manager.handlePasteSequence();
+
+    expect(manager.showSequenceSelectionModal).toHaveBeenCalledWith('paste');
+    expect(manager.actions).toHaveLength(1);
+  });
+
+  it('accepts a single-base manual range and rejects a fractional coordinate', async () => {
+    const { manager } = createManager('ACGT');
+    document.body.innerHTML = `
+      <select id="chromosomeSelectSeq"><option value="chr1">chr1</option></select>
+      <input id="startPositionSeq" value="2.5" />
+      <input id="endPositionSeq" value="2" />
+      <select id="strandSelectSeq"><option value="+">+</option></select>
+    `;
+    manager.currentOperation = 'delete';
+
+    await manager.confirmSequenceSelection();
+    expect(manager.actions).toHaveLength(0);
+
+    document.getElementById('startPositionSeq').value = '2';
+    await manager.confirmSequenceSelection();
+    expect(manager.actions[0].target).toBe('chr1:2-2(+)');
+  });
+
+  it('rejects invalid insert bases instead of silently stripping them', () => {
+    const { genomeBrowser, manager } = createManager('ACGT');
+    document.body.innerHTML = `
+      <select id="chromosomeSelectInsert"><option value="chr1">chr1</option></select>
+      <input id="insertPositionSeq" value="1" />
+      <textarea id="insertSequenceText">AT?CG</textarea>
+    `;
+
+    manager.confirmSequenceInsert();
+
+    expect(manager.actions).toHaveLength(0);
+    expect(genomeBrowser.showNotification).toHaveBeenCalledWith(expect.stringContaining('invalid characters'), 'error');
+  });
+
+  it.each([
+    ['insert', { position: 4, sequence: 'TT' }, 'splits target region'],
+    ['replace', { start: 4, end: 5, sequence: 'TT' }, 'overlaps replaced region'],
+  ])('preserves the queue when a %s invalidates a later interval', async (operation, params, reason) => {
+    const { manager } = createManager('ACGTACGT');
+    await manager[operation + 'Sequence']({ chromosome: 'chr1', ...params });
+    await manager.functionDeleteSequence({ chromosome: 'chr1', start: 3, end: 6 });
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/conflicting-edits.gbk' });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain(reason);
+    expect(manager.actions).toHaveLength(2);
+    expect(window.electronAPI.writeFile).not.toHaveBeenCalled();
+  });
+
+  it('clips deletion boundaries and shifts an annotation spanning a deletion exactly once', async () => {
+    const { manager } = createManager('ACGTACGTAC', [
+      { type: 'gene', name: 'spanning', start: 1, end: 9 },
+      { type: 'gene', name: 'left', start: 2, end: 4 },
+      { type: 'gene', name: 'right', start: 5, end: 9 },
+    ]);
+    await manager.functionDeleteSequence({ chromosome: 'chr1', start: 4, end: 5 });
+
+    expect((await manager.executeAllActionsInternal({ saveFile: '/tmp/feature-boundaries.gbk' })).success).toBe(true);
+    expect(lastExport.chr1.features).toMatchObject([
+      { name: 'spanning', start: 1, end: 7 },
+      { name: 'left', start: 2, end: 3 },
+      { name: 'right', start: 4, end: 7 },
+    ]);
+  });
+
+  it('restores original queued coordinates when reopening an execution', async () => {
+    const { manager } = createManager('ACGTACGT');
+    await manager.functionInsertSequence({ chromosome: 'chr1', position: 3, sequence: 'TT' });
+    await manager.functionDeleteSequence({ chromosome: 'chr1', start: 6, end: 6 });
+    const options = { saveFile: '/tmp/replayed-edits.gbk' };
+
+    expect((await manager.executeAllActionsInternal(options)).success).toBe(true);
+    const originalResult = lastExport.chr1.sequence;
+    manager.reopenFromHistory(manager.actionHistory[0].id);
+    expect(manager.actions[1].target).toBe('chr1:6-6(+)');
+    expect((await manager.executeAllActionsInternal(options)).success).toBe(true);
+    expect(lastExport.chr1.sequence).toBe(originalResult);
+  });
+
+  it('rejects queued edits against another genome version with the same chromosome name', async () => {
+    const { genomeBrowser, manager } = createManager('ACGT');
+    genomeBrowser.loadedGenomeSourceSha256 = 'source-A';
+    await manager.functionDeleteSequence({ chromosome: 'chr1', start: 2, end: 2 });
+    genomeBrowser.loadedGenomeSourceSha256 = 'source-B';
+    genomeBrowser.currentSequence = { chr1: 'TGCA' };
+
+    const result = await manager.executeAllActionsInternal({ saveFile: '/tmp/wrong-source.gbk' });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('another genome');
+    expect(manager.actions).toHaveLength(1);
+    expect(window.electronAPI.writeFile).not.toHaveBeenCalled();
+  });
+
+  it('locks execution during conflict confirmation and rejects changes to the source', async () => {
+    const { genomeBrowser, manager } = createManager('ACGT');
+    await manager.functionDeleteSequence({ chromosome: 'chr1', start: 2, end: 3 });
+    await manager.functionDeleteSequence({ chromosome: 'chr1', start: 3, end: 4 });
+    let confirm;
+    manager.showConflictResolutionDialog = () => new Promise(resolve => {
+      confirm = resolve;
+    });
+
+    const pending = manager.executeAllActionsInternal();
+    const concurrent = await manager.executeAllActionsInternal({ saveFile: '/tmp/concurrent-edits.gbk' });
+    genomeBrowser.currentSequence = { chr1: 'TGCA' };
+    confirm(true);
+
+    expect(concurrent.message).toContain('already executing');
+    expect((await pending).message).toContain('changed during confirmation');
+    expect(manager.isExecuting).toBe(false);
+    expect(genomeBrowser.currentSequence).toEqual({ chr1: 'TGCA' });
+    expect(window.electronAPI.writeFile).not.toHaveBeenCalled();
+  });
+
+  it('keeps the new genome loaded when the source changes during the save dialog', async () => {
+    const { genomeBrowser, manager } = createManager('ACGT');
+    await manager.functionDeleteSequence({ chromosome: 'chr1', start: 2, end: 2 });
+    window.electronAPI.showSaveDialog = vi.fn(async () => {
+      genomeBrowser.currentSequence = { chr1: 'AAAAAA' };
+      return { canceled: false, filePath: '/tmp/stale-edit.gbk' };
+    });
+
+    const result = await manager.executeAllActionsInternal();
+
+    expect(result.message).toContain('source genome changed during execution');
+    expect(genomeBrowser.currentSequence).toEqual({ chr1: 'AAAAAA' });
+    expect(window.electronAPI.writeFile).not.toHaveBeenCalled();
+  });
+
+  it('renders imported descriptions as text and only exposes working row controls', () => {
+    const { manager } = createManager('ACGT');
+    document.body.innerHTML = manager.renderActionItem({
+      id: 1,
+      status: 'pending',
+      type: 'delete_sequence',
+      target: 'chr1:1-1',
+      details: '<img src=x onerror="alert(1)">',
+    }, 0);
+
+    expect(document.querySelector('.action-details').textContent).toBe('<img src=x onerror="alert(1)">');
+    expect(document.querySelector('img')).toBeNull();
+    expect([...document.querySelectorAll('.action-controls button')].map(button => button.title)).toEqual(['Remove']);
+  });
+});
