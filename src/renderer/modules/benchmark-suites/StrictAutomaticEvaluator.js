@@ -880,6 +880,11 @@ class StrictAutomaticEvaluator {
     return calls;
   }
 
+  getCompletionAlternatives(test) {
+    if (!this.completionMode || test?.assertCallOnly) return {};
+    return test?.expectedResult?.completionAlternatives || {};
+  }
+
   getExpectedTools(test) {
     const expected = test?.expectedResult || {};
     if (Array.isArray(expected.tool_sequence)) return expected.tool_sequence;
@@ -888,7 +893,10 @@ class StrictAutomaticEvaluator {
     if (Number.isInteger(repeatedCount) && repeatedCount > 1) {
       return Array.from({ length: repeatedCount }, () => expected.tool_name);
     }
-    return [expected.tool_name];
+    // Single-call cases can declare other ways to complete the same request,
+    // each with its own argument contract. The strict tiers keep the canonical call.
+    const alternatives = Object.keys(this.getCompletionAlternatives(test));
+    return [alternatives.length > 0 ? [expected.tool_name, ...alternatives] : expected.tool_name];
   }
 
   getExpectedParameters(test, count) {
@@ -979,7 +987,13 @@ class StrictAutomaticEvaluator {
     };
   }
 
-  matchArguments(calls, sequenceMatches, expectedParameters) {
+  matchArguments(calls, sequenceMatches, expectedParameters, completionAlternatives = {}) {
+    const parametersFor = (call, expectedIndex) => {
+      const name = this.normalizeToolName(call.tool_name);
+      return Object.hasOwn(completionAlternatives, name)
+        ? completionAlternatives[name]
+        : expectedParameters[expectedIndex] || {};
+    };
     const used = new Set();
     return sequenceMatches.map(sequenceMatch => {
       if (!sequenceMatch.callObserved) {
@@ -1006,7 +1020,7 @@ class StrictAutomaticEvaluator {
         const exactCandidate = candidates.find(item =>
           this.parametersMatch(
             item.call.parameters,
-            expectedParameters[sequenceMatch.expectedIndex] || {},
+            parametersFor(item.call, sequenceMatch.expectedIndex),
             item.call.tool_name
           )
         );
@@ -1016,7 +1030,7 @@ class StrictAutomaticEvaluator {
       const call = calls[actualIndex];
       const comparison = this.compareParameters(
         call.parameters,
-        expectedParameters[sequenceMatch.expectedIndex] || {},
+        parametersFor(call, sequenceMatch.expectedIndex),
         call.tool_name
       );
       return {
@@ -1100,6 +1114,8 @@ class StrictAutomaticEvaluator {
   evaluate(test, testResult) {
     const maxScore = test.maxScore || (test.complexity === 'complex' ? 10 : 5);
     const assessmentMode = test.assertCallOnly === true ? 'contract' : this.assessmentMode;
+    const executionRequired =
+      assessmentMode === 'execution' || (assessmentMode === 'completion' && this.requireExecutionForCompletion);
     const calls = this.extractCurrentCalls(testResult);
     const expectedTools = this.getExpectedTools(test);
     const expectedParameters = this.getExpectedParameters(test, expectedTools.length);
@@ -1110,7 +1126,12 @@ class StrictAutomaticEvaluator {
       ? expectedTools
       : test?.expectedResult?.orderInsensitiveTools || [];
     const sequence = this.matchToolSequence(calls, expectedTools, orderInsensitiveTools);
-    const argumentMatches = this.matchArguments(calls, sequence.matches, expectedParameters);
+    const argumentMatches = this.matchArguments(
+      calls,
+      sequence.matches,
+      expectedParameters,
+      this.getCompletionAlternatives(test)
+    );
     const parameterMatches = argumentMatches.filter(match => match.parametersMatch).length;
     const schemaChecks = calls.map(call => this.validateObservedCall(call));
     const schemaValidCount = schemaChecks.filter(check => check.valid).length;
@@ -1192,9 +1213,6 @@ class StrictAutomaticEvaluator {
             `'${this.formatExpectedTool(match.expectedTool)}' was not observed in order`
         );
       }
-      for (const index of unexpectedIndexes) {
-        errors.push(`Tool sequence mismatch: unexpected observed call ${index + 1} '${calls[index].tool_name}'`);
-      }
       if (sequence.matchedCount === expectedTools.length && sequence.unexpectedIndexes.length === 0) {
         const mismatchIndex = expectedTools.findIndex(
           (tool, index) => !this.toolMatches(calls[index]?.tool_name, tool)
@@ -1207,6 +1225,9 @@ class StrictAutomaticEvaluator {
         }
       }
     }
+    for (const index of unexpectedIndexes) {
+      errors.push(`Tool sequence mismatch: unexpected observed call ${index + 1} '${calls[index].tool_name}'`);
+    }
     errors.push(...this.formatArgumentErrors(argumentMatches, calls));
     schemaChecks.forEach((check, index) => {
       if (!check.valid) {
@@ -1214,7 +1235,7 @@ class StrictAutomaticEvaluator {
         errors.push(`Schema invalid for observed call ${index + 1} '${calls[index].tool_name}': ${reasons}`);
       }
     });
-    if (assessmentMode === 'execution' || (assessmentMode === 'completion' && this.requireExecutionForCompletion)) {
+    if (executionRequired) {
       for (const match of expectedObservedCalls) {
         const call = calls[match.actualIndex];
         if (!call.executionObserved) {
@@ -1273,7 +1294,7 @@ class StrictAutomaticEvaluator {
             : assessmentMode === 'contract'
               ? 'native-function-contract'
               : 'real-tool-execution',
-        executionRequired: assessmentMode === 'execution',
+        executionRequired,
         expectedTools,
         actualTools: calls.map(call => call.tool_name),
         matchedCount: sequence.matchedCount,
