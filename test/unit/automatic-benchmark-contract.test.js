@@ -77,7 +77,10 @@ function expandExpectedValue(value) {
   if (!value || typeof value !== 'object') return [value];
 
   const branches = Array.isArray(value.benchmarkAnyOf) ? value.benchmarkAnyOf : [null];
-  const ownEntries = Object.entries(value).filter(([key]) => key !== 'benchmarkAnyOf');
+  // Default expectations permit omission. Exercise that valid call instead of sending the sentinel value.
+  const ownEntries = Object.entries(value).filter(
+    ([key, item]) => key !== 'benchmarkAnyOf' && !isDefaultExpectation(item)
+  );
   const ownAlternatives = ownEntries.map(([key, item]) => [key, expandExpectedValue(item)]);
   const ownObjects = combineProperties(ownAlternatives);
 
