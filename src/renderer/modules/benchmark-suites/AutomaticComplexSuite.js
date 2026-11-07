@@ -232,6 +232,10 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
    * Initialize automatic complex test cases
    */
   initializeTests() {
+    const genomePath = this.buildFilePath('ECOLI.gbk');
+    const readsPath = this.buildFilePath('1655_C10.sorted.bam');
+    const variantPath = this.buildFilePath('1655_C10.mutations.vcf');
+    const wigPaths = ['sample.wig', 'chipseq_test.wig'].map(filename => this.buildFilePath(filename));
     const tests = [
       // FILE LOADING WORKFLOW - Automatic + Complex
       {
@@ -241,21 +245,36 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         category: 'file_loading',
         complexity: 'complex',
         evaluation: 'automatic',
-        instruction: `Load genome file "${this.buildFilePath('ECOLI.gbk')}"; Load aligned read file "${this.buildFilePath('1655_C10.sorted.bam')}"; Load variant VCF "${this.buildFilePath('1655_C10.mutations.vcf')}"; Load WIG files "${this.buildFilePath('sample.wig')}", "${this.buildFilePath('another_sample.wig')}"`,
+        instruction: `Load genome file "${this.buildFilePath('ECOLI.gbk')}"; Load aligned read file "${this.buildFilePath('1655_C10.sorted.bam')}"; Load variant VCF "${this.buildFilePath('1655_C10.mutations.vcf')}"; Load WIG files "${this.buildFilePath('sample.wig')}", "${this.buildFilePath('chipseq_test.wig')}"`,
+        setup: async ({ chatManager, signal }) => {
+          for (const [filePath, tool] of [
+            [genomePath, 'load_genome_file'],
+            [readsPath, 'load_reads_file'],
+            [variantPath, 'load_variant_file'],
+            ...wigPaths.map(filePath => [filePath, 'load_wig_tracks']),
+          ]) {
+            signal?.throwIfAborted();
+            try {
+              await chatManager.services.file.validateFilePath(filePath, 'Benchmark fixture', tool);
+            } catch (error) {
+              throw new Error(`Benchmark fixture unavailable: ${filePath} (${error.message})`);
+            }
+          }
+        },
         expectedResult: {
           tool_sequence: ['load_genome_file', 'load_reads_file', 'load_variant_file', 'load_wig_tracks'],
           parameters: [
             {
-              filePath: this.buildFilePath('ECOLI.gbk'),
+              filePath: genomePath,
             },
             {
-              filePath: this.buildFilePath('1655_C10.sorted.bam'),
+              filePath: readsPath,
             },
             {
-              filePath: this.buildFilePath('1655_C10.mutations.vcf'),
+              filePath: variantPath,
             },
             {
-              filePaths: [this.buildFilePath('sample.wig'), this.buildFilePath('another_sample.wig')],
+              filePaths: wigPaths,
             },
           ],
         },
@@ -1166,10 +1185,11 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Design primers to amplify the lysC gene, including 50bp of upstream sequence to capture the RBS. Then add primers, navigate to position around lysC and toggle on the primer track to view their presence.',
+          'Design primers to amplify the lysC gene, including 50bp of upstream sequence to capture the RBS. Then save both designed primers once each to the Primer library with their returned oligo sequences, binding coordinates and strands. Then navigate to a region around lysC and toggle on the primer track.',
         expectedResult: {
           tool_sequence: [
             'design_primers',
+            'save_primer',
             'save_primer',
             ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position'],
             'toggle_track',
@@ -1184,6 +1204,16 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               chromosome: '{design_primers.target.chromosome}',
               start: '{design_primers.forward.genomicStart}',
               end: '{design_primers.forward.genomicEnd}',
+              sequence: '{design_primers.forward.sequence}',
+              strand: '-',
+            },
+            {
+              name: '<primer_name>',
+              chromosome: '{design_primers.target.chromosome}',
+              start: '{design_primers.reverse.genomicStart}',
+              end: '{design_primers.reverse.genomicEnd}',
+              sequence: '{design_primers.reverse.sequence}',
+              strand: '+',
             },
             {
               ...this.anyOfParameters(
@@ -1215,7 +1245,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'automatic',
         instruction:
-          'Search the UniProt database for the E.coli protein DapA and verify whether the UniProt ID P0A6L2 is present. Also search the PDB database to find structurally resolved DapA structures; this PDB lookup may be done during the initial discovery step because it does not depend on InterPro results. Then retrieve the representative sequence using that UniProt ID and perform an InterPro domain analysis to identify key domains.',
+          'Search UniProt by gene name for E. coli dapA and check for accession P0A6L2. Also search the PDB database for DapA structures. Then retrieve the representative sequence using that UniProt accession and perform an InterPro domain analysis using the Pfam application only.',
         expectedResult: {
           tool_sequence: [
             'search_uniprot_database',
@@ -1227,6 +1257,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             {
               search_query: 'DapA',
+              search_type: 'gene_name',
               organism: 'Escherichia coli',
             },
             {
@@ -1235,6 +1266,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               analysis_type: 'domains',
+              applications: ['Pfam'],
               // The tool resolves the sequence itself from a UniProt accession, and the
               // instruction supplies that accession, so passing uniprot_id instead of
               // re-transcribing 292 residues is the equally correct call.
@@ -1257,7 +1289,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         },
         maxScore: 15,
         bonusScore: 3,
-        timeout: 90000,
+        timeout: 360000,
         evaluator: this.evaluateWorkflowCall.bind(this),
       },
     ];
@@ -1288,7 +1320,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       load_genome_file: ['ECOLI.gbk'],
       load_reads_file: ['1655_C10.sorted.bam'],
       load_variant_file: ['1655_C10.mutations.vcf'],
-      load_wig_tracks: ['sample.wig', 'another_sample.wig'],
+      load_wig_tracks: ['sample.wig', 'chipseq_test.wig'],
     };
 
     const { matched: trackerMatchedTools } = this.getRecentToolMatches(
@@ -1334,7 +1366,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         patterns: ['variant file loaded successfully', '1655_C10.mutations.vcf', 'variant.*loaded', 'VCF.*loaded'],
       },
       { name: 'sample.wig', patterns: ['wig.*loaded', 'sample.wig', 'tracks.*loaded'] },
-      { name: 'another_sample.wig', patterns: ['wig.*loaded', 'another_sample.wig', 'tracks.*loaded'] },
+      { name: 'chipseq_test.wig', patterns: ['wig.*loaded', 'chipseq_test.wig', 'tracks.*loaded'] },
     ];
 
     const pointsPerFile = Math.floor(evaluation.maxScore / evaluation.details.totalFiles);
@@ -2640,7 +2672,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
       load_genome_file: ['ECOLI.gbk'],
       load_reads_file: ['1655_C10.sorted.bam'],
       load_variant_file: ['1655_C10.mutations.vcf'],
-      load_wig_tracks: ['sample.wig', 'another_sample.wig'],
+      load_wig_tracks: ['sample.wig', 'chipseq_test.wig'],
     };
 
     // Points per successfully loaded file

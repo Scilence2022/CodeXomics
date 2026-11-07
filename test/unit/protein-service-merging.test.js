@@ -536,6 +536,50 @@ describe('ProteinService - cancelling long polls', () => {
     service = createService({}, mockChatManager);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('polls queued InterPro jobs and reports HTTP errors separately from timeouts', async () => {
+    vi.spyOn(service, 'waitUnlessAborted').mockResolvedValue(undefined);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, text: async () => 'job-1' })
+      .mockResolvedValueOnce({ ok: true, text: async () => 'QUEUED\n' })
+      .mockResolvedValueOnce({ ok: true, text: async () => 'RUNNING' })
+      .mockResolvedValueOnce({ ok: true, text: async () => 'FINISHED\n' })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) })
+      .mockResolvedValueOnce({ ok: true, text: async () => 'job-2' })
+      .mockResolvedValueOnce({ ok: false, status: 503 });
+    vi.stubGlobal('fetch', fetchMock);
+    const parameters = { sequence: 'ACDEFGHIKLMNPQRSTVWY', applications: ['Pfam'] };
+
+    await expect(service.analyzeInterProDomains(parameters)).resolves.toMatchObject({ success: true, job_id: 'job-1' });
+    await expect(service.analyzeInterProDomains(parameters)).resolves.toMatchObject({
+      success: false,
+      error: 'InterPro status request failed (HTTP 503) for job job-2',
+    });
+  });
+
+  it('uses the UniProt search fields sent by the native tool schema', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(
+      service.searchUniProtDatabase({
+        search_query: 'DapA',
+        search_type: 'gene_name',
+        organism: 'Escherichia coli',
+        reviewed_only: true,
+        max_results: 7,
+      })
+    ).resolves.toMatchObject({ success: true });
+
+    const { searchParams } = new URL(fetchMock.mock.calls[0][0]);
+    expect(searchParams.get('query')).toBe('(gene:DapA) AND (organism_name:"Escherichia coli") AND (reviewed:true)');
+    expect(searchParams.get('size')).toBe('7');
+  });
+
   it('reports the turn as aborted once it is cancelled', () => {
     expect(service.isConversationAborted()).toBe(false);
     controller.abort();

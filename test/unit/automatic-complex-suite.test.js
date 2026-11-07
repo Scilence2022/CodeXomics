@@ -1,5 +1,5 @@
 /* eslint-disable no-new-func */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -45,6 +45,22 @@ describe('AutomaticComplexSuite', () => {
   beforeAll(() => {
     AutomaticComplexSuiteClass = loadAutomaticComplexSuite();
     suite = new AutomaticComplexSuiteClass();
+  });
+
+  it('checks both configured WIG fixtures before sending the loading workflow to the model', async () => {
+    const test = suite.getTests().find(candidate => candidate.id === 'file_auto_01');
+    const [first, second] = test.expectedResult.parameters[3].filePaths;
+    const validateFilePath = vi.fn().mockImplementation(async file => {
+      if (file === second) throw new Error('File does not exist');
+    });
+
+    await expect(test.setup({ chatManager: { services: { file: { validateFilePath } } } })).rejects.toThrow(
+      `Benchmark fixture unavailable: ${second}`
+    );
+    expect(first).toMatch(/sample\.wig$/);
+    expect(second).toMatch(/chipseq_test\.wig$/);
+    expect(validateFilePath).toHaveBeenCalledWith(first, 'Benchmark fixture', 'load_wig_tracks');
+    expect(validateFilePath).toHaveBeenCalledWith(second, 'Benchmark fixture', 'load_wig_tracks');
   });
 
   describe('Initialization and Config', () => {
@@ -138,6 +154,7 @@ describe('AutomaticComplexSuite', () => {
       expect(primerUpstreamTest.type).toBe('workflow');
       expect(primerUpstreamTest.expectedResult.tool_sequence).toEqual([
         'design_primers',
+        'save_primer',
         'save_primer',
         ['jump_to_gene', 'zoom_to_gene', 'navigate_to_position'],
         'toggle_track',
@@ -836,6 +853,7 @@ describe('AutomaticComplexSuite', () => {
             sequence:
               'MFTGSIVAIVTPMDEKGNVCRASLKKLIDYHVASGTSAIVSVGTTGESATLNHDEHADVVMMTLDLADGRIPVIAGTGANATAEAISLTQRFNDSGIVGCLTVTPYYNRPSQEGLYQHFKAIAEHTDLPQILYNVPSRTGCDLLPETVGRLAKVKNIIGIKEATGNLTRVNQIKELVSDDFVLLSGDDASALDFMQLGGHGVISVTANVAARDMAQMCKLAAEGHFAEARVINQRLMPLHNKLFVEPNPIPVKWACKELGLVATDTLRLPMTPITDSGRETVRAALKHAGLL',
             analysis_type: 'domains',
+            applications: ['Pfam'],
             geneName: 'dapA',
             organism: 'Escherichia coli',
           },

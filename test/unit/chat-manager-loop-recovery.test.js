@@ -912,6 +912,21 @@ describe('ChatManager requirements read the action, not the goal', () => {
     return state;
   }
 
+  it('recognizes saving primers as completion of an add-primer step and requires both when requested', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const workflow =
+      'Design primers to amplify lysC, then add primers, navigate to a region around lysC and show the Primers track.';
+    const calls = ['design_primers', 'save_primer', 'navigate_to_position', 'toggle_track'];
+    expect(manager.getOutstandingRequestSteps(stateFor(manager, workflow, calls))).toEqual([]);
+
+    const pairWorkflow = workflow.replace('add primers', 'save both designed primers once each to the Primer library');
+    expect(manager.getOutstandingRequestSteps(stateFor(manager, pairWorkflow, calls))).toMatchObject([
+      { capability: 'save_primer', remaining: 1 },
+    ]);
+    expect(manager.getOutstandingRequestSteps(stateFor(manager, pairWorkflow, [...calls, 'save_primer']))).toEqual([]);
+  });
+
   // Verbatim instruction from the benchmark run that never finished.
   const PROTEIN_WORKFLOW =
     'Search the UniProt database for the E.coli protein DapA and verify whether the UniProt ID P0A6L2 is present. ' +
