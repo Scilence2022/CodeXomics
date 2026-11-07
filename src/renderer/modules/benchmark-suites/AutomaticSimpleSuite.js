@@ -152,7 +152,11 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         instruction: 'List all available tools in the CodeXomics system.',
         expectedResult: {
           tool_name: 'list_available_tools',
-          parameters: {},
+          parameters: {
+            category: { benchmarkDefaultValue: null },
+            userQuery: { benchmarkDefaultValue: null },
+          },
+          allowRepeatedCalls: false,
         },
         maxScore: 5,
         bonusScore: 1,

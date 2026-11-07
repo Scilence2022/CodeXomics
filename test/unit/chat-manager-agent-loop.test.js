@@ -13,6 +13,64 @@ const require = createRequire(import.meta.url);
 const { createAgentLoopHarness, openAiToolCall, openAiToolCalls } = require('../helpers/agent-loop-harness.js');
 
 describe('agent loop', () => {
+  describe('tool inventory', () => {
+    const catalog = Array.from({ length: 214 }, (_, index) => ({
+      name: 'fixture_tool_' + index,
+      category: index < 200 ? 'navigation' : 'sequence',
+      description: 'Catalog description '.repeat(40),
+    }));
+
+    it('answers the full catalog request after one provider round and preserves every tool in the answer', async () => {
+      const harness = createAgentLoopHarness({
+        responses: [
+          openAiToolCall('list_available_tools', { format: 'summary', include_details: true }),
+          openAiToolCall('list_available_tools', { category: 'navigation' }),
+        ],
+        tools: {
+          list_available_tools: parameters => harness.chatManager.listAvailableTools(parameters),
+        },
+      });
+      harness.chatManager.dynamicToolsEnabled = true;
+      harness.chatManager.dynamicTools = { getAllTools: async () => catalog };
+
+      const answer = await harness.send('List all available tools in the CodeXomics system.');
+
+      expect(harness.rounds).toBe(1);
+      expect(harness.toolCalls.map(call => call.tool_name)).toEqual(['list_available_tools']);
+      expect(answer).toContain('**Total Tools:** 214');
+      expect(answer.match(/^- fixture_tool_\d+$/gm)).toHaveLength(214);
+    });
+
+    it('passes a complete inventory to the next round and suppresses an equivalent repeat during a workflow', async () => {
+      const harness = createAgentLoopHarness({
+        responses: [
+          openAiToolCall('list_available_tools'),
+          openAiToolCalls([
+            { name: 'list_available_tools', parameters: { format: 'summary', include_details: false }, id: 'repeat' },
+            { name: 'zoom_in', id: 'zoom' },
+          ]),
+          'Listed the available tools and zoomed in.',
+        ],
+        tools: {
+          list_available_tools: parameters => harness.chatManager.listAvailableTools(parameters),
+          zoom_in: () => ({ success: true }),
+        },
+      });
+      harness.chatManager.dynamicToolsEnabled = true;
+      harness.chatManager.dynamicTools = { getAllTools: async () => catalog };
+
+      await harness.send('List all available tools and then zoom in.');
+
+      expect(harness.toolCalls.map(call => call.tool_name)).toEqual(['list_available_tools', 'zoom_in']);
+      const result = harness.requests[1].find(message => message.role === 'tool');
+      const inventory = JSON.parse(result.content.split('\n')[0]);
+      expect(inventory.total_tools).toBe(214);
+      expect(inventory.categories.navigation.tools).toEqual(catalog.slice(0, 200).map(tool => tool.name));
+      expect(inventory.categories.sequence.tools).toEqual(catalog.slice(200).map(tool => tool.name));
+      expect(result.content.length).toBeLessThan(8192);
+    });
+  });
+
   describe('basic round-tripping', () => {
     it('executes a native tool call and feeds the result into the next round', async () => {
       const harness = createAgentLoopHarness({

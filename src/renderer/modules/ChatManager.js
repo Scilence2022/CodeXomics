@@ -6294,6 +6294,21 @@ class ChatManager {
     // ─── Tool-specific sanitization rules ───────────────────────────────
 
     switch (toolName) {
+      case 'list_available_tools':
+        // The categorized inventory already covers the flat list and its rendered Markdown.
+        if (!sanitized.categories || Object.keys(sanitized.categories).length === 0) break;
+        delete sanitized.tools;
+        delete sanitized.message;
+        if (JSON.stringify(sanitized.categories).length > 12 * 1024) {
+          sanitized.categories = Object.fromEntries(
+            Object.entries(sanitized.categories).map(([category, info]) => [
+              category,
+              { ...info, tools: info.tools.map(tool => (typeof tool === 'string' ? tool : tool.name)) },
+            ])
+          );
+          sanitized.inventory_note = 'All listed tool names are included. Descriptions and parameters were omitted.';
+        }
+        break;
       case 'fetch_alphafold_structure':
       case 'fetch_protein_structure':
         // These tools may return large PDB/structure data that must NEVER
@@ -7443,6 +7458,12 @@ class ChatManager {
   normalizeToolParams(toolName, parameters = {}) {
     const normalized = this.normalizeParams(parameters);
 
+    if (toolName === 'list_available_tools') {
+      if (normalized.category === null) delete normalized.category;
+      if (normalized.format === 'summary') delete normalized.format;
+      if (normalized.include_details === false) delete normalized.include_details;
+    }
+
     if (toolName === 'view_markdown_file') {
       // A different caption does not open a different document.
       delete normalized.title;
@@ -7888,7 +7909,7 @@ class ChatManager {
     const contextRequiredAction =
       /\b(?:calculate|compute|analy[sz]e|assess|predict|show|find|search|locate|open|fetch|retrieve)\b/.test(message);
     const genomicsOrAppContext =
-      /\b(?:genomes?|genes?|dna|rna|sequences?|annotations?|features?|chromosomes?|tracks?|tabs?|windows?|files?|images?|primers?|proteins?|blast|codons?|gc|domains?|motifs?|regions?|positions?|views?|browsers?|states?|tasks?|actions?|bookmarks?|settings?|themes?|styles?|modes?|models?|providers?|options?|sidebars?|panels?|banners?|modals?|plugins?|workflows?|benchmarks?|databases?|uniprot|interpro|reports?|screenshots?|director(?:y|ies)|folders?|reads?|variants?|wig|operons?|fasta|genbank|bed|gff|vcf|molecular|translations?)\b/.test(
+      /\b(?:genomes?|genes?|dna|rna|sequences?|annotations?|features?|chromosomes?|tracks?|tabs?|windows?|files?|images?|primers?|proteins?|blast|tools?|codons?|gc|domains?|motifs?|regions?|positions?|views?|browsers?|states?|tasks?|actions?|bookmarks?|settings?|themes?|styles?|modes?|models?|providers?|options?|sidebars?|panels?|banners?|modals?|plugins?|workflows?|benchmarks?|databases?|uniprot|interpro|reports?|screenshots?|director(?:y|ies)|folders?|reads?|variants?|wig|operons?|fasta|genbank|bed|gff|vcf|molecular|translations?)\b/.test(
         message
       ) ||
       /(?:基因组|基因|序列|注释|染色体|轨道|标签页|文件|引物|蛋白|区域|位置|视图|状态|任务|设置|数据库|截图|目录|变异|操纵子)/.test(
@@ -8067,6 +8088,18 @@ class ChatManager {
       clause: text,
       count: this.getRequestedExecutionCountFallback(text, repeatToolName),
     });
+
+    if (
+      /^(?:(?:please|kindly)\s+)?(?:list|show)\s+(?:me\s+)?(?:the\s+)?(?:all\s+)?available\s+tools(?:\s+in\s+(?:the\s+)?(?:codexomics(?:\s+system)?|system))?[.!?]*$/.test(
+        message
+      )
+    ) {
+      return requirement(
+        'list_available_tools',
+        (toolName, record) =>
+          toolName === 'list_available_tools' && !record?.parameters?.category && !record?.parameters?.userQuery
+      );
+    }
 
     const requestedGeneSelection = this.getRequestedGeneSelection(text);
     if (requestedGeneSelection) {
