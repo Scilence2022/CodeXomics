@@ -888,6 +888,17 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
         evaluation: 'automatic',
         instruction:
           'Check the current visibility status of all tracks, then show the GC content track, hide the variants track, and check the track status again to confirm the visibility changes.',
+        setup: async ({ chatManager, signal, deferCleanup }) => {
+          const previous = chatManager.getTrackStatus().visibleTracks;
+          for (const [track_name, visible] of [
+            ['gc', false],
+            ['variants', true],
+          ]) {
+            signal?.throwIfAborted();
+            deferCleanup(() => chatManager.toggleTrack({ track_name, visible: previous.includes(track_name) }));
+            await chatManager.toggleTrack({ track_name, visible });
+          }
+        },
         expectedResult: {
           tool_sequence: ['get_track_status', 'toggle_track', 'toggle_track', 'get_track_status'],
           // Showing GC and hiding Variants are independent; either order satisfies the task.

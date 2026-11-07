@@ -912,6 +912,52 @@ describe('ChatManager requirements read the action, not the goal', () => {
     return state;
   }
 
+  it('finishes the digest after a successful digest and requires a gel only when requested', () => {
+    const manager = new (loadLoopSupportClass())();
+    const digest =
+      'Perform a virtual restriction digest with EcoRI and HindIII enzymes of genome sequence in current view.';
+    const state = stateFor(manager, digest, ['virtual_digest']);
+    expect(manager.getOutstandingRequestSteps(state)).toEqual([]);
+    expect(
+      manager.getModelTurnRecoveryDecision(
+        { text: 'One uncut fragment.', toolCalls: [], invalidToolCalls: [] },
+        state,
+        2,
+        10
+      ).action
+    ).toBe('complete');
+    const workflow = 'Run virtual_digest of current viewing region, then simulate agarose gel electrophoresis.';
+    expect(
+      manager.getOutstandingRequestSteps(stateFor(manager, workflow, ['virtual_digest', 'virtual_digest']))
+    ).toMatchObject([{ capability: 'simulate_gel_electrophoresis' }]);
+    expect(
+      manager.getOutstandingRequestSteps(
+        stateFor(manager, workflow, ['virtual_digest', 'simulate_gel_electrophoresis'])
+      )
+    ).toEqual([]);
+  });
+
+  it('requires both requested track changes and a separate confirmation read', () => {
+    const manager = new (loadLoopSupportClass())();
+    const workflow =
+      'Check the current visibility status of all tracks, then show the GC content track, hide the variants track, and check the track status again to confirm the visibility changes.';
+    const state = stateFor(manager, workflow, ['get_track_status', 'get_track_status']);
+    state.records.splice(1, 0, {
+      tool: 'toggle_track',
+      status: 'success',
+      parameters: { track_name: 'variants', visible: false },
+    });
+    expect(manager.getOutstandingRequestSteps(state)).toMatchObject([{ capability: 'gc_track_visibility' }]);
+    state.records.splice(2, 0, {
+      tool: 'toggle_track',
+      status: 'success',
+      parameters: { track_name: 'gc_content', action: 'show' },
+    });
+    expect(manager.getOutstandingRequestSteps(state)).toEqual([]);
+    state.records.pop();
+    expect(manager.getOutstandingRequestSteps(state)).toMatchObject([{ capability: 'track_status_recheck' }]);
+  });
+
   it('recognizes saving primers as completion of an add-primer step and requires both when requested', () => {
     const LoopSupport = loadLoopSupportClass();
     const manager = new LoopSupport();
