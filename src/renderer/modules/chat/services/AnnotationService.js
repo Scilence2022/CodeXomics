@@ -1077,8 +1077,7 @@ class AnnotationService {
     }
     return {
       ...changeSet,
-      message:
-        'Direct annotation mutation is disabled for autonomous callers. Review and approve the returned ChangeSet before applying it.',
+      message: 'The returned ChangeSet is ready for curator review. Approval and application are separate actions.',
     };
   }
 

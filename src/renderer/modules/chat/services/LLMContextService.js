@@ -631,6 +631,14 @@ class LLMContextService {
       return selectionWasRequested && selectionSucceeded;
     }
 
+    const requestedEffects = this.chatManager?.getSequentialActionRequirements?.(originalMessage);
+    if (requestedEffects?.actionableClauseCount === 1 && requestedEffects.requirements.length === 1) {
+      const [effect] = requestedEffects.requirements;
+      if (['view_markdown', 'restore_chatbox'].includes(effect.capability)) {
+        return successfulResults.some(result => result.result?.success === true && effect.matcher(result.tool, result));
+      }
+    }
+
     // Simple task patterns that typically complete with one tool call
     const singleExecutionPatterns = [
       // Search patterns

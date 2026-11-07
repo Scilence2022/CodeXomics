@@ -856,8 +856,29 @@ describe('StrictAutomaticEvaluator', () => {
 
       expect(success.success).toBe(true);
       expect(executionFailure.success).toBe(false);
+      expect(executionFailure.errors).toEqual([expect.stringContaining('Execution failed')]);
       expect(noExecutionEvidence.success).toBe(false);
       expect(success.details.assessmentTier).toBe('task-completion-execution');
+    });
+
+    it('fails a Markdown test when the viewer opens repeatedly', () => {
+      const evaluator = new StrictAutomaticEvaluator({
+        assessmentMode: 'completion',
+        requireExecutionForCompletion: true,
+        validateToolCall: schemaValidator,
+      });
+      const filePath = '/fixtures/README.md';
+      const test = {
+        expectedResult: { tool_name: 'view_markdown_file', parameters: { filePath }, allowRepeatedCalls: false },
+      };
+      const call = { tool_name: 'view_markdown_file', parameters: { filePath }, executed: true, success: true };
+      const score = (...calls) => evaluator.evaluate(test, { actualResult: { nativeFunctionCalls: calls } });
+      expect(score(call).success).toBe(true);
+      const duplicate = { ...call, parameters: { filePath, title: 'New window title' } };
+      expect(score(call, duplicate)).toMatchObject({
+        success: false,
+        warnings: ['Unexpected call: view_markdown_file'],
+      });
     });
 
     it('uses execution evidence from the parameter-matched call instance', () => {

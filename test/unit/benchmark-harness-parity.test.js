@@ -129,6 +129,95 @@ describe('request overrides', () => {
   });
 });
 
+describe('Automatic Simple completion regressions', () => {
+  const ContextService = require('../../src/renderer/modules/chat/services/LLMContextService.js');
+  const cases = [
+    [
+      'Select and highlight the gene lacZ in the genome browser.',
+      'select_gene',
+      { geneName: 'lacZ' },
+      { geneName: 'lysC' },
+    ],
+    [
+      'Toggle off the BLAST track visibility.',
+      'toggle_track',
+      { track_name: 'blast', visible: false },
+      { track_name: 'blast', visible: true },
+    ],
+    [
+      'Restore the ChatBox window if it is minimized.',
+      'set_chatbox_minimized',
+      { action: 'restore' },
+      { action: 'minimize' },
+    ],
+    [
+      'View the /fixtures/README.md file in the markdown viewer.',
+      'view_markdown_file',
+      { filePath: '/fixtures/README.md' },
+    ],
+  ];
+
+  it.each(cases)('completes "%s" after the requested effect', (prompt, tool, parameters, wrongParameters) => {
+    const cm = makeChatManager();
+    const context = new ContextService({}, cm);
+    const state = cm.createToolExecutionState(prompt);
+    state.records.push({ tool, parameters, status: 'failed' });
+    expect(cm.hasSuccessfulExecutionForRequest(state)).toBe(false);
+    if (wrongParameters) {
+      state.records.push({ tool, parameters: wrongParameters, status: 'success' });
+      expect(cm.hasSuccessfulExecutionForRequest(state)).toBe(false);
+    }
+    state.records.push({ tool, parameters, status: 'success' });
+    expect(cm.getOutstandingRequestSteps(state)).toEqual([]);
+    expect(
+      context.shouldTerminateAfterToolExecution(
+        [{ tool_name: tool, parameters }],
+        [{ tool, parameters, result: { success: true } }],
+        prompt
+      )
+    ).toBe(true);
+  });
+
+  it('identifies Markdown duplicates by document even when the window title changes', () => {
+    const cm = makeChatManager();
+    const tool = 'view_markdown_file';
+    expect(cm.getToolExecutionKey(tool, { filePath: '/fixtures/README.md', title: 'README' })).toBe(
+      cm.getToolExecutionKey(tool, { filePath: '/fixtures/README.md', title: 'Another title' })
+    );
+    expect(cm.getToolExecutionKey(tool, { filePath: '/fixtures/README.md' })).not.toBe(
+      cm.getToolExecutionKey(tool, { filePath: '/fixtures/OTHER.md' })
+    );
+  });
+
+  it('does not stop a Markdown request that asks for a follow-up summary', () => {
+    const context = new ContextService({}, makeChatManager());
+    expect(
+      context.shouldTerminateAfterToolExecution(
+        [{ tool_name: 'view_markdown_file' }],
+        [{ tool: 'view_markdown_file', result: { success: true } }],
+        'View README.md and summarize its contents.'
+      )
+    ).toBe(false);
+  });
+
+  it('cleans up partially prepared fixtures and closes the tracker after a setup failure', async () => {
+    const tracker = { startSession: vi.fn(), endSession: vi.fn() };
+    const framework = makeFramework({ toolExecutionTracker: tracker });
+    const cleanup = vi.fn();
+    await expect(
+      framework.executeTest({
+        id: 'broken-fixture',
+        setup: ({ deferCleanup }) => {
+          deferCleanup(cleanup);
+          throw new Error('Fixture unavailable');
+        },
+      })
+    ).rejects.toThrow('Fixture unavailable');
+    expect(cleanup).toHaveBeenCalledOnce();
+    expect(tracker.endSession).toHaveBeenCalledWith(tracker.startSession.mock.calls[0][0]);
+  });
+});
+
 describe('tool selection limit', () => {
   it('follows the ChatBox setting in a production-parity run', () => {
     const cm = makeChatManager({ settings: { 'chatboxSettings.limitDynamicToolsSelection': false } });

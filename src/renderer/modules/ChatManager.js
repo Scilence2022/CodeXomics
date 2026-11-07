@@ -7443,6 +7443,11 @@ class ChatManager {
   normalizeToolParams(toolName, parameters = {}) {
     const normalized = this.normalizeParams(parameters);
 
+    if (toolName === 'view_markdown_file') {
+      // A different caption does not open a different document.
+      delete normalized.title;
+    }
+
     if (toolName === 'design_primers') {
       const hasResolvedTarget =
         normalized.geneName ||
@@ -7930,7 +7935,7 @@ class ChatManager {
     const token = '([A-Za-z][A-Za-z0-9_.-]*)';
     const explicitPatterns = [
       new RegExp(
-        `\\b(?:select|highlight|choose|pick|activate)\\s+(?:the\\s+)?gene\\s+(?:(?:named|called)\\s+)?${token}\\b`,
+        `\\b(?:select(?:\\s+and\\s+highlight)?|highlight|choose|pick|activate)\\s+(?:the\\s+)?gene\\s+(?:(?:named|called)\\s+)?${token}\\b`,
         'i'
       ),
       new RegExp(`\\b(?:select|highlight|choose|pick|activate)\\s+(?:the\\s+)?${token}\\s+gene\\b`, 'i'),
@@ -7984,6 +7989,7 @@ class ChatManager {
   getSequentialRequestClauses(originalMessage) {
     const actionVerb = this.getActionVerbPattern();
     return String(originalMessage || '')
+      .replace(/\bselect\s+and\s+highlight(?=\s+(?:the\s+)?gene\b)/gi, 'select')
       .split(
         new RegExp(
           `\\s*(?:[,;，；]\\s*(?:(?:and\\s+)?then\\s+)?|\\b(?:and\\s+then|then|after\\s+that|followed\\s+by|next|finally)\\b|\\band(?=\\s+(?:please\\s+)?${actionVerb}\\b)|(?:然后|接着|之后|下一步|最后))\\s*`,
@@ -8081,6 +8087,38 @@ class ChatManager {
     }
     if (/\b(?:select|highlight|choose|pick|activate)\b|(?:选择|选中|高亮)/.test(message)) {
       return requirement('selection', verbTool('select', 'highlight', 'switch', 'set'), 'select_sequence_region');
+    }
+    const blastVisibility = message.match(
+      /\b(hide|show|toggle(?:\s+(?:off|on))?)\s+(?:the\s+)?blast(?:\s+results?)?\s+track\b/
+    )?.[1];
+    if (blastVisibility) {
+      return requirement(
+        'blast_track_visibility',
+        (toolName, record) => {
+          const parameters = record?.parameters || {};
+          if (toolName !== 'toggle_track') return false;
+          if (!['blast', 'blast_results'].includes(parameters.track_name ?? parameters.trackName)) return false;
+          if (blastVisibility === 'toggle') return parameters.action === 'toggle' && parameters.visible === undefined;
+          const visible = blastVisibility === 'show' || blastVisibility === 'toggle on';
+          return parameters.visible === visible;
+        },
+        'toggle_track'
+      );
+    }
+    if (/\b(?:restore|expand)\s+(?:the\s+)?(?:minimized\s+)?chat\s*box\b/.test(message)) {
+      return requirement(
+        'restore_chatbox',
+        (toolName, record) =>
+          /^(?:utility_)?set_chatbox_minimized$/.test(toolName) &&
+          ['restore', 'maximize', 'expand', 'unminimize'].includes(record?.parameters?.action),
+        'set_chatbox_minimized'
+      );
+    }
+    if (
+      /\b(?:open|view)\b/.test(message) &&
+      /\bmarkdown\s+(?:file|document|viewer)\b|\.(?:md|markdown)\b/.test(message)
+    ) {
+      return requirement('view_markdown', toolName => toolName === 'view_markdown_file', 'view_markdown_file');
     }
     if (
       /\b(?:create|add|open)\b|(?:创建|添加|打开)/.test(message) &&

@@ -1153,9 +1153,23 @@ class LLMBenchmarkFramework {
       // CRITICAL FIX: Try to capture LLM interaction data even on timeout/error
       // Check if we have any LLM interaction data from ChatManager or other sources
       try {
-        const partialInteractionData = await this.attemptToRecoverLLMInteractionData(test, error);
+        const captured = error.interactionData || execution.interactionData;
+        const recovered = execution.conversation ? await this.attemptToRecoverLLMInteractionData(test, error) : null;
+        const partialInteractionData =
+          captured && recovered
+            ? { ...recovered, request: { ...recovered.request, ...captured.request } }
+            : recovered || captured;
         if (partialInteractionData) {
-          result.llmInteractionData = partialInteractionData;
+          result.llmInteractionData = { ...partialInteractionData };
+          if (this.isTestTimeoutError(error)) {
+            result.llmInteractionData.analysis = {
+              ...partialInteractionData.analysis,
+              isError: true,
+              errorType: 'timeout',
+              errorMessage: error.message,
+              timeoutOccurred: true,
+            };
+          }
           console.log(`🔄 Recovered partial LLM interaction data for test ${test.id}`);
         }
       } catch (recoveryError) {
@@ -1402,29 +1416,32 @@ class LLMBenchmarkFramework {
       }
     }
 
-    // Prepare test context for automated tests
+    const setupCleanups = [];
     const context = {
       chatManager: this.chatManager,
       configManager: this.configManager,
       testId: test.id,
       framework: this,
+      signal: execution?.controller.signal,
+      deferCleanup: cleanup => setupCleanups.push(cleanup),
     };
-
-    // Execute test setup if provided
-    if (test.setup) {
-      await test.setup(context);
-      execution?.controller.signal.throwIfAborted();
-    }
 
     // A benchmark run is unattended, so any tool that would open a blocking modal must
     // fail closed instead of waiting forever for a click that will never come.
-    const restoreUnattended =
-      typeof window !== 'undefined' && window.BlastManager?.setUnattended
-        ? window.BlastManager.setUnattended(true)
-        : () => {};
-    const restoreCallOnly = this.applyCallOnlyMode(test);
+    let restoreUnattended;
+    let restoreCallOnly;
 
     try {
+      if (test.setup) {
+        await test.setup(context);
+        context.signal?.throwIfAborted();
+      }
+      restoreUnattended =
+        typeof window !== 'undefined' && window.BlastManager?.setUnattended
+          ? window.BlastManager.setUnattended(true)
+          : null;
+      restoreCallOnly = this.applyCallOnlyMode(test);
+
       // Determine timeout based on configuration
       let timeoutMs;
       if (this.useIndividualTimeouts) {
@@ -1510,13 +1527,13 @@ class LLMBenchmarkFramework {
         detailedLogs: interactionData?.detailedLogs || null,
       };
     } finally {
-      restoreCallOnly();
-      restoreUnattended();
+      restoreCallOnly?.();
+      restoreUnattended?.();
 
-      // Execute test cleanup if provided
-      if (test.cleanup) {
+      if (test.cleanup) setupCleanups.push(() => test.cleanup(context));
+      for (const cleanup of setupCleanups.reverse()) {
         try {
-          await test.cleanup(context);
+          await cleanup();
         } catch (cleanupError) {
           console.warn(`Cleanup failed for test ${test.id}:`, cleanupError);
         }
@@ -1797,6 +1814,7 @@ class LLMBenchmarkFramework {
       signal.throwIfAborted();
       benchmarkConversation = this.beginBenchmarkConversation(options.testInfo?.id);
       execution.conversation = benchmarkConversation;
+      execution.interactionData = interactionData;
       chatSignal = this.chatManager.conversationState?.abortController?.signal;
       chatSignal?.addEventListener('abort', cancelExecution, { once: true });
       console.log(`📤 Sending benchmark test instruction: ${instruction}`);
@@ -2154,40 +2172,22 @@ class LLMBenchmarkFramework {
         capturedLogs.length = 0;
         this.capturedLogs = null;
 
-        // SONG'S CRITICAL FIX: If toolCallHistory has no tools but executionData has function calls,
-        // construct toolCallHistory from executionData directly
-        if (executionData && executionData.functionCalls && executionData.functionCalls.length > 0) {
-          const hasToolsInRounds = interactionData.detailedLogs.toolCallHistory.toolCallRounds.some(
-            r => r.tools && r.tools.length > 0
-          );
-
-          if (!hasToolsInRounds) {
-            console.log('⚠️ [Benchmark] No tools detected in rounds from logs, reconstructing from executionData');
-            console.log('🔧 [Benchmark] ExecutionData function calls:', executionData.functionCalls);
-
-            // Group function calls by round
-            const roundsMap = new Map();
-            executionData.functionCalls.forEach(call => {
-              const roundNum = call.round || 1;
-              if (!roundsMap.has(roundNum)) {
-                roundsMap.set(roundNum, {
-                  current: roundNum,
-                  total: executionData.rounds || 3,
-                  timestamp: call.timestamp || new Date().toISOString(),
-                  tools: [],
-                });
-              }
-              roundsMap.get(roundNum).tools.push(call.tool_name);
-            });
-
-            // Replace toolCallRounds with reconstructed data
-            interactionData.detailedLogs.toolCallHistory.toolCallRounds = Array.from(roundsMap.values());
-
-            console.log(
-              '✅ [Benchmark] Reconstructed rounds from executionData:',
-              interactionData.detailedLogs.toolCallHistory.toolCallRounds
-            );
+        // Console captures can omit rounds or mix parsing logs with tool executions.
+        if (executionData?.functionCalls?.length) {
+          const rounds = new Map();
+          for (const call of executionData.functionCalls) {
+            const current = call.round || 1;
+            if (!rounds.has(current)) {
+              rounds.set(current, {
+                current,
+                total: executionData.rounds || current,
+                timestamp: call.timestamp,
+                tools: [],
+              });
+            }
+            rounds.get(current).tools.push(call.tool_name);
           }
+          interactionData.detailedLogs.toolCallHistory.toolCallRounds = [...rounds.values()];
         }
       } finally {
         signal.removeEventListener('abort', restoreTestContext);
@@ -3044,24 +3044,26 @@ class LLMBenchmarkFramework {
       return [];
     }
 
-    // Pair each call with its first unconsumed tool result (calls and results are
-    // recorded in execution order) to recover success/failure per call.
-    const pendingResults = Array.isArray(executionData.toolResults) ? [...executionData.toolResults] : [];
-
+    const pendingResults = [...(executionData.toolResults || [])];
     return executionData.functionCalls
       .map(call => {
         const toolName = call.tool_name || call.toolName || call.tool;
-        let success = true;
-        const resultIndex = pendingResults.findIndex(r => (r.tool || r.tool_name) === toolName);
-        if (resultIndex !== -1) {
-          success = pendingResults[resultIndex].success !== false;
-          pendingResults.splice(resultIndex, 1);
+        let resultIndex = call.id
+          ? pendingResults.findIndex(result => call.id === (result.call_id ?? result.tool_call_id))
+          : -1;
+        if (resultIndex === -1) {
+          resultIndex = pendingResults.findIndex(
+            result =>
+              (!call.id || !(result.call_id ?? result.tool_call_id)) && (result.tool || result.tool_name) === toolName
+          );
         }
+        const success = resultIndex === -1 ? null : pendingResults.splice(resultIndex, 1)[0].success;
         return {
+          ...call,
           tool_name: toolName,
           parameters: call.parameters || {},
           success,
-          status: success ? 'completed' : 'failed',
+          status: success === true ? 'completed' : success === false ? 'failed' : 'unknown',
           detectionMethod: 'execution_data',
           executed: true,
         };
@@ -4989,6 +4991,18 @@ class LLMBenchmarkFramework {
     ) {
       const strictEvaluation = this.strictAutomaticEvaluator.evaluate(test, testResult);
       Object.assign(evaluation, strictEvaluation);
+      if (evaluation.success && test.verifyExecution) {
+        const toolResults = this.chatManager?.getLastExecutionData?.()?.toolResults || [];
+        const verified = toolResults.some(
+          result =>
+            result.tool === test.expectedResult.tool_name && result.success && test.verifyExecution(result.result)
+        );
+        if (!verified) {
+          evaluation.success = false;
+          evaluation.score = Math.min(evaluation.score, evaluation.maxScore - 1);
+          evaluation.errors.push(test.verificationError);
+        }
+      }
       console.log('🔒 [Test Evaluation] Strict automatic scorer completed:', {
         score: evaluation.score,
         success: evaluation.success,

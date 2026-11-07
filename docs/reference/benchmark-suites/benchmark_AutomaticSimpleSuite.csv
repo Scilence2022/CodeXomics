@@ -7,7 +7,7 @@ annotation,57,annot_auto_01,Create Gene Annotation,"Create a gene annotation nam
 annotation,58,annot_auto_02,List Annotations,List all annotations in the current visible genomic region using list_annotations.
 annotation,59,annot_auto_03,Search Annotations,"Search for annotations matching ""ligase"" in the current genome using search_annotations."
 annotation,60,annot_auto_04,Get Annotation Details,Get annotation details for the lacZ gene using get_annotation.
-annotation,61,annot_auto_05,Update Annotation,"Update the annotation named ""fakG"" to change its description to ""Updated fakG gene annotation""."
+annotation,61,annot_auto_05,Prepare Annotation Update for Review,"Update the description of annotation ""fakG"" to ""Updated fakG gene annotation"" using update_annotation to prepare a ChangeSet for human review only."
 annotation,62,annot_auto_06,Delete Annotation,"Delete the annotation named ""fakG"" using delete_annotation without user confirmation."
 annotation,127,annot_auto_07,Get Annotation History,Get the latest annotation change history with a limit of 10 records.
 annotation,128,annot_auto_08,Get Operons,List predicted operons for the current chromosome.
@@ -25,7 +25,7 @@ data_loading,3,load_auto_01,Load Genome File Path,Load genome file ${this.buildF
 data_loading,4,load_auto_02,Load BED Annotation File,Load BED annotation file ${this.buildFilePath('CHOPCHOP-Design.bed')}
 data_loading,5,load_auto_03,Load Aligned Reads File,Load aligned reads file ${this.buildFilePath('1655_C10.sorted.bam')}
 data_loading,6,load_auto_04,Load Variant VCF File,Load variant VCF file ${this.buildFilePath('1655_C10.mutations.vcf')}
-data_loading,7,load_auto_05,Load WIG Track File,Load WIG track file ${this.buildFilePath('another_sample.wig')}
+data_loading,7,load_auto_05,Load WIG Track File,Load WIG track file ${this.buildFilePath('variable_sample.wig')}
 data_loading,8,load_auto_06,Load Operon File,Load operon file ${this.buildFilePath('OperonSet.tsv')}
 data_management,126,data_auto_01,Export Generic Data,Run export_data for the current genomic data context.
 database,132,db_auto_01,Advanced UniProt Search,Search UniProt for reviewed Escherichia coli beta-galactosidase entries using advanced_uniprot_search.
@@ -57,7 +57,7 @@ navigation,18,nav_auto_08,Zoom Out,Zoom out the genome browser view by 10x.
 navigation,19,nav_auto_09,Pan Left,Pan the genome browser view to the left.
 navigation,20,nav_auto_10,Pan Right,Pan the genome browser view to the right.
 navigation,21,nav_auto_11,Zoom to Gene,Zoom to fit the lacZ gene in the genome browser view using zoom_to_gene.
-navigation,22,nav_auto_12,Select Gene,Select and highlight the gene lacZ in the genome browser.
+navigation,22,nav_auto_12,Select Gene,Select lacZ as the active gene in the genome browser.
 navigation,23,nav_auto_13,Select Sequence Region,Select the sequence region from position 100000 to 105000 on the current chromosome.
 navigation,42,tab_auto_02,Close Tab,Close the current tab in the genome browser.
 navigation,115,nav_auto_14,Highlight Genomic Region,Highlight region 110000 to 112000 and label it benchmark_focus.
@@ -93,7 +93,7 @@ sequence_editing,49,edit_auto_03,Delete Sequence Region,Delete the sequence regi
 sequence_editing,50,edit_auto_04,Insert Sequence at Position,"Insert the DNA sequence ""ATGCGATCGATCGATCG"" at position 300000 without user confirmation."
 sequence_editing,51,edit_auto_05,Replace Sequence Region,"Replace the sequence in region 400000 to 400200 with the new sequence ""GCTAGCTAGCTAGCTA""."
 sequence_editing,52,edit_auto_06,Cut Sequence Region,Cut the sequence region from position 500000 to 500300 (copy to clipboard and mark for deletion).
-sequence_editing,53,edit_auto_07,Execute Pending Actions,Execute all pending sequence editing actions in the queue and export the resulting gbk file to ${this.buildFilePath('exported_files/edited_genome_sequence.gbk')}
+sequence_editing,53,edit_auto_07,Execute Pending Actions,Execute the pending sequence edits with automatic GenBank output to ${this.buildFilePath('exported_files/edited_genome_sequence.gbk')}
 sequence_editing,54,edit_auto_08,Get Action List,Get the current list of sequence editing actions and their status.
 sequence_editing,55,edit_auto_09,Clear Action Queue,Clear all actions from the sequence editing queue without user confirmation.
 sequence_editing,56,edit_auto_10,Get Clipboard Content,Get the current content of the sequence clipboard using get_clipboard_content.
@@ -105,7 +105,7 @@ system,90,settings_auto_05,Switch UI Style Theme,Switch the application UI visua
 system,91,settings_auto_06,Switch to Midnight Mode,Change the application appearance to the midnight style.
 system,92,ui_control_auto_01,Show ChatBox Panel,Show the main ChatBox panel.
 system,93,ui_control_auto_02,Set ChatBox Floating Layout,Set the ChatBox layout to floating mode.
-system,94,ui_control_auto_03,Restore ChatBox Window,Restore the ChatBox window if it is minimized.
+system,94,ui_control_auto_03,Restore ChatBox Window,Restore the ChatBox to its expanded state.
 system,95,ui_control_auto_04,Expand Sidebar,Expand the main genome browser Sidebar.
 system,96,ui_control_auto_05,Show Tracks Sidebar Panel,Show the tracks panel in the Sidebar.
 system,97,ui_control_auto_06,Expand Top Banner,Expand the top banner area.
@@ -133,7 +133,7 @@ track_control,79,track_auto_17,Toggle Actions Track OFF,Toggle off the actions t
 track_control,80,track_auto_18,Toggle WIG Track OFF,Toggle off the WIG track visibility.
 track_control,81,track_auto_19,Toggle WIG Track ON,Toggle on the WIG track visibility.
 track_control,82,track_auto_20,Toggle BLAST Track ON,Toggle on the BLAST track visibility.
-track_control,83,track_auto_21,Toggle BLAST Track OFF,Toggle off the BLAST track visibility.
+track_control,83,track_auto_21,Toggle BLAST Track OFF,Hide the BLAST track.
 track_settings,86,settings_auto_01,Get Track Settings,Get the current track display settings.
 track_settings,87,settings_auto_02,Get All Track Settings,Get settings for all tracks.
 track_settings,88,settings_auto_03,Get Track Settings Schema,Get the schema for track settings configuration.
