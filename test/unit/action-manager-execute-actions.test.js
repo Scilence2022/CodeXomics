@@ -841,7 +841,9 @@ describe('Edit Queue regression coverage', () => {
     await manager.functionDeleteSequence({ chromosome: 'chr1', start: 2, end: 3 });
     await manager.functionDeleteSequence({ chromosome: 'chr1', start: 3, end: 4 });
     let confirm;
-    manager.showConflictResolutionDialog = () => new Promise(resolve => { confirm = resolve; });
+    manager.showConflictResolutionDialog = () => new Promise(resolve => {
+      confirm = resolve;
+    });
 
     const pending = manager.executeAllActionsInternal();
     const concurrent = await manager.executeAllActionsInternal({ saveFile: '/tmp/concurrent-edits.gbk' });

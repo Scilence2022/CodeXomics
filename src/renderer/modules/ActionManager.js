@@ -1670,7 +1670,8 @@ class ActionManager {
     const endInput = document.getElementById('endPositionSeq').value;
     const strand = document.getElementById('strandSelectSeq').value;
 
-    let start, end;
+    let start;
+    let end;
     try {
       ({ start, end } = this.validateRegionParameters(chromosome, startInput, endInput, strand));
     } catch (error) {
@@ -1869,7 +1870,8 @@ class ActionManager {
       return;
     }
 
-    let position, cleanSequence;
+    let position;
+    let cleanSequence;
     try {
       ({ position } = this.validateInsertParameters(chromosome, positionStr));
       cleanSequence = this.normalizeDnaSequence(sequence);
