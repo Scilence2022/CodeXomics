@@ -127,7 +127,7 @@ class CanvasGenesRenderer {
       width = window.innerWidth - sidebarWidth - 40;
     }
 
-    this.canvasWidth = Math.max(width, 200); // Minimum reasonable width
+    this.canvasWidth = width > 0 ? width : 800;
 
     // Height provided by layout
     const contentHeight = this.layout.totalHeight - this.layout.rulerHeight;
@@ -261,7 +261,7 @@ class CanvasGenesRenderer {
     const elementWidth = Math.max(width, minWidth);
 
     // Truncation flags
-    const isLeftTruncated = gene.start < this.viewport.start;
+    const isLeftTruncated = gene.start - 1 < this.viewport.start;
     const isRightTruncated = gene.end > this.viewport.end;
 
     // Get operon info for color
@@ -337,9 +337,18 @@ class CanvasGenesRenderer {
     const geneType = gene.type.toLowerCase();
     this.getGradientId(geneType);
 
-    // Set fill style (gradient)
-    // Note: Canvas gradients are relative to coordinate system, so we create one for this specific rect
-    const gradient = this.ctx.createLinearGradient(0, 0, width, height);
+    const isSpecialized = this.shouldUseSpecializedShape(geneType);
+    // SVG gradients use the glyph's normalized bounding box. Project that
+    // diagonal onto Canvas's pixel coordinates to match the colour stops.
+    const diagonalSquared = width * width + height * height;
+    const gradient = isSpecialized
+      ? this.ctx.createLinearGradient(0, 0, width, height)
+      : this.ctx.createLinearGradient(
+          0,
+          0,
+          (2 * width * height * height) / diagonalSquared,
+          (2 * height * width * width) / diagonalSquared
+        );
     const colors = this.getGradientColors(geneType, operonInfo.color);
     gradient.addColorStop(0, colors.start);
     gradient.addColorStop(1, colors.end);
@@ -356,10 +365,10 @@ class CanvasGenesRenderer {
     // Draw specific path
     this.ctx.beginPath();
 
-    if (this.shouldUseSpecializedShape(geneType)) {
+    if (isSpecialized) {
       this.drawSpecializedShapePath(gene, width, height, isLeftTruncated, isRightTruncated);
     } else {
-      this.drawStandardShapePath(gene, width, height, isLeftTruncated, isRightTruncated);
+      GeneShapeCreators.traceStandardGeneShape(this.ctx, gene, width, height, isLeftTruncated, isRightTruncated);
     }
 
     this.ctx.fill();
@@ -391,8 +400,7 @@ class CanvasGenesRenderer {
       displayText = '...';
     }
 
-    this.ctx.font = `500 ${fontSize}px ${this.settings.fontFamily}`;
-    this.ctx.font = `500 ${fontSize}px ${this.settings.fontFamily}`;
+    this.ctx.font = `500 ${fontSize}px ${this.settings.fontFamily || 'Arial, sans-serif'}`;
     this.ctx.fillStyle = this.settings.geneNameColor || '#333333';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -400,122 +408,6 @@ class CanvasGenesRenderer {
     // Save state to prevent stretching/scaling effects on text if we were using transforms
     // But here we are drawing effectively 1:1 pixel mapping, so standard text drawing is fine
     this.ctx.fillText(displayText, width / 2, height / 2);
-  }
-
-  /**
-   * Draw standard gene arrow/triangle path
-   */
-  drawStandardShapePath(gene, width, height, isLeftTruncated, isRightTruncated) {
-    const isForward = gene.strand !== -1 && gene.strand !== '-1'; // Handle numeric and string "-1"
-    const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
-
-    // Zigzag parameters
-    const zDepth = 4; // Depth of the zigzag notch
-    const numZigzags = 3;
-    const zStep = height / numZigzags;
-
-    // If gene is very small AND NOT truncated, draw simple triangle
-    // If it is truncated, we treat it as a bar/arrow regardless of width to maintain continuity
-    if (width < 8 && !isLeftTruncated && !isRightTruncated) {
-      // Triangle shape for small genes (only when fully visible)
-      if (isForward) {
-        // Forward Triangle
-        this.ctx.moveTo(0, 0);
-        this.ctx.lineTo(width, height / 2);
-        this.ctx.lineTo(0, height);
-      } else {
-        // Reverse Triangle
-        this.ctx.moveTo(width, 0);
-        this.ctx.lineTo(0, height / 2);
-        this.ctx.lineTo(width, height);
-      }
-    } else {
-      // Arrow / Bar shape with potential zigzags
-      if (isForward) {
-        // === Forward Gene ===
-
-        // 1. Start / Left Edge
-        if (isLeftTruncated) {
-          this.ctx.moveTo(0, 0);
-        } else {
-          this.ctx.moveTo(0, 0);
-        }
-
-        // 2. Top Edge -> Right Edge
-        if (isRightTruncated) {
-          this.ctx.lineTo(width, 0);
-          // Zigzag Down on Right Edge
-          for (let i = 0; i < numZigzags; i++) {
-            const yTop = i * zStep;
-            this.ctx.lineTo(width - zDepth, yTop + zStep / 2); // Notch In
-            this.ctx.lineTo(width, (i + 1) * zStep); // Point Out
-          }
-        } else {
-          // Standard Arrow Head
-          this.ctx.lineTo(width - arrowSize, 0);
-          this.ctx.lineTo(width, height / 2);
-          this.ctx.lineTo(width - arrowSize, height);
-        }
-
-        // 3. Bottom Edge -> Left Edge
-        this.ctx.lineTo(0, height);
-
-        if (isLeftTruncated) {
-          // Zigzag Up on Left Edge
-          for (let i = 0; i < numZigzags; i++) {
-            // Going UP from bottom
-            const yBottom = height - i * zStep;
-            this.ctx.lineTo(zDepth, yBottom - zStep / 2); // Notch In
-            this.ctx.lineTo(0, yBottom - zStep); // Point Out
-          }
-        } else {
-          // Close back to top-left
-          this.ctx.lineTo(0, 0);
-        }
-      } else {
-        // === Reverse Gene ===
-
-        // 1. Start / Left Edge (Arrow Head or Zigzag)
-        if (isLeftTruncated) {
-          this.ctx.moveTo(0, 0);
-        } else {
-          this.ctx.moveTo(arrowSize, 0);
-        }
-
-        // 2. Top Edge -> Right Edge
-        this.ctx.lineTo(width, 0);
-
-        if (isRightTruncated) {
-          // Zigzag Down on Right Edge
-          for (let i = 0; i < numZigzags; i++) {
-            const yTop = i * zStep;
-            this.ctx.lineTo(width - zDepth, yTop + zStep / 2); // Notch In
-            this.ctx.lineTo(width, (i + 1) * zStep); // Point Out
-          }
-        } else {
-          // Flat Right Edge
-          this.ctx.lineTo(width, height);
-        }
-
-        // 3. Bottom Edge -> Left Edge
-        if (isLeftTruncated) {
-          this.ctx.lineTo(0, height);
-          // Zigzag Up on Left Edge
-          for (let i = 0; i < numZigzags; i++) {
-            const yBottom = height - i * zStep;
-            this.ctx.lineTo(zDepth, yBottom - zStep / 2); // Notch In
-            this.ctx.lineTo(0, yBottom - zStep); // Point Out
-          }
-        } else {
-          this.ctx.lineTo(arrowSize, height);
-          // Arrow Head Pointing Left
-          this.ctx.lineTo(0, height / 2);
-          this.ctx.lineTo(arrowSize, 0);
-        }
-      }
-    }
-
-    this.ctx.closePath();
   }
 
   /**
@@ -601,7 +493,7 @@ class CanvasGenesRenderer {
         break;
       default:
         // Fallback to standard arrow for others (mrna, etc)
-        this.drawStandardShapePath(gene, width, height, isLeftTruncated, isRightTruncated);
+        GeneShapeCreators.traceStandardGeneShape(this.ctx, gene, width, height, isLeftTruncated, isRightTruncated);
     }
   }
 
@@ -681,19 +573,7 @@ class CanvasGenesRenderer {
   }
 
   shouldUseSpecializedShape(geneType) {
-    const specializedTypes = [
-      'promoter',
-      'terminator',
-      'regulatory',
-      'repeat_region',
-      'trna',
-      'rrna',
-      'mrna',
-      'comment',
-      'note',
-      'misc_feature',
-    ];
-    return specializedTypes.includes(geneType);
+    return GeneShapeCreators.shouldUseSpecializedShape(geneType);
   }
 
   getGradientId(geneType) {

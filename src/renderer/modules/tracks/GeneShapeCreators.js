@@ -120,7 +120,6 @@ class GeneShapeCreators {
     isRightTruncated = false,
     strokeWidth = 1
   ) {
-    const isForward = gene.strand !== -1;
     const geneType = gene.type.toLowerCase();
 
     // Create specialised shapes for specific gene types
@@ -139,93 +138,26 @@ class GeneShapeCreators {
     }
 
     const path = document.createElementNS(SVG_NS, 'path');
-    let pathData;
+    const commands = [];
+    GeneShapeCreators.traceStandardGeneShape(
+      {
+        moveTo: (x, y) => commands.push(`M ${x} ${y}`),
+        lineTo: (x, y) => commands.push(`L ${x} ${y}`),
+        closePath: () => commands.push('Z'),
+      },
+      gene,
+      width,
+      height,
+      isLeftTruncated,
+      isRightTruncated
+    );
 
-    if (width < 8) {
-      // For small genes, use triangle shape as requested by user
-      // Triangle width matches gene width exactly
-      if (isForward) {
-        // Forward triangle (pointing right)
-        if (isLeftTruncated) {
-          // Add jagged left edge
-          pathData = GeneShapeCreators.createJaggedTrianglePath(width, height, true, false, isForward);
-        } else if (isRightTruncated) {
-          // Add jagged right edge
-          pathData = GeneShapeCreators.createJaggedTrianglePath(width, height, false, true, isForward);
-        } else {
-          // Normal triangle - exact width match
-          pathData = `M 0 0
-                               L ${width} ${height / 2}
-                               L 0 ${height}
-                               Z`;
-        }
-      } else {
-        // Reverse triangle (pointing left)
-        if (isLeftTruncated) {
-          // Add jagged left edge
-          pathData = GeneShapeCreators.createJaggedTrianglePath(width, height, true, false, isForward);
-        } else if (isRightTruncated) {
-          // Add jagged right edge
-          pathData = GeneShapeCreators.createJaggedTrianglePath(width, height, false, true, isForward);
-        } else {
-          // Normal triangle - exact width match
-          pathData = `M ${width} 0
-                               L 0 ${height / 2}
-                               L ${width} ${height}
-                               Z`;
-        }
-      }
-      path.setAttribute(
-        'class',
-        `gene-triangle ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`
-      );
-    } else {
-      // For larger genes, use arrow shape with dynamic arrow size
-      // Calculate appropriate arrow size based on gene width
-      const arrowSize = Math.max(2, Math.min(width * 0.3, 15));
-
-      if (isForward) {
-        // Forward arrow (pointing right)
-        if (isLeftTruncated) {
-          // Add jagged left edge
-          pathData = GeneShapeCreators.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
-        } else if (isRightTruncated) {
-          // Add jagged right edge (but keep arrow tip)
-          pathData = GeneShapeCreators.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
-        } else {
-          // Normal forward arrow
-          pathData = `M 0 0
-                               L ${width - arrowSize} 0
-                               L ${width} ${height / 2}
-                               L ${width - arrowSize} ${height}
-                               L 0 ${height}
-                               Z`;
-        }
-      } else {
-        // Reverse arrow (pointing left)
-        if (isLeftTruncated) {
-          // Add jagged left edge (but keep arrow tip)
-          pathData = GeneShapeCreators.createJaggedArrowPath(width, height, arrowSize, true, false, isForward);
-        } else if (isRightTruncated) {
-          // Add jagged right edge
-          pathData = GeneShapeCreators.createJaggedArrowPath(width, height, arrowSize, false, true, isForward);
-        } else {
-          // Normal reverse arrow
-          pathData = `M ${arrowSize} 0
-                               L ${width} 0
-                               L ${width} ${height}
-                               L ${arrowSize} ${height}
-                               L 0 ${height / 2}
-                               Z`;
-        }
-      }
-      path.setAttribute(
-        'class',
-        `gene-arrow ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`
-      );
-    }
-
-    path.setAttribute('d', pathData);
+    const shapeClass = width < 8 && !isLeftTruncated && !isRightTruncated ? 'gene-triangle' : 'gene-arrow';
+    path.setAttribute(
+      'class',
+      `${shapeClass} ${isLeftTruncated ? 'left-truncated' : ''} ${isRightTruncated ? 'right-truncated' : ''}`
+    );
+    path.setAttribute('d', commands.join(' '));
     path.setAttribute('fill', `url(#${gradientId})`);
 
     // Use zoom-based stroke width (passed as parameter)
@@ -1255,155 +1187,48 @@ class GeneShapeCreators {
   // ---------------------------------------------------------------------------
 
   /**
-   * Create jagged path for truncated triangular genes.
-   * @param {number}  width
-   * @param {number}  height
-   * @param {boolean} isLeftJagged
-   * @param {boolean} isRightJagged
-   * @param {boolean} isForward
-   * @returns {string} SVG path data
+   * Trace the standard outline in either a Canvas context or an SVG path.
+   * A clipped edge gets a bounded zigzag in place of its usual edge or tip.
    */
-  static createJaggedTrianglePath(width, height, isLeftJagged, isRightJagged, isForward) {
-    const jaggedDepth = Math.min(4, height * 0.2); // Depth of jagged cuts
-    const jaggedStep = Math.max(2, height / 6); // Height of each jagged tooth
-    const arrowSize = Math.max(8, Math.min(width * 0.3, height * 0.8)); // Dynamic arrow size
-
-    if (isForward) {
-      // Forward triangle (pointing right)
-      if (isLeftJagged) {
-        // Left edge (truncation face) is jagged - vertical jagged line
-        return `M ${jaggedDepth} 0
-                       L 0 ${jaggedStep}
-                       L ${jaggedDepth} ${jaggedStep * 2}
-                       L 0 ${jaggedStep * 3}
-                       L ${jaggedDepth} ${jaggedStep * 4}
-                       L 0 ${height}
-                       L ${width} ${height / 2}
-                       L ${jaggedDepth} 0
-                       Z`;
-      } else if (isRightJagged) {
-        // Right edge (truncation face) is jagged - vertical jagged line
-        return `M 0 0
-                       L ${width - jaggedDepth} ${jaggedStep}
-                       L ${width} 0
-                       L ${width - jaggedDepth} ${jaggedStep * 2}
-                       L ${width} ${jaggedStep * 3}
-                       L ${width - jaggedDepth} ${jaggedStep * 4}
-                       L ${width} ${height}
-                       L 0 ${height}
-                       Z`;
-      }
-    } else {
-      // Reverse triangle (pointing left)
-      if (isLeftJagged) {
-        // Left edge (truncation face) is jagged - vertical jagged line
-        return `M ${jaggedDepth} 0
-                       L 0 ${jaggedStep}
-                       L ${jaggedDepth} ${jaggedStep * 2}
-                       L 0 ${jaggedStep * 3}
-                       L ${jaggedDepth} ${jaggedStep * 4}
-                       L 0 ${height}
-                       L ${width} ${height}
-                       L ${width} 0
-                       Z`;
-      } else if (isRightJagged) {
-        // Right edge (truncation face) is jagged - vertical jagged line
-        return `M ${arrowSize} 0
-                       L ${width - jaggedDepth} 0
-                       L ${width} ${jaggedStep}
-                       L ${width - jaggedDepth} ${jaggedStep * 2}
-                       L ${width} ${jaggedStep * 3}
-                       L ${width - jaggedDepth} ${jaggedStep * 4}
-                       L ${width} ${height}
-                       L ${arrowSize} ${height}
-                       L 0 ${height / 2}
-                       Z`;
-      }
+  static traceStandardGeneShape(path, gene, width, height, isLeftTruncated, isRightTruncated) {
+    const isForward = gene.strand !== -1 && gene.strand !== '-1';
+    if (width < 8 && !isLeftTruncated && !isRightTruncated) {
+      const base = isForward ? 0 : width;
+      path.moveTo(base, 0);
+      path.lineTo(width - base, height / 2);
+      path.lineTo(base, height);
+      path.closePath();
+      return;
     }
 
-    // Fallback - return normal arrow if no jagged edges
-    if (isForward) {
-      return `M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z`;
-    } else {
-      return `M ${arrowSize} 0 L ${width} 0 L ${width} ${height} L ${arrowSize} ${height} L 0 ${height / 2} Z`;
-    }
-  }
+    const arrowSize = Math.min(width / 2, Math.max(2, Math.min(width * 0.3, 15)));
+    const left = !isForward && !isLeftTruncated ? arrowSize : 0;
+    const right = isForward && !isRightTruncated ? width - arrowSize : width;
+    const depth = Math.min(4, height * 0.2, width / 2);
+    const step = height / 3;
 
-  /**
-   * Create jagged arrow path for truncated arrow-shaped genes.
-   * @param {number}  width
-   * @param {number}  height
-   * @param {number}  arrowSize
-   * @param {boolean} isLeftJagged
-   * @param {boolean} isRightJagged
-   * @param {boolean} isForward
-   * @returns {string} SVG path data
-   */
-  static createJaggedArrowPath(width, height, arrowSize, isLeftJagged, isRightJagged, isForward) {
-    const jaggedDepth = Math.min(4, height * 0.2);
-    const jaggedStep = Math.max(2, height / 6);
-
-    if (isForward) {
-      // Forward arrow (pointing right)
-      if (isLeftJagged) {
-        // Left edge is jagged
-        return `M ${jaggedDepth} 0
-                       L 0 ${jaggedStep}
-                       L ${jaggedDepth} ${jaggedStep * 2}
-                       L 0 ${jaggedStep * 3}
-                       L ${jaggedDepth} ${jaggedStep * 4}
-                       L 0 ${height}
-                       L ${width - arrowSize} ${height}
-                       L ${width} ${height / 2}
-                       L ${width - arrowSize} 0
-                       L ${jaggedDepth} 0
-                       Z`;
-      } else if (isRightJagged) {
-        // Right edge is completely jagged (no arrow tip for truncated genes)
-        return `M 0 0
-                       L ${width - jaggedDepth} 0
-                       L ${width} ${jaggedStep}
-                       L ${width - jaggedDepth} ${jaggedStep * 2}
-                       L ${width} ${jaggedStep * 3}
-                       L ${width - jaggedDepth} ${jaggedStep * 4}
-                       L ${width} ${height}
-                       L 0 ${height}
-                       Z`;
+    path.moveTo(left, 0);
+    path.lineTo(right, 0);
+    if (isRightTruncated) {
+      for (let i = 0; i < 3; i++) {
+        path.lineTo(width - depth, (i + 0.5) * step);
+        path.lineTo(width, (i + 1) * step);
       }
     } else {
-      // Reverse arrow (pointing left)
-      if (isLeftJagged) {
-        // Left edge is completely jagged (no arrow tip for truncated genes)
-        return `M ${jaggedDepth} 0
-                       L 0 ${jaggedStep}
-                       L ${jaggedDepth} ${jaggedStep * 2}
-                       L 0 ${jaggedStep * 3}
-                       L ${jaggedDepth} ${jaggedStep * 4}
-                       L 0 ${height}
-                       L ${width} ${height}
-                       L ${width} 0
-                       Z`;
-      } else if (isRightJagged) {
-        // Right edge is jagged
-        return `M ${arrowSize} 0
-                       L ${width - jaggedDepth} 0
-                       L ${width} ${jaggedStep}
-                       L ${width - jaggedDepth} ${jaggedStep * 2}
-                       L ${width} ${jaggedStep * 3}
-                       L ${width - jaggedDepth} ${jaggedStep * 4}
-                       L ${width} ${height}
-                       L ${arrowSize} ${height}
-                       L 0 ${height / 2}
-                       Z`;
-      }
+      if (isForward) path.lineTo(width, height / 2);
+      path.lineTo(right, height);
     }
 
-    // Fallback - return normal arrow
-    if (isForward) {
-      return `M 0 0 L ${width - arrowSize} 0 L ${width} ${height / 2} L ${width - arrowSize} ${height} L 0 ${height} Z`;
-    } else {
-      return `M ${arrowSize} 0 L ${width} 0 L ${width} ${height} L ${arrowSize} ${height} L 0 ${height / 2} Z`;
+    path.lineTo(left, height);
+    if (isLeftTruncated) {
+      for (let i = 0; i < 3; i++) {
+        path.lineTo(depth, height - (i + 0.5) * step);
+        path.lineTo(0, height - (i + 1) * step);
+      }
+    } else if (!isForward) {
+      path.lineTo(0, height / 2);
     }
+    path.closePath();
   }
 
   /**
@@ -1626,7 +1451,7 @@ class GeneShapeCreators {
   // ---------------------------------------------------------------------------
 
   /**
-   * Create SVG text label for gene with advanced anti-stretch protection.
+   * Create an SVG text label sized in the same units as its glyph.
    * @param {Object} self     - TrackRenderer instance (for self.genomeBrowser)
    * @param {Object} gene     - Gene data object
    * @param {number} width    - Available width in px
@@ -1658,89 +1483,23 @@ class GeneShapeCreators {
       displayText = '...';
     }
 
-    // Create a transform group to isolate text from SVG stretching
     const textGroup = document.createElementNS(SVG_NS, 'g');
     textGroup.setAttribute('class', 'svg-text-protected');
 
-    // Add resize-resistant attributes
-    textGroup.setAttribute('data-original-width', width);
-    textGroup.setAttribute('data-original-height', height);
-    textGroup.setAttribute('data-gene-name', geneName);
-
-    // Create text element with fixed sizing
     const text = document.createElementNS(SVG_NS, 'text');
     text.setAttribute('x', width / 2);
     text.setAttribute('y', height / 2);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('dominant-baseline', 'central');
-    text.setAttribute('font-size', `${fontSize}px`); // Use px for consistent sizing
+    text.setAttribute('font-size', `${fontSize}px`);
     text.setAttribute('font-family', settings?.fontFamily || 'Arial, sans-serif');
-    text.setAttribute('font-weight', '500'); // Slightly bold for better readability
+    text.setAttribute('font-weight', '500');
     text.setAttribute('fill', settings?.geneNameColor || '#333333');
     text.setAttribute('pointer-events', 'none');
-
-    // Enhanced protection against stretching
-    text.style.vectorEffect = 'non-scaling-stroke';
-    text.style.transformOrigin = 'center';
-    text.style.transform = 'scale(1, 1)'; // Force 1:1 aspect ratio
-
-    // Additional resize protection attributes
-    text.setAttribute('data-original-font-size', fontSize);
-    text.setAttribute('data-resize-protected', 'true');
-
     text.textContent = displayText;
+
     textGroup.appendChild(text);
-
     return textGroup;
-  }
-
-  /**
-   * Update SVG text elements to handle window resize properly.
-   * This method recalculates text sizes and positions after resize.
-   * @param {SVGElement} svgContainer   - The SVG container element
-   * @param {number}     containerWidth - New container width
-   */
-  static updateSVGTextForResize(svgContainer, containerWidth) {
-    if (!svgContainer) return;
-
-    const textElements = svgContainer.querySelectorAll('text[data-resize-protected="true"]');
-
-    textElements.forEach(textElement => {
-      const originalFontSize = parseFloat(textElement.getAttribute('data-original-font-size'));
-      const geneGroup = textElement.closest('g.svg-gene-element');
-
-      if (geneGroup && originalFontSize) {
-        // Get the current transform to understand positioning
-        const transform = geneGroup.getAttribute('transform');
-        if (transform) {
-          const translateMatch = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-          if (translateMatch) {
-            parseFloat(translateMatch[1]);
-            parseFloat(translateMatch[2]);
-
-            // Recalculate text positioning based on new container width
-            const textGroup = textElement.parentElement;
-            const originalWidth = parseFloat(textGroup.getAttribute('data-original-width'));
-            const originalHeight = parseFloat(textGroup.getAttribute('data-original-height'));
-
-            if (originalWidth && originalHeight) {
-              // Update text position within its group
-              textElement.setAttribute('x', originalWidth / 2);
-              textElement.setAttribute('y', originalHeight / 2);
-
-              // Maintain original font size to prevent stretching
-              textElement.setAttribute('font-size', `${originalFontSize}px`);
-
-              // Ensure transform protection is maintained
-              textElement.style.vectorEffect = 'non-scaling-stroke';
-              textElement.style.transform = 'scale(1, 1)';
-            }
-          }
-        }
-      }
-    });
-
-    console.log('🔤 Updated', textElements.length, 'SVG text elements for resize');
   }
 
   // ---------------------------------------------------------------------------

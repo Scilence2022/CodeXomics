@@ -2692,72 +2692,48 @@ class TrackRenderer {
    * Create SVG-based gene visualization
    */
   renderGeneElementsSVG(trackContent, geneRows, viewport, operons, layout, settings) {
-    // Force layout calculation to get accurate width
-    trackContent.style.width = '100%';
-
-    // Improved width calculation with better fallback to prevent distortion
-    let searchWidth = 0;
-    if (trackContent.getBoundingClientRect().width > 100) {
-      searchWidth = trackContent.getBoundingClientRect().width;
-    } else if (trackContent.offsetWidth > 100) {
-      searchWidth = trackContent.offsetWidth;
-    } else {
-      // Fallback: try to find parent track-container or use window width
-      const parent = trackContent.closest('.track-content') || trackContent.parentElement;
-      if (parent && parent.getBoundingClientRect().width > 100) {
-        searchWidth = parent.getBoundingClientRect().width;
-      } else {
-        // Last resort: window width minus approximate sidebar/padding
-        searchWidth = window.innerWidth - 300; // Approx sidebar width
-      }
-    }
-    const containerWidth = searchWidth || 800;
-
-    // Create SVG container that fills width but preserves text aspect ratio
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    // Calculate SVG content height (excluding ruler)
-    const svgContentHeight = layout.totalHeight - layout.rulerHeight;
-
-    // Use 100% width to ensure it always fills the available space (User Request)
-    // We use preserveAspectRatio="none" to allow exact fitting, but we rely on
-    // accurate containerWidth for the viewBox to minimize distortion.
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', svgContentHeight);
-    svg.setAttribute('viewBox', `0 0 ${containerWidth} ${svgContentHeight}`);
-    svg.setAttribute('preserveAspectRatio', 'none'); // Safe now because width matches viewBox width
     svg.setAttribute('class', 'genes-svg-container');
-    svg.style.position = 'relative';
-    svg.style.top = '0';
-    svg.style.left = '0';
-    svg.style.pointerEvents = 'all';
+    svg.style.cssText = `
+      display: block;
+      width: 100%;
+      height: ${layout.totalHeight - layout.rulerHeight}px;
+      pointer-events: all;
+    `;
 
-    // Create definitions for gradients and patterns
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    GeneShapeCreators.createSpecializedGradients(defs); // Add specialized gradients for different gene types
-    svg.appendChild(defs);
+    const draw = width => {
+      defs.replaceChildren();
+      GeneShapeCreators.createSpecializedGradients(defs);
+      svg.replaceChildren(defs);
 
-    // Create gene elements as SVG paths/rectangles
-    geneRows.forEach((rowGenes, rowIndex) => {
-      if (rowIndex >= layout.maxRows) return; // Skip hidden rows
-
-      rowGenes.forEach(gene => {
-        const geneGroup = this.createSVGGeneElement(
-          gene,
-          viewport,
-          operons,
-          rowIndex,
-          layout,
-          settings,
-          defs,
-          containerWidth
-        );
-        if (geneGroup) {
-          svg.appendChild(geneGroup);
-        }
+      geneRows.slice(0, layout.maxRows).forEach((rowGenes, rowIndex) => {
+        rowGenes.forEach(gene => {
+          const group = this.createSVGGeneElement(gene, viewport, operons, rowIndex, layout, settings, defs, width);
+          if (group) svg.appendChild(group);
+        });
       });
-    });
+    };
 
     trackContent.appendChild(svg);
+    let drawnWidth = trackContent.getBoundingClientRect().width;
+    if (drawnWidth > 0) draw(drawnWidth);
+
+    // Tracks can be built off-DOM while other tracks load. Wait for the
+    // actual layout width and redraw in CSS pixels when it changes.
+    const observer = new ResizeObserver(([entry]) => {
+      if (!trackContent.isConnected) {
+        // A detached track may receive a zero-width notification before mount.
+        if (drawnWidth > 0) observer.disconnect();
+        return;
+      }
+      const width = entry.contentRect.width;
+      if (width > 0 && width !== drawnWidth) {
+        drawnWidth = width;
+        draw(width);
+      }
+    });
+    observer.observe(trackContent);
   }
 
   /**
@@ -2820,16 +2796,12 @@ class TrackRenderer {
     // to the same value as a 0-based exclusive end.
     const geneStart = Math.max(adjustedGeneStart - 1, viewport.start);
     const geneEnd = Math.min(adjustedGeneEnd, viewport.end);
-    const left = ((geneStart - viewport.start) / (viewport.end - viewport.start)) * 100;
-    const width = ((geneEnd - geneStart) / (viewport.end - viewport.start)) * 100;
-
-    // Check for meaningful overlap (allow small tolerance for floating-point precision)
-    // Genes with width very close to 0 due to rounding should still be visible
-    if (width < -0.001) return null;
+    if (geneEnd <= geneStart) return null;
 
     // Get positioning parameters - use accurate container width (no ruler offset in SVG)
+    const viewportRange = viewport.end - viewport.start;
     const y = layout.topPadding + rowIndex * (layout.geneHeight + layout.rowSpacing);
-    const x = (left / 100) * containerWidth;
+    const x = ((geneStart - viewport.start) / viewportRange) * containerWidth;
     // Determine minimum width based on gene type
     // Specialized shapes (promoters, etc.) behave like icons and need a larger minimum width
     // Regular genes should be allowed to shrink to trigger the simplified triangular mode
@@ -2841,12 +2813,12 @@ class TrackRenderer {
     // Use 1px min for these types to allow proper scaling when zoomed out
     const minWidth = isSpecialized ? (isSmallMinWidthType ? 1 : 8) : 1;
 
-    const elementWidth = Math.max((width / 100) * containerWidth, minWidth);
+    const elementWidth = Math.max(((geneEnd - geneStart) / viewportRange) * containerWidth, minWidth);
     const elementHeight = layout.geneHeight;
 
     // Check if gene is partially visible (truncated at left or right edges)
     // Use adjusted coordinates to properly handle circular mode wrapping
-    const isLeftTruncated = adjustedGeneStart < viewport.start;
+    const isLeftTruncated = adjustedGeneStart - 1 < viewport.start;
     const isRightTruncated = adjustedGeneEnd > viewport.end;
 
     // Create SVG group for the gene
@@ -2859,7 +2831,6 @@ class TrackRenderer {
 
     // Calculate zoom-based stroke width (consistent for all elements at same zoom level)
     // Base range for "normal" zoom (e.g., 10,000 bp = strokeWidth 1.5)
-    const viewportRange = viewport.end - viewport.start;
     const baseRange = 10000;
     const zoomFactor = baseRange / viewportRange;
     // Cap stroke width at user-defined maximum (default 1)
@@ -13931,17 +13902,6 @@ This action cannot be undone.`;
 
     const trackContent = geneTrack.querySelector('.track-content');
     if (!trackContent) return;
-
-    const svgContainer = trackContent.querySelector('.genes-svg-container');
-    if (svgContainer) {
-      // Force layout recalculation to get accurate width
-      trackContent.style.width = '100%';
-      const containerWidth = trackContent.getBoundingClientRect().width || trackContent.offsetWidth || 800;
-
-      // Update text elements for proper sizing after changes
-      GeneShapeCreators.updateSVGTextForResize(svgContainer, containerWidth);
-      console.log('🧬 Gene track SVG updated with container width:', containerWidth);
-    }
 
     // Update operons panel when gene track is updated
     const viewport = this.getCurrentViewport();
