@@ -712,6 +712,26 @@ class StrictAutomaticEvaluator {
     const toolName = this.normalizeToolName(call?.tool_name || '');
     const flatten = names => names.flat().map(name => this.normalizeToolName(name));
     const expectedNames = flatten(expectedTools.map(expected => (Array.isArray(expected) ? expected : [expected])));
+    // Showing the loaded Reads track completes the import's own display step.
+    // Hiding it or changing another track remains an unexpected state change.
+    if (toolName === 'toggle_track' && call?.parameters?.track_name === 'reads' && call.parameters.visible === true) {
+      if (call.executionSuccess === false) return false;
+      if (this.requireExecutionForCompletion && call.executionSuccess !== true) return false;
+      const callIndex = calls.indexOf(call);
+      return expectedTools.some(
+        (expectedTool, expectedIndex) =>
+          this.toolMatches('load_reads_file', expectedTool) &&
+          calls
+            .slice(0, callIndex)
+            .some(
+              observed =>
+                this.toolMatches(observed.tool_name, 'load_reads_file') &&
+                observed.executionSuccess !== false &&
+                (!this.requireExecutionForCompletion || observed.executionSuccess === true) &&
+                this.parametersMatch(observed.parameters, expectedParameters[expectedIndex] || {}, observed.tool_name)
+            )
+      );
+    }
     const queueingEditTools = [
       'paste_sequence',
       'insert_sequence',

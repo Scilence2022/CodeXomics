@@ -637,6 +637,15 @@ class LLMContextService {
       if (['view_markdown', 'restore_chatbox'].includes(effect.capability)) {
         return successfulResults.some(result => result.result?.success === true && effect.matcher(result.tool, result));
       }
+      if (effect.capability === 'load') {
+        return successfulResults.some(
+          result =>
+            /^load_(?:genome_file|annotation_file|reads_file|variant_file|wig_tracks|operon_file)$/.test(result.tool) &&
+            result.result?.success === true &&
+            result.result.action !== 'dialog_opened' &&
+            (result.result.filePath || result.result.filePaths?.length)
+        );
+      }
     }
 
     // Simple task patterns that typically complete with one tool call

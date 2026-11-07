@@ -131,6 +131,35 @@ describe('request overrides', () => {
 
 describe('Automatic Simple completion regressions', () => {
   const ContextService = require('../../src/renderer/modules/chat/services/LLMContextService.js');
+  it('finishes a natural reads-loading request after a successful load and preserves requested follow-ups', () => {
+    const context = new ContextService({}, makeChatManager());
+    const tools = [{ tool_name: 'load_reads_file' }];
+    const result = { tool: 'load_reads_file', result: { success: true, filePath: '/fixtures/reads.bam' } };
+    expect(
+      context.shouldTerminateAfterToolExecution(tools, [result], 'Load aligned reads file /fixtures/reads.bam')
+    ).toBe(true);
+    expect(
+      context.shouldTerminateAfterToolExecution(
+        tools,
+        [{ ...result, result: { success: false } }],
+        'Load aligned reads file /fixtures/reads.bam'
+      )
+    ).toBe(false);
+    expect(
+      context.shouldTerminateAfterToolExecution(
+        tools,
+        [{ ...result, result: { success: true, action: 'dialog_opened' } }],
+        'Load aligned reads file /fixtures/reads.bam'
+      )
+    ).toBe(false);
+    expect(
+      context.shouldTerminateAfterToolExecution(
+        tools,
+        [result],
+        'Load aligned reads file /fixtures/reads.bam and then navigate to position 5000'
+      )
+    ).toBe(false);
+  });
   const cases = [
     [
       'Select and highlight the gene lacZ in the genome browser.',

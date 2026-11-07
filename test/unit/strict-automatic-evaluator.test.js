@@ -26,6 +26,41 @@ function simpleTest(parameters = { sequence: 'ATGC' }) {
 }
 
 describe('StrictAutomaticEvaluator', () => {
+  it('accepts showing Reads after loading the requested file, while rejecting unrelated or failed changes', () => {
+    const evaluator = new StrictAutomaticEvaluator({
+      assessmentMode: 'completion',
+      requireExecutionForCompletion: true,
+    });
+    const test = {
+      maxScore: 5,
+      expectedResult: { tool_name: 'load_reads_file', parameters: { filePath: '/fixtures/reads.bam' } },
+    };
+    const load = {
+      tool_name: 'load_reads_file',
+      parameters: { filePath: '/fixtures/reads.bam' },
+      executed: true,
+      success: true,
+    };
+    const show = {
+      tool_name: 'toggle_track',
+      parameters: { track_name: 'reads', visible: true },
+      executed: true,
+      success: true,
+    };
+    const score = (...calls) => evaluator.evaluate(test, { actualResult: { nativeFunctionCalls: calls } });
+    expect(score(load, show)).toMatchObject({ success: true, score: 5 });
+    for (const parameters of [
+      { track_name: 'reads', visible: false },
+      { track_name: 'genes', visible: true },
+    ]) {
+      expect(score(load, { ...show, parameters }).success).toBe(false);
+    }
+    expect(score(load, { ...show, success: false }).success).toBe(false);
+    expect(score(show, load).success).toBe(false);
+    expect(score({ ...load, parameters: { filePath: '/fixtures/other.bam' } }, show).success).toBe(false);
+    expect(score({ ...load, success: false }, show).success).toBe(false);
+  });
+
   it('rejects prose and inferred tool mentions as scoring evidence', () => {
     const evaluation = createEvaluator().evaluate(simpleTest(), {
       actualResult: {
