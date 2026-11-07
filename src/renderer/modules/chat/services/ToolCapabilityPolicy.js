@@ -199,7 +199,7 @@ class ToolCapabilityPolicy {
       },
 
       search: {
-        tools: ['find_gene_by_name', 'search_features', 'search_sequence_motif'],
+        tools: ['find_gene_by_name', 'search_features', 'search_sequence_motif', 'list_available_tools'],
         policy: 'parameter_based',
       },
 

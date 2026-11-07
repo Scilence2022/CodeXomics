@@ -26,6 +26,36 @@ function simpleTest(parameters = { sequence: 'ATGC' }) {
 }
 
 describe('StrictAutomaticEvaluator', () => {
+  it('requires a single unfiltered tool inventory when the case disallows repeated calls', () => {
+    const evaluator = new StrictAutomaticEvaluator({
+      assessmentMode: 'completion',
+      requireExecutionForCompletion: true,
+    });
+    const test = {
+      maxScore: 5,
+      expectedResult: {
+        tool_name: 'list_available_tools',
+        parameters: { category: { benchmarkDefaultValue: null }, userQuery: { benchmarkDefaultValue: null } },
+        allowRepeatedCalls: false,
+      },
+    };
+    const full = {
+      tool_name: 'list_available_tools',
+      parameters: { format: 'summary' },
+      executed: true,
+      success: true,
+    };
+    const filtered = { ...full, parameters: { category: 'navigation' } };
+    const score = (...calls) => evaluator.evaluate(test, { actualResult: { nativeFunctionCalls: calls } });
+    expect(score(full)).toMatchObject({ success: true, score: 5 });
+    expect(score(filtered).success).toBe(false);
+    expect(score(full, filtered)).toMatchObject({
+      success: false,
+      warnings: ['Unexpected call: list_available_tools'],
+    });
+    expect(score(full, { tool_name: 'get_current_state', executed: true, success: true }).success).toBe(true);
+  });
+
   it('accepts showing Reads after loading the requested file, while rejecting unrelated or failed changes', () => {
     const evaluator = new StrictAutomaticEvaluator({
       assessmentMode: 'completion',

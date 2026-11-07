@@ -1123,10 +1123,10 @@ class StrictAutomaticEvaluator {
     const unexpectedIndexes = this.completionMode
       ? sequence.unexpectedIndexes.filter(index => {
           const toolName = calls[index]?.tool_name;
-          if (this.isReadOnlyTool(toolName)) return false;
           if (expectedTools.some(expected => this.toolMatches(toolName, expected))) {
             return test.expectedResult?.allowRepeatedCalls === false;
           }
+          if (this.isReadOnlyTool(toolName)) return false;
           return !this.isCompletionToleratedExtra(calls[index], calls, expectedTools, expectedParameters);
         })
       : sequence.unexpectedIndexes;

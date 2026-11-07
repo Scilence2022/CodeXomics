@@ -637,6 +637,16 @@ class LLMContextService {
       if (['view_markdown', 'restore_chatbox'].includes(effect.capability)) {
         return successfulResults.some(result => result.result?.success === true && effect.matcher(result.tool, result));
       }
+      if (effect.capability === 'list_available_tools') {
+        return successfulResults.some(
+          result =>
+            effect.matcher(result.tool, result) &&
+            result.result?.success === true &&
+            result.result.total_tools > 0 &&
+            !result.result.filtered_category &&
+            !result.result.query_filtered
+        );
+      }
       if (effect.capability === 'load') {
         return successfulResults.some(
           result =>
