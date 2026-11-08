@@ -75,12 +75,7 @@ Important files:
 - `tools_registry/registry_manager.js` - loads YAML schemas, scores relevance, and provides intent keyword matching.
 - `tools_registry/tool_categories.yaml` - category metadata.
 
-Current registry facts:
-
-- 179 YAML tool schemas across 18 active categories.
-- 143 built-in tools mapped by `BuiltInToolsIntegration`.
-- Active YAML categories: `annotation`, `benchmark`, `coordination`, `data_management`, `database`, `external_apis`, `file_loading`, `file_operations`, `navigation`, `pathway`, `plugin_management`, `primer_design`, `protein`, `sequence`, `sequence_editing`, `system`, `task_management`, `utility`.
-- Built-in categories in `builtInToolsMap`: `file_loading`, `navigation`, `sequence`, `system`, `task_management`, `database`, `protein`, `data_management`, `external_apis`, `utility`, `sequence_editing`, `file_operations`, `annotation`, `primer_design`, `benchmark`.
+See [Agents.md](Agents.md#2-adding-or-changing-tools) for the current schema and tool counts.
 
 Tool classification rules:
 
@@ -111,7 +106,7 @@ Key policy memory:
 - Unknown tools fall through to a same-parameters duplicate block.
 - Re-runnable tools need explicit policy categories.
 - Primer design and benchmark tools need explicit policies because users commonly re-run them.
-- `wasToolExecutedSuccessfully()` searches conversation history for prior success markers, so stale system messages can affect policy decisions.
+- `wasToolExecutedSuccessfully()` reads structured execution records from `ConversationTranscriptService`. Assistant calls and matching results replay together in the provider's native protocol when all call IDs are available.
 
 ## 5. Multi-Agent System
 
@@ -158,26 +153,24 @@ Tool modules:
 
 Modes:
 
-- Tools mode exposes 96 tools.
+- Tools mode exposes the MCP tool set, filtered by credential permissions.
 - Agent mode exposes 3 tools: `codexomics_chat`, `list_genome_windows`, `switch_active_window`.
 - Mode priority: CLI argument, `CODEXOMICS_MCP_MODE`, `authConfig.mode`, then default `tools`.
 - Agent mode uses the same ChatBox `sendToLLM()` pipeline as in-app user input.
 - Agent mode timeout is 120 seconds; tools mode timeout is 30 seconds.
 
-Default transports:
-
-- HTTP/SSE: `3002`
-- WebSocket: `3003`
+- Streamable HTTP uses `/mcp` and legacy SSE uses `/sse` on port `3002`. The WebSocket compatibility listener uses port `3003`.
+- Start with `npm run start-with-mcp` for access to Electron genome windows through main-process IPC. The standalone server supports server-side development.
 
 ## 7. LLM Configuration
 
 Manager: `src/renderer/modules/LLMConfigManager.js`.
 
-Supported UI provider families include Local LLM, OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, and OpenRouter.
+The provider modal supports OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, MiniMax (Global and CN), Zhongkeyu, and a custom OpenAI-compatible endpoint.
 
 Rules:
 
-- Local base URL field is `localEndpoint`.
+- The Custom Endpoint base URL field is `localEndpoint`.
 - Cloud provider base URLs are `{provider}BaseUrl`.
 - Provider model dropdowns use an "Other (specify below)" option plus a hidden custom model input group.
 - The "Default Model" tab (`data-provider="models"`) writes `modelTypes.main` (`mainProvider` / `mainModel` / `mainCustomModel` element ids); `testConnection()` must not run against it.
@@ -242,7 +235,7 @@ Current preset CSS files:
 - `elegant.css`
 - `midnight.css`
 
-The project uses vanilla CSS only.
+The factory preset is Midnight. The saved user preference takes precedence.
 
 ## 11. Sequence Editing Vs. Task Checklist
 
@@ -280,12 +273,12 @@ Validation and deployment:
 
 - `npm run docs:validate` checks canonical/public version alignment and runs `mkdocs build --strict`.
 - `.github/workflows/docs.yml` runs the same checks on documentation pull requests and on `main`. The strict build rejects broken Markdown links and anchors. The workflow publishes to GitHub Pages from `main`.
-- `npm run docs:deploy` is the supported direct publication path. It builds from `docs/`, commits generated output to `gh-pages`, and pushes that branch. Never edit generated output directly.
+- `npm run docs:deploy` builds the site and pushes the generated `gh-pages` branch. The repository's active Pages source is the Actions deployment from `main`.
 - The live site is `https://scilence2022.github.io/CodeXomics/`.
 
 ## 13. Recent Engineering Memory
 
-The `0.722.0` production-readiness line combines security hardening, release engineering, CI coverage, documentation governance, and renderer-boundary fixes. The source release uses Electron `41.7.1` so installation remains compatible with the supported Node.js 20 and 22 CI matrix.
+See the [changelog](CHANGELOG.md#unreleased) for changes since the `0.723.0` tag.
 
 Release engineering memory:
 

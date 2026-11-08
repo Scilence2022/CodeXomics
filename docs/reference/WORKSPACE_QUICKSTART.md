@@ -2,6 +2,8 @@
 
 ## Installation
 
+Use Node.js 22.12 or newer in the 22.x line and npm 10 or newer.
+
 ```bash
 # Install all dependencies (root + workspaces)
 npm install
@@ -11,9 +13,11 @@ npm install
 
 ### Start Everything
 
+Set `CODEXOMICS_MCP_MASTER_KEY` or configure scoped MCP keys before running a command that starts the MCP listener. [MCP Server Guide](../user-guides/MCP_SERVER_GUIDE.md)
+
 ```bash
 npm run start-full
-# Starts: MCP Server (3000) + Marketplace (3001) + Electron App
+# Starts Electron with MCP, plus the marketplace server
 ```
 
 ### Start Individual Services
@@ -134,9 +138,9 @@ CodeXomics/
 
 ## Port Mapping
 
-- **3000**: MCP Server
-- **3001**: Plugin Marketplace Server
-- **Electron App**: Main window
+- **3002** for MCP Streamable HTTP (`/mcp`) and legacy SSE (`/sse`)
+- **3003** for MCP WebSocket compatibility
+- **3001** for the plugin marketplace server
 
 ## Quick Troubleshooting
 

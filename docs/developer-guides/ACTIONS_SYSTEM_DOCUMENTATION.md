@@ -417,6 +417,8 @@ strand: string
    - Update UI
    - Clear queue
 
+### GenBank Feature Preservation
+
 For compound GenBank features with exact local positions, a sequence edit
 between segments can shift the affected coordinates while preserving the
 segment order and the existing translation. Exact local coordinates in

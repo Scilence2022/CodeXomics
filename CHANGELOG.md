@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Make Midnight the default style for new settings. The left sidebar groups track controls, details, exploration, and file information into separate views. The overview ruler offers Full, Compact, and Minimal display modes.
+- Use a shared model catalog for the ChatBox picker and the **Default Model** tab. Both show friendly model names and include saved custom models.
+
+### Fixed
+
+- Keep queued sequence edits anchored to source coordinates and write results to a separate GenBank file. Compound features retain their segments and accession references, and affected CDS translations are checked during export.
+- Use bounded regional BAM and SAM reads and cancel work superseded by navigation. Coverage uses aligned bases from the CIGAR operations when depth is available. Empty BAM track diagnostics check the full reference list.
+- Score automatic benchmarks from the current request's calls and execution results. Accept declared search and GenBank alternatives, allow showing Reads after a successful import, and check that restriction digest, gel simulation, and track visibility workflows reach their requested steps.
+- Propagate MCP request cancellation and deadlines to active tool execution, and mark structured tool failures as errors in MCP replies.
+
 ### Security
 
 - Upgrade the desktop runtime to Electron 43.8.7. Source installs and packaging require Node.js 22.12 or later in the 22.x line. The standalone test suite remains covered on Node.js 20 and 22.

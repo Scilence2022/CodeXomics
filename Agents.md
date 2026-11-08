@@ -18,6 +18,7 @@ Versioned documentation must agree on all of the following:
 - Semantic application version: `0.723.0` in `package.json`, `src/version.js`, `CHANGELOG.md`, and current release notes.
 - Display version: `v0.723` where the compact in-app label is being described.
 - Documentation release label: `v0.723.0` in `mkdocs.yml` and the public documentation release selector.
+- Public version markers in `docs/index.md`, `docs/zh/index.md`, and both pages under `docs/landing/`.
 - Runtime baseline: Electron `43.8.7`, Node.js 22.12+ and npm 10+ for installs and builds, with Node.js 20 and 22 exercised by the standalone tests.
 
 ## 2. Adding Or Changing Tools
@@ -37,9 +38,9 @@ When adding a new AI-callable tool, update every relevant registry. Missing one 
 
 Current local facts to keep in mind:
 
-- `tools_registry/` currently contains 216 YAML tools across 18 active categories.
-- `builtInToolsMap` currently maps 178 built-in tools.
-- MCP tools mode currently exposes 96 tools.
+- `tools_registry/` contains 214 tool schemas across 18 category directories. `tool_categories.yaml` is category metadata.
+- `builtInToolsMap` maps 181 built-in tools.
+- MCP tools mode advertises 130 tools to an administrator. Scoped credentials receive a filtered list.
 - MCP agent mode exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
 
 ## 3. Keyword Regex Rules
@@ -97,7 +98,7 @@ Skills are multi-step workflow documents, not tools. See `docs/developer-guides/
   streaming, the 24-tool pin, and forcing Smart Executor / agent routing off belong to
   `oracle-assisted` alone, through `ChatManager.getBenchmarkRequestOverrides()` and the
   harness profile. Do not reintroduce unconditional `benchmarkAutomationActive` overrides.
-- When debugging `Policy blocked: <tool_name>`, check whether the tool has an explicit policy, whether identical parameters already succeeded, and whether stale system messages are being matched by `wasToolExecutedSuccessfully()`.
+- When debugging `Policy blocked: <tool_name>`, check the explicit policy and the prior successful calls with identical parameters in the structured execution ledger.
 
 ## 5a. Tool Result Protocol Rules
 
@@ -317,6 +318,6 @@ Model pickers:
 
 - Commit completed changes with a concise conventional commit message.
 - Maintain semantic version consistency in `package.json`, `src/version.js`, `CHANGELOG.md`, and release notes when doing release/version work.
-- Update the current version references in `README.md`, `Agents.md`, `Memory.md`, `docs/index.md`, `docs/user-guides/GETTING_STARTED.md`, and `mkdocs.yml` when cutting a release.
+- Update the current version references in `README.md`, `Agents.md`, `Memory.md`, the English and Chinese docs and landing pages, `docs/user-guides/GETTING_STARTED.md`, and `mkdocs.yml` when cutting a release.
 - Do not manually edit `package-lock.json`; run `npm install` if dependencies change.
 - If editing build or Pages config, validate with the relevant command before committing when tooling is available.

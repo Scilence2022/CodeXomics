@@ -10,9 +10,10 @@ Keep these files synchronized for release work:
 - `package-lock.json` after running `npm install` or version tooling
 - `src/version.js`
 - `CHANGELOG.md`
-- `docs/release-notes/RELEASE_NOTES_<version>.md`
+- `docs/release-notes/RELEASE_NOTES_v<major>.<minor>.md`
 - `mkdocs.yml` version metadata when publishing documentation for a new release line
-- `README.md`, `Agents.md`, `Memory.md`, and `docs/index.md`
+- `README.md`, `Agents.md`, and `Memory.md`
+- `docs/index.md`, `docs/zh/index.md`, and both HTML pages in `docs/landing/`
 - `docs/user-guides/GETTING_STARTED.md`
 
 Use the existing version scripts where possible:
@@ -65,7 +66,7 @@ The macOS build path uses the DMG background generation scripts before packaging
 Create release notes under `docs/release-notes/` with a filename that includes the version, for example:
 
 ```text
-RELEASE_NOTES_v0.722.md
+RELEASE_NOTES_v0.723.md
 ```
 
 Recommended sections:
@@ -80,11 +81,11 @@ Recommended sections:
 
 ## Git Tag
 
-Use the display tag style used by the project, for example:
+Tag the merged release commit with the full semantic version prefixed by `v`.
 
 ```bash
-git tag -a v0.722.0 -m "Release v0.722.0"
-git push origin v0.722.0
+git tag -a v0.723.0 -m "Release v0.723.0"
+git push origin v0.723.0
 ```
 
 ## GitHub Release
@@ -106,10 +107,6 @@ Before publishing, validate the canonical documents and strict site build:
 npm run docs:validate
 ```
 
-Publish through the Pages workflow on `main` or directly from the current checkout:
-
-```bash
-npm run docs:deploy
-```
+GitHub Pages uses the Documentation workflow on `main`. Merge the documentation pull request or run the workflow manually on `main` to deploy that branch's docs. `npm run docs:deploy` builds and pushes the generated `gh-pages` branch.
 
 Do not edit `site/` or generated `gh-pages` content manually.

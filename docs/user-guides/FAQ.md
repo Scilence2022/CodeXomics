@@ -6,25 +6,13 @@
 
 CodeXomics is an AI-native genome browser that provides comprehensive tools for genomic visualization, analysis, and interpretation. It features a multi-agent AI assistant you can talk to, an integrated plugin system, and support for multiple genomic data formats.
 
-### What's new in v0.722?
+### What's new in the current source?
 
-Version `v0.722` consolidates the platform architecture and adds production-readiness work around:
-
-- **Dynamic Tool Registry** with 179 YAML tool schemas across 18 active categories
-- **Multi-Agent AI System** with specialized agents for navigation, analysis, data, plugins, external tools, and research
-- **Dual-mode MCP Server** for direct tool calls or agent-routed prompts
-- **Plugin API 2.0.0** with marketplace infrastructure
-- **Multi-preset UI theming** using vanilla CSS preset files
-- **Expanded benchmark, primer, BLAST, protein, annotation, and task-management tools**
-- **Security and release engineering** with encrypted API-key storage, hardened renderer boundaries, logging, crash capture, auto-update support, and stronger CI gates
+The `0.723.0` release tag includes the application updater and its signed packaging workflow. Subsequent source changes cover GenBank editing and export, alignment browsing, ChatBox model controls, and benchmark execution. [Release notes](../release-notes/RELEASE_NOTES_v0.723.md) · [Unreleased changelog](https://github.com/Scilence2022/CodeXomics/blob/main/CHANGELOG.md#unreleased)
 
 ### What operating systems are supported?
 
-CodeXomics supports:
-
-- **macOS** 10.15 and later
-- **Windows** 10 and later
-- **Linux** (Ubuntu 20.04+ and other modern distributions)
+CodeXomics targets macOS, Windows, and Linux. Check the assets for your operating system and architecture, or see the platform build requirements. [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases) · [Build Instructions](../developer-guides/build-instructions.md#platform-requirements)
 
 ### Is CodeXomics free?
 
@@ -439,5 +427,3 @@ Absolutely:
 - Visit our **[Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md)** for technical issues
 - Browse the **[Documentation](https://github.com/Scilence2022/CodeXomics#readme)** for comprehensive information
 - Contact **support** for personalized assistance
-
-_This FAQ covers CodeXomics v0.722. For the latest information, see the [project repository](https://github.com/Scilence2022/CodeXomics)._

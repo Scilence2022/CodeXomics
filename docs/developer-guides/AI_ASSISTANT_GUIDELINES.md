@@ -8,7 +8,7 @@ This page summarizes the repository rules that matter most to AI coding assistan
 - Do not edit generated `site/` output directly.
 - Keep MkDocs nav paths relative to `docs/`.
 - Keep root `README.md`, `Agents.md`, and `Memory.md` synchronized with public docs when behavior changes.
-- Keep `0.722.0` semantic release references, the `v0.722` display label, and the `v0.722.0` MkDocs release label synchronized.
+- Keep the semantic release version, compact app display label, and MkDocs release label synchronized with the [canonical version rules](https://github.com/Scilence2022/CodeXomics/blob/main/Agents.md#1-documentation-and-github-pages).
 - Validate documentation changes with `npm run docs:validate`; publish requested online updates with `npm run docs:deploy`.
 
 ## Tool Changes
@@ -28,13 +28,7 @@ When adding or changing an AI-callable tool, update all relevant surfaces:
 
 ## Current Tool Facts
 
-| Surface                    | Count |
-| -------------------------- | ----: |
-| YAML registry schemas      |   180 |
-| Active registry categories |    18 |
-| Built-in ChatBox tools     |   143 |
-| MCP tools mode             |    96 |
-| MCP agent mode             |     3 |
+See the [canonical tool inventory](https://github.com/Scilence2022/CodeXomics/blob/main/Agents.md#2-adding-or-changing-tools) for current registry and MCP counts.
 
 MCP agent mode intentionally exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
 

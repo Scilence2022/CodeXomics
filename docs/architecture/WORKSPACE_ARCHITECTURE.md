@@ -118,9 +118,11 @@ npm install
 
 #### Development Mode (All Services)
 
+Configure MCP credentials before starting all services. [MCP Server Guide](../user-guides/MCP_SERVER_GUIDE.md)
+
 ```bash
 npm run start-full
-# Starts: MCP Server (3000) + Marketplace (3001) + Electron App
+# Starts Electron with MCP (HTTP 3002, WebSocket 3003) and the marketplace (3001)
 ```
 
 #### Application Only
