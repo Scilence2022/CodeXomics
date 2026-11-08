@@ -152,14 +152,15 @@ npm start                  # Start app (in another terminal)
 #### Development (Recommended)
 
 ```bash
-# Start everything together
+# Start everything together after configuring MCP credentials
 npm run start-full
 
-# Or individually:
-npm run mcp-server        # Terminal 1: MCP Server (port 3000)
-npm run marketplace:start # Terminal 2: Marketplace (port 3001)
-npm start                 # Terminal 3: Electron App
+# Or start the services in separate terminals:
+npm run start-with-mcp    # Electron with MCP (HTTP 3002, WebSocket 3003)
+npm run marketplace:start # Marketplace (port 3001)
 ```
+
+See the [MCP Server Guide](../user-guides/MCP_SERVER_GUIDE.md) for authentication and client setup.
 
 #### Marketplace Only
 

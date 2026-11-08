@@ -268,7 +268,7 @@
     </nav>
     <main id="top">
       <header class="wrap hero">
-        <div class="eyebrow">CODEXOMICS · v0.722.0</div>
+        <div class="eyebrow">CODEXOMICS · 源码 v0.723.0</div>
         <h1>AI 原生<br /><span>基因组浏览器</span></h1>
         <p class="lead">
           把基因组加载进一个可交互的工作区，用自然语言让 AI 代理导航视图、调用工具并完成真实的生物信息学分析。
@@ -359,10 +359,10 @@
             <ol>
               <li>
                 从 <a href="https://github.com/Scilence2022/CodeXomics/releases"><strong>Releases 下载</strong></a
-                >，或准备 Node.js 20/22 与 npm 10+。
+                >，或用 Node.js 22.x（至少 22.12）和 npm 10 或更高版本从源码启动。
               </li>
-              <li>在 <code>Options → Configure LLMs</code> 配置 provider 和模型。</li>
-              <li>通过 <code>File → Load File</code> 加载基因组。</li>
+              <li>在 <code>Options → Configure LLM Providers</code> 配置服务商和默认模型。</li>
+              <li>通过 <code>File → Load File → Genome File</code> 加载基因组。</li>
               <li>在 ChatBox 输入分析请求，查看工具执行结果。</li>
             </ol>
             <pre><code>git clone https://github.com/Scilence2022/CodeXomics.git
@@ -374,24 +374,19 @@ npm start</code></pre>
       </section>
       <section id="mcp">
         <div class="wrap">
-          <h2>MCP：连接外部客户端</h2>
+          <h2>通过 MCP 连接外部客户端</h2>
           <p class="intro">
-            将 CodeXomics 作为 MCP server 接入兼容客户端。工具模式提供完整工具列表，agent 模式通过应用内 ChatBox
-            处理自然语言任务。
+            启动带认证的 Electron MCP 服务后，外部客户端可按密钥权限调用工具，或在 agent 模式中将自然语言任务交给 ChatBox。
           </p>
-          <pre><code>npm run mcp-server
-# 默认地址
-HTTP/SSE: http://localhost:3002
-WebSocket: ws://localhost:3003
-
-# agent 模式
-npm run mcp-server -- --mode=agent</code></pre>
+          <pre><code>export CODEXOMICS_MCP_MASTER_KEY='replace-with-at-least-16-random-characters'
+npm run start-with-mcp</code></pre>
+          <p>客户端使用 <code>http://127.0.0.1:3002/mcp</code> 并发送 Bearer 密钥。<a href="../user-guides/MCP_SERVER_GUIDE/">MCP 配置指南</a></p>
         </div>
       </section>
     </main>
     <footer>
       <div class="wrap foot">
-        <span>CodeXomics · MIT License · v0.722.0</span
+        <span>CodeXomics · MIT License</span
         ><span
           ><a href="../zh/">中文文档</a>　<a href="index.html">English website</a>　<a
             href="https://github.com/Scilence2022/CodeXomics"

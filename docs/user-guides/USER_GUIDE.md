@@ -57,6 +57,8 @@ Download the latest available build from the [GitHub Releases](https://github.co
 
 ### Building from Source
 
+Use Node.js 22.12 or newer in the 22.x line and npm 10 or newer. See [Build Instructions](../developer-guides/build-instructions.md).
+
 ```bash
 # Clone the repository
 git clone https://github.com/Scilence2022/CodeXomics.git
@@ -65,7 +67,7 @@ cd CodeXomics
 # Install dependencies
 npm install
 
-# Run in development mode
+# Launch the app
 npm start
 
 # Build for your platform
@@ -111,10 +113,10 @@ display a warning. Previously saved keys remain available when the OS store reco
 **Model Lists Stay Current:**
 
 - Each provider tab fetches its live model list once credentials are saved, so newly released models appear without an app update
-- Models reported by the provider are grouped at the top of the **Default Model** dropdown; the models shipped with CodeXomics remain available below it
+- A successful refresh updates the provider tab to show the reported models. **Other (specify below)** remains available for custom model IDs
 - The line under the dropdown shows how many models were reported and when the list was last updated
 - Lists refresh automatically when you open a provider tab (cached for 6 hours) and immediately after you change an API key or endpoint; **Refresh** re-fetches on demand
-- Providers without a model-list endpoint keep the built-in list and say so — nothing is lost when a refresh fails
+- The built-in list is the fallback when a live list is unavailable
 
 **Configure Agent Settings:**
 
@@ -132,29 +134,19 @@ display a warning. Previously saved keys remain available when the OS store reco
 #### 2. Load Your First Genome
 
 ```
-File → Load File → Select FASTA/GenBank file
+File → Load File → Genome File
 ```
 
-**Supported Formats:**
-
-- **FASTA** (.fasta, .fa, .fna) - Sequence data
-- **GenBank** (.gb, .gbk) - Annotated sequences
-- **GFF/GTF** (.gff, .gtf) - Feature annotations
-- **BED** (.bed) - Genomic intervals
-- **VCF** (.vcf) - Variant data
-- **BAM/SAM** (.bam, .sam) - Read alignments
-
-**Sample Data:**
-CodeXomics includes E. coli genome and pathway data for testing.
+The source checkout includes `test_data/ECOLI.gbk` as a sample genome. See the [format table](GETTING_STARTED.md#load-data) for reference and supporting files.
 
 #### 3. Start Exploring
 
 **Navigate the Genome:**
 
-- Use the position slider to pan
-- Enter coordinates (e.g., "1000-5000") in the position input
-- Click zoom buttons (+/-) to adjust view scale
-- Right-click and drag to select regions
+- Use the overview ruler to pan or resize the viewport. Its display control cycles **Full**, **Compact**, and **Minimal** and saves the selected mode.
+- Drag in the coordinate ruler to select a sequence range. Use **Full** or **Compact** to show this ruler.
+- Enter coordinates in the position input or use the zoom and paging buttons in the toolbar.
+- To save the visible range, open **Explore → Bookmarks → Current View**, enter a name, and save. Select the bookmark later to return to its coordinates.
 
 **Search for Genes:**
 
@@ -324,23 +316,7 @@ Switch modes using: `View → Grid/List/Details`
 
 #### Loading Files
 
-**Single File:**
-
-```
-File → Load File → Select file
-```
-
-**Multiple Files:**
-
-```
-File → Load Multiple Files → Select annotation files
-```
-
-**Drag and Drop:**
-
-- Drag files directly onto the genome viewer
-- Automatically detects file type
-- Prompts for additional information if needed
+Choose the file role under **File → Load File**. To overlay reads, load the reference FASTA or GenBank first, then choose **Reads File**. Keep a BAM's `.bai` or `.csi` index beside it for indexed regional queries. For alignment troubleshooting, see [Reads Track Is Empty](TROUBLESHOOTING_GUIDE.md#reads-track-is-empty).
 
 #### Exporting Data
 
@@ -370,6 +346,8 @@ Use **Sequence Editing** to queue operations on the loaded genome. Paste replace
 Review the operations in **Edit Queue**. Positions refer to the source genome. CodeXomics adjusts downstream positions during execution and stops if an earlier edit makes a later target ambiguous. **Run Edit Queue** writes the result to a separate GenBank file and opens it in a new window when available.
 
 **Session Checkpoints** restore the pending queue, sequence clipboard and saved view for the loaded genome. To return to the original bases after a successful export, open the original genome file.
+
+For compound GenBank features, the exporter preserves segment structure and checks CDS translation when an edit affects coding sequence. See [GenBank feature preservation](../developer-guides/ACTIONS_SYSTEM_DOCUMENTATION.md#genbank-feature-preservation) for review and export behavior.
 
 ---
 
@@ -639,72 +617,24 @@ Tools → Bioinformatics Tools → STRING Networks
 
 ## Benchmark Testing
 
-Evaluate AI performance with comprehensive benchmark suites.
+The benchmark runs ChatBox tool-calling cases and records their calls, arguments, and execution results.
 
 ### Opening Benchmark Interface
 
 ```
-Benchmark & Debug → Open Benchmark
+Options → LLM Benchmark
 ```
 
-### Test Categories
+### Test Suites
 
-**1. Navigation Tests** (4 tests)
-
-- Browser navigation
-- Position jumping
-- Gene search
-- Region selection
-
-**2. Analysis Tests** (5 tests)
-
-- Sequence analysis
-- GC content calculation
-- Codon usage
-- ORF finding
-
-**3. Data Loading Tests** (3 tests)
-
-- File loading
-- Format parsing
-- Data validation
-
-**4. Search Tests** (4 tests)
-
-- Gene search
-- Feature search
-- Database queries
-- Result validation
-
-**5. External Database Tests** (3 tests)
-
-- API integration
-- Data retrieval
-- Link validation
-
-**6. Workflow Tests** (3 tests)
-
-- Multi-step analysis
-- Tool coordination
-- Result integration
+**Automatic Simple** covers individual operations such as navigation, file import, and sequence analysis. **Automatic Complex** covers workflows such as restriction digest followed by gel simulation or changing and rechecking track visibility. Manual suites provide instructions and a verification checklist for human scoring.
 
 ### Running Tests
 
-**Automatic Tests:**
-
-1. Select test suites
-2. Configure LLM settings
-3. Click "Run Selected Tests"
-4. Monitor real-time progress
-5. Review results
-
-**Manual Tests:**
-
-1. Follow step-by-step instructions
-2. Complete verification checklist
-3. Provide scores (0-10)
-4. Add comments
-5. Submit evaluation
+1. Configure the ChatBox provider and model, then select the suites or cases to run.
+2. For file-based cases, set **Default File Directory** to the folder containing the named fixtures. Check the case instructions for inputs or a genome that must already be loaded.
+3. Choose **Production parity** to use the current ChatBox settings, or **Oracle-assisted** for the controlled run that stops when the expected calls have executed.
+4. Select **Start Benchmark**. For manual cases, follow the checklist and submit your evaluation.
 
 ### Viewing Results
 
@@ -727,6 +657,8 @@ Benchmark & Debug → Open Benchmark
 - JSON export
 - HTML reports
 - LLM conversation logs
+
+Automatic pass/fail is based on structured evidence from the current request. Use the recorded harness mode when comparing runs. [Benchmark Methods](../reference/BENCHMARK_METHODS.md)
 
 ---
 
@@ -776,14 +708,7 @@ Plugins → Marketplace
 
 ### MCP Integration
 
-Model Context Protocol enables seamless tool integration.
-
-**Benefits:**
-
-- Standardized tool interfaces
-- Cross-platform compatibility
-- Enhanced AI tool selection
-- Better error handling
+Use the authenticated Electron MCP listener to let external clients call tools against the current workspace or send a prompt to the ChatBox. [MCP Server Guide](MCP_SERVER_GUIDE.md)
 
 ### Custom Annotations
 
@@ -970,7 +895,5 @@ A: AI provides helpful insights but should be validated. Use benchmark tests to 
 - Follow changelog
 
 ---
-
-**CodeXomics v0.722** - Intelligent Bioinformatics Analysis with Multi-Agent AI
 
 Made with ❤️ by the CodeXomics Team

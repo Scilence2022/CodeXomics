@@ -13,7 +13,7 @@ _Talk to your genome — AI agents drive the view and run the analysis._
 
 CodeXomics is an AI-native genome browser — a cross-platform Electron desktop app where conversational AI agents drive the visualization and run real biological analyses, with built-in tool execution, plugin development, and Model Context Protocol (MCP) integration.
 
-Current source release: `0.723.0` (shown as `v0.723` in the app). Build from source to get changes not yet in the published installers.
+Current source release: `0.723.0` (shown as `v0.723` in the app). See the [changelog](CHANGELOG.md#unreleased) for changes in the current source and [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases) for available installers.
 
 [Website](https://scilence2022.github.io/CodeXomics/landing/) •
 [中文 Landing Page](https://scilence2022.github.io/CodeXomics/landing/index-zh.html) •
@@ -32,13 +32,10 @@ Current source release: `0.723.0` (shown as `v0.723` in the app). Build from sou
 
 CodeXomics combines an interactive genome browser with executable AI analysis. Load a genome, ask a question in the ChatBox, and let the app navigate the view, call bioinformatics tools, and return results in the same workspace.
 
-Core capabilities:
-
-- Browse FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and `.prj.GAI` project files.
-- Run BLAST, GC-content analysis, primer design, protein structure lookup, pathway workflows, and literature research.
-- Compare genes, sequences, reads, variants, custom annotations, and quantitative tracks with SVG and Canvas rendering.
-- Configure cloud or local LLM-compatible providers and use multi-agent routing for multi-step work.
-- Extend the app with plugins or connect external clients through the MCP server.
+- Browse FASTA and GenBank genomes, overlay annotations, variants, SAM/BAM alignments, WIG/BigWig tracks and operons, and organize work in `.prj.GAI` projects. [Supported inputs](docs/user-guides/GETTING_STARTED.md#load-data)
+- Run BLAST, primer design, virtual restriction digest, gel simulation, and protein structure lookup from the ChatBox. [User Guide](docs/user-guides/USER_GUIDE.md)
+- Queue sequence edits and export a separate GenBank file. Run Deep Gene Research to create evidence-backed annotation ChangeSets for curator review. [Sequence editing](docs/user-guides/USER_GUIDE.md#sequence-editing) · [Annotation review](docs/developer-guides/AUTONOMOUS_ANNOTATION.md)
+- Choose a cloud or OpenAI-compatible local model, run the in-app benchmark, or extend the app through plugins and MCP. [Benchmark testing](docs/user-guides/USER_GUIDE.md#benchmark-testing) · [MCP Server Guide](docs/user-guides/MCP_SERVER_GUIDE.md)
 
 The tool registry and agent runtime are implementation details that evolve with the release; see the [architecture guide](docs/architecture/CodeXomics_Multi_Agent_System_Technical_Specification.md) for current internals.
 
@@ -110,8 +107,8 @@ npm run build:all
 ## Quick Start
 
 1. Launch CodeXomics after [downloading a release](https://github.com/Scilence2022/CodeXomics/releases) or starting the source build.
-2. Configure an AI provider in `Options -> Configure LLMs`. OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, and local endpoints are supported.
-3. Load a genome or project through `File -> Load File` or `File -> Open Project`.
+2. Open **Options → Configure LLM Providers**, save a provider, and choose the **Default Model**. The ChatBox model picker can override it for a conversation.
+3. Load a reference with **File → Load File → Genome File** or open a `.prj.GAI` project with **File → Open Project**.
 4. Add optional annotation, variant, reads, WIG, or operon files.
 5. Ask the assistant to run concrete analyses, for example:
 
@@ -121,42 +118,41 @@ Calculate GC content for the selected region.
 Design primers around lacZ.
 Search AlphaFold for the selected protein.
 Create a local BLAST database from the current genome.
-Run the automatic benchmark suite.
+Run a virtual restriction digest with EcoRI and simulate an agarose gel.
 ```
 
 ## MCP Server
 
-Start the server:
+To give external clients access to the loaded genome, start Electron with its authenticated MCP listener.
 
 ```bash
-npm run mcp-server
+export CODEXOMICS_MCP_MASTER_KEY='replace-with-at-least-16-random-characters'
+npm run start-with-mcp
 ```
 
-Start agent mode:
+To delegate natural-language requests to the configured ChatBox model, start the app in agent mode.
 
 ```bash
-npm run mcp-server -- --mode=agent
+CODEXOMICS_MCP_MODE=agent npm run start-with-mcp
 ```
 
-Default endpoints:
-
-- HTTP/SSE: `http://localhost:3002`
-- WebSocket: `ws://localhost:3003`
-
-Tools mode exposes the full MCP tool list. Agent mode exposes `codexomics_chat`, `list_genome_windows`, and `switch_active_window`, then routes analysis through the same ChatBox LLM pipeline used inside the app.
-
-Example HTTP/SSE client configuration:
+Use the Streamable HTTP endpoint and send the server key as a bearer token.
 
 ```json
 {
   "mcpServers": {
     "CodeXomics": {
-      "url": "http://localhost:3002",
-      "transportType": "streamable-http"
+      "url": "http://127.0.0.1:3002/mcp",
+      "transportType": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer YOUR_CODEXOMICS_MCP_KEY"
+      }
     }
   }
 }
 ```
+
+Tools mode is the default and filters tools by credential permissions. Agent mode exposes `codexomics_chat`, `list_genome_windows`, and `switch_active_window`. Standalone server development, scoped credentials, and legacy transports are covered in the [MCP Server Guide](docs/user-guides/MCP_SERVER_GUIDE.md).
 
 ## Architecture At A Glance
 
@@ -195,30 +191,7 @@ CodeXomics/
 
 The dynamic registry lives at the repository root in `tools_registry/`. Each tool has its own YAML schema with parameters, keywords, usage examples, and relationships. The registry manager retrieves relevant tools per query instead of injecting every capability into every prompt.
 
-Current YAML categories:
-
-| Category            | YAML tools |
-| ------------------- | ---------: |
-| `navigation`        |         26 |
-| `sequence`          |         18 |
-| `coordination`      |         15 |
-| `file_operations`   |         14 |
-| `database`          |         13 |
-| `external_apis`     |         13 |
-| `plugin_management` |         12 |
-| `sequence_editing`  |         11 |
-| `annotation`        |         10 |
-| `benchmark`         |          8 |
-| `data_management`   |          7 |
-| `file_loading`      |          7 |
-| `primer_design`     |          6 |
-| `protein`           |          5 |
-| `system`            |          5 |
-| `task_management`   |          5 |
-| `pathway`           |          2 |
-| `utility`           |          2 |
-
-When adding or changing tools, keep the YAML registry, built-in tool map, `ToolNames.js`, `FunctionCallsOrganizer`, MCP tools, and execution policy rules synchronized. The full checklist is in [Agents.md](Agents.md).
+The [category definitions](tools_registry/tool_categories.yaml) describe how schemas are grouped. See [Agents.md](Agents.md#2-adding-or-changing-tools) for the current inventory and the checklist for keeping ChatBox and MCP tool contracts in sync.
 
 ## Documentation
 
@@ -230,15 +203,15 @@ GitHub Pages is built from `docs/` using MkDocs Material and configured by [mkdo
 
 Do not edit generated `site/` output directly. Update files under `docs/` and rebuild Pages from source.
 
-Local documentation commands:
+Install the documentation dependencies in a Python environment, then preview or validate the site.
 
 ```bash
+python -m pip install 'mkdocs>=1.6,<2' mkdocs-material mkdocs-minify-plugin
 npm run docs:serve      # Preview at http://127.0.0.1:8000
 npm run docs:validate   # Check version/docs consistency and build strictly
-npm run docs:deploy     # Publish the current docs to gh-pages
 ```
 
-The public site is deployed from the same `docs/` sources. Release documentation must keep `README.md`, `Agents.md`, `Memory.md`, `CHANGELOG.md`, `docs/`, and `mkdocs.yml` synchronized.
+The [Documentation workflow](.github/workflows/docs.yml) validates pull requests and publishes the site from `main`. See the [Developer Guide](docs/developer-guides/DEVELOPER_GUIDE.md#documentation) for editing and release conventions.
 
 ## Development
 

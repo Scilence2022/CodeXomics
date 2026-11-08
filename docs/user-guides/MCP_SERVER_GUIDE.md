@@ -9,7 +9,7 @@ The CodeXomics Model Context Protocol (MCP) server lets external AI clients insp
 | Tools mode | External clients call specific CodeXomics tools directly.                          | Current registry, filtered to the authenticated key's scopes     |
 | Agent mode | External clients send natural-language prompts to the in-app ChatBox LLM pipeline. | `codexomics_chat`, `list_genome_windows`, `switch_active_window` |
 
-Tools mode is the default. Agent mode is useful when you want CodeXomics to choose and sequence tools internally.
+Tools mode is the default. Agent mode lets CodeXomics choose and sequence tools internally.
 
 ## Start The Server
 
@@ -19,27 +19,19 @@ Authentication is fail-closed. Configure either a master key or scoped API keys 
 export CODEXOMICS_MCP_MASTER_KEY='replace-with-at-least-16-random-characters'
 ```
 
-Then, from the repository root:
-
-```bash
-npm run mcp-server
-```
-
-Start agent mode:
-
-```bash
-npm run mcp-server -- --mode=agent
-```
-
-Start the Electron app and MCP server together:
+From the repository root, start Electron with its MCP listener to give clients access to the genome workspace.
 
 ```bash
 npm run start-with-mcp
 ```
 
-This is the recommended full-product launcher. The authenticated MCP listener runs inside Electron, so tools that need the loaded genome are routed through main-process IPC without giving the renderer a privileged network bridge credential. `npm run mcp-server` remains useful for standalone/server-side development, but it cannot access an Electron genome window under the fail-closed configuration.
+The listener runs inside Electron and routes genome calls through main-process IPC. Use the standalone listener for server-side development and tools that can run without a genome window.
 
-The combined launcher exits with a non-zero status if MCP authentication is invalid, a listener port cannot be bound, or MCP startup otherwise fails; it never silently continues in app-only mode.
+```bash
+npm run mcp-server
+```
+
+The combined launcher exits with a non-zero status if authentication is invalid or a listener fails to start.
 
 Default transports:
 
@@ -94,11 +86,11 @@ Non-admin scoped keys can call only mapped annotation tools. See [Autonomous Ann
 
 ## Agent Mode Configuration
 
-Start the server with `--mode=agent`, then connect to the same authenticated HTTP endpoint:
+Set `CODEXOMICS_MCP_MODE=agent` for the Electron launcher, then connect to the same authenticated HTTP endpoint.
 
 ```bash
 export CODEXOMICS_MCP_MASTER_KEY='replace-with-at-least-16-random-characters'
-npm run mcp-server -- --mode=agent
+CODEXOMICS_MCP_MODE=agent npm run start-with-mcp
 ```
 
 Agent mode requires a configured LLM provider in CodeXomics. If the ChatBox is already processing a request, agent mode returns a busy response instead of starting a second run.

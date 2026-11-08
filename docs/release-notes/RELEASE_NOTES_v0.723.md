@@ -11,6 +11,8 @@ This release completes the application updater and its signed release pipeline,
 and incorporates main-menu fixes and previously unreleased application improvements.
 Current source builds use Electron `43.8.7` and require Node.js 22.12+ and npm 10+. The standalone test matrix covers Node.js 20 and 22.
 
+For changes on `main` since this tag, see the [Unreleased changelog](https://github.com/Scilence2022/CodeXomics/blob/main/CHANGELOG.md#unreleased).
+
 ## Application Updates
 
 - One update window shows checks, release notes, download progress, cancellation,

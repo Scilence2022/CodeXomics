@@ -4,12 +4,12 @@ This guide summarizes the current CodeXomics development workflow and architectu
 
 ## Prerequisites
 
-- Node.js 20 or 22.
+- Node.js 22.12 or newer in the 22.x line.
 - npm 10 or newer.
 - Git.
 - Platform build tools required by Electron Builder for your operating system.
 
-CodeXomics `0.722.0` uses Electron `41.7.1` for compatibility with the supported Node.js CI matrix.
+Current source builds use Electron `43.8.7`. CI also runs standalone tests on Node.js 20 after installing dependencies with Node.js 22. See [Build Instructions](build-instructions.md).
 
 ## Setup
 
@@ -42,7 +42,6 @@ npm run dev
 | `npm run version-validate`  | Validate version consistency                  |
 | `npm run docs:serve`        | Preview the MkDocs site locally               |
 | `npm run docs:validate`     | Validate docs and build the site strictly     |
-| `npm run docs:deploy`       | Publish documentation to `gh-pages`           |
 | `npm run build`             | Build the current platform                    |
 | `npm run build:mac`         | Build macOS packages                          |
 | `npm run build:win`         | Build Windows packages                        |
@@ -129,12 +128,7 @@ Important files:
 - `builtin_tools_integration.js` maps local built-ins to ChatManager/service methods.
 - `tool_categories.yaml` describes categories.
 
-Current registry snapshot:
-
-- 179 YAML tool schemas.
-- 18 active YAML categories.
-- 143 built-in ChatBox tools.
-- 96 MCP tools in tools mode.
+The ChatBox registry and MCP tool set have separate inventories. See the current counts and tool registration checklist in [Agents.md](https://github.com/Scilence2022/CodeXomics/blob/main/Agents.md#2-adding-or-changing-tools).
 
 ### MCP Server
 
@@ -144,6 +138,7 @@ Tool modules live under `src/mcp-tools/`:
 
 - navigation
 - sequence
+- evo2
 - protein
 - database
 - data
@@ -155,7 +150,7 @@ Tool modules live under `src/mcp-tools/`:
 - primer
 - annotation
 
-Tools mode exposes the full MCP list. Agent mode exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
+Tools mode filters the MCP list by the authenticated key's permissions. Agent mode exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`. Use the Electron listener for tools that need genome state. [MCP Server Guide](../user-guides/MCP_SERVER_GUIDE.md)
 
 ### Plugin System
 
@@ -231,11 +226,15 @@ Do not:
 - Point MkDocs nav at root-level files outside `docs/`.
 - Hand-edit generated content on the `gh-pages` branch.
 
-Run this before committing documentation or release metadata changes:
+Install the Python dependencies used by the Documentation workflow. Run validation before committing documentation or release metadata changes.
 
 ```bash
+python -m pip install 'mkdocs>=1.6,<2' mkdocs-material mkdocs-minify-plugin
 npm run docs:validate
+npm run docs:serve
 ```
+
+Validation checks version and runtime markers, navigation targets, and Markdown links and anchors in the strict MkDocs build. The [Documentation workflow](https://github.com/Scilence2022/CodeXomics/blob/main/.github/workflows/docs.yml) runs the same command on pull requests and deploys the site from `main`.
 
 ## Contribution Notes
 

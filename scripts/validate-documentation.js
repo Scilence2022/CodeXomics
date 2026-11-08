@@ -22,6 +22,9 @@ const checks = [
   ['CHANGELOG.md', `## [${semanticVersion}]`],
   ['docs/index.md', `version-${semanticVersion}`],
   ['docs/index.md', `\`${semanticVersion}\` (\`${displayVersion}\` display)`],
+  ['docs/zh/index.md', `当前源码版本为 \`${semanticVersion}\`，应用内显示为 \`${displayVersion}\``],
+  ['docs/landing/index.html', `Source ${displayVersion} &nbsp;`],
+  ['docs/landing/index-zh.html', `源码 ${docsVersion}</div>`],
   ['docs/user-guides/GETTING_STARTED.md', `CodeXomics \`${semanticVersion}\``],
   ['mkdocs.yml', `name: ${docsVersion}`],
   ['mkdocs.yml', `default: ${docsVersion}`],
@@ -31,6 +34,7 @@ const checks = [
   ['Agents.md', `Electron \`${electronVersion}\``],
   ['Memory.md', `Electron \`${electronVersion}\``],
   ['docs/user-guides/GETTING_STARTED.md', `Electron \`${electronVersion}\``],
+  ['docs/developer-guides/DEVELOPER_GUIDE.md', `Electron \`${electronVersion}\``],
 ];
 
 const errors = [];

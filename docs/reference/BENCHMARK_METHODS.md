@@ -6,11 +6,11 @@ We developed a comprehensive benchmark framework to systematically evaluate the 
 
 ## Benchmark Architecture
 
-The benchmark system is implemented as a modular framework integrated into CodeXomics, consisting of the test execution engine, strict automatic evaluator, and reporting system. The execution engine captures request-scoped calls and results across multiple function-calling rounds. The automatic evaluator assesses retrieval coverage, exact tool sequence, argument correctness, registered JSON Schema validity, and execution success. The reporting system aggregates these results without treating natural-language claims as execution evidence.
+The in-app harness captures tool calls and results across the current request's function-calling rounds. The automatic evaluator checks tool coverage, arguments, JSON Schema validity, and observed execution. It also records retrieval and sequence diagnostics. The report uses structured calls and results as execution evidence.
 
 ## Test Suite Design
 
-The production tool-calling evaluation covered here contains 172 cases: 143 Automatic Simple tests and 29 Automatic Complex tests. The simple suite targets individual genomic operations such as gene search, sequence retrieval, and navigation. The complex suite covers multi-step workflows and validates every required step in order. Manual suites are outside this evaluation and training-data boundary.
+The current source defines 143 Automatic Simple cases and 29 Automatic Complex cases. The simple suite covers operations such as gene search, sequence retrieval, and navigation. The complex suite covers multi-step workflows. Manual cases use a separate human-scored workflow. [Running tests](../user-guides/USER_GUIDE.md#benchmark-testing)
 
 ## Test Execution Protocol
 
@@ -51,26 +51,28 @@ the following hold:
 
 1. The current request produced an authoritative structured tool call.
 2. Every expected capability is covered by a matching or explicitly equivalent
-   tool; step order is free because workflows often have several valid orders.
-3. Every expected concrete argument matches, or the call uses a
-   schema-documented alternative key (for example `navigate_to_position`
-   accepts either `position` or a start-only call); omitted schema defaults
-   remain valid.
+   tool. This tier matches required calls across the request without requiring
+   the oracle's order. A repeated check still needs a distinct call for each
+   expected occurrence.
+3. Expected concrete arguments match an accepted parameter shape. An omitted
+   argument satisfies a concrete expectation when the tool's registered default
+   supplies the expected value. For example, `navigate_to_position` accepts
+   `position` or a start-only call for a centered jump.
 4. Every call satisfies the current registered JSON Schema.
 5. Every expected call completed successfully, except tests explicitly marked
    call-only.
-6. Extra calls are tolerated when they are read-only, another instance of a
-   required capability, or the documented follow-up of a required workflow
+6. Extra calls are tolerated when they are read-only, a repeat the case permits,
+   or the documented follow-up of a required workflow
    step (for example `execute_actions` after a queued edit, or
    `export_genbank_format` repeating the file `execute_actions` already
-   writes). Other unexpected state-changing calls still fail.
+   writes). Explicitly showing the Reads track is also allowed after a matching
+   successful reads import. Other unexpected state-changing calls still fail.
 
 Text mentions, inferred calls, stale tracker entries, and debug-log matches earn no credit. Failed cases may receive diagnostic partial scores, but the pass flag remains strict.
 
-The stricter **native-function-contract** and **real-tool-execution** tiers
-remain available as diagnostics (exact sequence, exact argument keys, no
-unexpected calls) and are what the offline audit harness reports before the
-task-completion rescore.
+The **native-function-contract** and **real-tool-execution** diagnostic tiers
+check the expected sequence and argument contract more strictly. The offline
+audit reports these tiers before the task-completion rescore.
 
 ## Scoring and Statistical Analysis
 
@@ -96,6 +98,6 @@ Automatic benchmark definitions are JavaScript objects in `src/renderer/modules/
 
 The benchmark framework supports both automated batch execution and interactive single-test modes, accommodating different research workflows. Automated execution processes entire test suites sequentially with configurable delays between tests to prevent resource contention, while interactive mode allows researchers to execute individual tests with detailed real-time logging for debugging and analysis purposes. All execution modes produce standardized output formats compatible with downstream statistical analysis tools and data visualization platforms.
 
-## Ethical Considerations
+## Data Handling
 
-The benchmark framework was designed with consideration for responsible AI evaluation practices. Test instructions avoid potentially harmful scenarios and focus exclusively on legitimate genomic analysis tasks. All benchmark data and results are retained locally without transmission to external services, protecting any proprietary genomic information that may be involved in testing. The framework includes safeguards against infinite retry loops and excessive resource consumption, with hard limits on execution time and API call frequency to ensure responsible use of computational resources.
+CodeXomics stores benchmark results locally. Model requests follow the selected provider configuration. When a benchmark uses a cloud model, the instruction, conversation messages and tool results included in the request go to that provider. Individual cases can also call external services such as NCBI BLAST.

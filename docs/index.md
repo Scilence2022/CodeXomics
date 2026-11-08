@@ -12,7 +12,7 @@ _Talk to your genome — AI agents drive the view and run the analysis._
 
 CodeXomics is an AI-native genome browser — a cross-platform Electron workspace where conversational AI agents drive the visualization and run real biological analyses, with plugin development, benchmark testing, and Model Context Protocol (MCP) integration.
 
-The current release is `v0.723`. Download installers from [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases), or build from source for the latest changes.
+This site documents the current source, version `0.723.0` (`v0.723` display). See [GitHub Releases](https://github.com/Scilence2022/CodeXomics/releases) for available installers and the [changelog](https://github.com/Scilence2022/CodeXomics/blob/main/CHANGELOG.md#unreleased) for changes since the release tag.
 
 <div class="grid cards" markdown>
 
@@ -52,7 +52,7 @@ The current release is `v0.723`. Download installers from [GitHub Releases](http
 
 ## Install And Start
 
-For the fastest start, [download the latest release](https://github.com/Scilence2022/CodeXomics/releases). For a source checkout, use Node.js 22.12+ and npm 10+:
+For a source checkout, use Node.js 22.12 or newer in the 22.x line and npm 10 or newer.
 
 ```bash
 git clone https://github.com/Scilence2022/CodeXomics.git
@@ -61,28 +61,18 @@ npm install
 npm start
 ```
 
-Then open `Options -> Configure LLMs`, add an API key or local endpoint, load a genome with `File -> Load File`, and ask the ChatBox to navigate or analyze it. The [Getting Started guide](user-guides/GETTING_STARTED.md) covers the first session in detail.
-
-## What You Can Do
-
-- Browse FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and `.prj.GAI` project files.
-- Ask the ChatBox to search features, inspect tracks, calculate GC content, design primers, run BLAST, look up protein structures, or research a gene.
-- Connect external clients through the [MCP Server](user-guides/MCP_SERVER_GUIDE.md), or extend the app with plugins.
-
-The current release is `0.723.0` (`v0.723` display). See the [release notes](release-notes/RELEASE_NOTES_v0.723.md) for version-specific changes.
+Load a genome with **File → Load File → Genome File**. To use the ChatBox, open **Options → Configure LLM Providers**, save a provider, and select a default model. [Getting Started](user-guides/GETTING_STARTED.md)
 
 ### Genome Visualization
 
-- Load FASTA, GenBank, GFF/GTF, BED, VCF, SAM/BAM, WIG, KGML, and `.prj.GAI` projects.
-- Explore genes, sequence, GC content/skew, variants, reads, protein data, pathway views, and custom annotation tracks.
-- Use SVG and Canvas renderers for responsive browsing across dense genomic datasets.
+- Browse FASTA and GenBank genomes with annotations, variants, SAM/BAM alignments, and WIG/BigWig tracks. [Supported inputs](user-guides/GETTING_STARTED.md#load-data)
+- Queue sequence edits and export a separate GenBank file. [Sequence editing](user-guides/USER_GUIDE.md#sequence-editing)
 
 ### AI-Assisted Analysis
 
-- Configure OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, or local LLM-compatible endpoints.
-- Ask the ChatBox to navigate, search, analyze sequence content, design primers, run BLAST workflows, retrieve protein structures, and manage tasks.
-- Use multi-agent routing for complex workflows that need decomposition and tool coordination.
-- Run evidence-backed Deep Gene Research as a background task: live progress stays pinned in the ChatBox while it runs, and a reviewable annotation ChangeSet is created automatically when it completes — never applied without curator approval.
+- Ask the ChatBox to navigate, search, design primers, run BLAST, or simulate restriction digest and gel electrophoresis. [User Guide](user-guides/USER_GUIDE.md#ai-assistant)
+- Track Deep Gene Research in the ChatBox and review evidence-backed annotation ChangeSets in the Review Center. [Deep Gene Research](user-guides/USER_GUIDE.md#deep-gene-research)
+- Run automatic benchmarks in production-parity or oracle-assisted mode. [Benchmark Methods](reference/BENCHMARK_METHODS.md)
 
 ### Extensibility
 
@@ -92,9 +82,7 @@ The current release is `0.723.0` (`v0.723` display). See the [release notes](rel
 
 ### MCP Integration
 
-- Run CodeXomics as a standalone MCP server.
-- Use tools mode for direct tool calls.
-- Use agent mode when an external client should delegate natural-language prompts to the in-app AI pipeline.
+- Start Electron with the authenticated MCP listener to give clients access to genome windows. Use tools mode for direct calls or agent mode to delegate natural-language prompts to the ChatBox. [MCP Server Guide](user-guides/MCP_SERVER_GUIDE.md)
 
 ## Screenshots
 

@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you resolve common issues encountered while using **CodeXomics v0.722**.
+Use this guide to diagnose installation, file loading, model configuration, and analysis issues in CodeXomics.
 
 ## 🚨 Common Installation Issues
 
@@ -230,6 +230,12 @@ This guide helps you resolve common issues encountered while using **CodeXomics 
 2. **Check for special characters** in file names
 3. **Verify file permissions** are readable
 4. **Move files to project directory** for better management
+
+### Reads Track Is Empty
+
+1. Load the reference genome used for alignment. Compare the selected chromosome or contig with the names in the SAM/BAM header. If the track reports that the current chromosome is missing from the BAM, switch to a matching reference or load the matching assembly.
+2. Confirm that **Reads** is visible under **Display → Track Control**. Check the mapping-quality and secondary/supplementary alignment filters, then navigate to a region with known coverage.
+3. For BAM, keep the matching `.bai` or `.csi` index in the same directory as the file. CodeXomics checks both `sample.bam.bai` and `sample.bai`, and the corresponding `.csi` names.
 
 ## 🖥️ User Interface Issues
 
@@ -472,5 +478,3 @@ curl -I https://codexomics-marketplace.com/api/health
 ---
 
 **Still having issues?** Contact our support team with detailed information about your problem, including system specifications and error messages.
-
-_This guide covers CodeXomics 0.722.0. Check for updates to both the application and this documentation._

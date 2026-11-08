@@ -6,18 +6,18 @@ This guide gets CodeXomics `0.723.0` running, connected to an AI provider, and r
 
 | Resource | Minimum                               | Recommended                                                  |
 | -------- | ------------------------------------- | ------------------------------------------------------------ |
-| OS       | macOS 10.15, Windows 10, Ubuntu 20.04 | Current stable release                                       |
+| OS       | macOS, Windows, or Linux             | A current OS release and a package for your architecture    |
 | Memory   | 6 GB RAM                              | 12 GB RAM or more                                            |
 | Storage  | 1 GB for the app                      | Extra space for genomes, reads, BLAST databases, and plugins |
 | Network  | Optional for local workflows          | Required for cloud LLMs and biological databases             |
 
 Optional tools:
 
-- An API key for OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, or another OpenAI-compatible endpoint.
+- An API key for your chosen cloud provider, if you want to use cloud AI.
 - A local LLM server such as Ollama for offline or local model workflows.
 - BLAST+ for local sequence alignment. CodeXomics includes BLAST setup and management workflows.
 
-Building from source requires Node.js 22.12+ and npm 10 or newer. The packaged application uses Electron `43.8.7`.
+Building from source requires Node.js 22.12 or newer in the 22.x line and npm 10 or newer. The current source uses Electron `43.8.7`.
 
 ## Install
 
@@ -60,23 +60,23 @@ AI features are optional, but they enable natural-language analysis and multi-ag
 3. Enter an API key or local endpoint.
 4. Pick a model, or choose "Other (specify below)" for a custom model name.
 5. Test the connection.
-6. Save the configuration.
+6. Save the provider configuration, then choose the provider and model on the **Default Model** tab.
 
-Supported provider families include OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, and local OpenAI-compatible endpoints.
+Provider tabs include OpenAI, Anthropic, Google, DeepSeek, SiliconFlow, OpenRouter, MiniMax (Global and CN), Zhongkeyu, and **Custom Endpoint** for OpenAI-compatible servers. The ChatBox model selector can override the default for the current conversation.
 
 ## Load Data
 
-Use `File -> Load File` to load a genome or supporting dataset.
+Load the reference with **File → Load File → Genome File**, then choose the corresponding **Load File** entry for each supporting dataset.
 
-| Data type           | Formats                        |
-| ------------------- | ------------------------------ |
-| Genome sequence     | FASTA, GenBank (`.gb`, `.gbk`) |
-| Annotations         | GFF, GFF3, GTF, BED            |
-| Variants            | VCF                            |
-| Reads               | SAM, BAM                       |
-| Quantitative tracks | WIG, BigWig, BedGraph          |
-| Pathways            | KGML                           |
-| Projects            | `.prj.GAI`                     |
+| Data type           | Formats and entry points                                                   |
+| ------------------- | -------------------------------------------------------------------------- |
+| Genome sequence     | Nucleotide FASTA (`.fa`, `.fasta`, `.fas`, `.fna`) or GenBank (`.gb`, `.gbk`, `.gbff`, `.genbank`). Either may end in `.gz`. |
+| Annotations         | GFF, GFF3, GTF, BED                                                        |
+| Variants            | VCF                                                                        |
+| Reads               | SAM or BAM. Keep the `.bai` or `.csi` index beside an indexed BAM.           |
+| Quantitative tracks | WIG or BigWig (`.bw`, `.bigwig`)                                            |
+| Pathways            | KGML in the pathway viewer                                                 |
+| Projects            | `.prj.GAI` via **File → Open Project**                                     |
 
 After loading data, use the browser controls to zoom, pan, search features, select genes, and toggle tracks.
 
@@ -99,24 +99,20 @@ The assistant selects relevant tools dynamically from the registry. Complex requ
 
 ## Use MCP Clients
 
-Start the standalone MCP server:
+Start Electron with its authenticated MCP listener so external clients can work with a loaded genome.
 
 ```bash
-npm run mcp-server
+export CODEXOMICS_MCP_MASTER_KEY='replace-with-at-least-16-random-characters'
+npm run start-with-mcp
 ```
 
-Or run agent mode:
+Connect to `http://127.0.0.1:3002/mcp` with `Authorization: Bearer <key>`. To delegate prompts to the ChatBox, launch in agent mode.
 
 ```bash
-npm run mcp-server -- --mode=agent
+CODEXOMICS_MCP_MODE=agent npm run start-with-mcp
 ```
 
-Default endpoints:
-
-- HTTP/SSE: `http://localhost:3002`
-- WebSocket: `ws://localhost:3003`
-
-See the [MCP Server Guide](MCP_SERVER_GUIDE.md) for client configuration.
+See the [MCP Server Guide](MCP_SERVER_GUIDE.md) for client configuration, scoped credentials, and the standalone server.
 
 ## Work With Projects
 
@@ -134,7 +130,7 @@ Common workflows:
 
 - Genome navigation and search.
 - Sequence analysis, GC content, translation, restriction digest, and gel simulation.
-- Primer design and binding-site annotation.
+- Primer design, binding-site prediction, and the primer library.
 - BLAST database creation and sequence search.
 - UniProt, InterPro, AlphaFold, PDB, KEGG, GO, DAVID, STRING, Reactome, and NCBI helper windows.
 - Benchmark execution and result export.
@@ -147,6 +143,7 @@ Common workflows:
 | Learn the main interface      | [User Guide](USER_GUIDE.md)                               |
 | Configure external clients    | [MCP Server Guide](MCP_SERVER_GUIDE.md)                   |
 | Run local alignment workflows | [BLAST Guide](../reference/BLAST_GUIDE.md)                |
+| Run AI benchmarks             | [Benchmark Testing](USER_GUIDE.md#benchmark-testing)     |
 | Install or develop plugins    | [Plugin Marketplace Guide](PLUGIN_MARKETPLACE_GUIDE.md)   |
 | Contribute to the codebase    | [Developer Guide](../developer-guides/DEVELOPER_GUIDE.md) |
 
