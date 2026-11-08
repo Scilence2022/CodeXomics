@@ -499,6 +499,16 @@
   font-size: 11px;
 }
 
+.dgr-report-body {
+  flex: 1;
+  overflow: auto;
+  padding: 18px;
+  overflow-wrap: anywhere;
+  background: #f8fafc;
+  border-radius: 0 0 10px 10px;
+  font-size: 14px;
+}
+
 .annotation-review-operation {
   margin-bottom: 10px;
   padding: 10px;

@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import * as marked from 'marked';
 
 const REVIEW_MANAGER_PATH = path.join(process.cwd(), 'src/renderer/modules/AnnotationReviewManager.js');
 const RENDERER_INDEX_PATH = path.join(process.cwd(), 'src/renderer/index.html');
@@ -1293,25 +1294,47 @@ describe('AnnotationReviewManager', () => {
     expect(app.showNotification).not.toHaveBeenCalledWith('Annotation governance preferences saved.', 'success');
   });
 
-  it('opens research reports through the detail button and supports closing, Escape and read errors', async () => {
+  it('renders sanitized research Markdown from the detail button and supports closing, Escape and read errors', async () => {
     const record = {
       ...summary('cs-report-button', 'thrB', 'hash'),
       researchRun: 'task-report',
       reportAttachment: 'dgr:task-report',
     };
     const { manager, app, mockWindow } = actionFixture([record]);
+    const { default: DOMPurify } = await vi.importActual('dompurify');
+    mockWindow.DOMPurify = DOMPurify;
+    mockWindow.marked = marked;
+    const sanitizer = fs.readFileSync('src/renderer/modules/security/SanitizeService.js', 'utf8');
+    new Function('window', sanitizer)(mockWindow);
     const reader = vi.fn().mockResolvedValue({
       success: true,
       title: 'Research report',
       taskId: 'task-report',
-      reportMarkdown: '# Evidence report',
+      reportMarkdown: [
+        '# Evidence report',
+        '',
+        '- **Finding**',
+        '',
+        '| Source |',
+        '| --- |',
+        '| [PubMed](https://pubmed.ncbi.nlm.nih.gov/1234567/) |',
+        '',
+        '<img src=x onerror="alert(1)">',
+        '',
+        '[Unsafe link](javascript:alert%281%29)',
+      ].join('\n'),
     });
     mockWindow.electronAPI = { readDgrReportAttachment: reader };
     await manager.viewChangeSet(record.id);
     document.querySelector('[data-action="open-report"]').click();
     await vi.waitFor(() => expect(document.getElementById('dgrReportOverlay')).not.toBeNull());
     expect(reader).toHaveBeenCalledWith('', 'task-report');
-    expect(document.getElementById('dgrReportOverlay').textContent).toContain('# Evidence report');
+    const body = document.querySelector('#dgrReportOverlay .dgr-report-body');
+    expect(body.querySelector('h1').textContent).toBe('Evidence report');
+    expect(body.querySelector('ul li strong').textContent).toBe('Finding');
+    expect(body.querySelector('table td a').href).toBe('https://pubmed.ncbi.nlm.nih.gov/1234567/');
+    expect(body.querySelectorAll('a[href]')).toHaveLength(1);
+    expect(body.querySelector('img')).toBeNull();
     document.querySelector('#dgrReportOverlay button').click();
     expect(document.getElementById('dgrReportOverlay')).toBeNull();
     document.querySelector('[data-action="open-report"]').click();
@@ -1323,6 +1346,49 @@ describe('AnnotationReviewManager', () => {
     await vi.waitFor(() =>
       expect(app.showNotification).toHaveBeenCalledWith('Failed to read research report: attachment missing', 'error')
     );
+  });
+
+  it('opens distinct archived reports from applied gene qualifiers and checks the recorded digest', async () => {
+    const { manager, app, mockWindow } = actionFixture([]);
+    const sha256 = 'a'.repeat(64);
+    app.loadedGenomePath = '/genomes/genome.gb';
+    app.loadedGenomeSourceSha256 = 'b'.repeat(64);
+    const reader = vi.fn(async (_genomePath, taskId) => ({
+      success: true,
+      taskId,
+      sha256,
+      reportMarkdown: 'Evidence report',
+    }));
+    mockWindow.electronAPI = { readDgrReportAttachment: reader };
+    const container = document.body.appendChild(document.createElement('div'));
+    const base = 'codexomics://genome/genome_1/gene/b2699/dgr/';
+    const report = `${base}task%20one@${sha256}`;
+    manager.addGeneResearchReportButtons(container, {
+      codexomics_research_report: [report, 'https://example.org/expired'],
+      codexomics_research_details: [report, `${base}task- two`],
+    });
+
+    const buttons = container.querySelectorAll('button');
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].textContent).toContain('View Research Report');
+    buttons[0].click();
+    await vi.waitFor(() => expect(document.querySelector('#dgrReportOverlay')).not.toBeNull());
+    expect(reader).toHaveBeenLastCalledWith(app.loadedGenomePath, 'task one', app.loadedGenomeSourceSha256);
+    document.querySelector('#dgrReportOverlay button').click();
+    buttons[1].click();
+    await vi.waitFor(() => expect(document.querySelector('#dgrReportOverlay')).not.toBeNull());
+    expect(reader).toHaveBeenLastCalledWith(app.loadedGenomePath, 'task-two', app.loadedGenomeSourceSha256);
+    document.querySelector('#dgrReportOverlay button').click();
+
+    reader.mockResolvedValueOnce({ success: true, sha256: 'c'.repeat(64), reportMarkdown: 'Other report' });
+    buttons[0].click();
+    await vi.waitFor(() =>
+      expect(app.showNotification).toHaveBeenCalledWith(
+        'Archived research report does not match the annotation reference.',
+        'error'
+      )
+    );
+    expect(document.querySelector('#dgrReportOverlay')).toBeNull();
   });
 
   it('refreshes both lists from their buttons and passes the archived toggle and applied sort', async () => {

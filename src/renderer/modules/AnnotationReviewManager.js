@@ -795,19 +795,7 @@ class AnnotationReviewManager {
       return;
     }
     if (button?.dataset.action === 'open-report') {
-      const taskId = String(button.dataset.taskId || '').trim();
-      const reader = window.electronAPI?.readDgrReportAttachment;
-      if (!reader || !taskId) {
-        this._notify('Research report is not available for this ChangeSet.', 'error');
-        return;
-      }
-      const digest = this.app?.loadedGenomeSourceSha256;
-      reader(this.app?.loadedGenomePath || '', taskId, ...(digest ? [digest] : []))
-        .then(result => {
-          if (result?.success && result.reportMarkdown) this._showResearchReportModal(result);
-          else this._notify(result?.error || 'Research report is not available for this ChangeSet.', 'error');
-        })
-        .catch(error => this._notify(`Failed to read research report: ${error?.message || error}`, 'error'));
+      await this.openResearchReport(button.dataset.taskId);
       return;
     }
     if (button?.dataset.action === 'details') {
@@ -829,6 +817,65 @@ class AnnotationReviewManager {
     const item = event.target.closest('.annotation-review-item[data-changeset-id]');
     const interactiveControl = event.target.closest('input, label, button, a, select, textarea, summary');
     if (item && !interactiveControl) void this.viewChangeSet(item.dataset.changesetId);
+  }
+
+  addGeneResearchReportButtons(container, qualifiers) {
+    if (!container) return;
+    const reports = new Map();
+    for (const field of ['codexomics_research_report', 'codexomics_research_details']) {
+      for (const value of [].concat(qualifiers?.[field] || [])) {
+        if (typeof value !== 'string') continue;
+        // GenBank readers may insert spaces when joining a wrapped qualifier.
+        const uri = value.replace(/\s+/g, '');
+        const match = /^codexomics:\/\/genome\/[^/?#]+\/gene\/[^/?#]+\/dgr\/([^/@?#]+)(?:@([a-f0-9]{64}))?$/i.exec(uri);
+        if (!match) continue;
+        const [, encodedTaskId, sha256] = match;
+        let taskId;
+        try {
+          taskId = decodeURIComponent(encodedTaskId).trim();
+        } catch {
+          continue;
+        }
+        if (taskId) reports.set(`${taskId}@${sha256?.toLowerCase() || ''}`, { taskId, sha256 });
+      }
+    }
+    let index = 0;
+    for (const { taskId, sha256 } of reports.values()) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-secondary gene-action-btn';
+      button.innerHTML = '<i class="fas fa-file-alt"></i> View Research Report';
+      if (reports.size > 1) button.append(` (${++index})`);
+      button.title = `Open archived research report DGR-${taskId}`;
+      button.addEventListener('click', () => this.openResearchReport(taskId, sha256));
+      container.appendChild(button);
+    }
+  }
+
+  async openResearchReport(taskId, expectedSha256) {
+    const task = String(taskId || '').trim();
+    const reader = window.electronAPI?.readDgrReportAttachment;
+    if (!reader || !task) {
+      this._notify('Archived research report is not available.', 'error');
+      return;
+    }
+    const genomePath = this.app.loadedGenomePath;
+    const sourceSha256 = this.app.loadedGenomeSourceSha256;
+    try {
+      const result = await reader(genomePath || '', task, ...(sourceSha256 ? [sourceSha256] : []));
+      if (genomePath !== this.app.loadedGenomePath || sourceSha256 !== this.app.loadedGenomeSourceSha256) return;
+      if (!result?.success || !result.reportMarkdown) {
+        this._notify(result?.error || 'Archived research report is not available.', 'error');
+        return;
+      }
+      if (expectedSha256 && result.sha256?.toLowerCase() !== expectedSha256.toLowerCase()) {
+        this._notify('Archived research report does not match the annotation reference.', 'error');
+        return;
+      }
+      this._showResearchReportModal(result);
+    } catch (error) {
+      this._notify(`Failed to read research report: ${error?.message || error}`, 'error');
+    }
   }
 
   _showResearchReportModal(result) {
@@ -855,10 +902,9 @@ class AnnotationReviewManager {
       'border:1px solid #cbd5e1;background:#f1f5f9;border-radius:6px;padding:6px 12px;cursor:pointer;';
     close.onclick = () => this._closeResearchReportModal();
     header.appendChild(close);
-    const body = document.createElement('pre');
-    body.style.cssText =
-      'flex:1;overflow:auto;padding:18px;margin:0;white-space:pre-wrap;word-break:break-word;font:13px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;background:#f8fafc;';
-    body.textContent = result.reportMarkdown || '(No markdown body in the archived report.)';
+    const body = document.createElement('div');
+    body.className = 'message-text dgr-report-body';
+    this._renderResearchReportMarkdown(body, result.reportMarkdown);
     panel.appendChild(header);
     panel.appendChild(body);
     overlay.appendChild(panel);
@@ -872,6 +918,31 @@ class AnnotationReviewManager {
       };
       document.addEventListener('keydown', this._boundReportEsc);
     }
+  }
+
+  _renderResearchReportMarkdown(body, markdown) {
+    if (window.marked?.parse && window.SanitizeService) {
+      try {
+        const renderer = new window.marked.Renderer();
+        renderer.html = html => this._escape(html);
+        const html = window.marked.parse(markdown, { renderer, gfm: true, breaks: false });
+        window.SanitizeService.safeSetInnerHTML(body, html, 'markdown');
+        for (const link of body.querySelectorAll('a[href]')) {
+          const href = link.getAttribute('href');
+          if (/^https?:\/\//i.test(href)) {
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+          } else if (!href.startsWith('#')) {
+            link.removeAttribute('href');
+          }
+        }
+        return;
+      } catch (error) {
+        console.warn('Unable to render research report Markdown:', error);
+      }
+    }
+    body.style.whiteSpace = 'pre-wrap';
+    body.textContent = markdown;
   }
 
   _closeResearchReportModal() {

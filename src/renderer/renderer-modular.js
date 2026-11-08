@@ -6533,8 +6533,9 @@ class GenomeBrowser {
       });
     }
 
-    // Check for Deep Research Report presence and add button if exists.
-    this.addGeneResearchReportButton(geneName);
+    const reportContainer = geneDetailsContent.querySelector('#deep-research-report-container');
+    this.annotationReviewManager?.addGeneResearchReportButtons(reportContainer, gene.qualifiers);
+    void this.addGeneResearchReportButton(geneName, reportContainer);
 
     // Add event listeners for expandable sections
     this.setupExpandableSequences();
@@ -6570,7 +6571,8 @@ class GenomeBrowser {
     this.annotationReviewManager.showReviewCenter({ changeSetId });
   }
 
-  async addGeneResearchReportButton(geneName) {
+  async addGeneResearchReportButton(geneName, container) {
+    if (!container) return;
     try {
       const api = window.electronAPI;
       if (
@@ -6589,8 +6591,7 @@ class GenomeBrowser {
         return;
       }
 
-      const container = document.getElementById('deep-research-report-container');
-      if (!container || container.querySelector('.gene-research-report-btn')) {
+      if (!container.isConnected || container.querySelector('.gene-research-report-btn')) {
         return;
       }
 
@@ -6602,7 +6603,8 @@ class GenomeBrowser {
       btn.style.marginBottom = '8px';
       btn.style.width = '100%';
       btn.style.fontWeight = '600';
-      btn.innerHTML = '<i class="fas fa-file-alt"></i> View Research Report';
+      const label = container.childElementCount ? 'View Local Research Report' : 'View Research Report';
+      btn.innerHTML = `<i class="fas fa-file-alt"></i> ${label}`;
       btn.title = `Open report: ${report.fileName || 'Gene research report'}`;
 
       btn.onclick = async () => {
