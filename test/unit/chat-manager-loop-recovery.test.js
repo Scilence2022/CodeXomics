@@ -655,9 +655,9 @@ describe('ChatManager bounded model-turn recovery', () => {
     expect(manager.isAppGeneratedNotice(manager.buildRoundLimitResponse(20))).toBe(true);
     expect(manager.isAppGeneratedNotice('The requested tool call was blocked by the tool execution policy')).toBe(true);
     expect(manager.isAppGeneratedNotice('The model repeated a tool call beyond the request limit')).toBe(true);
-    expect(manager.isAppGeneratedNotice('The model declined this request before the requested action could be completed.')).toBe(
-      true
-    );
+    expect(
+      manager.isAppGeneratedNotice('The model declined this request before the requested action could be completed.')
+    ).toBe(true);
     expect(manager.isAppGeneratedNotice('Sorry, I encountered an error. Please try again.')).toBe(true);
 
     // Genuine model speech and user text must keep replaying.
@@ -835,7 +835,6 @@ describe('ChatManager bounded model-turn recovery', () => {
     // Without native tools the text-JSON protocol remains the only channel.
     expect(textProtocol).toContain('{"tool_name":"exact_tool_name"');
   });
-
 
   it('recognizes namespaced tools across the whole effect table', () => {
     const LoopSupport = loadLoopSupportClass();
@@ -1230,5 +1229,65 @@ describe('ChatManager requirements match the tools that carry them out', () => {
       expect(message).toContain('empty response');
       expect(message).toContain('rounds 3–4 of 10');
     });
+  });
+});
+
+describe('ChatManager reads "highlight" as the object of a removal', () => {
+  function stateFor(manager, message, tools) {
+    const state = manager.createToolExecutionState(message);
+    for (const tool of tools) state.records.push({ tool, status: 'success' });
+    return state;
+  }
+
+  // Verbatim instruction from benchmark nav_auto_16. The noun "highlight" was
+  // read as the select/highlight verb, so a successful remove_highlight left a
+  // phantom "selection" step and the repair loop drove the model to call
+  // clear_highlights, wiping highlights the user never asked to remove.
+  const REMOVE_BY_COORDINATES = 'Remove the highlight spanning 110000 to 112000.';
+
+  it('requires a highlight removal, not a selection', () => {
+    const manager = new (loadLoopSupportClass())();
+    const { requirements } = manager.getSequentialActionRequirements(REMOVE_BY_COORDINATES);
+    expect(requirements.map(requirement => requirement.capability)).toEqual(['remove_highlight']);
+  });
+
+  it('completes the turn once remove_highlight has succeeded', () => {
+    const manager = new (loadLoopSupportClass())();
+    const state = stateFor(manager, REMOVE_BY_COORDINATES, ['remove_highlight']);
+    expect(manager.getOutstandingRequestSteps(state)).toEqual([]);
+    expect(
+      manager.getModelTurnRecoveryDecision(
+        { text: 'Removed the highlight at 110000-112000.', toolCalls: [], invalidToolCalls: [] },
+        state,
+        2,
+        20
+      ).action
+    ).toBe('complete');
+  });
+
+  it('still asks for the removal when it has not run', () => {
+    const manager = new (loadLoopSupportClass())();
+    const state = stateFor(manager, REMOVE_BY_COORDINATES, ['list_highlights']);
+    expect(manager.getOutstandingRequestSteps(state)).toMatchObject([{ capability: 'remove_highlight' }]);
+  });
+
+  it('keeps "highlight" as an action when it is the verb', () => {
+    const manager = new (loadLoopSupportClass())();
+    const { requirements } = manager.getSequentialActionRequirements(
+      'Highlight region 110000 to 112000 and label it benchmark_focus.'
+    );
+    expect(requirements.map(requirement => requirement.capability)).toEqual(['selection']);
+    expect(
+      manager.getOutstandingRequestSteps(
+        stateFor(manager, 'Highlight region 110000 to 112000 and label it benchmark_focus.', ['highlight_region'])
+      )
+    ).toEqual([]);
+  });
+
+  it('satisfies a remove-then-clear workflow with remove_highlight and clear_highlights', () => {
+    const manager = new (loadLoopSupportClass())();
+    const workflow = 'List highlights, remove that highlight, then clear all remaining highlights.';
+    const state = stateFor(manager, workflow, ['list_highlights', 'remove_highlight', 'clear_highlights']);
+    expect(manager.getOutstandingRequestSteps(state)).toEqual([]);
   });
 });

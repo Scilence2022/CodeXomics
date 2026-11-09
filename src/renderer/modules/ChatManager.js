@@ -8101,6 +8101,22 @@ class ChatManager {
       );
     }
 
+    // "Remove the highlight spanning 110000 to 112000" names a highlight as the
+    // object being removed, not as the action. Read as the verb, the clause
+    // demanded a select_/highlight_ tool that remove_highlight can never match,
+    // so a removal that had already succeeded was sent back for repair until the
+    // model reached for clear_highlights and wiped every other highlight too.
+    if (
+      /\b(?:remove|delete|clear|erase|drop|unhighlight)\b|(?:删除|移除|清除|取消)/.test(message) &&
+      /\bhighlight(?:s|ed|ing)?\b|高亮/.test(message)
+    ) {
+      return requirement(
+        'remove_highlight',
+        toolName => toolName === 'remove_highlight' || toolName === 'clear_highlights',
+        'remove_highlight'
+      );
+    }
+
     const requestedGeneSelection = this.getRequestedGeneSelection(text);
     if (requestedGeneSelection) {
       return requirement(
