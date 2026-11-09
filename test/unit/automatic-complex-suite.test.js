@@ -506,6 +506,49 @@ describe('AutomaticComplexSuite', () => {
       expect(evalResult.errors.join(' ')).toContain('Critical parameters');
     });
 
+    describe('analysis_auto_01 current-view export', () => {
+      const bedCall = extra => ({
+        tool_name: 'export_bed_format',
+        parameters: {
+          filename: suite.buildFilePath('exported_files/region_features.bed'),
+          feature_types: ['all'],
+          auto_save: true,
+          ...extra,
+        },
+      });
+      const gcCall = { tool_name: 'calc_region_gc', parameters: { chromosome: 'U00096', start: 109999, end: 112000 } };
+      const run = async bed => {
+        const test = suite.getTests().find(candidate => candidate.id === 'analysis_auto_01');
+        return suite.evaluateWorkflowCall([gcCall, bed], test.expectedResult, {
+          id: test.id,
+          maxScore: 10,
+          category: 'sequence_analysis',
+        });
+      };
+
+      it('accepts export_range current_view', async () => {
+        const result = await run(bedCall({ export_range: 'current_view' }));
+        expect(result.success).toBe(true);
+      });
+
+      // Verbatim from the failing run: the prompt's Current Position line gave the model
+      // the view as 109999-112000 and it exported exactly that region.
+      it('accepts custom_range spelling out the viewport coordinates', async () => {
+        const result = await run(
+          bedCall({ export_range: 'custom_range', start_position: 109999, end_position: 112000 })
+        );
+        expect(result.success).toBe(true);
+        expect(result.errors).toEqual([]);
+      });
+
+      it('rejects a custom_range that is not the current view', async () => {
+        const result = await run(
+          bedCall({ export_range: 'custom_range', start_position: 500000, end_position: 502000 })
+        );
+        expect(result.success).toBe(false);
+      });
+    });
+
     it('getRecentOrderedWorkflowMatches should consume tracker executions in order', () => {
       const now = Date.now();
       global.window.chatManager.toolExecutionTracker.getSessionExecutions = () => [

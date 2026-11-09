@@ -54,7 +54,8 @@ parameters:
       default: ['all']
     export_range:
       type: string
-      description: Range of genome to export
+      description: >-
+        Range of genome to export. Use "current_view" when the user asks for the current view, visible region or viewing region (the tool reads the live viewport, so no coordinates are needed); "custom_range" only for explicit start_position/end_position the user gave; "selected_features" for the current selection; "all" for everything.
       enum: ['all', 'current_view', 'selected_features', 'custom_range']
       default: 'all'
     start_position:

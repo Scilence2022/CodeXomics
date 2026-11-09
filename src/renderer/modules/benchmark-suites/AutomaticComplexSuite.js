@@ -541,8 +541,16 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             {},
             {
               filename: this.buildFilePath('exported_files/region_features.bed'),
-              export_range: 'current_view',
               feature_types: ['all'],
+              // "current view" is satisfied by the live-viewport enum value or by the
+              // viewport's own coordinates, which the prompt's Current Position line
+              // hands the model. The fixture view is 109999-112000 (110000-112000 in
+              // 1-based terms), so either start is the same region.
+              ...this.anyOfParameters(
+                { export_range: 'current_view' },
+                { export_range: 'custom_range', start_position: 109999, end_position: 112000 },
+                { export_range: 'custom_range', start_position: 110000, end_position: 112000 }
+              ),
             },
           ],
         },

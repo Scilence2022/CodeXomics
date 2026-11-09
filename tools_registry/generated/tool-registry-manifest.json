@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-11-06T14:38:54.627Z",
-  "registryHash": "c5d1dd5463fdd3b0fc0d991c4ed1f9106d3d6f5b9292ab76eb09d32e1e8d6e74",
+  "generatedAt": "2026-11-09T14:48:36.660Z",
+  "registryHash": "6c5a76463e03798a7d21f6a6c2e76e24af8fe1494a028bb2efb5900884d22a40",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -12288,7 +12288,7 @@
           },
           "export_range": {
             "type": "string",
-            "description": "Range of genome to export",
+            "description": "Range of genome to export. Use \"current_view\" when the user asks for the current view, visible region or viewing region (the tool reads the live viewport, so no coordinates are needed); \"custom_range\" only for explicit start_position/end_position the user gave; \"selected_features\" for the current selection; \"all\" for everything.",
             "enum": [
               "all",
               "current_view",
@@ -13165,7 +13165,7 @@
           },
           "export_range": {
             "type": "string",
-            "description": "Range of genome to export",
+            "description": "Range of genome to export. Use \"current_view\" when the user asks for the current view, visible region or viewing region (the tool reads the live viewport, so no coordinates are needed); \"custom_range\" only for explicit start_position/end_position the user gave; \"selected_features\" for the current selection; \"all\" for everything.",
             "enum": [
               "all",
               "current_view",
@@ -13357,7 +13357,7 @@
           },
           "export_range": {
             "type": "string",
-            "description": "Range of genome to export",
+            "description": "Range of genome to export. Use \"current_view\" when the user asks for the current view, visible region or viewing region (the tool reads the live viewport, so no coordinates are needed); \"custom_range\" only for explicit start_position/end_position the user gave; \"selected_features\" for the current selection; \"all\" for everything.",
             "enum": [
               "all",
               "current_view",
@@ -39031,7 +39031,7 @@
           },
           "export_range": {
             "type": "string",
-            "description": "Range of genome to export",
+            "description": "Range of genome to export. Use \"current_view\" when the user asks for the current view, visible region or viewing region (the tool reads the live viewport, so no coordinates are needed); \"custom_range\" only for explicit start_position/end_position the user gave; \"selected_features\" for the current selection; \"all\" for everything.",
             "enum": [
               "all",
               "current_view",
@@ -39908,7 +39908,7 @@
           },
           "export_range": {
             "type": "string",
-            "description": "Range of genome to export",
+            "description": "Range of genome to export. Use \"current_view\" when the user asks for the current view, visible region or viewing region (the tool reads the live viewport, so no coordinates are needed); \"custom_range\" only for explicit start_position/end_position the user gave; \"selected_features\" for the current selection; \"all\" for everything.",
             "enum": [
               "all",
               "current_view",
@@ -40100,7 +40100,7 @@
           },
           "export_range": {
             "type": "string",
-            "description": "Range of genome to export",
+            "description": "Range of genome to export. Use \"current_view\" when the user asks for the current view, visible region or viewing region (the tool reads the live viewport, so no coordinates are needed); \"custom_range\" only for explicit start_position/end_position the user gave; \"selected_features\" for the current selection; \"all\" for everything.",
             "enum": [
               "all",
               "current_view",
