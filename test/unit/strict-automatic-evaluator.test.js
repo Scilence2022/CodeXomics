@@ -1008,5 +1008,122 @@ describe('StrictAutomaticEvaluator', () => {
 
       expect(evaluation.success).toBe(true);
     });
+
+    describe('export_data dispatching to a dedicated export tool', () => {
+      const dir = '/data/exported_files/';
+      const exportWorkflow = {
+        id: 'export_auto_complex_01',
+        complexity: 'complex',
+        maxScore: 20,
+        expectedResult: {
+          tool_sequence: [
+            'export_fasta_sequence',
+            'export_genbank_format',
+            'export_gff_annotations',
+            'export_bed_format',
+            'export_cds_fasta',
+            'export_protein_fasta',
+          ],
+          parameters: [
+            { filename: `${dir}exported_sequences.fasta` },
+            { filename: `${dir}exported_data.gbk` },
+            { filename: `${dir}exported_annotations.gff3` },
+            { filename: `${dir}exported_features.bed` },
+            { filename: `${dir}exported_cds.fasta` },
+            { filename: `${dir}exported_proteins.fasta` },
+          ],
+        },
+      };
+      const executed = (tool_name, parameters) => ({ tool_name, parameters, executed: true, success: true });
+      const workflowWithGenbankCall = genbankCall => [
+        executed('export_fasta_sequence', { filename: `${dir}exported_sequences.fasta`, auto_save: true }),
+        genbankCall,
+        executed('export_gff_annotations', { filename: `${dir}exported_annotations.gff3`, auto_save: true }),
+        executed('export_bed_format', { filename: `${dir}exported_features.bed`, auto_save: true }),
+        executed('export_cds_fasta', { filename: `${dir}exported_cds.fasta`, auto_save: true }),
+        executed('export_protein_fasta', { filename: `${dir}exported_proteins.fasta`, auto_save: true }),
+      ];
+      const score = (evaluator, calls) =>
+        evaluator.evaluate(exportWorkflow, { actualResult: { executedFunctionCalls: calls } });
+      const inAppEvaluator = () =>
+        new StrictAutomaticEvaluator({ assessmentMode: 'completion', requireExecutionForCompletion: true });
+
+      it('accepts export_data with an explicit format in place of the dedicated tool', () => {
+        const calls = workflowWithGenbankCall(
+          executed('export_data', { format: 'genbank', filename: `${dir}exported_data.gbk`, auto_save: true })
+        );
+
+        expect(score(inAppEvaluator(), calls)).toMatchObject({ success: true, score: 20, errors: [] });
+      });
+
+      it('accepts every documented spelling of the format, case-insensitively', () => {
+        for (const format of ['gb', 'GBK', ' GenBank ']) {
+          const calls = workflowWithGenbankCall(
+            executed('export_data', { format, filename: `${dir}exported_data.gbk`, auto_save: true })
+          );
+          expect(score(inAppEvaluator(), calls).success).toBe(true);
+        }
+      });
+
+      it('keeps the strict tiers on exact tool names', () => {
+        const calls = workflowWithGenbankCall(
+          executed('export_data', { format: 'genbank', filename: `${dir}exported_data.gbk`, auto_save: true })
+        );
+        const evaluation = score(new StrictAutomaticEvaluator({ assessmentMode: 'execution' }), calls);
+
+        expect(evaluation.success).toBe(false);
+        expect(evaluation.errors).toContain(
+          "Tool sequence mismatch: expected call 2 'export_genbank_format' was not observed in order"
+        );
+      });
+
+      it('rejects export_data whose format names another tool, or no format at all', () => {
+        for (const parameters of [
+          { format: 'bed', filename: `${dir}exported_data.gbk` },
+          { filename: `${dir}exported_data.gbk` },
+          { format: 'embl', filename: `${dir}exported_data.gbk` },
+        ]) {
+          const evaluation = score(inAppEvaluator(), workflowWithGenbankCall(executed('export_data', parameters)));
+          expect(evaluation.success).toBe(false);
+        }
+      });
+
+      it('still requires the destination and successful execution', () => {
+        const wrongPath = score(
+          inAppEvaluator(),
+          workflowWithGenbankCall(executed('export_data', { format: 'genbank', filename: `${dir}other.gbk` }))
+        );
+        const failed = score(
+          inAppEvaluator(),
+          workflowWithGenbankCall({
+            ...executed('export_data', { format: 'genbank', filename: `${dir}exported_data.gbk` }),
+            success: false,
+            error: 'disk full',
+          })
+        );
+
+        expect(wrongPath.success).toBe(false);
+        expect(failed.success).toBe(false);
+      });
+
+      it('does not treat a region-scoped FASTA export as the whole-genome FASTA export', () => {
+        const evaluator = inAppEvaluator();
+        const test = {
+          id: 'whole_genome_fasta',
+          complexity: 'simple',
+          maxScore: 5,
+          expectedResult: { tool_name: 'export_fasta_sequence', parameters: { filename: `${dir}genome.fasta` } },
+        };
+        const evaluate = parameters =>
+          evaluator.evaluate(test, {
+            actualResult: {
+              executedFunctionCalls: [executed('export_data', { filename: `${dir}genome.fasta`, ...parameters })],
+            },
+          });
+
+        expect(evaluate({ format: 'fasta' }).success).toBe(true);
+        expect(evaluate({ format: 'fasta', chromosome: 'U00096', start: 1, end: 1000 }).success).toBe(false);
+      });
+    });
   });
 });

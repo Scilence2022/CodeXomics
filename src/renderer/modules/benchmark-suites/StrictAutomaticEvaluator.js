@@ -71,6 +71,34 @@ class StrictAutomaticEvaluator {
       translate_dna: ['translate_sequence'],
     };
 
+    // Completion-mode equivalents that depend on an argument: a generic tool
+    // whose runtime dispatches on one parameter to the same implementation a
+    // dedicated tool uses. ChatManager.exportData() hands export_data(format)
+    // to the FileOperationService method behind each export_* tool, so an
+    // explicit format writes the same file the dedicated tool would. A missing
+    // format is not inferred from the schema default.
+    this.parameterizedToolEquivalents = {
+      export_data: {
+        parameter: 'format',
+        values: {
+          fasta: 'export_fasta_sequence',
+          genbank: 'export_genbank_format',
+          gb: 'export_genbank_format',
+          gbk: 'export_genbank_format',
+          gff: 'export_gff_annotations',
+          gff3: 'export_gff_annotations',
+          bed: 'export_bed_format',
+          cds: 'export_cds_fasta',
+          protein: 'export_protein_fasta',
+        },
+        // A FASTA export with a full region is exportRegionFasta(), not the
+        // whole-genome export_fasta_sequence.
+        excludeWhen: parameters =>
+          String(parameters.format).trim().toLowerCase() === 'fasta' &&
+          Boolean(parameters.chromosome && parameters.start && parameters.end),
+      },
+    };
+
     // Completion-mode parameter fallbacks: when the oracle expects key K but
     // the tool schema accepts alternative keys for the same concept, any
     // concrete alternative satisfies the requirement.
@@ -199,6 +227,29 @@ class StrictAutomaticEvaluator {
       (this.toolEquivalents[actualName] || []).includes(expectedName) ||
       (this.toolEquivalents[expectedName] || []).includes(actualName)
     );
+  }
+
+  /**
+   * The dedicated tool an observed generic call dispatches to, or null.
+   * Completion mode only; see parameterizedToolEquivalents.
+   */
+  resolveParameterizedEquivalent(call) {
+    if (!this.completionMode) return null;
+    const rule = this.parameterizedToolEquivalents[this.normalizeToolName(call?.tool_name || '')];
+    if (!rule) return null;
+    const parameters = this.normalizeObservedAliases(call.tool_name, this.normalizeArguments(call.parameters || {}));
+    const value = parameters?.[rule.parameter];
+    if (typeof value !== 'string' || value.trim() === '') return null;
+    if (rule.excludeWhen?.(parameters)) return null;
+    return rule.values[value.trim().toLowerCase()] || null;
+  }
+
+  /** toolMatches() for an observed call, which may also resolve through its arguments. */
+  callMatchesTool(call, expected) {
+    if (Array.isArray(expected)) return expected.some(candidate => this.callMatchesTool(call, candidate));
+    if (this.toolMatches(call?.tool_name, expected)) return true;
+    const equivalent = this.resolveParameterizedEquivalent(call);
+    return equivalent !== null && this.toolMatches(equivalent, expected);
   }
 
   /** JSON-unescape a string that the model double-encoded, or null. */
@@ -919,7 +970,7 @@ class StrictAutomaticEvaluator {
     let index = 0;
     while (index < expectedTools.length) {
       if (!this.isOrderInsensitiveTool(expectedTools[index], orderInsensitiveTools)) {
-        if (!this.toolMatches(calls[index].tool_name, expectedTools[index])) return false;
+        if (!this.callMatchesTool(calls[index], expectedTools[index])) return false;
         index += 1;
         continue;
       }
@@ -930,9 +981,7 @@ class StrictAutomaticEvaluator {
       }
       const unused = calls.slice(index, end).map((call, offset) => ({ call, index: index + offset, used: false }));
       for (let expectedIndex = index; expectedIndex < end; expectedIndex += 1) {
-        const match = unused.find(
-          item => !item.used && this.toolMatches(item.call.tool_name, expectedTools[expectedIndex])
-        );
+        const match = unused.find(item => !item.used && this.callMatchesTool(item.call, expectedTools[expectedIndex]));
         if (!match) return false;
         match.used = true;
       }
@@ -951,7 +1000,7 @@ class StrictAutomaticEvaluator {
       const start = orderInsensitive ? 0 : cursor;
       let actualIndex = -1;
       for (let index = start; index < calls.length; index += 1) {
-        if (!used.has(index) && this.toolMatches(calls[index].tool_name, expectedTool)) {
+        if (!used.has(index) && this.callMatchesTool(calls[index], expectedTool)) {
           actualIndex = index;
           break;
         }
@@ -1017,7 +1066,7 @@ class StrictAutomaticEvaluator {
       if (sequenceMatch.orderInsensitive) {
         const candidates = calls
           .map((call, index) => ({ call, index }))
-          .filter(item => !used.has(item.index) && this.toolMatches(item.call.tool_name, sequenceMatch.expectedTool));
+          .filter(item => !used.has(item.index) && this.callMatchesTool(item.call, sequenceMatch.expectedTool));
         const exactCandidates = candidates.filter(item =>
           this.parametersMatch(
             item.call.parameters,
@@ -1153,7 +1202,7 @@ class StrictAutomaticEvaluator {
           .filter(index => {
             if (matchedIndexes.has(index)) return false;
             const toolName = calls[index]?.tool_name;
-            if (expectedTools.some(expected => this.toolMatches(toolName, expected))) {
+            if (expectedTools.some(expected => this.callMatchesTool(calls[index], expected))) {
               return test.expectedResult?.allowRepeatedCalls === false;
             }
             if (this.isReadOnlyTool(toolName)) return false;
@@ -1223,9 +1272,7 @@ class StrictAutomaticEvaluator {
         );
       }
       if (sequence.matchedCount === expectedTools.length && sequence.unexpectedIndexes.length === 0) {
-        const mismatchIndex = expectedTools.findIndex(
-          (tool, index) => !this.toolMatches(calls[index]?.tool_name, tool)
-        );
+        const mismatchIndex = expectedTools.findIndex((tool, index) => !this.callMatchesTool(calls[index], tool));
         if (mismatchIndex !== -1) {
           errors.push(
             `Tool sequence mismatch at position ${mismatchIndex + 1}: expected ` +
