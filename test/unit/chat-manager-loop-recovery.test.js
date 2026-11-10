@@ -299,6 +299,67 @@ describe('ChatManager bounded model-turn recovery', () => {
     expect(decision.action).toBe('complete');
   });
 
+  it('treats "take a screenshot of all tracks" as an action and keeps its capture call', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    manager.services = {
+      intent: {
+        analyzeResponse: () => ({
+          displayText: '',
+          toolCalls: [{ tool_name: 'capture_screenshot', parameters: { target: 'tracks' }, source: 'internal' }],
+          invalidToolCalls: [],
+          isEmpty: false,
+        }),
+      },
+    };
+    manager.lastSystemPromptMetadata = { selectedTools: [{ name: 'capture_screenshot' }] };
+
+    expect(manager.requestRequiresToolExecution('take a screenshot of all tracks')).toBe(true);
+    const analysis = manager.analyzeLLMResponse('response', 'take a screenshot of all tracks');
+    expect(analysis.toolCalls.map(call => call.tool_name)).toEqual(['capture_screenshot']);
+    expect(analysis.suppressedToolCalls).toEqual([]);
+  });
+
+  it('recognizes everyday action verbs only when the request names app context', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+
+    expect(manager.requestRequiresToolExecution('Display the GC content track')).toBe(true);
+    expect(manager.requestRequiresToolExecution('plot the coverage of this region')).toBe(true);
+    expect(manager.requestRequiresToolExecution('go to position 150000 on the chromosome')).toBe(true);
+    expect(manager.requestRequiresToolExecution('make the reads track taller')).toBe(true);
+    expect(manager.requestRequiresToolExecution('请截图所有轨道')).toBe(true);
+
+    expect(manager.requestRequiresToolExecution('take a break')).toBe(false);
+    expect(manager.requestRequiresToolExecution('make a sandwich')).toBe(false);
+    expect(manager.requestRequiresToolExecution('go home')).toBe(false);
+    expect(manager.requestRequiresToolExecution('draw a cat')).toBe(false);
+  });
+
+  it('says a suppressed call was withheld by the app rather than blaming the model', () => {
+    const LoopSupport = loadLoopSupportClass();
+    const manager = new LoopSupport();
+    const state = manager.createToolExecutionState('What is lysC?');
+    const suppressedRound = {
+      text: '',
+      toolCalls: [],
+      invalidToolCalls: [],
+      suppressedToolCalls: [{ tool_name: 'select_gene', reason: 'suppressed' }],
+      hasToolCallIntent: true,
+      isEmpty: false,
+    };
+
+    expect(manager.getModelTurnRecoveryDecision(suppressedRound, state, 1, 10).action).toBe('retry');
+    expect(manager.getModelTurnRecoveryDecision(suppressedRound, state, 2, 10).action).toBe('retry');
+    const decision = manager.getModelTurnRecoveryDecision(suppressedRound, state, 3, 10);
+
+    expect(decision.action).toBe('fail');
+    expect(decision.finalResponse).toContain('read as informational');
+    expect(decision.finalResponse).toContain('select_gene');
+    expect(decision.finalResponse).not.toContain('model repeatedly returned');
+    expect(manager.isAppGeneratedNotice(decision.finalResponse)).toBe(true);
+  });
+
   it('repairs mixed or incomplete protocol responses before any tool executes', () => {
     const LoopSupport = loadLoopSupportClass();
     const manager = new LoopSupport();
