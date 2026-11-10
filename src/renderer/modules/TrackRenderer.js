@@ -11736,13 +11736,6 @@ This action cannot be undone.`;
                         <div class="settings-section">
                             <h4>Interactive Features</h4>
                             <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="genesEnableGlobalDragging" ${settings.enableGlobalDragging !== false ? 'checked' : ''}>
-                                    Enable Global Track Dragging
-                                </label>
-                                <div class="help-text">When enabled, this track will update dynamically during drag operations, providing real-time navigation feedback. Disable for better performance on slower devices.</div>
-                            </div>
-                            <div class="form-group">
                                 <label for="genesWheelZoomSensitivity">Wheel Zoom Sensitivity:</label>
                                 <input type="range" id="genesWheelZoomSensitivity" class="form-range" min="0.01" max="0.5" step="0.01" value="${settings.wheelZoomSensitivity || 0.1}">
                                 <div class="range-display">Current: <span id="genesWheelZoomSensitivityValue">${settings.wheelZoomSensitivity || 0.1}</span></div>
@@ -12657,7 +12650,6 @@ This action cannot be undone.`;
         geneNameColor: '#333333', // Default gene name color
         fontFamily: 'Arial, sans-serif',
         layoutMode: 'packed', // 'packed' | 'singleRow' | 'groupByType'
-        enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false, // Inherit from global setting, default to true
         highlightEffect: 'pulse', // 'pulse', 'border', 'both'
         autoHighlightSequence: true, // Auto-highlight sequence region when gene is selected
         autoScrollBottomSequenceOnGeneSelect: true, // Scroll Bottom Sequence Track to selected gene
@@ -12745,7 +12737,6 @@ This action cannot be undone.`;
         geneNameColor: '#4a044e',
         fontFamily: 'Arial, sans-serif',
         layoutMode: 'packed',
-        enableGlobalDragging: this.genomeBrowser?.generalSettingsManager?.getSettings()?.enableGlobalDragging !== false,
         highlightEffect: 'border',
         autoHighlightSequence: false,
         showSequence: false,
@@ -12918,7 +12909,6 @@ This action cannot be undone.`;
         const geneNameColorElement = modal.querySelector('#genesGeneNameColor');
         const fontFamilyElement = modal.querySelector('#genesFontFamily');
         const layoutModeElement = modal.querySelector('#genesLayoutMode');
-        const enableGlobalDraggingElement = modal.querySelector('#genesEnableGlobalDragging');
         const wheelZoomSensitivityElement = modal.querySelector('#genesWheelZoomSensitivity');
         const overrideGlobalZoomElement = modal.querySelector('#genesOverrideGlobalZoom');
         const showSequenceElement = modal.querySelector('#genesShowSequence');
@@ -12936,7 +12926,6 @@ This action cannot be undone.`;
           fontSizeElement: !!fontSizeElement,
           fontFamilyElement: !!fontFamilyElement,
           layoutModeElement: !!layoutModeElement,
-          enableGlobalDraggingElement: !!enableGlobalDraggingElement,
           wheelZoomSensitivityElement: !!wheelZoomSensitivityElement,
           overrideGlobalZoomElement: !!overrideGlobalZoomElement,
         });
@@ -12951,7 +12940,6 @@ This action cannot be undone.`;
         settings.geneNameColor = geneNameColorElement?.value || '#333333';
         settings.fontFamily = fontFamilyElement?.value || 'Arial, sans-serif';
         settings.layoutMode = this.normalizeLayoutMode(layoutModeElement?.value);
-        settings.enableGlobalDragging = enableGlobalDraggingElement?.checked !== false; // Default to true
         settings.wheelZoomSensitivity = parseFloat(wheelZoomSensitivityElement?.value) || 0.1;
         settings.overrideGlobalZoom = overrideGlobalZoomElement?.checked || false;
         settings.showSequence = showSequenceElement?.checked || false; // Default to false (hidden)

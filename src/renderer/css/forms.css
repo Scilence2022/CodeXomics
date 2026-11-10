@@ -242,6 +242,23 @@ small.form-help {
   color: var(--text-secondary);
 }
 
+/* A setting another setting currently overrides: greyed out, with a note */
+.form-group.setting-overridden > label {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.setting-override-note {
+  display: block;
+  font-style: italic;
+}
+
+/* Several .help-text rules set display (one as `.form-group small.help-text`),
+   which would beat the UA [hidden] rule */
+.setting-override-note[hidden] {
+  display: none !important;
+}
+
 /* Specific Input Types */
 .form-input[type='number'] {
   text-align: right;

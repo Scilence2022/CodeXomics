@@ -3771,32 +3771,45 @@ Supported formats:
                                     <input type="checkbox" id="enableAnimations" checked>
                                     Enable Animations
                                 </label>
-                                <small class="help-text">Disable for better performance on slower devices</small>
+                                <small class="help-text">Interface transitions and animations: fades, slides, hover
+                                    effects and pulsing highlights. Turn off for a calmer screen or on slower devices;
+                                    loading spinners keep turning.</small>
                             </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableGlobalDragging" checked>
-                                    Enable Global Track Dragging
-                                </label>
-                                <small class="help-text">All tracks update dynamically during drag operations (like
-                                    Genes & Features track)</small>
-                            </div>
+                        </div>
+
+                        <!-- Three independent parts of a drag: what is drawn, what moves, and the sequence panel -->
+                        <div class="settings-section">
+                            <h4><i class="fas fa-arrows-alt-h"></i> Dragging the View</h4>
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="dragUpdateGeneFeatures">
                                     Live-Render New Region While Dragging
                                 </label>
-                                <small class="help-text">While you drag the view, draw the region scrolling into view:
-                                    genes, aligned reads, GC content and the other tracks fill in as you drag instead
-                                    of after you release. Uses more CPU and reads I/O, so it is off by default.</small>
+                                <small class="help-text">Draw the region scrolling into view while you drag: genes,
+                                    aligned reads, GC content and the other tracks fill in as you go. When off
+                                    (default), the tracks slide as a picture and the new region is drawn once you
+                                    release. Uses more CPU and reads I/O.</small>
+                            </div>
+                            <div class="form-group" id="enableGlobalDraggingGroup">
+                                <label>
+                                    <input type="checkbox" id="enableGlobalDragging" checked>
+                                    Move All Tracks Together
+                                </label>
+                                <small class="help-text">Every track slides with the mouse while you drag. When off,
+                                    only the track you grab slides and the others jump to the new place on
+                                    release.</small>
+                                <small class="help-text setting-override-note" id="enableGlobalDraggingOverride"
+                                    hidden>Not used while Live-Render New Region While Dragging is on: live rendering
+                                    always moves every track.</small>
                             </div>
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="dragRealtimeSequenceUpdate">
-                                    Real-time Sequence Update While Dragging
+                                    Update Sequence Panel While Dragging
                                 </label>
-                                <small class="help-text">Update the bottom sequence panel continuously during a drag.
-                                    When off (default), it updates once after the drag ends.</small>
+                                <small class="help-text">Redraw the bottom sequence panel during a drag. When off
+                                    (default), it is redrawn once when you release. Works with either setting
+                                    above.</small>
                             </div>
                         </div>
 
@@ -4784,12 +4797,12 @@ Supported formats:
 
                     <div class="setting-item">
                         <div class="setting-label">
-                            <label for="enableAnimations">Enable Hover Animations</label>
+                            <label for="tabHoverAnimations">Enable Hover Animations</label>
                             <p class="setting-description">Animate indicators on hover</p>
                         </div>
                         <div class="setting-control">
                             <label class="switch">
-                                <input type="checkbox" id="enableAnimations" checked>
+                                <input type="checkbox" id="tabHoverAnimations" checked>
                                 <span class="slider"></span>
                             </label>
                         </div>

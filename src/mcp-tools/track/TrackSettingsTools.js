@@ -177,7 +177,6 @@ class TrackSettingsTools {
             description:
               'Layout mode: "packed" (fill first row, overflow on overlap), "singleRow" (all features on one row), "groupByType" (one row per feature type)',
           },
-          enableGlobalDragging: { type: 'boolean', default: true, description: 'Enable global track dragging' },
           highlightEffect: {
             type: 'string',
             enum: ['pulse', 'border', 'both'],
