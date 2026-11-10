@@ -129,3 +129,17 @@ body {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
+
+/* "Enable Animations" off (General Settings > Performance). Durations go to
+   near zero rather than `none` so animations still end in their final state.
+   Busy indicators are left alone: a frozen spinner reads as a hang. */
+body.no-animations *:not(.fa-spin):not(.fa-pulse):not(.spinner):not(.loading-spinner):not(.task-status-icon),
+body.no-animations *:not(.btn.loading)::before,
+body.no-animations *:not(.btn.loading)::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}

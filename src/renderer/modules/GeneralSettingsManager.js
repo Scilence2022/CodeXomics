@@ -29,9 +29,9 @@ class GeneralSettingsManager {
       enableAnimations: true,
       enableFileCache: true,
       cacheSize: 500,
-      enableGlobalDragging: true, // Enable dynamic viewport updates for all tracks during dragging
+      enableGlobalDragging: true, // Move every track with the mouse during a drag (off: only the grabbed track); not used by a live drag
       dragUpdateGeneFeatures: false, // Live-render the newly exposed region (genes, reads, GC, ...) while dragging; off by default for performance
-      dragRealtimeSequenceUpdate: false, // Update bottom sequence panel live during drag (real-time) vs only after release (unified, default)
+      dragRealtimeSequenceUpdate: false, // Redraw the bottom sequence panel during a drag (off: once on release); works with either drag mode
 
       // Wheel Zoom
       enableWheelZoom: true,
@@ -773,6 +773,7 @@ class GeneralSettingsManager {
       const checkbox = document.getElementById(id);
       if (checkbox) checkbox.checked = this.settings[id];
     });
+    this.syncDragSettingControls(this.settings.dragUpdateGeneFeatures === true);
 
     // External tools settings
     const deepGeneResearchUrlInput = document.getElementById('deepGeneResearchUrl');
@@ -1067,12 +1068,21 @@ class GeneralSettingsManager {
    * Apply animations setting
    */
   applyAnimations(enabled) {
-    const body = document.body;
-    if (enabled) {
-      body.classList.remove('no-animations');
-    } else {
-      body.classList.add('no-animations');
-    }
+    // base.css turns transitions and animations off under this class
+    document.body.classList.toggle('no-animations', enabled === false);
+  }
+
+  /**
+   * "Move All Tracks Together" only applies to the transform-only drag. A live
+   * drag always moves every track, so grey the control out and say why rather
+   * than leave a checkbox that silently does nothing.
+   */
+  syncDragSettingControls(liveRender) {
+    const checkbox = document.getElementById('enableGlobalDragging');
+    if (checkbox) checkbox.disabled = liveRender;
+    document.getElementById('enableGlobalDraggingGroup')?.classList.toggle('setting-overridden', liveRender);
+    const note = document.getElementById('enableGlobalDraggingOverride');
+    if (note) note.hidden = !liveRender;
   }
 
   /**
@@ -1081,21 +1091,13 @@ class GeneralSettingsManager {
   applyFeatureSetting(feature, enabled) {
     // Handle specific feature settings
     switch (feature) {
+      case 'enableAnimations':
+        this.applyAnimations(enabled);
+        break;
       case 'enableGlobalDragging':
-        // Notify the genome browser about the global dragging setting change
-        if (window.genomeBrowser) {
+        // Move every track (on) or only the grabbed one (off) during a drag
+        if (window.genomeBrowser?.setGlobalDragging) {
           window.genomeBrowser.setGlobalDragging(enabled);
-
-          // Also update individual track settings to inherit the global setting
-          if (window.genomeBrowser.trackRenderer) {
-            if (window.genomeBrowser.trackRenderer.trackSettings) {
-              // Update existing track settings
-              if (window.genomeBrowser.trackRenderer.trackSettings.genes) {
-                window.genomeBrowser.trackRenderer.trackSettings.genes.enableGlobalDragging = enabled;
-              }
-            }
-            console.log(`🎯 Updated individual track settings to inherit global dragging: ${enabled}`);
-          }
         }
         break;
       case 'dragUpdateGeneFeatures':
@@ -1103,6 +1105,7 @@ class GeneralSettingsManager {
         if (window.genomeBrowser?.navigationManager?.setDragUpdateGeneFeatures) {
           window.genomeBrowser.navigationManager.setDragUpdateGeneFeatures(enabled);
         }
+        this.syncDragSettingControls(enabled === true);
         break;
       case 'dragRealtimeSequenceUpdate':
         // Real-time vs unified bottom-sequence update during drag

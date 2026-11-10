@@ -2204,7 +2204,7 @@ class TabManager {
     const trackBorderRadius = document.getElementById('trackBorderRadius');
     const trackBorderRadiusValue = document.getElementById('trackBorderRadiusValue');
     const enableChromosomeColors = document.getElementById('enableChromosomeColors');
-    const enableAnimations = document.getElementById('enableAnimations');
+    const enableAnimations = document.getElementById('tabHoverAnimations');
 
     // Modal close functionality
     const closeButtons = modal.querySelectorAll('.modal-close');
@@ -2370,7 +2370,7 @@ class TabManager {
     const trackBorderRadius = document.getElementById('trackBorderRadius');
     const trackBorderRadiusValue = document.getElementById('trackBorderRadiusValue');
     const enableChromosomeColors = document.getElementById('enableChromosomeColors');
-    const enableAnimations = document.getElementById('enableAnimations');
+    const enableAnimations = document.getElementById('tabHoverAnimations');
 
     // Populate cache settings
     tabCacheEnabled.checked = this.cacheSettings.enabled;
@@ -2536,7 +2536,7 @@ class TabManager {
     const trackBorderColor = document.getElementById('trackBorderColor').value;
     const trackRadius = document.getElementById('trackBorderRadius').value;
     const enableChromosomeColors = document.getElementById('enableChromosomeColors').checked;
-    const enableAnimations = document.getElementById('enableAnimations').checked;
+    const enableAnimations = document.getElementById('tabHoverAnimations').checked;
 
     // Update preview visualization height
     previewVisualization.style.height = `${height}px`;
@@ -2583,7 +2583,7 @@ class TabManager {
     const trackBorderColor = document.getElementById('trackBorderColor');
     const trackBorderRadius = document.getElementById('trackBorderRadius');
     const enableChromosomeColors = document.getElementById('enableChromosomeColors');
-    const enableAnimations = document.getElementById('enableAnimations');
+    const enableAnimations = document.getElementById('tabHoverAnimations');
 
     // The inputs carry min/max attributes, so clamp rather than rejecting the
     // whole save with a blocking alert

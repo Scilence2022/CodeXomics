@@ -57,16 +57,21 @@ class NavigationManager {
       pendingUpdate: false,
     };
 
-    // Global dragging setting - when enabled, all tracks update during drag
+    // The three drag settings (General Settings > Dragging the View) are
+    // independent parts of one drag:
+    //  - dragUpdateGeneFeatures ("Live-Render New Region While Dragging"):
+    //    WHAT is drawn. Re-render every track for the newly exposed region
+    //    during the drag (genes, reads, GC, ...) on top of the transform
+    //    preview. The setting key predates the wider scope and is kept for
+    //    saved configs. Default OFF.
+    //  - globalDraggingEnabled ("Move All Tracks Together"): WHAT moves in the
+    //    transform-only drag - every track, or only the grabbed one. A live
+    //    drag always moves every track, so it has no effect then.
+    //  - dragRealtimeSequenceUpdate ("Update Sequence Panel While Dragging"):
+    //    redraw the bottom sequence panel during the drag (otherwise once,
+    //    when the drag ends). Default OFF; works with either mode.
     this.globalDraggingEnabled = false;
 
-    // Drag update behavior (both default OFF for best performance):
-    //  - dragUpdateGeneFeatures ("Live-Render New Region While Dragging"):
-    //    re-render every track for the newly exposed region during a drag
-    //    (genes, reads, GC, ...) on top of the CSS transform preview. The
-    //    setting key predates the wider scope and is kept for saved configs.
-    //  - dragRealtimeSequenceUpdate: re-render the bottom sequence panel live
-    //    during a drag (otherwise it updates once, when the drag ends).
     this.dragUpdateGeneFeatures = false;
     this.dragRealtimeSequenceUpdate = false;
 
@@ -2651,20 +2656,10 @@ class NavigationManager {
     );
   }
 
-  // Decide whether tracks should re-render live during a drag. True when the
-  // global setting is on, or when a per-track "update while dragging" toggle is
-  // enabled for the genes or reads track (read from their saved track settings).
+  // Whether tracks re-render live during a drag. The one switch is
+  // "Live-Render New Region While Dragging"; there is no per-track override.
   isDynamicDragUpdateEnabled() {
-    if (this.dragUpdateGeneFeatures) return true;
-    const trackRenderer = this.genomeBrowser.trackRenderer;
-    if (!trackRenderer || typeof trackRenderer.getTrackSettings !== 'function') return false;
-    try {
-      if (trackRenderer.getTrackSettings('genes')?.dynamicUpdateOnDrag === true) return true;
-      if (trackRenderer.getTrackSettings('reads')?.dynamicUpdateOnDrag === true) return true;
-    } catch (err) {
-      console.warn('⚠️ [NavigationManager] Could not read per-track dynamic drag settings:', err);
-    }
-    return false;
+    return this.dragUpdateGeneFeatures === true;
   }
 
   /**
