@@ -520,6 +520,27 @@ class GeneralSettingsManager {
   }
 
   /**
+   * Register the modal with the drag and resize managers. Both are loaded
+   * asynchronously after the renderer starts, so retry until they exist.
+   */
+  registerModalBehavior(attempt = 0) {
+    const dragManager = window.modalDragManager;
+    const resizeManager = window.resizableModalManager;
+
+    if (dragManager && resizeManager) {
+      dragManager.makeDraggable('#generalSettingsModal');
+      resizeManager.makeResizable('#generalSettingsModal');
+      return;
+    }
+
+    if (attempt < 50) {
+      setTimeout(() => this.registerModalBehavior(attempt + 1), 200);
+    } else {
+      console.warn('⚠️ [GeneralSettings] Modal drag/resize managers did not become available');
+    }
+  }
+
+  /**
    * Setup modal event handlers
    */
   setupModalHandlers() {
@@ -530,11 +551,15 @@ class GeneralSettingsManager {
     }
 
     // Initialize draggable and resizable using centralized managers
-    if (window.modalDragManager) {
-      window.modalDragManager.makeDraggable('#generalSettingsModal');
-    }
-    if (window.resizableModalManager) {
-      window.resizableModalManager.makeResizable('#generalSettingsModal');
+    this.registerModalBehavior();
+
+    // Reset position button: re-center the modal and restore its default size
+    const resetPositionBtn = modal.querySelector('.reset-position-btn');
+    if (resetPositionBtn) {
+      resetPositionBtn.addEventListener('click', () => {
+        window.modalDragManager?.resetPosition('#generalSettingsModal');
+        window.resizableModalManager?.resetSize('#generalSettingsModal');
+      });
     }
 
     // Add reset to defaults button handler
@@ -1502,7 +1527,9 @@ class GeneralSettingsManager {
   testTabSwitching() {
     console.log('🧪 [GeneralSettings] Testing tab switching...');
 
-    const tabs = ['appearance', 'performance', 'features', 'export', 'about'];
+    const tabs = [...document.querySelectorAll('#generalSettingsModal .llm-provider-tabs .tab-button')].map(
+      btn => btn.dataset.tab
+    );
     let currentIndex = 0;
 
     const testNext = () => {

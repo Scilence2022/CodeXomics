@@ -2036,8 +2036,8 @@
 
   /* General Settings modal specific sizing */
   #generalSettingsModal .modal-content {
-    width: 700px;
-    min-width: 400px;
+    width: 1080px;
+    min-width: 520px;
     max-width: none !important;
     min-height: 500px;
   }

@@ -3522,11 +3522,11 @@ Supported formats:
 
     <!-- General Settings Modal -->
     <div id="generalSettingsModal" class="modal">
-        <div class="modal-content resizable llm-config-modal" style="max-width: none; width: 700px; min-width: 400px;">
+        <div class="modal-content resizable llm-config-modal" style="max-width: none; width: 1080px; min-width: 520px;">
             <div class="modal-header">
                 <h3><i class="fas fa-cog"></i> General Settings</h3>
                 <div class="modal-controls">
-                    <button class="reset-position-btn" title="Reset Position">
+                    <button class="reset-position-btn" title="Reset Position &amp; Size">
                         <i class="fas fa-crosshairs"></i>
                     </button>
                     <button class="reset-defaults-btn" title="Reset to Defaults">
@@ -3540,11 +3540,20 @@ Supported formats:
                     <button class="tab-button active" data-tab="appearance">
                         <i class="fas fa-palette"></i> Appearance
                     </button>
-                    <button class="tab-button" data-tab="performance">
-                        <i class="fas fa-tachometer-alt"></i> Performance
+                    <button class="tab-button" data-tab="visualization">
+                        <i class="fas fa-chart-line"></i> Visualization
+                    </button>
+                    <button class="tab-button" data-tab="navigation">
+                        <i class="fas fa-compass"></i> Navigation
                     </button>
                     <button class="tab-button" data-tab="features">
                         <i class="fas fa-toggle-on"></i> Features
+                    </button>
+                    <button class="tab-button" data-tab="memory">
+                        <i class="fas fa-memory"></i> Memory
+                    </button>
+                    <button class="tab-button" data-tab="caching">
+                        <i class="fas fa-database"></i> Caching
                     </button>
                     <button class="tab-button" data-tab="security">
                         <i class="fas fa-shield-alt"></i> Security
@@ -3695,7 +3704,7 @@ Supported formats:
                         </div>
 
                         <div class="settings-section">
-                            <h4><i class="fas fa-expand-arrows-alt"></i> Layout</h4>
+                            <h4><i class="fas fa-desktop"></i> Interface</h4>
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="compactMode">
@@ -3710,48 +3719,22 @@ Supported formats:
                                 </label>
                                 <small class="help-text">Display welcome screen when no file is loaded</small>
                             </div>
-                        </div>
-
-                        <div class="settings-section">
-                            <h4><i class="fas fa-align-justify"></i> Sequence Display</h4>
                             <div class="form-group">
-                                <label for="minLineSpacing">Minimum Line Spacing (px):</label>
-                                <input type="number" id="minLineSpacing" value="12" min="2" max="20" step="1"
-                                    class="input-full">
-                                <small class="help-text">Minimum spacing between sequence lines to ensure readability
-                                    (default: 12px)</small>
+                                <label>
+                                    <input type="checkbox" id="enableAnimations" checked>
+                                    Enable Animations
+                                </label>
+                                <small class="help-text">Interface transitions and animations: fades, slides, hover
+                                    effects and pulsing highlights. Turn off for a calmer screen or on slower devices;
+                                    loading spinners keep turning.</small>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Performance Tab -->
-                    <div id="performance-tab" class="tab-content">
+                    <!-- Visualization Tab -->
+                    <div id="visualization-tab" class="tab-content">
                         <div class="settings-section">
-                            <h4><i class="fas fa-memory"></i> Memory Management</h4>
-                            <div class="form-group">
-                                <label for="maxSequenceLength">Maximum Sequence Length (bp):</label>
-                                <select id="maxSequenceLength" class="input-full">
-                                    <option value="1000000">1 Million</option>
-                                    <option value="5000000" selected>5 Million</option>
-                                    <option value="10000000">10 Million</option>
-                                    <option value="50000000">50 Million</option>
-                                    <option value="unlimited">Unlimited (Use with caution)</option>
-                                </select>
-                                <small class="help-text">Limit sequence length to prevent memory issues</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="renderingMode">Rendering Mode:</label>
-                                <select id="renderingMode" class="input-full">
-                                    <option value="adaptive" selected>Adaptive (Recommended)</option>
-                                    <option value="performance">Performance (Lower Quality)</option>
-                                    <option value="quality">Quality (Higher Memory)</option>
-                                </select>
-                                <small class="help-text">Balance between visual quality and performance</small>
-                            </div>
-                        </div>
-
-                        <div class="settings-section">
-                            <h4><i class="fas fa-chart-line"></i> Visualization</h4>
+                            <h4><i class="fas fa-layer-group"></i> Tracks</h4>
                             <div class="form-group">
                                 <label for="maxGenesDisplay">Maximum Genes to Display:</label>
                                 <input type="number" id="maxGenesDisplay" value="1000" min="100" max="10000"
@@ -3766,14 +3749,16 @@ Supported formats:
                                     <option value="expanded">Expanded (120px)</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4><i class="fas fa-align-justify"></i> Sequence Display</h4>
                             <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableAnimations" checked>
-                                    Enable Animations
-                                </label>
-                                <small class="help-text">Interface transitions and animations: fades, slides, hover
-                                    effects and pulsing highlights. Turn off for a calmer screen or on slower devices;
-                                    loading spinners keep turning.</small>
+                                <label for="minLineSpacing">Minimum Line Spacing (px):</label>
+                                <input type="number" id="minLineSpacing" value="12" min="2" max="20" step="1"
+                                    class="input-full">
+                                <small class="help-text">Minimum spacing between sequence lines to ensure readability
+                                    (default: 12px)</small>
                             </div>
                         </div>
 
@@ -3812,78 +3797,12 @@ Supported formats:
                                     above.</small>
                             </div>
                         </div>
-
-                        <div class="settings-section">
-                            <h4><i class="fas fa-database"></i> Caching</h4>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableFileCache" checked>
-                                    Enable File Caching
-                                </label>
-                                <small class="help-text">Cache processed files for faster loading</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="cacheSize">Cache Size Limit (MB):</label>
-                                <input type="number" id="cacheSize" value="500" min="100" max="2000" class="input-full">
-                            </div>
-                            <div class="form-group">
-                                <button id="clearCacheBtn" class="btn btn-secondary">
-                                    <i class="fas fa-trash"></i>
-                                    Clear Cache
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- Features Tab -->
-                    <div id="features-tab" class="tab-content">
+                    <!-- Navigation Tab -->
+                    <div id="navigation-tab" class="tab-content">
                         <div class="settings-section">
-                            <h4><i class="fas fa-dna"></i> Sequence Features</h4>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableGCContent" checked>
-                                    Enable GC Content Analysis
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableProteinTranslation" checked>
-                                    Enable Protein Translation
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableOperonPrediction" checked>
-                                    Enable Operon Prediction
-                                </label>
-                                <small class="help-text">Automatically predict and group genes into operons</small>
-                            </div>
-                        </div>
-
-                        <div class="settings-section">
-                            <h4><i class="fas fa-search"></i> Search & Navigation</h4>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableFuzzySearch" checked>
-                                    Enable Fuzzy Search
-                                </label>
-                                <small class="help-text">Allow approximate matches in search</small>
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableAutoComplete" checked>
-                                    Enable Search Auto-complete
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label for="searchHistorySize">Search History Size:</label>
-                                <input type="number" id="searchHistorySize" value="50" min="10" max="200"
-                                    class="input-full">
-                            </div>
-                        </div>
-
-                        <div class="settings-section">
-                            <h4><i class="fas fa-mouse"></i> Mouse & Navigation</h4>
+                            <h4><i class="fas fa-mouse"></i> Mouse Wheel Zoom</h4>
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="enableWheelZoom" checked>
@@ -3919,6 +3838,54 @@ Supported formats:
                                 <input type="number" id="wheelZoomMaxRange" value="1000000" min="1000" max="10000000"
                                     class="input-full">
                                 <small class="help-text">Maximum genomic range when fully zoomed out</small>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4><i class="fas fa-search"></i> Search</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableFuzzySearch" checked>
+                                    Enable Fuzzy Search
+                                </label>
+                                <small class="help-text">Allow approximate matches in search</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableAutoComplete" checked>
+                                    Enable Search Auto-complete
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="searchHistorySize">Search History Size:</label>
+                                <input type="number" id="searchHistorySize" value="50" min="10" max="200"
+                                    class="input-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Features Tab -->
+                    <div id="features-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4><i class="fas fa-dna"></i> Sequence Features</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableGCContent" checked>
+                                    Enable GC Content Analysis
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableProteinTranslation" checked>
+                                    Enable Protein Translation
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableOperonPrediction" checked>
+                                    Enable Operon Prediction
+                                </label>
+                                <small class="help-text">Automatically predict and group genes into operons</small>
                             </div>
                         </div>
 
@@ -3959,6 +3926,57 @@ Supported formats:
                                 <input type="url" id="progenFixerUrl" value="https://progenfixer.biodesign.ac.cn"
                                     class="input-full">
                                 <small class="help-text">URL for the ProGenFixer web interface</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Memory Tab -->
+                    <div id="memory-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4><i class="fas fa-memory"></i> Memory Management</h4>
+                            <div class="form-group">
+                                <label for="maxSequenceLength">Maximum Sequence Length (bp):</label>
+                                <select id="maxSequenceLength" class="input-full">
+                                    <option value="1000000">1 Million</option>
+                                    <option value="5000000" selected>5 Million</option>
+                                    <option value="10000000">10 Million</option>
+                                    <option value="50000000">50 Million</option>
+                                    <option value="unlimited">Unlimited (Use with caution)</option>
+                                </select>
+                                <small class="help-text">Limit sequence length to prevent memory issues</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="renderingMode">Rendering Mode:</label>
+                                <select id="renderingMode" class="input-full">
+                                    <option value="adaptive" selected>Adaptive (Recommended)</option>
+                                    <option value="performance">Performance (Lower Quality)</option>
+                                    <option value="quality">Quality (Higher Memory)</option>
+                                </select>
+                                <small class="help-text">Balance between visual quality and performance</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Caching Tab -->
+                    <div id="caching-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h4><i class="fas fa-database"></i> Caching</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableFileCache" checked>
+                                    Enable File Caching
+                                </label>
+                                <small class="help-text">Cache processed files for faster loading</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="cacheSize">Cache Size Limit (MB):</label>
+                                <input type="number" id="cacheSize" value="500" min="100" max="2000" class="input-full">
+                            </div>
+                            <div class="form-group">
+                                <button id="clearCacheBtn" class="btn btn-secondary">
+                                    <i class="fas fa-trash"></i>
+                                    Clear Cache
+                                </button>
                             </div>
                         </div>
                     </div>
