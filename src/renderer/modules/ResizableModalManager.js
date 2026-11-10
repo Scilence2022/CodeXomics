@@ -64,6 +64,11 @@ class ResizableModalManager {
       }
     }
 
+    // Remember the authored inline width so resetSize() can return to it.
+    if (!modalContent.hasAttribute('data-initial-inline-width')) {
+      modalContent.setAttribute('data-initial-inline-width', modalContent.style.width || '');
+    }
+
     // Allow the JS constraint logic to be the single source of truth.
     modalContent.style.setProperty('max-width', 'none', 'important');
     this.syncInitialWidth(modalContent);
@@ -342,14 +347,18 @@ class ResizableModalManager {
 
     if (!modalContent) return;
 
-    // Clear inline dimensions and positioning so CSS defaults take effect
-    modalContent.style.width = '';
+    // Clear inline dimensions and positioning so the authored defaults take effect.
+    modalContent.style.width = modalContent.getAttribute('data-initial-inline-width') || '';
     modalContent.style.height = '';
     modalContent.style.left = '';
     modalContent.style.top = '';
-    modalContent.style.maxWidth = '';
     modalContent.style.position = '';
     modalContent.style.margin = '';
+
+    // The modal must stay resizable after a reset. Clearing max-width here would let a
+    // stylesheet cap (e.g. .modal-content.large) come back and pin the width.
+    modalContent.style.setProperty('max-width', 'none', 'important');
+    this.syncInitialWidth(modalContent);
   }
 }
 
