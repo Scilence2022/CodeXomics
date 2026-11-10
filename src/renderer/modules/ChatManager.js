@@ -5640,6 +5640,15 @@ class ChatManager {
             );
           } else if (detectedToolCount > 0) {
             this.updateThinkingMessage(`🔍 Detected ${detectedToolCount} tool call(s), none queued for execution`);
+          } else if ((responseAnalysis.suppressedToolCalls || []).length > 0) {
+            // The call parsed fine; it was withheld because the request read as
+            // informational. Saying "could not be normalized" here sent
+            // debugging after the parser instead of the intent check.
+            this.updateThinkingMessage(
+              `🚫 Suppressed state-changing tool call(s) for a request read as informational: ${responseAnalysis.suppressedToolCalls
+                .map(t => t.tool_name)
+                .join(', ')}`
+            );
           } else if (responseAnalysis.hasToolCallIntent) {
             this.updateThinkingMessage(`⚠️ Tool-like response detected but it could not be normalized`);
           } else {
@@ -7881,8 +7890,12 @@ class ChatManager {
   // requestRequiresToolExecution anchors on the leading verb, so a request whose
   // first word is missing from this list is read as informational and every
   // state-changing call the model makes for it is suppressed unexecuted.
+  // "take a screenshot of all tracks" was refused this way until "take" was
+  // listed. The everyday verbs at the end (take, display, plot, go, make, ...)
+  // also read as plain English, so requestRequiresToolExecution additionally
+  // demands app or genomics context for them: "take a break" stays a chat.
   getActionVerbPattern() {
-    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|detect|identify|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|expand|collapse|view|check|change|fetch|get|list|retrieve|filter|sort|extract|annotate|compare|convert|summari[sz]e|generate|perform|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry)';
+    return '(?:select|highlight|choose|pick|activate|set|open|close|switch|navigate|jump|zoom|pan|scroll|search|find|locate|detect|identify|load|import|export|download|save|archive|delete|create|add|remove|clear|cut|edit|update|modify|rename|replace|apply|configure|calculate|compute|analy[sz]e|assess|predict|translate|align|run|execute|start|stop|pause|resume|show|hide|toggle|expand|collapse|view|check|change|fetch|get|list|retrieve|filter|sort|extract|annotate|compare|convert|summari[sz]e|generate|perform|design|simulate|copy|paste|insert|bookmark|restore|reset|capture|install|uninstall|enable|disable|validate|merge|rollback|reject|cancel|resolve|assign|decompose|balance|optimize|retry|take|display|render|plot|draw|visuali[sz]e|print|go|move|make)';
   }
 
   requestRequiresToolExecution(originalMessage, responseText = '') {
@@ -7902,12 +7915,14 @@ class ChatManager {
       ).test(message) ||
       /\b(?:i\s+(?:want|need)|please\s+have)\s+.+?\b(?:selected|highlighted|activated)\b/.test(message) ||
       /\bmake\s+.+?\b(?:the\s+)?(?:active\s+gene|active\s+selection|selected|highlighted)\b/.test(message) ||
-      /^(?:(?:请|帮我|麻烦|能否|可以)\s*)?(?:选择|选中|高亮|打开|关闭|切换|导航|跳转|缩放|搜索|查找|定位|加载|导入|导出|保存|删除|创建|添加|移除|编辑|更新|计算|分析|翻译|运行|显示|隐藏|获取|设计|模拟|复制|粘贴|插入)/.test(
+      /^(?:(?:请|帮我|麻烦|能否|可以)\s*)?(?:选择|选中|高亮|打开|关闭|切换|导航|跳转|缩放|搜索|查找|定位|加载|导入|导出|保存|删除|创建|添加|移除|编辑|更新|计算|分析|翻译|运行|显示|隐藏|获取|设计|模拟|复制|粘贴|插入|截图|截取|绘制|展示)/.test(
         String(originalMessage || '').trim()
       );
     const knowledgeAction = /\b(?:calculate|compute|analy[sz]e|show)\b/.test(message);
     const contextRequiredAction =
-      /\b(?:calculate|compute|analy[sz]e|assess|predict|show|find|search|locate|open|fetch|retrieve)\b/.test(message);
+      /\b(?:calculate|compute|analy[sz]e|assess|predict|show|find|search|locate|open|fetch|retrieve|take|display|render|plot|draw|visuali[sz]e|print|go|move|make)\b/.test(
+        message
+      );
     const genomicsOrAppContext =
       /\b(?:genomes?|genes?|dna|rna|sequences?|annotations?|features?|chromosomes?|tracks?|tabs?|windows?|files?|images?|primers?|proteins?|blast|tools?|codons?|gc|domains?|motifs?|regions?|positions?|views?|browsers?|states?|tasks?|actions?|bookmarks?|settings?|themes?|styles?|modes?|models?|providers?|options?|sidebars?|panels?|banners?|modals?|plugins?|workflows?|benchmarks?|databases?|uniprot|interpro|reports?|screenshots?|director(?:y|ies)|folders?|reads?|variants?|wig|operons?|fasta|genbank|bed|gff|vcf|molecular|translations?)\b/.test(
         message
@@ -8757,6 +8772,7 @@ class ChatManager {
     const text = String(message || '').trim();
     return (
       text.startsWith('I could not complete the requested action because the model repeatedly returned') ||
+      text.startsWith('The requested action was not carried out because the request was read as informational') ||
       text.startsWith('The model returned an empty response for two consecutive rounds') ||
       text.startsWith('⚠️ Processing stopped after the configured limit') ||
       text.startsWith('The requested tool call was blocked by the tool execution policy') ||
@@ -8845,13 +8861,24 @@ class ChatManager {
               .map(step => step.capability)
               .join(', ')}.`
           : '';
+      const suppressedNames = [
+        ...new Set((responseAnalysis?.suppressedToolCalls || []).map(call => call.tool_name).filter(Boolean)),
+      ];
+      // A suppressed call is a valid call the app withheld, not a model fault.
+      // Blaming the model ("repeatedly returned ... instead of a valid tool
+      // call") pointed the reader at the wrong component.
+      const finalResponse =
+        suppressedNames.length > 0 && invalidToolCalls.length === 0
+          ? `The requested action was not carried out because the request was read as informational, ` +
+            `so the state-changing tool call(s) the model issued were suppressed: ${suppressedNames.join(', ')}. ` +
+            `Rephrasing it as a direct command (for example "capture ..." or "export ...") will run it.${unfinished}`
+          : `I could not complete the requested action because the model repeatedly returned ${reason} ` +
+            `instead of a valid tool call.${unfinished}`;
       return {
         action: 'fail',
         reason,
         outstandingSteps,
-        finalResponse:
-          `I could not complete the requested action because the model repeatedly returned ${reason} ` +
-          `instead of a valid tool call.${unfinished}`,
+        finalResponse,
       };
     }
 
