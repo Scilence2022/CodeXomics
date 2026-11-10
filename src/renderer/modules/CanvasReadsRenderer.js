@@ -112,7 +112,6 @@ class CanvasReadsRenderer {
             z-index: 50;
             background: transparent;
             opacity: 0;
-            transition: opacity 0.1s ease-out;
         `;
 
     // Get 2D context with alpha for transparency
@@ -134,7 +133,14 @@ class CanvasReadsRenderer {
       if (this.options.showSequences) {
         this.calculateTextMetrics();
       }
-      // Fade in the canvas now that it has correct dimensions
+      // setupCanvas resizes the canvas, which clears whatever the caller drew
+      // off-DOM. Draw again in this same frame: otherwise the rows stay blank
+      // until the ResizeObserver's debounced redraw ~100ms later, and every
+      // navigation shows the reads track twice (empty, then filled).
+      this.render();
+      // Show the canvas now that it has correct dimensions. No fade: during a
+      // live drag the track is rebuilt several times a second, and fading in
+      // each rebuild makes the reads flicker.
       this.canvas.style.opacity = '1';
     });
 
@@ -1131,6 +1137,15 @@ class CanvasReadsRenderer {
     }
 
     this.resizeTimeout = setTimeout(() => {
+      this.resizeTimeout = null;
+      // A later render replaced this track; nothing to draw.
+      if (!this.container.isConnected) return;
+      // The observer also fires when the container is first laid out and when
+      // setupCanvas sets the container height. Only a width change alters the
+      // drawing; redrawing for those would repaint the same image ~100ms
+      // after the first one.
+      const width = this.container.getBoundingClientRect().width;
+      if (this.canvasWidth > 0 && width > 0 && Math.abs(Math.max(width, 200) - this.canvasWidth) < 0.5) return;
       console.log('🔄 [CanvasReadsRenderer] Handling resize');
       this.setupCanvas();
       if (this.options.showSequences) {

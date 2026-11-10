@@ -30,7 +30,7 @@ class GeneralSettingsManager {
       enableFileCache: true,
       cacheSize: 500,
       enableGlobalDragging: true, // Enable dynamic viewport updates for all tracks during dragging
-      dragUpdateGeneFeatures: false, // Re-render gene features live during drag (avoids trailing blank space); off by default for performance
+      dragUpdateGeneFeatures: false, // Live-render the newly exposed region (genes, reads, GC, ...) while dragging; off by default for performance
       dragRealtimeSequenceUpdate: false, // Update bottom sequence panel live during drag (real-time) vs only after release (unified, default)
 
       // Wheel Zoom
@@ -1099,7 +1099,7 @@ class GeneralSettingsManager {
         }
         break;
       case 'dragUpdateGeneFeatures':
-        // Live gene-feature re-rendering during drag
+        // Live-render the newly exposed region during drag
         if (window.genomeBrowser?.navigationManager?.setDragUpdateGeneFeatures) {
           window.genomeBrowser.navigationManager.setDragUpdateGeneFeatures(enabled);
         }
