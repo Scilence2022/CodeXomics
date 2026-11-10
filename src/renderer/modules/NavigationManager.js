@@ -25,7 +25,22 @@ class NavigationManager {
       elementWidth: 0,
       dynamicUpdate: false, // Whether tracks re-render live during this drag (per global/per-track setting)
       canvasTransformsApplied: false, // Track if Canvas transforms were applied during this drag
+      // Start of the region the on-screen tracks were drawn for. The live
+      // preview offsets the DOM by (renderedStart - current start); a live
+      // re-render mid-drag moves it forward.
+      renderedStart: 0,
+      dragId: 0, // Increments per drag so a late live render can tell it is stale
     };
+
+    // Live re-render state for "Live-render new region while dragging". Only one
+    // render runs at a time: displayGenomeView aborts the render it supersedes,
+    // so starting one per throttle tick would cancel each in-flight render
+    // (reads await I/O) and nothing would ever reach the screen mid-drag.
+    this.liveDragRender = { inFlight: false, pending: false, timer: null };
+
+    // Restores the drag transforms on the old DOM if the release render never
+    // replaced it (render error). Run before the next drag starts.
+    this.pendingDragVisualReset = null;
 
     // Throttle for full/sequence re-renders performed *during* a drag when the
     // real-time update options are enabled (defaults keep these off).
@@ -46,9 +61,10 @@ class NavigationManager {
     this.globalDraggingEnabled = false;
 
     // Drag update behavior (both default OFF for best performance):
-    //  - dragUpdateGeneFeatures: re-render genome tracks live during a drag so
-    //    gene features fill in instead of leaving blank space on the trailing
-    //    edge (otherwise only a lightweight CSS transform is applied).
+    //  - dragUpdateGeneFeatures ("Live-Render New Region While Dragging"):
+    //    re-render every track for the newly exposed region during a drag
+    //    (genes, reads, GC, ...) on top of the CSS transform preview. The
+    //    setting key predates the wider scope and is kept for saved configs.
     //  - dragRealtimeSequenceUpdate: re-render the bottom sequence panel live
     //    during a drag (otherwise it updates once, when the drag ends).
     this.dragUpdateGeneFeatures = false;
@@ -1665,10 +1681,12 @@ class NavigationManager {
       : ((startPosition - newStart) / currentRange) * 100;
 
     if (this.dragState.dynamicUpdate) {
-      // Re-render the genome tracks live so gene features / reads (and other
-      // tracks) stay filled in instead of leaving blank space behind the drag.
-      // Enabled by the global setting or by a per-track "update while dragging"
-      // toggle (genes / reads). Computed once at drag start.
+      // Re-render the tracks for the newly exposed region while dragging, so
+      // genes, reads, GC and the other tracks fill in instead of leaving blank
+      // space. Every track keeps following the mouse through a transform taken
+      // against the region it was last drawn for, and a throttled re-render
+      // replaces the DOM as often as rendering allows.
+      this.applyLiveDragShift();
       this.requestDragViewRender(chromosome, sequence);
     } else if (this.globalDraggingEnabled) {
       // Update all tracks during drag when global dragging is enabled
@@ -1698,15 +1716,91 @@ class NavigationManager {
   }
 
   /**
-   * Throttled full genome-view re-render used during a drag when
-   * `dragUpdateGeneFeatures` is enabled. The drag-end handler always performs a
-   * final authoritative render, so dropping intermediate frames here is safe.
+   * Throttled full genome-view re-render used during a live drag
+   * (`dragUpdateGeneFeatures`). At most one render runs; moves that arrive
+   * meanwhile coalesce into one follow-up render, and a trailing timer makes
+   * sure the last position is drawn. The drag-end handler still performs the
+   * final authoritative render.
    */
   requestDragViewRender(chromosome, sequence) {
-    const now = performance.now();
-    if (now - this.dragRenderThrottle.lastViewRenderTime < this.dragRenderThrottle.intervalMs) return;
-    this.dragRenderThrottle.lastViewRenderTime = now;
-    this.genomeBrowser.displayGenomeView(chromosome, sequence);
+    const live = this.liveDragRender;
+    if (!this.dragState.isDragging) return;
+
+    // One render at a time; remember that the view moved and render again
+    // when the current one lands.
+    if (live.inFlight) {
+      live.pending = true;
+      return;
+    }
+
+    // Throttle, but never drop the last move: schedule the trailing render.
+    const wait = this.dragRenderThrottle.intervalMs - (performance.now() - this.dragRenderThrottle.lastViewRenderTime);
+    if (wait > 0) {
+      if (!live.timer) {
+        live.timer = setTimeout(() => {
+          live.timer = null;
+          this.requestDragViewRender(chromosome, sequence);
+        }, wait);
+      }
+      return;
+    }
+
+    if (this.genomeBrowser.currentPosition.start === this.dragState.renderedStart) return;
+
+    live.inFlight = true;
+    live.pending = false;
+    this.dragRenderThrottle.lastViewRenderTime = performance.now();
+    const dragId = this.dragState.dragId;
+    const seqBefore = this.genomeBrowser.genomeViewRenderSeq;
+
+    Promise.resolve()
+      .then(() => this.genomeBrowser.displayGenomeView(chromosome, sequence))
+      .catch(error => console.warn('⚠️ [DRAG-LIVE] Live render failed:', error))
+      .finally(() => {
+        live.inFlight = false;
+        // The release render supersedes (aborts) any live render still running.
+        if (!this.dragState.isDragging || this.dragState.dragId !== dragId) return;
+
+        // Runs in the same task as the DOM swap, before the browser paints, so
+        // the new tracks never appear at the wrong offset.
+        if (this.genomeBrowser.genomeViewRenderSeq !== seqBefore && this.genomeBrowser.lastRenderedPosition) {
+          this.dragState.renderedStart = this.genomeBrowser.lastRenderedPosition.start;
+        }
+        this.applyLiveDragShift();
+
+        if (live.pending || this.genomeBrowser.currentPosition.start !== this.dragState.renderedStart) {
+          live.pending = false;
+          this.requestDragViewRender(chromosome, sequence);
+        }
+      });
+  }
+
+  /**
+   * Offset every track by the distance between the region it was drawn for
+   * (dragState.renderedStart) and the current position. Used by live drags,
+   * where a re-render mid-drag resets the reference point.
+   */
+  applyLiveDragShift() {
+    const { start, end } = this.genomeBrowser.currentPosition;
+    const range = end - start;
+    if (!(range > 0)) return;
+
+    let delta = this.dragState.renderedStart - start;
+    if (this.circularMode) {
+      const seqLen = this.genomeBrowser.currentSequence?.[this.dragState.chromosome]?.length || 0;
+      if (seqLen > 0) {
+        // Take the short way around the origin.
+        delta = ((((delta + seqLen / 2) % seqLen) + seqLen) % seqLen) - seqLen / 2;
+      }
+    }
+    this.performGlobalDragUpdate((delta / range) * 100, this.dragState.chromosome);
+  }
+
+  cancelLiveDragRender() {
+    const live = this.liveDragRender;
+    clearTimeout(live.timer);
+    live.timer = null;
+    live.pending = false;
   }
 
   /**
@@ -1738,15 +1832,25 @@ class NavigationManager {
     element.classList.remove('dragging');
     document.body.style.userSelect = '';
 
-    if (this.globalDraggingEnabled) {
-      // Reset all tracks when global dragging is enabled
-      this.resetGlobalVisualDragUpdates();
-    } else {
-      // Only reset the dragged element (default behavior)
-      this.resetVisualDragUpdates(element);
-    }
+    this.cancelLiveDragRender();
 
-    // No Canvas-specific tracking needed with unified container approach
+    // Undo the live drag offset. Not done here when the drag moved the view:
+    // the release render is async (the reads track awaits I/O), so clearing
+    // the transform now would put the old region back on screen - offset by
+    // the whole drag distance - until the new DOM arrives, and the view would
+    // visibly land twice (first beside the target, then on it). The offset
+    // is kept until the render replaces those elements; see
+    // commitDragRender().
+    const dynamicUpdate = this.dragState.dynamicUpdate;
+    const resetVisuals = () => {
+      if (this.globalDraggingEnabled || dynamicUpdate) {
+        // Every track was offset (global dragging, or a live drag)
+        this.resetGlobalVisualDragUpdates();
+      } else {
+        // Only the dragged track was offset (default behavior)
+        this.resetVisualDragUpdates(element);
+      }
+    };
 
     // Clean up global drag update timeout if it exists
     if (this.globalDragUpdateTimeout) {
@@ -1773,6 +1877,7 @@ class NavigationManager {
 
     if (!hasDragged) {
       this.dragState.hasDragged = false;
+      resetVisuals();
       console.log('🔧 [DRAG-END] No significant drag detected, no position change');
       return;
     }
@@ -1821,7 +1926,7 @@ class NavigationManager {
     // Trigger a full re-render with the definitive new position
     console.log('🔧 [DRAG-END] Starting re-render...');
     this.genomeBrowser.updateStatistics(chromosome, sequence);
-    this.genomeBrowser.displayGenomeView(chromosome, sequence);
+    this.commitDragRender(chromosome, sequence, resetVisuals);
     this.genomeBrowser.genomeNavigationBar.update();
 
     // Update current tab title with new position (from drag)
@@ -1839,6 +1944,49 @@ class NavigationManager {
 
     console.log('🔧 [DRAG-END] Re-render completed');
     console.log('🔧 [DRAG-END] Final position after render:', this.genomeBrowser.currentPosition);
+  }
+
+  /**
+   * Final render for a drag, leaving the live drag offset in place until the
+   * new DOM replaces the dragged elements. That replacement discards the
+   * offset with the old elements, so there is nothing left to reset and the
+   * view goes straight from the drag preview to the committed render. If the
+   * render never lands (it threw, or a later navigation superseded it and then
+   * failed), the offset is undone so the old DOM is not left shifted.
+   */
+  commitDragRender(chromosome, sequence, resetVisuals) {
+    const browser = this.genomeBrowser;
+    const seqBefore = browser.genomeViewRenderSeq;
+    let settled = false;
+    const reset = () => {
+      if (settled) return;
+      settled = true;
+      if (this.pendingDragVisualReset === reset) this.pendingDragVisualReset = null;
+      resetVisuals();
+    };
+    this.pendingDragVisualReset = reset;
+
+    Promise.resolve()
+      .then(() => browser.displayGenomeView(chromosome, sequence))
+      .catch(error => console.error('❌ [DRAG-END] Render after drag failed:', error))
+      .finally(() => {
+        if (browser.genomeViewRenderSeq !== seqBefore) {
+          // New DOM is up; the offset left with the old elements. The reset
+          // only clears leftover bookkeeping on the fresh elements - unless a
+          // new drag already moves them.
+          if (this.dragState.isDragging) {
+            settled = true;
+            if (this.pendingDragVisualReset === reset) this.pendingDragVisualReset = null;
+          } else {
+            reset();
+          }
+        } else if (!browser.genomeViewRenderController) {
+          // Nothing replaced the old DOM and nothing will: undo the offset.
+          reset();
+        }
+        // Otherwise a newer render is in flight and will replace the old DOM;
+        // the next drag start flushes this reset if it never does.
+      });
   }
 
   // Show real-time position feedback during drag
@@ -1951,6 +2099,12 @@ class NavigationManager {
       if (e.button !== 0) return;
       if (document.body.hasAttribute('data-splitter-resizing')) return;
 
+      // A previous drag's release render never replaced its DOM: undo its
+      // offset before caching this drag's base transforms. While that render
+      // is still running it will replace the DOM, so leave the offset alone.
+      if (!this.genomeBrowser.genomeViewRenderController) this.pendingDragVisualReset?.();
+      this.cancelLiveDragRender();
+
       // Initialize centralized drag state
       Object.assign(this.dragState, {
         isDragging: true,
@@ -1960,6 +2114,8 @@ class NavigationManager {
         startX: e.clientX,
         startPosition: this.genomeBrowser.currentPosition.start,
         lastCalculatedStart: this.genomeBrowser.currentPosition.start,
+        renderedStart: this.genomeBrowser.currentPosition.start,
+        dragId: this.dragState.dragId + 1,
         // Capture the px-per-base reference once; reused for the whole drag
         elementWidth: this.getEffectiveWidth(element),
         // Decide once whether tracks should re-render live during this drag
@@ -1969,14 +2125,15 @@ class NavigationManager {
       });
 
       // Reset in-drag render throttles so the first eligible frame renders
-      this.dragRenderThrottle.lastViewRenderTime = 0;
-      this.dragRenderThrottle.lastSequenceRenderTime = 0;
+      this.dragRenderThrottle.lastViewRenderTime = -Infinity;
+      this.dragRenderThrottle.lastSequenceRenderTime = -Infinity;
 
       element.style.cursor = 'grabbing';
       element.classList.add('dragging');
 
-      if (this.globalDraggingEnabled) {
-        // Cache transforms for all tracks when global dragging is enabled
+      if (this.globalDraggingEnabled || this.dragState.dynamicUpdate) {
+        // Cache transforms for all tracks (global dragging, or a live drag,
+        // which offsets every track it re-renders)
         this.cacheAllTrackTransforms();
       } else {
         // Only cache the dragged element (default behavior)
@@ -2475,9 +2632,9 @@ class NavigationManager {
     console.log(`🎯 NavigationManager: Global dragging ${enabled ? 'enabled' : 'disabled'}`);
   }
 
-  // Re-render gene features (and other tracks) live during a drag instead of
+  // Live-render the newly exposed region (every track) during a drag instead of
   // only applying a CSS transform. Eliminates trailing blank space at the cost
-  // of extra rendering. Default OFF.
+  // of extra rendering and reads I/O. Default OFF.
   setDragUpdateGeneFeatures(enabled) {
     this.dragUpdateGeneFeatures = enabled === true;
     console.log(

@@ -64,7 +64,6 @@ class CanvasGenesRenderer {
             z-index: 10;
             pointer-events: auto;
             opacity: 0;
-            transition: opacity 0.1s ease-out;
         `;
 
     // Get 2D context
@@ -87,7 +86,8 @@ class CanvasGenesRenderer {
       this._pendingInitialRender = null;
       this.setupCanvas();
       this.render();
-      // Fade in the canvas now that it has correct dimensions
+      // Show the canvas now that it has correct dimensions. No fade: a live
+      // drag rebuilds the track several times a second.
       this.canvas.style.opacity = '1';
     });
 

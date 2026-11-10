@@ -4633,12 +4633,15 @@ class TrackRenderer {
   async createMultipleReadsTracks(chromosome, bamFiles, signal) {
     const tracksContainer = document.createElement('div');
     tracksContainer.className = 'multi-reads-tracks-container';
+    // Every file's track must show the same region. Later files are built after
+    // awaiting earlier ones, and a live drag can move the view in between.
+    const viewport = this.getCurrentViewport();
 
     for (let i = 0; i < bamFiles.length; i++) {
       const bamFile = bamFiles[i];
 
       if (this.genomeBrowser.multiFileManager.getTrackVisibility(bamFile.trackId)) {
-        const track = await this.createSingleReadsTrack(chromosome, bamFile, signal);
+        const track = await this.createSingleReadsTrack(chromosome, bamFile, signal, viewport);
         signal?.throwIfAborted();
         if (track) {
           tracksContainer.appendChild(track);
@@ -4853,9 +4856,7 @@ class TrackRenderer {
   /**
    * Create single reads track with file-specific header
    */
-  async createSingleReadsTrack(chromosome, bamFile, signal) {
-    const viewport = this.getCurrentViewport();
-
+  async createSingleReadsTrack(chromosome, bamFile, signal, viewport = this.getCurrentViewport()) {
     // CRITICAL FIX: Get and apply track settings for single reads track (instance-specific)
     const rawSettings = this.getTrackSettings('reads', bamFile.metadata.id);
     const settings = JSON.parse(JSON.stringify(rawSettings));
@@ -5985,6 +5986,18 @@ class TrackRenderer {
         if (!window.canvasReadsRenderers) {
           window.canvasReadsRenderers = [];
         }
+        // Drop renderers whose track a later render has replaced. Every
+        // navigation (and every live-drag frame) builds new ones; without this
+        // the list, their reads and their observers grow for the whole session.
+        // Renderers from the render in progress are still off-DOM, so only
+        // detached ones from an earlier render generation are discarded.
+        const renderSeq = this.genomeBrowser.genomeViewRenderSeq || 0;
+        canvasRenderer._renderSeq = renderSeq;
+        window.canvasReadsRenderers = window.canvasReadsRenderers.filter(renderer => {
+          if (!renderer || renderer.canvas?.isConnected || !(renderer._renderSeq < renderSeq)) return true;
+          renderer.destroy?.();
+          return false;
+        });
         window.canvasReadsRenderers.push(canvasRenderer);
       }
 
@@ -9397,7 +9410,10 @@ class TrackRenderer {
     const span = viewport.end - viewport.start;
     const pixelsPerBase = containerWidth / span;
     const y = layout.topPadding + rowIndex * (layout.actionHeight + layout.rowSpacing);
-    const elementWidth = Math.min(containerWidth, Math.max((action._displayEnd - action._displayStart) * pixelsPerBase, 8));
+    const elementWidth = Math.min(
+      containerWidth,
+      Math.max((action._displayEnd - action._displayStart) * pixelsPerBase, 8)
+    );
     const x = Math.min((action._displayStart - viewport.start) * pixelsPerBase, containerWidth - elementWidth);
     const elementHeight = layout.actionHeight;
 
@@ -10021,8 +10037,9 @@ Created: ${new Date(action.timestamp).toLocaleString()}`;
       let placed = false;
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        const canPlace = row.every(existingAction =>
-          action._displayEnd < existingAction._displayStart || action._displayStart > existingAction._displayEnd
+        const canPlace = row.every(
+          existingAction =>
+            action._displayEnd < existingAction._displayStart || action._displayStart > existingAction._displayEnd
         );
 
         if (canPlace) {

@@ -4004,6 +4004,31 @@ class GenomeBrowser {
     }
   }
 
+  /**
+   * Run `build` with currentPosition temporarily set to `position`, restoring
+   * the live value as soon as it returns. Only the synchronous part runs pinned:
+   * nothing else can move the view during it, so the restore is exact. When the
+   * position has not moved (every render outside a live drag) this is a no-op.
+   */
+  withViewPosition(position, build) {
+    const live = this.currentPosition;
+    if (!live || (live.start === position.start && live.end === position.end)) return build();
+    this.currentPosition = { start: position.start, end: position.end };
+    try {
+      return build();
+    } finally {
+      this.currentPosition = live;
+    }
+  }
+
+  // Build one track for the region the current render started with. Async
+  // builders (reads) capture their viewport before their first await.
+  createTrackAtPosition(position, trackType, chromosome, sequence, tracksToShow, signal) {
+    return this.withViewPosition(position, () =>
+      this.createTrackByType(trackType, chromosome, sequence, tracksToShow, signal)
+    );
+  }
+
   // Helper method to create tracks by type
   async createTrackByType(trackType, chromosome, sequence, tracksToShow, signal) {
     console.log(`🔧 [DEBUG] [createTrackByType] Called for trackType: ${trackType}`);
@@ -4106,6 +4131,14 @@ class GenomeBrowser {
     const controller = new AbortController();
     this.genomeViewRenderController = controller;
     const { signal } = controller;
+
+    // Every track in one render must describe the same region. The reads track
+    // awaits I/O, and a live drag keeps moving currentPosition while it waits,
+    // so the tracks built after that await would otherwise be drawn for a
+    // different region than the ones built before it. Pin the region this
+    // render started with for each track's synchronous build (see
+    // createTrackAtPosition) and record it once the new DOM is in place.
+    const renderPosition = { start: this.currentPosition.start, end: this.currentPosition.end };
 
     try {
       this.navigationManager?.cancelAlignedReadsRedraw();
@@ -4224,7 +4257,7 @@ class GenomeBrowser {
 
       // Create tracks according to the tab's specific order
       for (const trackType of currentTabOrder) {
-        await this.createTrackByType(trackType, chromosome, sequence, tracksToShow, signal);
+        await this.createTrackAtPosition(renderPosition, trackType, chromosome, sequence, tracksToShow, signal);
         signal.throwIfAborted();
       }
 
@@ -4243,7 +4276,7 @@ class GenomeBrowser {
       ];
       for (const trackType of defaultOrder) {
         if (!currentTabOrder.includes(trackType)) {
-          await this.createTrackByType(trackType, chromosome, sequence, tracksToShow, signal);
+          await this.createTrackAtPosition(renderPosition, trackType, chromosome, sequence, tracksToShow, signal);
           signal.throwIfAborted();
         }
       }
@@ -4252,7 +4285,9 @@ class GenomeBrowser {
       if (this.annotationTracks && this.annotationTracks.length > 0) {
         for (const annotationTrack of this.annotationTracks) {
           if (annotationTrack.visible && !currentTabOrder.includes(`annotation_${annotationTrack.id}`)) {
-            const trackElement = this.trackRenderer.createAnnotationTrack(chromosome, annotationTrack);
+            const trackElement = this.withViewPosition(renderPosition, () =>
+              this.trackRenderer.createAnnotationTrack(chromosome, annotationTrack)
+            );
             if (trackElement) {
               tracksToShow.push({ element: trackElement, type: `annotation_${annotationTrack.id}` });
             }
@@ -4295,6 +4330,11 @@ class GenomeBrowser {
       });
 
       container.replaceChildren(browserContainer);
+      // The region the on-screen tracks were drawn for. A live drag keeps
+      // panning while a render is in flight; NavigationManager offsets the new
+      // DOM by the difference between this and the current position.
+      this.lastRenderedPosition = renderPosition;
+      this.genomeViewRenderSeq = (this.genomeViewRenderSeq || 0) + 1;
 
       // Apply saved track state (sizes) from previous sessions
       // Note: Track order is already applied during track creation
