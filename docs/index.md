@@ -61,7 +61,7 @@ npm install
 npm start
 ```
 
-Load a genome with **File → Load File → Genome File**. To use the ChatBox, open **Options → Configure LLM Providers**, save a provider, and select a default model. [Getting Started](user-guides/GETTING_STARTED.md)
+Load a genome with **File → Load File → Genome File**. To use the ChatBox, open **Settings → Model Providers** (<kbd>⌘,</kbd> / <kbd>Ctrl+,</kbd>), save a provider, and select a default model. [Getting Started](user-guides/GETTING_STARTED.md)
 
 ### Genome Visualization
 

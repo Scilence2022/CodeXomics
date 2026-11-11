@@ -5,6 +5,31 @@
  * Handles LLM settings, UI preferences, chat history, and app configurations
  */
 class ConfigManager {
+  /**
+   * Top-level sections that hold user preferences but have no config file of
+   * their own. They travel together in `preferences` (preferences.json), so a
+   * setting written with `set('<section>...')` survives a restart. Keep this
+   * list to preferences: runtime state and per-genome data stay out.
+   */
+  static PREFERENCE_SECTIONS = Object.freeze([
+    'search',
+    'geneDetailSettings',
+    'tracks',
+    'mcpSettings',
+    'mcpGlobalSettings',
+    'mcpServers',
+    'mcpBridgeEnabled',
+    'multiAgentSettings',
+    'agentSystemSettings',
+    'skills',
+    'externalTools',
+    'pluginDirectory',
+    'enablePluginSandbox',
+    'enablePluginDebug',
+    'literature',
+    'blastTools',
+  ]);
+
   constructor() {
     // Detect Electron environment first
     this.isElectron = this.detectElectron();
@@ -557,6 +582,22 @@ class ConfigManager {
       }
     }
 
+    this.applyPreferencesSection(loadedConfig.preferences);
+
+    // Keep the BLAST+ setup (owned by its own window, in localStorage) and its
+    // persisted copy in step: whichever exists fills in the other.
+    let hasStoredBlastTools = false;
+    try {
+      hasStoredBlastTools = !!localStorage.getItem('blast-config');
+    } catch (error) {
+      hasStoredBlastTools = false;
+    }
+    if (hasStoredBlastTools) {
+      this.syncBlastToolsFromStorage();
+    } else {
+      this.restoreBlastToolsToStorage();
+    }
+
     if (loadedConfig.llm?.localCustomConfigs === undefined) {
       try {
         const legacy = JSON.parse(localStorage.getItem('localCustomConfigs'));
@@ -650,6 +691,12 @@ class ConfigManager {
       if (chatboxSettings) {
         this.config.chatboxSettings = { ...JSON.parse(chatboxSettings) };
         console.log('ChatBox settings loaded from localStorage');
+      }
+
+      // Load the remaining preference sections (search, tracks, agents, MCP, ...)
+      const preferences = localStorage.getItem('preferences');
+      if (preferences) {
+        this.applyPreferencesSection(JSON.parse(preferences));
       }
 
       // Load marketplace settings and installed plugins
@@ -916,7 +963,43 @@ class ConfigManager {
       }
     });
 
+    persistableConfig.preferences = this.buildPreferencesSection();
+
     return persistableConfig;
+  }
+
+  /**
+   * Collect the PREFERENCE_SECTIONS into the object stored as preferences.json.
+   * Track settings keep only their type-level entries: per-file overrides are
+   * keyed by `<type>::<fileId>` and belong to one loaded file.
+   */
+  buildPreferencesSection() {
+    const preferences = {};
+    for (const section of ConfigManager.PREFERENCE_SECTIONS) {
+      let value = this.config[section];
+      if (value === undefined) continue;
+      if (section === 'tracks' && value && typeof value === 'object') {
+        value = Object.fromEntries(Object.entries(value).filter(([key]) => !key.includes('::')));
+      }
+      preferences[section] = this.validateAndCleanData(value);
+    }
+    return preferences;
+  }
+
+  /**
+   * Merge a stored preferences object back into the live config. Unknown keys
+   * are ignored so a stale or hand-edited file cannot inject runtime state.
+   */
+  applyPreferencesSection(preferences) {
+    if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) return;
+    for (const section of ConfigManager.PREFERENCE_SECTIONS) {
+      if (!Object.hasOwn(preferences, section)) continue;
+      const stored = preferences[section];
+      const current = this.config[section];
+      const isPlainObject = value => value && typeof value === 'object' && !Array.isArray(value);
+      this.config[section] =
+        isPlainObject(stored) && isPlainObject(current) ? this.mergeConfig(current, stored) : stored;
+    }
   }
 
   /**
@@ -1045,6 +1128,7 @@ class ConfigManager {
       saveSetting('chatboxSettings', this.config.chatboxSettings);
     }
     saveSetting('marketplaceSettings', this.config.marketplace);
+    saveSetting('preferences', this.buildPreferencesSection());
 
     const cleanChatHistory = this.validateAndCleanData(this.config.chat).history;
     localStorage.setItem(this.getChatHistoryKey(), this.safeStringify(cleanChatHistory));
@@ -1280,6 +1364,128 @@ class ConfigManager {
 
     if (this.debouncedSave) {
       this.debouncedSave();
+    }
+  }
+
+  /**
+   * Sections a settings export carries: the preference files plus
+   * PREFERENCE_SECTIONS. Chat history, conversation-evolution data, BLAST
+   * database registrations and installed plugins are data, not settings.
+   */
+  static get SETTINGS_EXPORT_SECTIONS() {
+    return ['generalSettings', 'chatboxSettings', 'ui', 'app', 'llm', ...ConfigManager.PREFERENCE_SECTIONS];
+  }
+
+  /**
+   * Build the object written by Settings > Backup > Export. Every credential
+   * (API keys, tokens, Authorization headers) is removed, and so is state that
+   * only makes sense on this computer (recent files, saved tab sessions).
+   */
+  buildSettingsExport() {
+    this.syncBlastToolsFromStorage();
+
+    const preferences = this.buildPreferencesSection();
+    const sections = {};
+    for (const section of ConfigManager.SETTINGS_EXPORT_SECTIONS) {
+      const value = Object.hasOwn(preferences, section) ? preferences[section] : this.config[section];
+      if (value === undefined) continue;
+      sections[section] = structuredClone(this.validateAndCleanData(value));
+    }
+
+    if (sections.app) delete sections.app.recentFiles;
+    if (sections.ui) delete sections.ui.lastSessionTabs;
+
+    window.configurationCredentials.mapConfigurationCredentials(sections, () => undefined);
+
+    const versionInfo = typeof window !== 'undefined' ? window.VERSION_INFO : null;
+    return {
+      format: 'codexomics-settings',
+      formatVersion: 2,
+      exported: new Date().toISOString(),
+      appVersion: versionInfo?.fullVersion || this.config.version,
+      sections,
+    };
+  }
+
+  /**
+   * Apply a settings export. Accepts the current format, the older General
+   * Settings export (`{ settings }`) and a full `exportConfig()` file
+   * (`{ config }`). Credentials already on this computer are kept whenever the
+   * file has none for that field, which is always the case for exports.
+   * @returns {Promise<string[]>} The sections that were imported
+   */
+  async importSettingsExport(data) {
+    if (typeof data === 'string') data = JSON.parse(data);
+    if (!data || typeof data !== 'object') throw new Error('Invalid settings file');
+
+    let sections;
+    if (data.format === 'codexomics-settings' && data.sections && typeof data.sections === 'object') {
+      sections = data.sections;
+    } else if (data.config && typeof data.config === 'object') {
+      sections = data.config;
+    } else if (data.settings && typeof data.settings === 'object') {
+      sections = { generalSettings: data.settings };
+    } else {
+      throw new Error('This file is not a CodeXomics settings export');
+    }
+
+    await this.waitForInitialization();
+
+    const isPlainObject = value => value && typeof value === 'object' && !Array.isArray(value);
+    const imported = [];
+    for (const section of ConfigManager.SETTINGS_EXPORT_SECTIONS) {
+      if (!Object.hasOwn(sections, section)) continue;
+      const incoming = structuredClone(sections[section]);
+      const current = this.config[section];
+
+      if (isPlainObject(incoming)) {
+        if (section === 'app') delete incoming.recentFiles;
+        if (section === 'ui') delete incoming.lastSessionTabs;
+        // A blank or missing credential in the file keeps the one stored here
+        window.configurationCredentials.mapConfigurationCredentials(
+          incoming,
+          (value, previous) => value || (typeof previous === 'string' ? previous : ''),
+          isPlainObject(current) ? current : null
+        );
+      }
+
+      this.config[section] =
+        isPlainObject(incoming) && isPlainObject(current) ? this.mergeConfig(current, incoming) : incoming;
+      imported.push(section);
+    }
+
+    if (imported.length === 0) throw new Error('The file contains no settings this version understands');
+
+    if (imported.includes('blastTools')) this.restoreBlastToolsToStorage();
+    await this.saveConfig();
+    return imported;
+  }
+
+  /**
+   * The BLAST+ setup window stores its result in localStorage ('blast-config'),
+   * which the BLAST runner reads. Mirror it into `blastTools` so the setting is
+   * persisted, exported and visible in Settings.
+   */
+  syncBlastToolsFromStorage() {
+    try {
+      const stored = localStorage.getItem('blast-config');
+      if (stored) this.config.blastTools = JSON.parse(stored);
+    } catch (error) {
+      console.warn('Could not read BLAST+ tool configuration:', error.message);
+    }
+    return this.config.blastTools || null;
+  }
+
+  /**
+   * Write `blastTools` back to the localStorage entry the BLAST runner reads.
+   */
+  restoreBlastToolsToStorage() {
+    try {
+      if (this.config.blastTools && typeof this.config.blastTools === 'object') {
+        localStorage.setItem('blast-config', JSON.stringify(this.config.blastTools));
+      }
+    } catch (error) {
+      console.warn('Could not restore BLAST+ tool configuration:', error.message);
     }
   }
 

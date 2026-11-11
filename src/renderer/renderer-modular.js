@@ -676,6 +676,12 @@ class GenomeBrowser {
     // Step 5.6.1: Load Gene Details Settings
     console.log('⚙️ Loading Gene Details settings...');
     this.loadGeneDetailSettings();
+    // Preference sections arrive asynchronously; read them again once loaded,
+    // and drop track settings that were cached from defaults before that.
+    Promise.resolve(this.configManager?.waitForInit?.()).then(() => {
+      this.loadGeneDetailSettings();
+      this.trackRenderer?.clearTrackSettingsCache?.();
+    });
 
     // Step 5.6.2: Initialize Gene Attachments Manager
     console.log('📎 About to initialize GeneAttachmentsManager...');
@@ -896,8 +902,9 @@ class GenomeBrowser {
           window.internalMCPServer = this.internalMCPServer; // Keep for debugging
           console.log('✅ Internal MCP Server initialized and started');
 
-          // Initialize MCPBridge for auto-connect to standalone MCP server
-          this.initializeMCPBridge();
+          // Initialize MCPBridge for auto-connect to standalone MCP server once the
+          // persisted on/off toggle (preferences.json) has loaded
+          Promise.resolve(this.configManager?.waitForInit?.()).finally(() => this.initializeMCPBridge());
         } else {
           console.warn('⚠️ InternalMCPServer class not available');
         }
@@ -1481,6 +1488,12 @@ class GenomeBrowser {
     // MCP Settings modal
     document.getElementById('mcpSettingsBtn')?.addEventListener('click', () => this.showMCPSettingsModal());
 
+    // Settings window
+    document.getElementById('openSettingsCenterBtn')?.addEventListener('click', () => {
+      this.uiManager?.closeOptionsDropdown?.();
+      window.settingsCenter?.open();
+    });
+
     // General Settings modal
     document.getElementById('settingsBtn')?.addEventListener('click', () => this.showGeneralSettingsModal());
 
@@ -1530,83 +1543,47 @@ class GenomeBrowser {
     }
   }
 
-  showGeneralSettingsModal() {
+  /**
+   * Load General Settings into its panel and show it. The Settings window
+   * displays the panel; `tab` picks the section (appearance, memory, ...).
+   * Returns a promise that settles once the values and tab are in place.
+   */
+  showGeneralSettingsModal(tab = null) {
     const modal = document.getElementById('generalSettingsModal');
-    if (modal) {
-      // Initialize GeneralSettingsManager if not already done
-      if (this.generalSettingsManager) {
-        console.log('🔄 [GeneralSettings] Loading settings and initializing tabs...');
-
-        // Check if it's initialized, if not initialize it first
-        if (!this.generalSettingsManager.isInitialized) {
-          console.log('🔄 [GeneralSettings] Initializing GeneralSettingsManager...');
-          this.generalSettingsManager
-            .init()
-            .then(() => {
-              // Load current settings and update UI
-              return this.generalSettingsManager.loadSettings();
-            })
-            .then(() => {
-              // Initialize tabs properly after settings are loaded
-              this.generalSettingsManager.initializeTabs();
-            })
-            .catch(error => {
-              console.error('❌ [GeneralSettings] Error initializing or loading settings:', error);
-              // Still try to initialize tabs even if settings loading fails
-              this.generalSettingsManager.initializeTabs();
-            });
-        } else {
-          // Load current settings and update UI
-          this.generalSettingsManager
-            .loadSettings()
-            .then(() => {
-              // Initialize tabs properly after settings are loaded
-              this.generalSettingsManager.initializeTabs();
-            })
-            .catch(error => {
-              console.error('❌ [GeneralSettings] Error loading settings:', error);
-              // Still try to initialize tabs even if settings loading fails
-              this.generalSettingsManager.initializeTabs();
-            });
-        }
-      } else {
-        console.warn('❌ [GeneralSettings] GeneralSettingsManager not available');
-        // Try to create it on-demand
-        try {
-          this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
-          window.generalSettingsManager = this.generalSettingsManager;
-          this.generalSettingsManager
-            .init()
-            .then(() => {
-              console.log('✅ [GeneralSettings] GeneralSettingsManager initialized successfully');
-              // Load current settings and update UI
-              return this.generalSettingsManager.loadSettings();
-            })
-            .then(() => {
-              // Initialize tabs properly after settings are loaded
-              this.generalSettingsManager.initializeTabs();
-            })
-            .catch(error => {
-              console.error('❌ [GeneralSettings] Error initializing or loading settings:', error);
-              // Still try to initialize tabs even if settings loading fails
-              this.generalSettingsManager.initializeTabs();
-            });
-        } catch (error) {
-          console.error('❌ [GeneralSettings] Failed to create GeneralSettingsManager:', error);
-        }
-      }
-
-      // Reset drag position so modal re-centers on open
-      if (window.modalDragManager) {
-        window.modalDragManager.resetPosition('#generalSettingsModal');
-      }
-
-      // Show modal
-      modal.classList.add('show');
-      console.log('✅ [GeneralSettings] Modal shown');
-    } else {
+    if (!modal) {
       console.error('❌ [GeneralSettings] General Settings modal not found');
+      return Promise.resolve();
     }
+
+    if (!this.generalSettingsManager) {
+      try {
+        this.generalSettingsManager = new GeneralSettingsManager(this.configManager);
+        window.generalSettingsManager = this.generalSettingsManager;
+      } catch (error) {
+        console.error('❌ [GeneralSettings] Failed to create GeneralSettingsManager:', error);
+        return Promise.resolve();
+      }
+    }
+
+    const manager = this.generalSettingsManager;
+    if (tab) manager.pendingTab = tab;
+
+    const ready = (manager.isInitialized ? manager.loadSettings() : manager.init().then(() => manager.loadSettings()))
+      .catch(error => {
+        console.error('❌ [GeneralSettings] Error initializing or loading settings:', error);
+      })
+      .then(() => {
+        // Initialize tabs after settings are loaded, even if loading failed
+        manager.initializeTabs();
+      });
+
+    // Reset drag position so modal re-centers on open
+    if (window.modalDragManager) {
+      window.modalDragManager.resetPosition('#generalSettingsModal');
+    }
+
+    modal.classList.add('show');
+    return ready;
   }
 
   showExternalToolsModal() {
@@ -3455,6 +3432,11 @@ class GenomeBrowser {
           }, 500);
         }
       }
+    });
+
+    // Settings window (Cmd/Ctrl+, and Options > Settings…); an optional pane id deep-links
+    ipcRenderer.on('open-settings', (_event, paneId) => {
+      window.settingsCenter?.open(typeof paneId === 'string' ? paneId : null);
     });
 
     ipcRenderer.on('general-settings', () => {

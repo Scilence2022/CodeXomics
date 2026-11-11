@@ -112,7 +112,7 @@ Use this guide to diagnose installation, file loading, model configuration, and 
 **Solutions**:
 
 1. **Check API key configuration**:
-   - Go to Options → Configure LLM Providers
+   - Open Settings → Model Providers (⌘, / Ctrl+,)
    - Verify API key is correct and active
    - Test connection using "Test Connection" button
 

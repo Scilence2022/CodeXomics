@@ -32,6 +32,7 @@
     <link rel="stylesheet" href="css/chatbox-markdown.css">
     <link rel="stylesheet" href="css/llm-config.css">
     <link rel="stylesheet" href="css/skills.css">
+    <link rel="stylesheet" href="css/settings-center.css">
     <link rel="stylesheet" href="css/advanced-search.css">
     <link rel="stylesheet" href="css/digest.css">
     <link rel="stylesheet" href="css/gel-electrophoresis.css">
@@ -380,6 +381,12 @@
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="dropdown-menu" id="optionsDropdownMenu">
+                        <button class="dropdown-item" id="openSettingsCenterBtn">
+                            <i class="fas fa-gear"></i>
+                            Settings…
+                            <span class="dropdown-item-shortcut" data-shortcut-mac="⌘," data-shortcut-other="Ctrl+,"></span>
+                        </button>
+                        <div class="dropdown-divider"></div>
                         <button class="dropdown-item" id="configureLLMBtn">
                             <i class="fas fa-robot"></i>
                             Configure LLM Providers
@@ -3520,6 +3527,56 @@ Supported formats:
         </div>
     </div>
 
+    <!-- Settings window: every preference panel, adopted by modules/SettingsCenter.js -->
+    <div id="settingsCenterModal" class="modal settings-center-modal" role="dialog" aria-modal="true"
+        aria-labelledby="settingsCenterTitle" aria-hidden="true">
+        <div class="modal-content resizable settings-center-window">
+            <div class="modal-header settings-center-titlebar">
+                <h3 id="settingsCenterTitle"><i class="fas fa-gear"></i> Settings</h3>
+                <div class="modal-controls">
+                    <button type="button" class="settings-center-reset-position" title="Reset Position &amp; Size"
+                        aria-label="Reset position and size">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <button type="button" class="modal-close settings-center-close" title="Close Settings (Esc)"
+                        aria-label="Close settings">&times;</button>
+                </div>
+            </div>
+            <div class="settings-center-layout">
+                <aside class="settings-center-sidebar">
+                    <div class="settings-center-search">
+                        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                        <input type="search" id="settingsCenterSearch" placeholder="Search settings"
+                            aria-label="Search settings" aria-controls="settingsCenterResults" autocomplete="off"
+                            spellcheck="false">
+                    </div>
+                    <nav class="settings-center-nav" id="settingsCenterNav" aria-label="Settings sections"></nav>
+                    <div class="settings-center-results" id="settingsCenterResults" role="listbox"
+                        aria-label="Matching settings" hidden></div>
+                </aside>
+                <section class="settings-center-main" aria-labelledby="settingsCenterPaneTitle">
+                    <header class="settings-center-pane-header">
+                        <div class="settings-center-icon settings-center-pane-icon" id="settingsCenterPaneIcon"></div>
+                        <div class="settings-center-pane-heading">
+                            <h2 id="settingsCenterPaneTitle"></h2>
+                            <p id="settingsCenterPaneDescription"></p>
+                        </div>
+                    </header>
+                    <div class="settings-center-hosts" id="settingsCenterHosts"></div>
+                </section>
+            </div>
+            <!-- Resize handles -->
+            <div class="resize-handle resize-handle-n"></div>
+            <div class="resize-handle resize-handle-s"></div>
+            <div class="resize-handle resize-handle-e"></div>
+            <div class="resize-handle resize-handle-w"></div>
+            <div class="resize-handle resize-handle-ne"></div>
+            <div class="resize-handle resize-handle-nw"></div>
+            <div class="resize-handle resize-handle-se"></div>
+            <div class="resize-handle resize-handle-sw"></div>
+        </div>
+    </div>
+
     <!-- General Settings Modal -->
     <div id="generalSettingsModal" class="modal">
         <div class="modal-content resizable llm-config-modal" style="max-width: none; width: 1080px; min-width: 520px;">
@@ -4119,7 +4176,8 @@ Supported formats:
                                     <i class="fas fa-download"></i>
                                     Export All Settings
                                 </button>
-                                <small class="help-text">Save all settings to a file</small>
+                                <small class="help-text">Save every setting to a file you can import on another
+                                    computer. API keys, tokens and passwords are not included.</small>
                             </div>
                             <div class="form-group">
                                 <input type="file" id="importSettingsFile" accept=".json" style="display: none;">
@@ -4127,14 +4185,17 @@ Supported formats:
                                     <i class="fas fa-upload"></i>
                                     Import Settings
                                 </button>
-                                <small class="help-text">Load settings from a file</small>
+                                <small class="help-text">Load settings from an exported file. API keys already on this
+                                    computer are kept.</small>
                             </div>
                             <div class="form-group">
                                 <button id="resetAllSettingsBtn" class="btn btn-warning">
                                     <i class="fas fa-undo"></i>
-                                    Reset All Settings
+                                    Reset General Settings
                                 </button>
-                                <small class="help-text">Restore all settings to default values</small>
+                                <small class="help-text">Restore Appearance, Visualization, Navigation, Features, Memory,
+                                    Caching and Security to their defaults. Model providers, ChatBox, agents, MCP
+                                    servers and tools keep their settings.</small>
                             </div>
                         </div>
                     </div>
@@ -4148,7 +4209,7 @@ Supported formats:
                                     <i class="fas fa-dna"></i>
                                 </div>
                                 <h3>CodeXomics</h3>
-                                <p class="version" id="about-version">Version 0.3.0-beta</p>
+                                <p class="version" id="about-version">Version</p>
                                 <p class="description">
                                     An advanced genome visualization and analysis platform with integrated AI
                                     capabilities.
@@ -4174,15 +4235,18 @@ Supported formats:
                         <div class="settings-section">
                             <h4><i class="fas fa-book"></i> Documentation & Support</h4>
                             <div class="support-links">
-                                <button class="btn btn-secondary" onclick="window.open('#', '_blank')">
+                                <button type="button" class="btn btn-secondary"
+                                    data-external-url="https://scilence2022.github.io/CodeXomics/user-guides/USER_GUIDE/">
                                     <i class="fas fa-book-open"></i>
                                     User Guide
                                 </button>
-                                <button class="btn btn-secondary" onclick="window.open('#', '_blank')">
+                                <button type="button" class="btn btn-secondary"
+                                    data-external-url="https://scilence2022.github.io/CodeXomics/user-guides/FAQ/">
                                     <i class="fas fa-question-circle"></i>
                                     FAQ
                                 </button>
-                                <button class="btn btn-secondary" onclick="window.open('#', '_blank')">
+                                <button type="button" class="btn btn-secondary"
+                                    data-external-url="https://github.com/Scilence2022/CodeXomics/issues">
                                     <i class="fas fa-bug"></i>
                                     Report Issues
                                 </button>
@@ -4205,8 +4269,12 @@ Supported formats:
                                     <span class="info-value" id="memoryInfo">Loading...</span>
                                 </div>
                                 <div class="info-row">
-                                    <span class="info-label">Performance:</span>
-                                    <span class="info-value" id="performanceInfo">Good</span>
+                                    <span class="info-label">App Version:</span>
+                                    <span class="info-value" id="appVersionInfo">Loading...</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Language:</span>
+                                    <span class="info-value" id="languageInfo">Loading...</span>
                                 </div>
                             </div>
                         </div>
@@ -4697,7 +4765,7 @@ Supported formats:
                                     <span class="stat-label">Oldest entry</span>
                                     <span class="stat-value" id="cacheOldestEntry">—</span>
                                 </div>
-                                <button id="clearCacheBtn" class="btn btn-sm btn-secondary">
+                                <button id="clearTabCacheBtn" class="btn btn-sm btn-secondary">
                                     <i class="fas fa-trash"></i> Clear Cache
                                 </button>
                             </div>
@@ -5671,6 +5739,7 @@ Supported formats:
     <script defer src="../version.js"></script>
 
     <!-- Main application -->
+    <script defer src="modules/SettingsCenter.js"></script>
     <script defer src="renderer-modular.js"></script>
 </body>
 

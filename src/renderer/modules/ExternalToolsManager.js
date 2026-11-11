@@ -359,6 +359,7 @@ class ExternalToolsManager {
   async loadSettings() {
     try {
       if (this.genomeBrowser.configManager) {
+        await this.genomeBrowser.configManager.waitForInit?.();
         // Load built-in tools settings from GeneralSettingsManager
         const generalSettings = await this.genomeBrowser.configManager.get('generalSettings', {});
         if (generalSettings.deepGeneResearchUrl) {

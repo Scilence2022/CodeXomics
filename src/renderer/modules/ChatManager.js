@@ -552,7 +552,8 @@ class ChatManager {
    */
   async initializeMultiAgentSystem() {
     try {
-      // Load settings first
+      // Load settings first, once the stored preferences have arrived
+      await this.configManager?.waitForInit?.();
       this.loadAgentSystemSettings();
 
       // Agent System Settings loaded
@@ -12044,12 +12045,25 @@ ${coreTools}
       };
     }
 
+    // Settings panels live in the Settings window. Opening still goes through the
+    // panel's own loader (entry.open), which brings the window up at that panel;
+    // closing closes the window, since a panel's own hide no longer removes it.
+    const settingsCenter = window.settingsCenter;
+    if (settingsCenter?.managesModal?.(entry.id)) {
+      entry.close = () => settingsCenter.close();
+      if (entry.id === 'literatureSettingsModal') {
+        entry.open = () => settingsCenter.open('ai.literature');
+      }
+    }
+
     try {
       // Determine current state and action to perform
       const modal = document.getElementById(entry.id);
-      const isOpen = modal
-        ? modal.classList.contains('show') || modal.style.display === 'flex' || modal.style.display === 'block'
-        : false;
+      const isOpen = settingsCenter?.managesModal?.(entry.id)
+        ? settingsCenter.isModalShown(entry.id)
+        : modal
+          ? modal.classList.contains('show') || modal.style.display === 'flex' || modal.style.display === 'block'
+          : false;
 
       let effectiveAction = action;
       if (action === 'toggle') {

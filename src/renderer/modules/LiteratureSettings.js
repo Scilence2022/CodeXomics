@@ -13,28 +13,69 @@ class LiteratureSettings {
   }
 
   /**
-   * Load settings from localStorage
+   * The application's ConfigManager, once the main window has created it.
+   * Literature settings live there (`literature` in preferences.json) so they
+   * are included in settings export and survive "Clear Cache".
+   */
+  getConfigManager() {
+    const configManager = typeof window !== 'undefined' ? window.genomeBrowser?.configManager : null;
+    return configManager && typeof configManager.get === 'function' ? configManager : null;
+  }
+
+  /**
+   * Load settings: ConfigManager when it is ready, otherwise the legacy
+   * localStorage entry. A legacy entry is moved into ConfigManager once.
    */
   loadSettings() {
+    let legacy = null;
     try {
       const stored = localStorage.getItem(this.storageKey);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        this.settings = { ...this.defaults, ...parsed };
-      }
+      if (stored) legacy = JSON.parse(stored);
     } catch (error) {
       console.error('Error loading literature settings:', error);
-      this.settings = { ...this.defaults };
+    }
+
+    const configManager = this.getConfigManager();
+    const configured = configManager?.isInitialized ? configManager.get('literature', null) : null;
+
+    this.settings = { ...this.defaults, ...(configured || legacy || {}) };
+    this.configSynced = !!configManager?.isInitialized;
+
+    if (this.configSynced && legacy) {
+      if (!configured) this.writeToConfig(configManager);
+      try {
+        localStorage.removeItem(this.storageKey);
+      } catch (error) {
+        // localStorage may be unavailable; the ConfigManager copy is authoritative
+      }
     }
   }
 
   /**
-   * Save settings to localStorage
+   * Read ConfigManager on first use after it finishes loading.
+   */
+  ensureSynced() {
+    if (!this.configSynced && this.getConfigManager()?.isInitialized) {
+      this.loadSettings();
+    }
+  }
+
+  writeToConfig(configManager) {
+    configManager.set('literature', { ...this.settings });
+    if (typeof configManager.saveConfig === 'function') configManager.saveConfig();
+  }
+
+  /**
+   * Save settings
    */
   saveSettings() {
+    const configManager = this.getConfigManager();
+    if (configManager) {
+      this.writeToConfig(configManager);
+      return;
+    }
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(this.settings));
-      console.log('Literature settings saved:', this.settings);
     } catch (error) {
       console.error('Error saving literature settings:', error);
     }
@@ -45,6 +86,7 @@ class LiteratureSettings {
    * @returns {number} Page size
    */
   getPageSize() {
+    this.ensureSynced();
     return this.settings.pageSize;
   }
 
@@ -64,6 +106,9 @@ class LiteratureSettings {
   resetToDefaults() {
     this.settings = { ...this.defaults };
     this.saveSettings();
+    if (typeof window !== 'undefined' && window.enhancedCitationDisplay) {
+      window.enhancedCitationDisplay.onSettingsChanged();
+    }
   }
 
   /**
@@ -109,6 +154,11 @@ class LiteratureSettings {
    * Show settings modal
    */
   showModal() {
+    // The Settings window hosts this panel when it is available
+    if (typeof window !== 'undefined' && window.settingsCenter?.open('ai.literature')) {
+      return;
+    }
+
     // Remove existing modal if present
     const existingModal = document.getElementById('literatureSettingsModal');
     if (existingModal) {

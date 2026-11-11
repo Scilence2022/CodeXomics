@@ -1,0 +1,592 @@
+/*
+ * Settings window (modules/SettingsCenter.js).
+ *
+ * Layout: sidebar (search + sections) on the left, the selected panel on the
+ * right. Panels are the application's existing settings modals, moved in at
+ * startup; the `.settings-center-embedded` rules below strip their dialog
+ * chrome (overlay, positioning, drag handles, close buttons) so they render as
+ * a page of the window.
+ */
+
+/* Above the floating chat panel and ordinary modals (10000-10001). While the
+   window is open, any other dialog that opens (add a server, confirm, a file
+   picker modal, ...) is lifted above it. */
+#settingsCenterModal {
+  z-index: 10010;
+}
+
+body.settings-center-open .modal.show:not(#settingsCenterModal):not(.settings-center-embedded),
+body.settings-center-open .literature-settings-modal-overlay {
+  z-index: 10020 !important;
+}
+
+/* Id selector: ModalDragManager tags the window `.large`/`.extra-large`
+   (it finds the adopted LLM tabs inside), whose size caps must not apply. */
+#settingsCenterModal > .settings-center-window {
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, 94vw);
+  height: min(820px, 90vh);
+  max-width: none;
+  max-height: 94vh;
+  min-width: 640px;
+  min-height: 460px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.settings-center-titlebar {
+  flex: 0 0 auto;
+  padding: 10px 14px 10px 18px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.settings-center-titlebar h3 {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.settings-center-titlebar h3 i {
+  color: var(--text-secondary);
+}
+
+.settings-center-titlebar .modal-controls button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-center-titlebar .modal-controls button:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.settings-center-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 252px minmax(0, 1fr);
+}
+
+/* ---------------------------------------------------------------- Sidebar */
+
+.settings-center-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+}
+
+.settings-center-search {
+  position: relative;
+  padding: 12px 12px 6px;
+}
+
+.settings-center-search i {
+  position: absolute;
+  left: 23px;
+  top: 50%;
+  transform: translateY(-25%);
+  color: var(--text-muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.settings-center-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px 7px 30px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.settings-center-search input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.settings-center-nav,
+.settings-center-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 8px 14px;
+}
+
+.settings-center-nav[hidden],
+.settings-center-results[hidden] {
+  display: none;
+}
+
+.settings-center-nav-heading {
+  padding: 12px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.settings-center-nav-item,
+.settings-center-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-center-nav-item:hover,
+.settings-center-result:hover {
+  background: var(--bg-tertiary);
+}
+
+.settings-center-nav-item:focus-visible,
+.settings-center-result:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.settings-center-nav-item.active,
+.settings-center-result.selected {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+/* Colored square behind each section icon */
+.settings-center-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--settings-center-icon-bg, #64748b);
+  color: #ffffff;
+  font-size: 11px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.settings-center-nav-item.active .settings-center-icon,
+.settings-center-result.selected .settings-center-icon {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.settings-center-nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-center-result {
+  align-items: flex-start;
+  padding: 7px 10px;
+}
+
+.settings-center-result .settings-center-icon {
+  margin-top: 1px;
+}
+
+.settings-center-result-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.settings-center-result-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-center-result-crumb {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-center-result.selected .settings-center-result-crumb {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.settings-center-no-results {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- Main area */
+
+.settings-center-main {
+  /* Containing block for the adopted panels' header buttons */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-primary);
+}
+
+.settings-center-pane-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 74px;
+  box-sizing: border-box;
+  /* Room on the right for a panel's own header buttons (reset, ...) */
+  padding: 16px 132px 14px 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.settings-center-pane-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.settings-center-pane-heading {
+  min-width: 0;
+}
+
+.settings-center-pane-heading h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.settings-center-pane-heading p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.settings-center-hosts {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-center-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-center-host[hidden] {
+  display: none !important;
+}
+
+/* -------------------------------------------- Adopted modals become a page */
+
+/* `!important` throughout: managers still set inline display/position/size
+   on their modals (drag, resize, show/hide), and those must not move the
+   panel out of the window. */
+.settings-center-host > .modal.settings-center-embedded {
+  display: flex !important;
+  flex-direction: column;
+  /* .modal centers its dialog; a page fills the panel instead */
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  flex: 1 1 auto;
+  min-height: 0;
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  background: none !important;
+  z-index: auto !important;
+}
+
+.settings-center-embedded > .modal-content {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  cursor: default !important;
+}
+
+/* The window shows the panel title; keep only the header's action buttons,
+   placed at the right of the panel title row. */
+.settings-center-embedded .modal-header {
+  position: absolute;
+  top: 21px;
+  right: 22px;
+  padding: 0 !important;
+  border: none !important;
+  background: none !important;
+  color: var(--text-secondary) !important;
+  overflow: visible;
+  cursor: default !important;
+  z-index: 2;
+}
+
+.settings-center-embedded .modal-header::before {
+  display: none !important;
+}
+
+.settings-center-embedded .modal-header > h3,
+.settings-center-embedded .modal-header .modal-close,
+.settings-center-embedded .modal-header .reset-position-btn {
+  display: none !important;
+}
+
+.settings-center-embedded .modal-header .modal-controls {
+  gap: 6px;
+}
+
+.settings-center-embedded .modal-header .modal-controls button,
+.settings-center-embedded .modal-header > button:not(.modal-close) {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-md);
+  background: var(--bg-primary) !important;
+  color: var(--text-secondary) !important;
+  cursor: pointer;
+}
+
+.settings-center-embedded .modal-header .modal-controls button:hover,
+.settings-center-embedded .modal-header > button:not(.modal-close):hover {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+.settings-center-embedded .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
+  overflow-y: auto;
+  padding: 18px 24px 24px;
+}
+
+.settings-center-embedded .modal-footer {
+  flex: 0 0 auto;
+  padding: 12px 24px;
+  background: var(--bg-secondary);
+}
+
+.settings-center-embedded .resize-handle,
+.settings-center-embedded .settings-center-hidden {
+  display: none !important;
+}
+
+/* General Settings: the sidebar picks the tab */
+.settings-center-split-tabs .llm-provider-tabs {
+  display: none !important;
+}
+
+.settings-center-split-tabs .llm-provider-config .tab-content {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ------------------------------------------------------- Rendered panels */
+
+.settings-center-native-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 24px 24px;
+}
+
+.settings-center-native-body .settings-section {
+  max-width: 720px;
+}
+
+.settings-center-native-body .settings-section + .settings-section {
+  margin-top: 22px;
+}
+
+.settings-center-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Label/value rows (Security > Runtime Protection, About > System
+   Information, BLAST+ status). They had no styles of their own. */
+.system-info {
+  display: grid;
+  gap: 2px;
+}
+
+.system-info .info-row {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.system-info .info-row:last-child {
+  border-bottom: none;
+}
+
+.system-info .info-label {
+  color: var(--text-secondary);
+}
+
+.system-info .info-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.settings-center-blast-status {
+  margin: 8px 0 6px;
+}
+
+.settings-center-blast-status .info-value {
+  word-break: break-all;
+}
+
+.settings-center-status-ok {
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+/* Track type picker above the adopted Track Settings panel */
+.settings-center-track-picker {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.settings-center-track-type {
+  padding: 5px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.settings-center-track-type:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.settings-center-track-type.active {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+.settings-center-track-note {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.settings-center-unavailable {
+  margin: auto;
+  padding: 40px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.settings-center-unavailable i {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+/* A setting opened from search */
+@keyframes settings-center-flash {
+  0%,
+  35% {
+    box-shadow: 0 0 0 3px var(--focus-ring-intense);
+    background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+    background-color: transparent;
+  }
+}
+
+.settings-center-flash {
+  border-radius: var(--radius-md);
+  animation: settings-center-flash 1.8s ease-out;
+}
+
+/* Keyboard shortcut hint in the Options menu */
+.dropdown-item-shortcut {
+  margin-left: auto;
+  padding-left: 16px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 760px) {
+  .settings-center-layout {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+}
+
+/* About > Documentation & Support */
+.support-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

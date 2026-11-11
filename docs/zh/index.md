@@ -31,7 +31,7 @@ npm start
 首次启动后可按以下步骤打开基因组并启用 ChatBox。
 
 1. 打开 **File → Load File → Genome File** 加载基因组，或用 **File → Open Project** 打开 `.prj.GAI` 项目。
-2. 打开 **Options → Configure LLM Providers**，保存服务商配置，在 **Default Model** 选项卡选择默认模型。
+2. 按 <kbd>⌘,</kbd>（Windows/Linux 为 <kbd>Ctrl+,</kbd>）打开 **Settings → Model Providers**，保存服务商配置，在 **Default Model** 选项卡选择默认模型。所有设置都集中在这个窗口里，左侧可按类别浏览或直接搜索。
 3. 在 ChatBox 中提出一个具体问题，让助手导航、可视化或分析当前数据。
 
 完整的英文步骤见 [Getting Started Guide](../user-guides/GETTING_STARTED.md)。

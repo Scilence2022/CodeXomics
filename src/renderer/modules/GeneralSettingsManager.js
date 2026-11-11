@@ -3,6 +3,29 @@
  * Handles all general application settings and preferences
  */
 class GeneralSettingsManager {
+  /**
+   * localStorage keys that hold settings or user data. "Clear Cache" must
+   * leave them alone.
+   */
+  static PROTECTED_STORAGE_KEYS = Object.freeze([
+    'llmConfiguration',
+    'localCustomConfigs',
+    'uiPreferences',
+    'appSettings',
+    'generalSettings',
+    'chatboxSettings',
+    'marketplaceSettings',
+    'preferences',
+    'blast-config',
+    'blast_custom_databases',
+    'genomeBrowser_literatureSettings',
+    'bannerCollapsed',
+    '_uiStyleHint',
+    '_themeHint',
+  ]);
+
+  static PROTECTED_STORAGE_PREFIXES = Object.freeze(['chatHistory', 'trackSettings_']);
+
   constructor(configManager) {
     this.configManager = configManager;
     this.currentTab = 'appearance';
@@ -113,85 +136,38 @@ class GeneralSettingsManager {
   }
 
   /**
-   * Initialize tabs when modal is opened
+   * Initialize tabs when the panel is opened.
+   *
+   * Opens `tabName` when given, otherwise the tab the Settings window asked for
+   * (`pendingTab`), otherwise Appearance. Loading settings is asynchronous, so a
+   * caller that wants a specific tab must route it through here rather than
+   * switching first and being overridden when the load finishes.
    */
-  initializeTabs() {
-    console.log('🔄 [GeneralSettings] Initializing tabs');
+  initializeTabs(tabName = null) {
+    const requested = tabName || this.pendingTab || 'appearance';
+    this.pendingTab = null;
 
-    // Use a more robust approach with multiple attempts
     const initializeTabsWithRetry = (attempts = 0, maxAttempts = 5) => {
-      // Ensure the first tab is active by default
-      const firstTab = document.querySelector(
-        '#generalSettingsModal .llm-provider-tabs .tab-button[data-tab="appearance"]'
-      );
-      const firstContent = document.getElementById('appearance-tab');
+      const buttonFor = name =>
+        document.querySelector(`#generalSettingsModal .llm-provider-tabs .tab-button[data-tab="${name}"]`);
+      const target = buttonFor(requested) ? requested : 'appearance';
 
-      console.log(`🔍 [GeneralSettings] Attempt ${attempts + 1}: Found first tab:`, !!firstTab);
-      console.log('🔍 [GeneralSettings] Found first content:', !!firstContent);
-
-      if (firstTab && firstContent) {
-        // Remove active from all tabs first
-        const allTabButtons = document.querySelectorAll('#generalSettingsModal .llm-provider-tabs .tab-button');
-        const allTabContents = document.querySelectorAll('#generalSettingsModal .tab-content');
-
-        console.log(`🔍 [GeneralSettings] Found ${allTabButtons.length} tab buttons`);
-        console.log(`🔍 [GeneralSettings] Found ${allTabContents.length} tab contents`);
-
-        allTabButtons.forEach(btn => {
-          btn.classList.remove('active');
-          console.log(`🔄 [GeneralSettings] Removed active from button: ${btn.dataset.tab}`);
-        });
-
-        allTabContents.forEach(content => {
-          content.classList.remove('active');
-          console.log(`🔄 [GeneralSettings] Removed active from content: ${content.id}`);
-        });
-
-        // Set first tab as active
-        firstTab.classList.add('active');
-        firstContent.classList.add('active');
-        this.currentTab = 'appearance';
-
-        console.log('✅ [GeneralSettings] Default tab (appearance) activated');
-        console.log('🔍 [GeneralSettings] First tab classes:', firstTab.className);
-        console.log('🔍 [GeneralSettings] First content classes:', firstContent.className);
-
-        // Setup tab event listeners after ensuring elements exist
+      if (buttonFor(target) && document.getElementById(`${target}-tab`)) {
+        // Rebind first: setupTabHandlers() replaces the buttons with clones.
         this.setupTabHandlers();
-
+        this.switchTab(target);
         return true;
-      } else {
-        console.warn(`❌ [GeneralSettings] Attempt ${attempts + 1}: Could not find default tab elements`);
-
-        if (attempts < maxAttempts) {
-          console.log(`🔄 [GeneralSettings] Retrying in ${(attempts + 1) * 100}ms...`);
-          setTimeout(
-            () => {
-              initializeTabsWithRetry(attempts + 1, maxAttempts);
-            },
-            (attempts + 1) * 100
-          );
-        } else {
-          console.error('❌ [GeneralSettings] Failed to initialize tabs after all attempts');
-
-          // Debug: List all available elements
-          const allTabs = document.querySelectorAll('#generalSettingsModal .tab-button');
-          const allContents = document.querySelectorAll('#generalSettingsModal .tab-content');
-          console.log(
-            '🔍 [GeneralSettings] All tab buttons found:',
-            Array.from(allTabs).map(t => t.dataset.tab)
-          );
-          console.log(
-            '🔍 [GeneralSettings] All tab contents found:',
-            Array.from(allContents).map(c => c.id)
-          );
-        }
-        return false;
       }
+
+      if (attempts < maxAttempts) {
+        setTimeout(() => initializeTabsWithRetry(attempts + 1, maxAttempts), (attempts + 1) * 100);
+      } else {
+        console.error('❌ [GeneralSettings] Failed to initialize tabs after all attempts');
+      }
+      return false;
     };
 
-    // Start the initialization process
-    initializeTabsWithRetry();
+    return initializeTabsWithRetry();
   }
 
   /**
@@ -477,6 +453,19 @@ class GeneralSettingsManager {
         this.clearCache();
       });
     }
+
+    // About > Documentation & Support links open in the system browser
+    document.querySelectorAll('#about-tab [data-external-url]').forEach(button => {
+      button.addEventListener('click', () => {
+        const url = button.dataset.externalUrl;
+        if (!/^https:\/\//.test(url)) return;
+        try {
+          window.require?.('electron')?.shell?.openExternal(url);
+        } catch (error) {
+          console.error('Could not open link:', error);
+        }
+      });
+    });
 
     // Export settings
     const exportSettingsBtn = document.getElementById('exportSettingsBtn');
@@ -1246,14 +1235,15 @@ class GeneralSettingsManager {
    */
   async clearCache() {
     try {
-      // Clear localStorage
-      const keysToKeep = ['generalSettings', 'llmConfig'];
-      const allKeys = Object.keys(localStorage);
-      allKeys.forEach(key => {
-        if (!keysToKeep.some(keepKey => key.includes(keepKey))) {
-          localStorage.removeItem(key);
-        }
-      });
+      // Remove cached data from localStorage, but never the keys that hold
+      // settings or user data: those live here too (style hints, saved
+      // endpoint configurations, BLAST+ setup, chat history, ...).
+      const isProtected = key =>
+        GeneralSettingsManager.PROTECTED_STORAGE_KEYS.includes(key) ||
+        GeneralSettingsManager.PROTECTED_STORAGE_PREFIXES.some(prefix => key.startsWith(prefix));
+      Object.keys(localStorage)
+        .filter(key => !isProtected(key))
+        .forEach(key => localStorage.removeItem(key));
 
       // Clear any cached data in ConfigManager
       if (this.configManager && typeof this.configManager.clearCache === 'function') {
@@ -1268,15 +1258,18 @@ class GeneralSettingsManager {
   }
 
   /**
-   * Export settings to file
+   * Export every preference to a JSON file. Credentials (API keys, tokens,
+   * Authorization headers) are left out; see ConfigManager.buildSettingsExport().
    */
   async exportSettings() {
     try {
-      const settingsData = {
-        version: '1.0',
-        timestamp: new Date().toISOString(),
-        settings: this.settings,
-      };
+      if (!this.configManager?.buildSettingsExport) {
+        throw new Error('Configuration manager is unavailable');
+      }
+
+      // Write the panel's current values first so the file matches the screen
+      await this.configManager.set('generalSettings', this.settings);
+      const settingsData = this.configManager.buildSettingsExport();
 
       const blob = new Blob([JSON.stringify(settingsData, null, 2)], {
         type: 'application/json',
@@ -1285,13 +1278,13 @@ class GeneralSettingsManager {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `genome-explorer-settings-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `codexomics-settings-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      this.showNotification('Settings exported successfully', 'success');
+      this.showNotification('Settings exported (API keys and tokens are not included)', 'success');
     } catch (error) {
       console.error('Failed to export settings:', error);
       this.showNotification('Failed to export settings', 'error');
@@ -1299,7 +1292,9 @@ class GeneralSettingsManager {
   }
 
   /**
-   * Import settings from file
+   * Import settings from a file written by exportSettings(). Older exports
+   * that only held General Settings are accepted too. Credentials already on
+   * this computer are kept when the file has none.
    */
   async importSettings() {
     const input = document.createElement('input');
@@ -1311,28 +1306,8 @@ class GeneralSettingsManager {
       if (!file) return;
 
       try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-
-        if (data.settings) {
-          // Validate and merge settings
-          const validatedSettings = this.validateSettings(data.settings);
-          this.settings = { ...this.defaultSettings, ...validatedSettings };
-
-          // Save to config
-          if (this.configManager) {
-            await this.configManager.set('generalSettings', this.settings);
-            await this.configManager.saveConfig();
-          }
-
-          // Update UI and apply settings
-          this.updateUIFromSettings();
-          this.applySettings();
-
-          this.showNotification('Settings imported successfully', 'success');
-        } else {
-          throw new Error('Invalid settings file format');
-        }
+        await this.importSettingsFromText(await file.text());
+        this.showNotification('Settings imported. Some changes take effect after a restart.', 'success');
       } catch (error) {
         console.error('Failed to import settings:', error);
         this.showNotification('Failed to import settings: ' + error.message, 'error');
@@ -1343,13 +1318,58 @@ class GeneralSettingsManager {
   }
 
   /**
-   * Reset all settings to defaults
+   * Apply an exported settings file and refresh the panels that cache values.
+   * @param {string} text - File contents
+   * @returns {Promise<string[]>} The sections that were imported
    */
-  async resetAllSettings() {
-    if (!confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
-      return;
+  async importSettingsFromText(text) {
+    if (!this.configManager?.importSettingsExport) {
+      throw new Error('Configuration manager is unavailable');
     }
 
+    const data = JSON.parse(text);
+    // Old General-only exports: validate against this panel's schema
+    if (data && data.settings && !data.sections && !data.config) {
+      data.settings = this.validateSettings(data.settings);
+    }
+
+    const imported = await this.configManager.importSettingsExport(data);
+
+    if (imported.includes('generalSettings')) {
+      await this.loadSettings();
+      this.applySettings();
+    }
+    window.chatBoxSettingsManager?.loadSettings?.();
+    window.literatureSettings?.loadSettings?.();
+    if (imported.includes('mcpServers')) {
+      window.genomeBrowser?.mcpServerManager?.loadServerConfigurations?.();
+    }
+    if (imported.includes('blastTools')) {
+      this.configManager.restoreBlastToolsToStorage?.();
+    }
+    return imported;
+  }
+
+  /**
+   * Reset General Settings (Appearance through Security) to their defaults.
+   * Model providers, ChatBox, agents, MCP servers and tools keep their own
+   * configuration; each of their panels has its own reset.
+   */
+  async resetAllSettings() {
+    if (
+      !confirm(
+        'Reset Appearance, Visualization, Navigation, Features, Memory, Caching and Security to their defaults? This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    await this.restoreDefaultSettings();
+  }
+
+  /**
+   * Restore the default General Settings without asking.
+   */
+  async restoreDefaultSettings() {
     try {
       this.settings = { ...this.defaultSettings };
 
@@ -1361,7 +1381,7 @@ class GeneralSettingsManager {
       this.updateUIFromSettings();
       this.applySettings();
 
-      this.showNotification('All settings reset to defaults', 'success');
+      this.showNotification('General settings reset to defaults', 'success');
     } catch (error) {
       console.error('Failed to reset settings:', error);
       this.showNotification('Failed to reset settings', 'error');
@@ -1394,43 +1414,29 @@ class GeneralSettingsManager {
   }
 
   /**
-   * Update system information display
+   * Fill in About > System Information. (This used to rewrite the first
+   * `.system-info` on the page, which is Security > Runtime Protection.)
    */
   updateSystemInfo() {
-    const platform = navigator.platform;
-    const memory = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Unknown';
-    const cores = navigator.hardwareConcurrency || 'Unknown';
-    const language = navigator.language;
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
 
-    const systemInfo = document.querySelector('.system-info');
-    if (systemInfo) {
-      systemInfo.innerHTML = `
-                <div class="info-row">
-                    <span class="info-label">Platform:</span>
-                    <span class="info-value">${platform}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Browser:</span>
-                    <span class="info-value">${this.getBrowserName()}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Memory:</span>
-                    <span class="info-value">${memory}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">CPU Cores:</span>
-                    <span class="info-value">${cores}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Language:</span>
-                    <span class="info-value">${language}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">App Version:</span>
-                    <span class="info-value">1.0.0</span>
-                </div>
-            `;
-    }
+    const version = window.VERSION_INFO;
+    const memory = performance.memory
+      ? `${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB used of ${Math.round(
+          performance.memory.jsHeapSizeLimit / 1048576
+        )} MB`
+      : navigator.deviceMemory
+        ? `${navigator.deviceMemory} GB device memory`
+        : 'Unknown';
+
+    setText('platformInfo', `${navigator.platform} · ${navigator.hardwareConcurrency || '?'} CPU cores`);
+    setText('browserInfo', this.getBrowserName());
+    setText('memoryInfo', memory);
+    setText('appVersionInfo', version?.fullVersion || 'Unknown');
+    setText('languageInfo', navigator.language);
   }
 
   /**
@@ -1550,43 +1556,11 @@ class GeneralSettingsManager {
   /**
    * Reset settings to default values
    */
+  /**
+   * Header "Reset to Defaults" button.
+   */
   resetToDefaults() {
-    if (confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.')) {
-      // Reset all settings to defaults
-      this.settings = {
-        theme: 'dark',
-        fontSize: 14,
-        showLineNumbers: true,
-        enableHighlighting: true,
-        autoSave: true,
-        trackVisibility: {
-          sequence: true,
-          genes: true,
-          gc: true,
-          reads: true,
-        },
-        performance: {
-          cacheSize: 100,
-          maxConcurrentTracks: 5,
-        },
-        features: {
-          enableSearch: true,
-          enableExport: true,
-          enablePlugins: true,
-        },
-      };
-
-      // Update the UI
-      this.loadSettingsIntoUI();
-
-      // Save to config
-      if (this.configManager) {
-        this.configManager.set('generalSettings', this.settings);
-        this.configManager.saveConfig();
-      }
-
-      this.showNotification('Settings reset to defaults successfully!', 'success');
-    }
+    return this.resetAllSettings();
   }
 }
 

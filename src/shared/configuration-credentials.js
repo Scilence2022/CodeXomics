@@ -1,6 +1,15 @@
 'use strict';
 
-const CONFIG_CREDENTIAL_FIELDS = Object.freeze(['apikey', 'api_key', 'apitoken', 'accesstoken', 'secretkey']);
+// Matched case-insensitively against object keys at any depth. `authorization`
+// covers HTTP headers stored with external MCP server definitions.
+const CONFIG_CREDENTIAL_FIELDS = Object.freeze([
+  'apikey',
+  'api_key',
+  'apitoken',
+  'accesstoken',
+  'secretkey',
+  'authorization',
+]);
 
 function mapConfigurationCredentials(
   node,
