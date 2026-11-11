@@ -508,13 +508,8 @@ class ToolExecutionService {
     if (toolName === 'translate_dna' && parameters) {
       const seq = parameters.dna || parameters.sequence || parameters.dna_sequence;
       if (typeof seq === 'string') {
-        const frame =
-          parameters.frame !== undefined
-            ? Number(parameters.frame)
-            : parameters.reading_frame !== undefined
-              ? Math.max(0, Number(parameters.reading_frame) - 1)
-              : 0;
-        return [seq, frame];
+        const { frame, options } = window.MicrobeGenomicsFunctions.translationArgsFromParameters(parameters);
+        return [seq, frame, options];
       }
     }
 

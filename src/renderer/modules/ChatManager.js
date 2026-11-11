@@ -2456,13 +2456,8 @@ class ChatManager {
         if (methodName === 'calculateMolecularWeight') {
           result = this.MicrobeFns[methodName](seq, parameters.type || 'auto');
         } else if (methodName === 'translateDNA') {
-          const frame =
-            parameters.frame !== undefined
-              ? Number(parameters.frame)
-              : parameters.reading_frame !== undefined
-                ? Math.max(0, Number(parameters.reading_frame) - 1)
-                : 0;
-          result = this.MicrobeFns[methodName](seq, frame);
+          const { frame, options } = this.MicrobeFns.translationArgsFromParameters(parameters);
+          result = this.MicrobeFns[methodName](seq, frame, options);
         } else {
           result = this.MicrobeFns[methodName](seq);
         }
@@ -3702,11 +3697,14 @@ class ChatManager {
                   sequence: dnaSeq,
                   frame: frame,
                   strand: parsedStrand,
-                  geneticCode: finalTranslTable === 11 ? 'standard' : 'standard',
+                  geneticCode: finalTranslTable,
                   includeStops: true,
+                  // Only a CDS read from its first base starts on an initiation codon.
+                  cds: frame === 0,
                 });
                 if (transResult && transResult.success) {
-                  translatedProt = transResult.protein;
+                  // /translation holds the protein without its terminal stop.
+                  translatedProt = transResult.protein.replace(/\*$/, '');
                 }
               } else {
                 translatedProt = this.app.translateDNA(dnaSeq, parsedStrand);

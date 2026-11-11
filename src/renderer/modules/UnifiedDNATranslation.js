@@ -14,152 +14,21 @@
 
 class UnifiedDNATranslation {
   /**
-   * Get genetic code table by name
+   * The shared NCBI genetic code tables (see GeneticCodes.js).
+   */
+  static getGeneticCodes() {
+    return typeof module !== 'undefined' && module.exports ? require('./GeneticCodes') : window.GeneticCodes;
+  }
+
+  /**
+   * Get the codon-to-residue map of a genetic code.
    *
-   * @param {string} geneticCode - Genetic code name
-   * @returns {Object} Genetic code table
+   * @param {number|string} geneticCode - NCBI translation table id or name
+   * @returns {Object} Codon table
+   * @throws {Error} If the genetic code is not known
    */
   static getGeneticCodeTable(geneticCode = 'standard') {
-    const standardCode = {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: '*',
-      TGG: 'W',
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'I',
-      ATG: 'M',
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: 'R',
-      AGG: 'R',
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
-
-    const mitochondrialCode = {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: 'W',
-      TGG: 'W', // TGA = Trp in mitochondria
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'M',
-      ATG: 'M', // ATA = Met in mitochondria
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: '*',
-      AGG: '*', // AGA/AGG = stop in mitochondria
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
-
-    const geneticCodes = {
-      standard: standardCode,
-      mitochondrial: mitochondrialCode,
-    };
-
-    return geneticCodes[geneticCode] || standardCode;
+    return this.getGeneticCodes().require(geneticCode).codons;
   }
 
   /**
@@ -169,8 +38,12 @@ class UnifiedDNATranslation {
    * @param {string} parameters.sequence - DNA sequence to translate
    * @param {number} parameters.frame - Reading frame (0, 1, or 2, default: 0)
    * @param {number} parameters.strand - Strand direction (1 for forward, -1 for reverse, default: 1)
-   * @param {string} parameters.geneticCode - Genetic code to use ('standard' or 'mitochondrial', default: 'standard')
+   * @param {number|string} parameters.geneticCode - NCBI translation table id or name, such as 11,
+   *   'standard', 'bacterial' or 'vertebrate_mitochondrial' (default: 'standard'). An unknown code is an
+   *   error; it never falls back to the standard code.
    * @param {boolean} parameters.includeStops - Whether to include stop codons in output (default: false)
+   * @param {boolean} parameters.cds - Treat the frame as a complete coding sequence: a first codon that is
+   *   an initiation codon of the table (GTG or TTG in bacteria) is translated as Met (default: false)
    * @param {number} parameters.minLength - Minimum protein length (default: 0)
    * @param {boolean} parameters.validateInput - Whether to validate input sequence (default: true)
    * @param {Object} context - Execution context (optional)
@@ -183,6 +56,7 @@ class UnifiedDNATranslation {
       strand = 1,
       geneticCode = 'standard',
       includeStops = false,
+      cds = false,
       minLength = 0,
       validateInput = true,
     } = parameters;
@@ -193,11 +67,12 @@ class UnifiedDNATranslation {
         this.validateInput(sequence, frame, strand);
       }
 
-      // Get genetic code table
-      const codonTable = this.getGeneticCodeTable(geneticCode);
+      // Resolve the genetic code; an unknown code throws instead of silently
+      // translating with the standard table.
+      const codonTable = this.getGeneticCodes().require(geneticCode);
 
-      // Process sequence
-      let processedSequence = sequence.toUpperCase();
+      // Process sequence. RNA input is read as its DNA equivalent.
+      let processedSequence = sequence.toUpperCase().replace(/U/g, 'T');
 
       // Handle strand direction
       if (strand === -1) {
@@ -209,7 +84,7 @@ class UnifiedDNATranslation {
       const frameSequence = processedSequence.slice(startPosition);
 
       // Translate sequence
-      const translationResult = this.performTranslation(frameSequence, codonTable, includeStops);
+      const translationResult = this.performTranslation(frameSequence, codonTable, includeStops, { cds });
 
       // Validate minimum length
       if (minLength > 0 && translationResult.protein.length < minLength) {
@@ -238,10 +113,12 @@ class UnifiedDNATranslation {
         frame,
         strand,
         geneticCode,
+        translationTable: codonTable.id,
         metadata: {
           originalSequence: sequence,
           processedSequence,
           frameSequence,
+          geneticCodeName: codonTable.name,
           startPosition,
           totalCodons: translationResult.codons.length,
           stopCodons: translationResult.stopCodons,
@@ -270,11 +147,15 @@ class UnifiedDNATranslation {
    * Perform the actual translation
    *
    * @param {string} sequence - DNA sequence to translate
-   * @param {Object} codonTable - Genetic code table
+   * @param {Object} codonTable - Genetic code entry from GeneticCodes, or a plain codon-to-residue map
    * @param {boolean} includeStops - Whether to include stop codons
+   * @param {Object} options - Translation options
+   * @param {boolean} options.cds - Translate an initiation codon in first position as Met
    * @returns {Object} Translation result
    */
-  static performTranslation(sequence, codonTable, includeStops) {
+  static performTranslation(sequence, codonTable, includeStops, options = {}) {
+    const geneticCodes = this.getGeneticCodes();
+    const table = codonTable && codonTable.codons ? codonTable : { codons: codonTable, startCodons: [] };
     let protein = '';
     const codons = [];
     let stopCodons = 0;
@@ -283,7 +164,10 @@ class UnifiedDNATranslation {
       const codon = sequence.substring(i, i + 3);
 
       if (codon.length === 3) {
-        const aminoAcid = codonTable[codon] || 'X';
+        const aminoAcid =
+          i === 0 && options.cds && geneticCodes.isStartCodon(codon, table)
+            ? 'M'
+            : geneticCodes.translateCodon(codon, table);
 
         codons.push({
           position: i,
@@ -327,9 +211,9 @@ class UnifiedDNATranslation {
       throw new Error('Sequence must be at least 3 nucleotides long');
     }
 
-    if (!/^[ATGCRYSWKMBDHVN]*$/i.test(sequence)) {
+    if (!/^[ATUGCRYSWKMBDHVN]*$/i.test(sequence)) {
       throw new Error(
-        'Sequence contains invalid characters. Only A, T, G, C, and ambiguous bases (R, Y, S, W, K, M, B, D, H, V, N) are allowed'
+        'Sequence contains invalid characters. Only A, T, U, G, C, and ambiguous bases (R, Y, S, W, K, M, B, D, H, V, N) are allowed'
       );
     }
 
@@ -362,18 +246,16 @@ class UnifiedDNATranslation {
    * @returns {Object} Available genetic codes
    */
   static getAvailableGeneticCodes() {
-    return [
-      {
-        name: 'standard',
-        description: 'Standard genetic code (most organisms)',
+    return this.getGeneticCodes()
+      .list()
+      .map(table => ({
+        id: table.id,
+        name: table.id === 1 ? 'standard' : `table_${table.id}`,
+        description: table.name,
         codonCount: 64,
-      },
-      {
-        name: 'mitochondrial',
-        description: 'Mitochondrial genetic code (vertebrates)',
-        codonCount: 64,
-      },
-    ];
+        startCodons: table.startCodons,
+        stopCodons: table.stopCodons,
+      }));
   }
 
   /**
@@ -417,16 +299,21 @@ class UnifiedDNATranslation {
    * @param {number} frame - Reading frame (legacy parameter)
    * @returns {string} Translated protein sequence
    */
-  static legacyTranslateDNA(sequence, frame = 0) {
+  static legacyTranslateDNA(sequence, frame = 0, options = {}) {
     const result = this.translateDNA({
       sequence,
       frame,
       strand: 1,
-      geneticCode: 'standard',
-      includeStops: true,
+      geneticCode: options.geneticCode ?? 'standard',
+      includeStops: options.includeStops ?? true,
       validateInput: false,
     });
 
+    // An explicitly requested genetic code that cannot be honoured is an
+    // error the caller must see; other failures keep the legacy empty result.
+    if (!result.success && options.geneticCode !== undefined && !this.getGeneticCodes().resolve(options.geneticCode)) {
+      throw new Error(result.error);
+    }
     return result.success ? result.protein : '';
   }
 

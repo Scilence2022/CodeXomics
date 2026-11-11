@@ -98,11 +98,15 @@ describe('ChatManager benchmark tool execution fixes', () => {
 
   it('translate_sequence routes through translateDNA and accepts the dna parameter', async () => {
     const manager = Object.create(ChatManager.prototype);
-    manager.MicrobeFns = { translateDNA: vi.fn((seq, frame) => `MK*:${frame}`) };
+    const Microbe = require('../../src/renderer/modules/MicrobeGenomicsFunctions');
+    manager.MicrobeFns = {
+      translateDNA: vi.fn((seq, frame) => `MK*:${frame}`),
+      translationArgsFromParameters: Microbe.translationArgsFromParameters,
+    };
 
-    const result = await manager.translateSequence({ dna: 'ATGAAATAA', reading_frame: 1 });
+    const result = await manager.translateSequence({ dna: 'ATGAAATAA', reading_frame: 1, genetic_code: 'bacterial' });
 
-    expect(manager.MicrobeFns.translateDNA).toHaveBeenCalledWith('ATGAAATAA', 0);
+    expect(manager.MicrobeFns.translateDNA).toHaveBeenCalledWith('ATGAAATAA', 0, { geneticCode: 'bacterial' });
     expect(result.success).toBe(true);
     expect(result.value).toBe('MK*:0');
   });

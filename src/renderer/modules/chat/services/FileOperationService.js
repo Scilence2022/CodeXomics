@@ -325,7 +325,13 @@ class FileOperationService {
   }
 
   async exportProteinFasta(parameters = {}) {
-    const translationTable = parameters.translationTable ?? parameters.translation_table;
+    // genetic_code is the name the tool schema advertises; the others are legacy spellings.
+    const translationTable =
+      parameters.translationTable ??
+      parameters.translation_table ??
+      parameters.transl_table ??
+      parameters.genetic_code ??
+      parameters.geneticCode;
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentAnnotations || Object.keys(this.app.currentAnnotations).length === 0) {
       throw new Error('No annotation data loaded to export protein sequences');

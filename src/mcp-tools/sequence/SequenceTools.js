@@ -76,6 +76,18 @@ class SequenceTools {
             dna: { type: 'string', description: 'DNA sequence to translate' },
             frame: { type: 'number', description: 'Reading frame (0, 1, or 2)', default: 0 },
             reading_frame: { type: 'number', description: 'Reading frame (1, 2, or 3)', enum: [1, 2, 3] },
+            genetic_code: {
+              type: 'string',
+              description:
+                'NCBI translation table id ("11", "4") or name (standard, bacterial, archaeal, ' +
+                'vertebrate_mitochondrial, mycoplasma). Default: standard. An unknown code is rejected.',
+              default: 'standard',
+            },
+            include_stop_codons: {
+              type: 'boolean',
+              description: 'Keep stop codons (*) and translate through them; false stops at the first stop codon',
+              default: true,
+            },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
           required: ['dna'],
@@ -310,85 +322,9 @@ class SequenceTools {
     return ((gcCount / sequence.length) * 100).toFixed(2);
   }
 
-  translateDNA(dna, frame = 0) {
-    const codonTable = {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: '*',
-      TGG: 'W',
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'I',
-      ATG: 'M',
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: 'R',
-      AGG: 'R',
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
-
-    const sequence = dna.toUpperCase().slice(frame);
-    let protein = '';
-
-    for (let i = 0; i < sequence.length - 2; i += 3) {
-      const codon = sequence.slice(i, i + 3);
-      if (codon.length === 3) {
-        protein += codonTable[codon] || 'X';
-      }
-    }
-
-    return protein;
+  translateDNA(dna, frame = 0, options = {}) {
+    const microbeFunctions = require('../../renderer/modules/MicrobeGenomicsFunctions');
+    return microbeFunctions.translateDNA(dna, frame, options);
   }
 
   reverseComplement(dna) {

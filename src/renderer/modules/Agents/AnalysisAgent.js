@@ -174,17 +174,14 @@ class AnalysisAgent extends AgentBase {
    */
   async translateSequence(parameters, strategy) {
     try {
-      const { sequence, frame = 0 } = parameters;
+      const sequence = parameters.sequence || parameters.dna || parameters.dna_sequence;
 
-      if (!sequence) {
+      if (!sequence || typeof sequence !== 'string') {
         throw new Error('Sequence is required');
       }
 
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const protein = this.sequenceUtils.translateDNA(sequence, frame);
+      const { frame, options } = window.MicrobeGenomicsFunctions.translationArgsFromParameters(parameters);
+      const protein = window.MicrobeGenomicsFunctions.translateDNA(sequence, frame, options);
 
       return {
         success: true,
@@ -205,23 +202,16 @@ class AnalysisAgent extends AgentBase {
    */
   async translateDNA(parameters, strategy) {
     try {
-      const { dna } = parameters;
-      const frame =
-        parameters.frame !== undefined
-          ? Number(parameters.frame)
-          : parameters.reading_frame !== undefined
-            ? Math.max(0, Number(parameters.reading_frame) - 1)
-            : 0;
+      const dna = parameters.dna || parameters.sequence || parameters.dna_sequence;
 
-      if (!dna) {
+      if (!dna || typeof dna !== 'string') {
         throw new Error('DNA sequence is required');
       }
 
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const protein = this.sequenceUtils.translateDNA(dna, frame);
+      // SequenceUtils.translateDNA(sequence, strand) takes a strand, not a
+      // frame; passing a frame there returned an empty protein for frame 0.
+      const { frame, options } = window.MicrobeGenomicsFunctions.translationArgsFromParameters(parameters);
+      const protein = window.MicrobeGenomicsFunctions.translateDNA(dna, frame, options);
 
       return {
         success: true,

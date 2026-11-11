@@ -114,13 +114,38 @@ class MicrobeGenomicsFunctions {
    * @param {number} frame - Reading frame (0, 1, or 2)
    * @returns {string} Amino acid sequence
    */
-  static translateDNA(dna, frame = 0) {
+  static translateDNA(dna, frame = 0, options = {}) {
     if (!dna || typeof dna !== 'string') return '';
     const translation =
       typeof module !== 'undefined' && module.exports
         ? require('./UnifiedDNATranslation')
         : window.UnifiedDNATranslation;
-    return translation.legacyTranslateDNA(dna, frame);
+    return translation.legacyTranslateDNA(dna, frame, options || {});
+  }
+
+  /**
+   * Read the positional arguments of translateDNA from translate_dna tool
+   * parameters, so every execution path honours the same spellings.
+   *
+   * @param {Object} parameters - Tool call parameters
+   * @returns {{frame: number, options: Object}} Zero-based frame and translation options
+   */
+  static translationArgsFromParameters(parameters = {}) {
+    const frame =
+      parameters.frame !== undefined
+        ? Number(parameters.frame)
+        : parameters.reading_frame !== undefined
+          ? Math.max(0, Number(parameters.reading_frame) - 1)
+          : 0;
+    const options = {};
+    const geneticCode =
+      parameters.genetic_code ?? parameters.geneticCode ?? parameters.transl_table ?? parameters.translation_table;
+    if (geneticCode !== undefined && geneticCode !== null && geneticCode !== '') options.geneticCode = geneticCode;
+    const includeStops = parameters.include_stop_codons ?? parameters.includeStops;
+    if (includeStops !== undefined && includeStops !== null) {
+      options.includeStops = !(includeStops === false || String(includeStops).toLowerCase() === 'false');
+    }
+    return { frame, options };
   }
 
   /**
