@@ -707,8 +707,9 @@ class SettingsCenter {
           window.chatBoxSettingsManager?.showSettingsModal?.();
           break;
         case 'agents':
-          if (options.tab && window.multiAgentSettingsManager)
+          if (options.tab && window.multiAgentSettingsManager) {
             window.multiAgentSettingsManager.currentTab = options.tab;
+          }
           window.multiAgentSettingsManager?.showModal?.();
           break;
         case 'mcp':

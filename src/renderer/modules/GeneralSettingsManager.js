@@ -1423,7 +1423,7 @@ class GeneralSettingsManager {
       if (el) el.textContent = text;
     };
 
-    const version = typeof VERSION_INFO !== 'undefined' ? VERSION_INFO : window.VERSION_INFO;
+    const version = window.VERSION_INFO;
     const memory = performance.memory
       ? `${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB used of ${Math.round(
           performance.memory.jsHeapSizeLimit / 1048576
