@@ -292,6 +292,79 @@ class GeneticCodes {
   }
 
   /**
+   * Codons grouped by the residue they encode, in TCAG order. Stop codons are
+   * listed under '*'.
+   *
+   * @param {Object} table - Entry returned by resolve()
+   * @returns {Object} Map of one-letter residue to its codons
+   */
+  static synonymousCodons(table) {
+    const groups = {};
+    for (const [codon, residue] of Object.entries(table.codons)) {
+      (groups[residue] = groups[residue] || []).push(codon);
+    }
+    return groups;
+  }
+
+  /**
+   * The table named by a feature's /transl_table qualifier.
+   *
+   * @param {Object} feature - Annotation feature
+   * @returns {Object|null} Table entry, or null when the feature names none or one that is not known
+   */
+  static forFeature(feature) {
+    const value = feature?.qualifiers?.transl_table;
+    const first = Array.isArray(value) ? value[0] : value;
+    if (first === undefined || first === null || first === '') return null;
+    return this.resolve(String(first));
+  }
+
+  /**
+   * The table most CDS features of a record are annotated with. Organisms use
+   * one genetic code throughout, so this is the code to read unannotated
+   * sequence of the same record with.
+   *
+   * @param {Array} features - Features of one chromosome or record
+   * @returns {Object|null} Table entry, or null when no CDS names a known table
+   */
+  static forAnnotations(features) {
+    if (!Array.isArray(features)) return null;
+    // Renderers ask on every draw; remember the answer until the list changes size.
+    if (!this._annotationCache) this._annotationCache = new WeakMap();
+    const cached = this._annotationCache.get(features);
+    if (cached && cached.length === features.length) return cached.table;
+
+    const votes = new Map();
+    let counted = 0;
+    for (const feature of features) {
+      if (feature?.type !== 'CDS') continue;
+      const table = this.forFeature(feature);
+      if (!table) continue;
+      votes.set(table, (votes.get(table) || 0) + 1);
+      // A few hundred CDS settle the answer; no need to walk a whole genome.
+      if (++counted >= 500) break;
+    }
+    let best = null;
+    for (const [table, count] of votes) {
+      if (!best || count > votes.get(best)) best = table;
+    }
+    this._annotationCache.set(features, { length: features.length, table: best });
+    return best;
+  }
+
+  /**
+   * The table to translate a feature with: its own /transl_table, else the
+   * one the rest of its record is annotated with, else the standard code.
+   *
+   * @param {Object|null} feature - Feature being translated, if any
+   * @param {Array} [features] - Features of the record the sequence comes from
+   * @returns {Object} Table entry
+   */
+  static forContext(feature, features) {
+    return this.forFeature(feature) || this.forAnnotations(features) || this.resolve(1);
+  }
+
+  /**
    * Translate one codon. A codon holding IUPAC ambiguity codes is translated
    * when every sequence it stands for encodes the same residue (GCN is Ala);
    * otherwise it is 'X'.

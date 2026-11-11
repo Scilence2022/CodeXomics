@@ -322,15 +322,17 @@ class UnifiedDNATranslation {
    *
    * @param {string} sequence - DNA sequence
    * @param {number} strand - Strand direction (1 or -1)
+   * @param {Object} options - Optional geneticCode (table id or name) and cds flag
    * @returns {string} Translated protein sequence
    */
-  static strandBasedTranslateDNA(sequence, strand = 1) {
+  static strandBasedTranslateDNA(sequence, strand = 1, options = {}) {
     const result = this.translateDNA({
       sequence,
       frame: 0,
       strand,
-      geneticCode: 'standard',
+      geneticCode: options.geneticCode ?? 'standard',
       includeStops: false,
+      cds: options.cds === true,
       validateInput: true,
     });
 

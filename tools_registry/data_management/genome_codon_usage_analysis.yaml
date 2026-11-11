@@ -51,6 +51,9 @@ parameters:
       examples:
         - 1000
         - 5000
+    genetic_code:
+      type: string
+      description: 'Genetic code: an NCBI translation table id ("11", "4") or a name (standard, bacterial, mycoplasma, vertebrate_mitochondrial). Omit it to use the code the genome is annotated with (/transl_table), which is almost always correct.'
     clientId:
       type: string
       description: 'Browser client ID for multi-window support'

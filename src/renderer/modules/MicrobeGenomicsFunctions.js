@@ -152,12 +152,21 @@ class MicrobeGenomicsFunctions {
    * Find Open Reading Frames (ORFs) in a sequence
    * @param {string} dna - DNA sequence
    * @param {number} minLength - Minimum ORF length in codons (default: 30)
+   * @param {Object} options - Search options
+   * @param {number|string} options.geneticCode - NCBI translation table id or name; decides the
+   *   stop codons (TGA is not a stop in Mycoplasma). Default: standard
+   * @param {boolean} options.alternativeStarts - Also start ORFs at the table's alternative
+   *   initiation codons (GTG and TTG in bacteria). Default: false, ATG only
    * @returns {Array} Array of ORF objects {start, end, frame, sequence}
    */
-  static findORFs(dna, minLength = 30) {
+  static findORFs(dna, minLength = 30, options = {}) {
     if (!dna || typeof dna !== 'string') return [];
     const orfs = [];
-    const stopCodons = ['TAA', 'TAG', 'TGA'];
+    const geneticCodes =
+      typeof module !== 'undefined' && module.exports ? require('./GeneticCodes') : window.GeneticCodes;
+    const table = geneticCodes.require(options?.geneticCode);
+    const stopCodons = table.stopCodons;
+    const startCodons = options?.alternativeStarts ? table.startCodons : ['ATG'];
 
     // Check all 6 reading frames (3 forward, 3 reverse)
     for (let strand = 0; strand < 2; strand++) {
@@ -166,7 +175,7 @@ class MicrobeGenomicsFunctions {
       for (let frame = 0; frame < 3; frame++) {
         let nextStop = frame;
         for (let i = frame; i < seq.length - 2; i += 3) {
-          if (seq.substring(i, i + 3) !== 'ATG') continue;
+          if (!startCodons.includes(seq.substring(i, i + 3))) continue;
 
           // Nested starts share the same in-frame stop. Advance the stop
           // cursor only when a start is beyond the last stop we found.

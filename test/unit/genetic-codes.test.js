@@ -170,3 +170,78 @@ describe('protein export uses the genetic code of the CDS', () => {
     expect(() => manager.extractFeatureProtein('ATGTGAAAATAA', feature)).toThrow(/No supported translation/);
   });
 });
+
+describe('the genetic code of a loaded genome', () => {
+  const cds = (table, extra = {}) => ({
+    type: 'CDS',
+    qualifiers: table ? { transl_table: [String(table)] } : {},
+    ...extra,
+  });
+
+  it('reads a feature table from a scalar or array /transl_table', () => {
+    expect(GeneticCodes.forFeature(cds(4)).id).toBe(4);
+    expect(GeneticCodes.forFeature({ qualifiers: { transl_table: '11' } }).id).toBe(11);
+    expect(GeneticCodes.forFeature(cds(null))).toBeNull();
+    expect(GeneticCodes.forFeature(cds(7))).toBeNull();
+    expect(GeneticCodes.forFeature(null)).toBeNull();
+  });
+
+  it('takes the table most CDS features of a record carry', () => {
+    const features = [{ type: 'gene', qualifiers: { transl_table: '2' } }, cds(4), cds(4), cds(11), cds(null)];
+    expect(GeneticCodes.forAnnotations(features).id).toBe(4);
+    expect(GeneticCodes.forAnnotations([cds(null)])).toBeNull();
+    expect(GeneticCodes.forAnnotations(undefined)).toBeNull();
+    // The answer is refreshed when the record gains features.
+    const growing = [cds(null)];
+    expect(GeneticCodes.forAnnotations(growing)).toBeNull();
+    growing.push(cds(11));
+    expect(GeneticCodes.forAnnotations(growing).id).toBe(11);
+  });
+
+  it('prefers the feature, then its record, then the standard code', () => {
+    expect(GeneticCodes.forContext(cds(4), [cds(11)]).id).toBe(4);
+    expect(GeneticCodes.forContext(cds(null), [cds(11)]).id).toBe(11);
+    expect(GeneticCodes.forContext(null, []).id).toBe(1);
+  });
+
+  it('groups synonymous codons by the table in use', () => {
+    expect(GeneticCodes.synonymousCodons(GeneticCodes.resolve(1))['*']).toEqual(['TAA', 'TAG', 'TGA']);
+    expect(GeneticCodes.synonymousCodons(GeneticCodes.resolve(1)).W).toEqual(['TGG']);
+    expect(GeneticCodes.synonymousCodons(GeneticCodes.resolve(4))['*']).toEqual(['TAA', 'TAG']);
+    expect(GeneticCodes.synonymousCodons(GeneticCodes.resolve(4)).W).toEqual(['TGA', 'TGG']);
+    expect(GeneticCodes.synonymousCodons(GeneticCodes.resolve(1)).L).toEqual([
+      'TTA',
+      'TTG',
+      'CTT',
+      'CTC',
+      'CTA',
+      'CTG',
+    ]);
+  });
+
+  it('passes a genetic code and CDS flag through the strand-based wrapper', () => {
+    expect(Translation.strandBasedTranslateDNA('GTGTGAAAATAA', 1)).toBe('V');
+    expect(Translation.strandBasedTranslateDNA('GTGTGAAAATAA', 1, { geneticCode: 4, cds: true })).toBe('MWK');
+    expect(Translation.strandBasedTranslateDNA('TTATTTTCACAC', -1, { geneticCode: 4, cds: true })).toBe('MWK');
+  });
+});
+
+describe('ORF search honours the genetic code', () => {
+  it('keeps ATG-only, standard-stop behaviour by default', () => {
+    const orfs = Microbe.findORFs('ATGAAATGAAAATAA', 1).filter(orf => orf.frame === 1);
+    expect(orfs.map(orf => orf.sequence)).toEqual(['ATGAAATGA']);
+  });
+
+  it('reads through TGA under table 4', () => {
+    const orfs = Microbe.findORFs('ATGAAATGAAAATAA', 1, { geneticCode: 'mycoplasma' }).filter(orf => orf.frame === 1);
+    expect(orfs.map(orf => orf.sequence)).toEqual(['ATGAAATGAAAATAA']);
+  });
+
+  it('finds GTG and TTG starts only when alternative starts are requested', () => {
+    const dna = 'CCGTGAAACCCTAA';
+    expect(Microbe.findORFs(dna, 1, { geneticCode: 11 }).filter(orf => orf.frame > 0)).toEqual([]);
+    const orfs = Microbe.findORFs(dna, 1, { geneticCode: 11, alternativeStarts: true }).filter(orf => orf.frame === 3);
+    expect(orfs.map(orf => orf.sequence)).toEqual(['GTGAAACCCTAA']);
+    expect(() => Microbe.findORFs(dna, 1, { geneticCode: 'klingon' })).toThrow(/Unknown genetic code/);
+  });
+});

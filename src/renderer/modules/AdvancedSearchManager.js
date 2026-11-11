@@ -828,7 +828,7 @@ class AdvancedSearchManager {
     if (chromosomeSequence && Number.isFinite(Number(feature.start)) && Number.isFinite(Number(feature.end))) {
       try {
         const cdsSequence = this.extractFeatureSequence(chromosomeSequence, feature);
-        addCandidate(this.translateDNA(cdsSequence), 'computed');
+        addCandidate(this.translateDNA(cdsSequence, feature), 'computed');
       } catch (error) {
         console.warn('Could not translate CDS for protein search:', error);
       }
@@ -857,99 +857,26 @@ class AdvancedSearchManager {
   /**
    * Translate DNA using the app's unified translator when available
    */
-  translateDNA(sequence) {
-    if (window.UnifiedDNATranslation) {
-      const result = window.UnifiedDNATranslation.translateDNA({
-        sequence,
-        frame: 0,
-        strand: 1,
-        geneticCode: 'standard',
-        includeStops: false,
-        validateInput: true,
-      });
+  translateDNA(sequence, feature = null) {
+    const node = typeof module !== 'undefined' && module.exports;
+    const codes = node ? require('./GeneticCodes') : window.GeneticCodes;
+    const translator = node ? require('./UnifiedDNATranslation') : window.UnifiedDNATranslation;
+    const codonStartValue = feature?.qualifiers?.codon_start;
+    const codonStart = Number(Array.isArray(codonStartValue) ? codonStartValue[0] : codonStartValue) || 1;
+    const result = translator.translateDNA({
+      sequence,
+      // Hits are mapped back to the genome from the feature start, so the frame stays fixed.
+      frame: 0,
+      strand: 1,
+      // The CDS's own /transl_table; a table the app does not carry falls back to the standard code
+      // here because the annotated /translation is searched as well.
+      geneticCode: (codes.forFeature(feature) || codes.resolve(1)).id,
+      includeStops: false,
+      cds: codonStart === 1,
+      validateInput: true,
+    });
 
-      return result.success ? result.protein : '';
-    }
-
-    const codonTable = {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: '*',
-      TGG: 'W',
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'I',
-      ATG: 'M',
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: 'R',
-      AGG: 'R',
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
-
-    let protein = '';
-    const normalizedSequence = String(sequence || '')
-      .toUpperCase()
-      .replace(/U/g, 'T');
-
-    for (let i = 0; i < normalizedSequence.length - 2; i += 3) {
-      const aminoAcid = codonTable[normalizedSequence.substring(i, i + 3)] || 'X';
-      if (aminoAcid === '*') break;
-      protein += aminoAcid;
-    }
-
-    return protein;
+    return result.success ? result.protein : '';
   }
 
   /**

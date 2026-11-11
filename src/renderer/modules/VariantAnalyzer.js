@@ -4,79 +4,19 @@
 class VariantAnalyzer {
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
-    this.geneticCode = this.initializeGeneticCode();
   }
 
   /**
-   * Initialize the genetic code table
+   * The genetic code a gene is translated with: its own /transl_table, else
+   * the one the rest of its chromosome is annotated with, else the standard code.
    */
-  initializeGeneticCode() {
-    return {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: '*',
-      TGG: 'W',
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'I',
-      ATG: 'M',
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: 'R',
-      AGG: 'R',
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
+  getGeneticCode(gene, chromosome) {
+    const codes = window.GeneticCodes;
+    return (
+      codes.forFeature(gene) ||
+      codes.forAnnotations(this.genomeBrowser?.currentAnnotations?.[chromosome]) ||
+      codes.resolve(1)
+    );
   }
 
   /**
@@ -424,8 +364,9 @@ class VariantAnalyzer {
       const lengthChange = variant.alt.length - variant.ref.length;
 
       // Translate original and mutated sequences
-      const originalProtein = this.translateDNA(originalSeq);
-      const mutatedProtein = this.translateDNA(mutatedSeq);
+      const geneticCode = this.getGeneticCode(gene, variant.chromosome);
+      const originalProtein = this.translateDNA(originalSeq, geneticCode);
+      const mutatedProtein = this.translateDNA(mutatedSeq, geneticCode);
 
       details.push(`Original sequence length: ${originalSeq.length} bp`);
       details.push(`Mutated sequence length: ${mutatedSeq.length} bp`);
@@ -584,12 +525,13 @@ class VariantAnalyzer {
   /**
    * Translate DNA sequence to protein
    */
-  translateDNA(dnaSequence) {
+  translateDNA(dnaSequence, geneticCode = this.getGeneticCode(null, null)) {
+    const codes = window.GeneticCodes;
     let protein = '';
 
     for (let i = 0; i < dnaSequence.length - 2; i += 3) {
       const codon = dnaSequence.substr(i, 3).toUpperCase();
-      const aminoAcid = this.geneticCode[codon] || 'X';
+      const aminoAcid = codes.translateCodon(codon, geneticCode);
       protein += aminoAcid;
 
       // Stop at first stop codon

@@ -513,6 +513,23 @@ class ToolExecutionService {
       }
     }
 
+    if (toolName === 'find_orfs' && parameters) {
+      const seq = parameters.dna || parameters.sequence || parameters.dna_sequence;
+      if (typeof seq === 'string') {
+        const minLength = Number(parameters.min_length ?? parameters.minLength);
+        const geneticCode = parameters.genetic_code ?? parameters.geneticCode ?? parameters.transl_table;
+        const alternativeStarts = parameters.alternative_starts ?? parameters.alternativeStarts;
+        return [
+          seq,
+          Number.isFinite(minLength) && minLength > 0 ? minLength : 30,
+          {
+            ...(geneticCode !== undefined && geneticCode !== null && geneticCode !== '' ? { geneticCode } : {}),
+            alternativeStarts: alternativeStarts === true || String(alternativeStarts).toLowerCase() === 'true',
+          },
+        ];
+      }
+    }
+
     const argMappings = {
       search_sequence_motif: [], // Pass full params object - searchSequenceMotif handles object deconstruction internally
       find_gene: ['name'], // legacy alias

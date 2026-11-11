@@ -2111,7 +2111,7 @@ class SequenceUtils {
     }
 
     this.performanceStats.cacheMisses++;
-    const proteinSequence = this.translateDNA(dnaSequence, cds.strand);
+    const proteinSequence = this.translateDNA(dnaSequence, cds.strand, cds);
     this.proteinTranslationCache.set(cacheKey, proteinSequence);
     return proteinSequence;
   }
@@ -2975,10 +2975,14 @@ class SequenceUtils {
   }
 
   // Biological utilities
-  translateDNA(dnaSequence, strand = 1) {
+  translateDNA(dnaSequence, strand = 1, feature = null) {
     // Use unified translation implementation
     if (window.UnifiedDNATranslation) {
-      const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(dnaSequence, strand);
+      const options =
+        typeof this.genomeBrowser?.getTranslationOptions === 'function'
+          ? this.genomeBrowser.getTranslationOptions(feature)
+          : {};
+      const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(dnaSequence, strand, options);
       return result;
     }
 

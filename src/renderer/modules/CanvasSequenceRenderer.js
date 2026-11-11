@@ -80,74 +80,6 @@ class CanvasSequenceRenderer {
       '*': '#E91E63', // Stop codon - magenta for visibility
     };
 
-    // Standard genetic code table
-    this.geneticCode = {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: '*',
-      TGG: 'W',
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'I',
-      ATG: 'M',
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: 'R',
-      AGG: 'R',
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
-
     // Canvas and rendering context
     this.canvas = null;
     this.ctx = null;
@@ -170,8 +102,24 @@ class CanvasSequenceRenderer {
   /**
    * Translate DNA sequence to protein in all three reading frames
    */
+  /**
+   * The genetic code of the displayed chromosome: the one its CDS features
+   * are annotated with (/transl_table), else the standard code.
+   */
+  getGeneticCode() {
+    const chromosome = this.viewport?.chromosome;
+    const annotations = this.genomeBrowser?.currentAnnotations?.[chromosome];
+    if (this._geneticCodeSource !== annotations || !this._geneticCode) {
+      this._geneticCodeSource = annotations;
+      this._geneticCode = window.GeneticCodes.forAnnotations(annotations) || window.GeneticCodes.resolve(1);
+    }
+    return this._geneticCode;
+  }
+
   translateDNAToProtein(sequence, frame = 0) {
     if (!sequence || sequence.length < 3) return '';
+
+    const geneticCode = this.getGeneticCode();
 
     // Adjust for frame offset
     const startIndex = frame;
@@ -181,7 +129,7 @@ class CanvasSequenceRenderer {
     for (let i = startIndex; i < sequence.length - 2; i += 3) {
       const codon = sequence.substring(i, i + 3).toUpperCase();
       if (codon.length === 3) {
-        protein += this.geneticCode[codon] || 'X';
+        protein += window.GeneticCodes.translateCodon(codon, geneticCode);
       }
     }
 
