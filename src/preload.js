@@ -187,6 +187,7 @@ const allowedListenChannels = [
   'multi-agent-settings',
 
   'general-settings',
+  'open-settings',
   'chatbox-settings',
   'check-file-status',
   'load-file',
@@ -257,6 +258,8 @@ const allowedSendChannels = [
   'mcp-tool-response',
   'internal-mcp-server-ready',
   'internal-mcp-server-stopped',
+  'open-blast-config-window',
+  'open-blast-downloader-window',
   'open-chopchop-window',
   'open-custom-external-tool',
   'open-deep-gene-research-window',

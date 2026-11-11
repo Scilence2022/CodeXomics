@@ -107,7 +107,7 @@ npm run build:all
 ## Quick Start
 
 1. Launch CodeXomics after [downloading a release](https://github.com/Scilence2022/CodeXomics/releases) or starting the source build.
-2. Open **Options → Configure LLM Providers**, save a provider, and choose the **Default Model**. The ChatBox model picker can override it for a conversation.
+2. Open **Settings → Model Providers** (<kbd>⌘,</kbd> / <kbd>Ctrl+,</kbd>), save a provider, and choose the **Default Model**. The ChatBox model picker can override it for a conversation.
 3. Load a reference with **File → Load File → Genome File** or open a `.prj.GAI` project with **File → Open Project**.
 4. Add optional annotation, variant, reads, WIG, or operon files.
 5. Ask the assistant to run concrete analyses, for example:

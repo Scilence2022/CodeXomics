@@ -80,6 +80,9 @@ const CONFIG_FILES = Object.freeze({
   evolution: 'conversation-evolution-data.json',
   blast: 'blast-databases.json',
   marketplace: 'marketplace-settings.json',
+  // Every other preference section (search, tracks, agents, MCP servers, ...);
+  // see ConfigManager.PREFERENCE_SECTIONS.
+  preferences: 'preferences.json',
 });
 
 function getBamReaderClass() {
@@ -624,6 +627,7 @@ function registerIpcHandlers(deps) {
     createPDBWindow,
     createGeneAnnotationRefineWindow,
     createBlastDownloaderWindow,
+    createBlastConfigWindow,
 
     createProGenFixerWindow,
     createDeepGeneResearchWindow,
@@ -4514,6 +4518,10 @@ function registerIpcHandlers(deps) {
   ipcMain.on('open-blast-downloader-window', () => {
     console.log('IPC: Opening BLAST+ Downloader window...');
     createBlastDownloaderWindow();
+  });
+
+  ipcMain.on('open-blast-config-window', () => {
+    createBlastConfigWindow();
   });
 
   ipcMain.on('open-gene-annotation-refine', (event, data) => {

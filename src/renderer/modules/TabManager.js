@@ -2182,7 +2182,8 @@ class TabManager {
     const tabCacheEnabled = document.getElementById('tabCacheEnabled');
     document.getElementById('maxCacheSize');
     document.getElementById('cacheTimeout');
-    const clearCacheBtn = document.getElementById('clearCacheBtn');
+    // Not 'clearCacheBtn': that id belongs to General Settings > Caching.
+    const clearCacheBtn = document.getElementById('clearTabCacheBtn');
     const saveTabSettingsBtn = document.getElementById('saveTabSettingsBtn');
     const resetTabSettingsBtn = document.getElementById('resetTabSettingsBtn');
 

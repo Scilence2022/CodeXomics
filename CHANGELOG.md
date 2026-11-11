@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add a single **Settings** window for every preference, opened with <kbd>⌘,</kbd> / <kbd>Ctrl+,</kbd> or **Options → Settings…**. A sidebar groups 21 sections under General, Genome View, AI Assistant, Tools and System, and a search box finds individual settings across all of them (English labels or Chinese keywords) and highlights the match. The existing panels move into the window unchanged; every older entry point (menus, toolbar, track gears, the `toggle_settings_modal` tool) opens the matching section. New sections cover Literature and the BLAST+ installation.
+- Export and import every setting from **System → Import, Export & Backup**. Exports never contain API keys, tokens or Authorization headers; importing keeps the credentials already stored on the computer. Older General Settings exports still import.
+
 ### Changed
 
 - Make Midnight the default style for new settings. The left sidebar groups track controls, details, exploration, and file information into separate views. The overview ruler offers Full, Compact, and Minimal display modes.
@@ -14,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Persist settings that were lost on restart: search options, track settings, gene details, agent and skill state, external MCP servers, MCP and bridge toggles, custom external tools and plugin options now live in `preferences.json`. Managers that read them at startup wait for the stored values, and the MCP server list is no longer overwritten with the defaults before it loads. Authorization headers are encrypted like other credentials.
+- General Settings: **Reset to Defaults** restored an unrelated settings shape and then failed; it now restores the real defaults. **Clear Cache** no longer deletes saved custom endpoints, the BLAST+ setup, literature settings, style hints or chat history from local storage. About shows the real version and system information instead of overwriting the Security panel, and its documentation links open.
+- Give Tab Settings its own Clear Cache button id; it shared one with General Settings, so its button did nothing and the General one also cleared the tab cache.
+- Literature settings move from local storage into the app configuration, so they are backed up, exported and kept by Clear Cache.
 - Keep queued sequence edits anchored to source coordinates and write results to a separate GenBank file. Compound features retain their segments and accession references, and affected CDS translations are checked during export.
 - Use bounded regional BAM and SAM reads and cancel work superseded by navigation. Coverage uses aligned bases from the CIGAR operations when depth is available. Empty BAM track diagnostics check the full reference list.
 - Score automatic benchmarks from the current request's calls and execution results. Accept declared search and GenBank alternatives, allow showing Reads after a successful import, and check that restriction digest, gel simulation, and track visibility workflows reach their requested steps.

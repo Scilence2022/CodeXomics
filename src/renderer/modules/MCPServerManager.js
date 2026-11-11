@@ -17,8 +17,21 @@ class MCPServerManager {
     this.serverPrompts = new Map(); // serverId -> array of prompts
     this.connectionPromises = new Map();
 
-    this.loadServerConfigurations();
-    this.setupAutoConnect();
+    // Saved servers (preferences.json) load asynchronously. Until they arrive,
+    // serve the defaults without writing them back: a save here would replace
+    // the stored list before it was read.
+    const configLoading = this.configManager?.waitForInit && this.configManager.isInitialized === false;
+    this.loadServerConfigurations({ persist: !configLoading });
+    if (configLoading) {
+      this.configReady = Promise.resolve(this.configManager.waitForInit()).then(() => {
+        this.loadServerConfigurations();
+        this.setupAutoConnect();
+        this.emit('serversReloaded', { serverCount: this.servers.size });
+      });
+    } else {
+      this.configReady = Promise.resolve();
+      this.setupAutoConnect();
+    }
   }
 
   // Event system for server status changes
@@ -36,7 +49,7 @@ class MCPServerManager {
   }
 
   // Load server configurations from storage
-  loadServerConfigurations() {
+  loadServerConfigurations({ persist = true } = {}) {
     const defaultServers = new Map([
       // ['genome-studio', {
       //     id: 'genome-studio',
@@ -88,7 +101,7 @@ class MCPServerManager {
     if (dgrServer) this.servers.set('deep-gene-research', this._withoutAuthorizationHeader(dgrServer));
 
     // Clean up duplicate/obsolete servers
-    this.cleanupObsoleteServers();
+    this.cleanupObsoleteServers({ persist });
 
     // Ensure default servers exist
     defaultServers.forEach((server, id) => {
@@ -99,7 +112,7 @@ class MCPServerManager {
   }
 
   // Clean up obsolete/duplicate servers
-  cleanupObsoleteServers() {
+  cleanupObsoleteServers({ persist = true } = {}) {
     const obsoleteServerIds = ['unified-claude-mcp', 'claude-mcp-genome', 'dev-local'];
 
     obsoleteServerIds.forEach(serverId => {
@@ -110,7 +123,7 @@ class MCPServerManager {
     });
 
     // Save the cleaned configuration
-    this.saveServerConfigurations();
+    if (persist) this.saveServerConfigurations();
   }
 
   // Save server configurations to storage

@@ -273,6 +273,12 @@ class MultiAgentSettingsManager {
     this.currentSettings = { ...this.defaultSettings };
     this.loadSettings();
     this.setupEventListeners();
+
+    // Saved settings load asynchronously (preferences.json); read them again then
+    Promise.resolve(this.configManager?.waitForInit?.()).then(() => {
+      this.loadSettings();
+      this.syncAgentEnabledState();
+    });
   }
 
   loadSettings() {
@@ -505,9 +511,10 @@ class MultiAgentSettingsManager {
       window.resizableModalManager.makeResizable('#multiAgentSettingsModal');
     }
 
-    // Add reset to defaults button handler
+    // Add reset to defaults button handler (once: this runs on every open)
     const resetDefaultsBtn = this.modal.querySelector('.reset-defaults-btn');
-    if (resetDefaultsBtn) {
+    if (resetDefaultsBtn && !resetDefaultsBtn.dataset.bound) {
+      resetDefaultsBtn.dataset.bound = 'true';
       resetDefaultsBtn.addEventListener('click', () => {
         this.resetToDefaults();
       });

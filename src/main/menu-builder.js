@@ -1257,10 +1257,10 @@ function createMenu() {
               },
               { type: 'separator' },
               {
-                label: 'Preferences',
+                label: 'Settings…',
                 accelerator: 'Cmd+,',
                 click: () => {
-                  sendToCurrentMainWindow('general-settings');
+                  sendToCurrentMainWindow('open-settings');
                 },
               },
               { type: 'separator' },
@@ -1858,6 +1858,15 @@ function createMenu() {
     {
       label: 'Options',
       submenu: [
+        {
+          label: 'Settings…',
+          // macOS binds Cmd+, in the application menu
+          ...(process.platform !== 'darwin' ? { accelerator: 'Ctrl+,' } : {}),
+          click: () => {
+            sendToCurrentMainWindow('open-settings');
+          },
+        },
+        { type: 'separator' },
         {
           label: 'Configure LLM Providers',
           click: () => {

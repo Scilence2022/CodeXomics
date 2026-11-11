@@ -89,6 +89,30 @@ When you first launch CodeXomics, you'll see the main interface with:
 - **ChatBox** - AI assistant interface (right sidebar)
 - **Sidebar** - Left panel with an icon rail that switches between four views: **Display** (track and feature-type toggles), **Inspect** (details of the selected gene, primer, read or variant), **Explore** (search results, operons, bookmarks) and **Info** (file information and statistics). Click a section header to collapse it; click the active rail icon to hide the sidebar.
 
+### Settings
+
+Every preference lives in one **Settings** window. Open it with <kbd>⌘,</kbd> on macOS or
+<kbd>Ctrl+,</kbd> on Windows and Linux, from **Options → Settings…** in the toolbar, or from the
+**Options** menu.
+
+- The sidebar groups the sections: **General** (Appearance, Navigation, Features, Tabs),
+  **Genome View** (Visualization, Tracks, Gene Details, Search), **AI Assistant** (Model
+  Providers, ChatBox, Agents & Skills, MCP Servers, Literature), **Tools** (External Tools,
+  BLAST+, Plugins) and **System** (Memory, Caching, Security, Import, Export & Backup, About).
+- The search box at the top of the sidebar finds individual settings across every section,
+  in English or by Chinese keywords. Use the arrow keys and <kbd>Enter</kbd> to open a result;
+  the setting is highlighted in its section.
+- The older entry points still work and open the matching section: the **Options** menu
+  items, a track header's gear (opens **Tracks** for that track type), the ChatBox settings
+  button, and the assistant's `toggle_settings_modal` tool.
+- Sections that have a **Save** button keep the window open after saving. Close the window
+  with its close button or <kbd>Esc</kbd>.
+- Settings persist across restarts, including search options, track settings, agents, MCP
+  servers, skills and external tools.
+- **System → Import, Export & Backup → Export All Settings** writes every setting to a JSON
+  file you can import on another computer. API keys, tokens and Authorization headers are
+  never included, and importing keeps the keys already stored on the computer.
+
 ### Quick Start Workflow
 
 #### 1. Configure AI Models (Essential)
@@ -96,7 +120,7 @@ When you first launch CodeXomics, you'll see the main interface with:
 Before using AI features, configure your LLM providers:
 
 ```
-Options → Configure LLM Providers
+Settings → Model Providers      (⌘, on macOS, Ctrl+, on Windows and Linux)
 ```
 
 **Add API Keys:**
@@ -453,7 +477,7 @@ The conversation also keeps a detailed status message for each run, updated in p
 
 **Default Model:**
 
-- Set in the **Default Model** tab under **Options → Configure LLM Providers**
+- Set in the **Default Model** tab under **Settings → Model Providers**
 - Used whenever the ChatBox model selector is set to Auto; the Auto entry shows which model that currently is
 - Leave its Model on Auto to use the **Provider default model** chosen on that provider's tab
 - The selector beside the ChatBox input box overrides it per conversation. It lists every enabled provider's models, including ones entered through "Other (specify below)"
@@ -741,7 +765,7 @@ Create your own genomic features.
 
 **Solutions:**
 
-1. Check API key configuration (Options → Configure LLM Providers)
+1. Check API key configuration (Settings → Model Providers)
 2. Verify internet connection
 3. Test connection using "Test Connection" button
 4. Check API quota/billing

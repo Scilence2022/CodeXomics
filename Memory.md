@@ -42,6 +42,7 @@ Core entry points:
   - `TrackRenderer.js`, `CanvasGenesRenderer.js`, `CanvasReadsRenderer.js`, `CanvasSequenceRenderer.js` - Genome rendering.
   - `TabManager.js`, `GenomeNavigationBar.js`, `NavigationManager.js` - navigation and tab state.
   - `ThemeManager.js`, `GeneralSettingsManager.js` - style presets and UI settings.
+  - `SettingsCenter.js` - the Settings window; adopts every settings modal (see Agents.md section 9a).
   - `PluginManagerV2.js`, `PluginMarketplace.js`, `PluginFunctionCallsIntegrator.js` - plugin lifecycle and AI-callable plugin functions.
   - `BenchmarkManager.js`, `BenchmarkUI.js`, `BenchmarkReportGenerator.js` - benchmark orchestration and reporting.
 - `src/renderer/modules/chat/`
@@ -283,6 +284,7 @@ See the [changelog](CHANGELOG.md#unreleased) for changes since the `0.723.0` tag
 Release engineering memory:
 
 - LLM API keys use Electron `safeStorage` through `src/main/secret-store.js`.
+- Config sections without a file of their own persist through `preferences.json` (`ConfigManager.PREFERENCE_SECTIONS`); before it existed, search, track, agent, MCP-server and skill settings were lost on restart.
 - Structured logging and crash capture live in `src/main/logging.js`.
 - Auto-update support uses `electron-updater`, with release publishing configured for GitHub.
 - CI validates lint, versions, tool-registry consistency, test coverage, and an unpacked packaging smoke build.

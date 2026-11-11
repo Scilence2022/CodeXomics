@@ -290,6 +290,33 @@ Model pickers:
 - When adding a preset, define variables in `ThemeManager.js`, create the theme CSS, add the preset card and stylesheet link in `index.html`, and update `ThemeManager.applyStyle()`.
 - Keep `GeneralSettingsManager.applySettings()` ordering and accent-color safeguards intact so non-default presets win over accent color overrides.
 
+## 9a. Settings Window Rules
+
+Every preference panel lives in the Settings window (`modules/SettingsCenter.js`,
+`#settingsCenterModal`, `css/settings-center.css`).
+
+- The window adopts existing settings modals at startup: they move into a host and keep their
+  ids, listeners and managers. Panels and hosts are declared in `SettingsCenter.PANES` and
+  `SettingsCenter.HOSTS`; a new settings panel needs an entry in both, and a modal built on first
+  use is adopted when it is appended to `<body>`.
+- Open a panel with `window.settingsCenter.open('<pane id>')`. A manager's own show method
+  still works: any adopted modal gaining `.show` (or an inline `display: flex|block`) displays its
+  panel. Keep loading values in the manager's show method; the window calls it on the first visit
+  of each opening.
+- A manager hiding its modal (after Save) does not close the window; only the window's close
+  button, Escape or `settingsCenter.close()` do. `toggle_settings_modal` closes through the window.
+- Footer Cancel/Close buttons are hidden inside the window. Do not rely on them for cleanup;
+  use the host's leave hook in `SettingsCenter.leaveHost()` (Tab Settings stops its polling there).
+- Dialogs opened from a panel must be ordinary `.modal` elements; while the window is open they
+  are raised above it by `body.settings-center-open`.
+- Settings are persisted only if their top-level config section has a file. Sections without one
+  belong in `ConfigManager.PREFERENCE_SECTIONS` (stored in `preferences.json`). Code that reads a
+  preference at construction must re-read it after `configManager.waitForInit()`, and must not
+  write defaults before then: `ConfigManager.set()` waits for loading, so an early default write
+  lands after, and replaces, the stored value.
+- Settings export (`ConfigManager.buildSettingsExport()`) strips every credential field
+  (`CONFIG_CREDENTIAL_FIELDS`, which includes `authorization`); import keeps local credentials.
+
 ## 10. Navigation And Tab Rules
 
 - Any navigation, zoom, or drag code that updates tab titles must call `updateCurrentTabPosition()` with an options object.

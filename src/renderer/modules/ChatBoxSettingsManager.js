@@ -530,9 +530,10 @@ class ChatBoxSettingsManager {
       document.body.appendChild(modal);
     }
 
-    // Add reset to defaults button handler
+    // Add reset to defaults button handler (once: this runs on every open)
     const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
-    if (resetDefaultsBtn) {
+    if (resetDefaultsBtn && !resetDefaultsBtn.dataset.bound) {
+      resetDefaultsBtn.dataset.bound = 'true';
       resetDefaultsBtn.addEventListener('click', async () => {
         await this.resetToDefaults();
         this.populateSettingsForm(modal);
@@ -541,7 +542,8 @@ class ChatBoxSettingsManager {
 
     // Add reset position button handler
     const resetPositionBtn = modal.querySelector('.reset-position-btn');
-    if (resetPositionBtn) {
+    if (resetPositionBtn && !resetPositionBtn.dataset.bound) {
+      resetPositionBtn.dataset.bound = 'true';
       resetPositionBtn.addEventListener('click', () => {
         if (window.modalDragManager) {
           window.modalDragManager.resetPosition('#chatboxSettingsModal');
