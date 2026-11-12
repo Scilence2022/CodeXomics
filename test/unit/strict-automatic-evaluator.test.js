@@ -1009,6 +1009,67 @@ describe('StrictAutomaticEvaluator', () => {
       expect(evaluation.success).toBe(true);
     });
 
+    describe('removing a highlight named by coordinates', () => {
+      const coordinates = { start: 110000, end: 112000 };
+      const test = { expectedResult: { tool_name: 'remove_highlight', parameters: coordinates } };
+      const list = { tool_name: 'list_highlights', parameters: {} };
+      const remove = { tool_name: 'remove_highlight', id: 'remove-call', parameters: { id: 'hl_target' } };
+      const highlight = { id: 'hl_target', ...coordinates };
+      const execution = { tool_name: 'remove_highlight', tool_call_id: remove.id, success: true };
+      const evaluator = new StrictAutomaticEvaluator({
+        assessmentMode: 'completion',
+        requireExecutionForCompletion: true,
+        validateToolCall(name, parameters) {
+          const valid =
+            name !== 'remove_highlight' ||
+            typeof parameters.id === 'string' ||
+            [parameters.start, parameters.end].every(Number.isInteger);
+          return { valid, errors: valid ? [] : ['A highlight selector is required'] };
+        },
+      });
+      const score = (call, toolExecution, scorer = evaluator, calls = [list, call]) =>
+        scorer.evaluate(test, {
+          actualResult: { executedFunctionCalls: calls },
+          llmInteractionData: { response: { toolExecutions: [toolExecution] } },
+        });
+
+      it('accepts a direct coordinate call', () => {
+        const call = { ...remove, parameters: coordinates };
+        expect(score(call, execution)).toMatchObject({ success: true, score: 5 });
+      });
+
+      it.each([
+        { result: { success: true, removed: [highlight], count: 0 } },
+        { removedHighlight: highlight },
+        {
+          resultPreview: `{"success":true,"message":"Removed 1 highlight(s)","removed":[${JSON.stringify(highlight)}...[TRUNCATED]`,
+        },
+      ])('accepts a lookup followed by an ID removal with the recorded target', evidence => {
+        expect(score(remove, { ...execution, ...evidence })).toMatchObject({ success: true, score: 5, errors: [] });
+      });
+
+      it.each([
+        { removedHighlight: { ...highlight, end: 112001 } },
+        { removedHighlight: { ...highlight, id: 'hl_other' } },
+        { removedHighlight: highlight, tool_call_id: 'other-call' },
+        { removedHighlight: highlight, success: false },
+        {
+          resultPreview:
+            '{"success":true,"message":"Removed 1 highlight(s)","removed":[{"id":"hl_target"...[TRUNCATED]',
+        },
+        {},
+      ])('requires a successful removal of the requested interval by the same call', evidence => {
+        const call = { ...remove, parameters: { ...remove.parameters, ...coordinates } };
+        expect(score(call, { ...execution, ...evidence }).success).toBe(false);
+      });
+
+      it('keeps contract-only scoring on the submitted arguments', () => {
+        const contractEvaluator = new StrictAutomaticEvaluator({ assessmentMode: 'contract' });
+        const result = score(remove, { ...execution, removedHighlight: highlight }, contractEvaluator, [remove]);
+        expect(result.details.argumentsExact).toBe(false);
+      });
+    });
+
     describe('export_data dispatching to a dedicated export tool', () => {
       const dir = '/data/exported_files/';
       const exportWorkflow = {

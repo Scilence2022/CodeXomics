@@ -2069,6 +2069,7 @@ class LLMBenchmarkFramework {
           // Store only summary of tool results (success/failure), not full output
           interactionData.response.toolExecutions = (executionData.toolResults || []).map(r => {
             const execution = r.execution || r;
+            const removedHighlight = StrictAutomaticEvaluator.getRemovedHighlight(execution);
             return {
               // ChatManager's queue records use `tool`; the evaluator matches on
               // `tool_name`/`tool`/`name`, so expose both spellings explicitly.
@@ -2081,6 +2082,7 @@ class LLMBenchmarkFramework {
               id: execution.id ?? execution.executionId ?? null,
               call_id: execution.call_id ?? execution.tool_call_id ?? null,
               tool_call_id: execution.tool_call_id ?? execution.call_id ?? null,
+              ...(removedHighlight && { removedHighlight }),
               // Truncate large result data to first 200 chars
               resultPreview:
                 typeof execution.result === 'string'

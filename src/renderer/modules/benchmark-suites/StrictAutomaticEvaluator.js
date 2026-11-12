@@ -847,6 +847,31 @@ class StrictAutomaticEvaluator {
     return null;
   }
 
+  static getRemovedHighlight(execution) {
+    if ((execution.tool_name ?? execution.tool) !== 'remove_highlight' || execution.success !== true) return null;
+    if (execution.removedHighlight) return execution.removedHighlight;
+
+    let result = execution.result;
+    if (!result && typeof execution.resultPreview === 'string') {
+      // Older reports stored a 200-character preview. Recover a complete
+      // entry when the preview also records that exactly one item was removed.
+      const preview = execution.resultPreview.replace(/\.\.\.\[TRUNCATED\]$/, '');
+      const prefix = preview.match(
+        /^(\{"success":true,"message":"Removed 1 highlight\(s\)","removed":\[\{.*\})(?:\](?:,"count":\d*)?)?$/
+      )?.[1];
+      try {
+        result = JSON.parse(prefix ? `${prefix}]}` : preview);
+      } catch {
+        return null;
+      }
+    }
+
+    if (result?.success !== true || !Array.isArray(result.removed) || result.removed.length !== 1) return null;
+    const { id, start, end } = result.removed[0] || {};
+    if (typeof id !== 'string' || !Number.isInteger(start) || !Number.isInteger(end)) return null;
+    return { id, start, end };
+  }
+
   normalizeCall(call, source, sourceExecutionObserved = false) {
     const toolName = call?.tool_name || call?.toolName || call?.tool || call?.function?.name || call?.name;
     if (!toolName) return null;
@@ -928,6 +953,13 @@ class StrictAutomaticEvaluator {
       call.status =
         execution?.status ||
         (call.executionSuccess === true ? 'completed' : call.executionSuccess === false ? 'failed' : 'unknown');
+      if (
+        this.completionMode &&
+        call.callId &&
+        (execution.call_id ?? execution.tool_call_id ?? execution.id) === call.callId
+      ) {
+        call.removedHighlight = StrictAutomaticEvaluator.getRemovedHighlight(execution);
+      }
     }
     return calls;
   }
@@ -1037,12 +1069,39 @@ class StrictAutomaticEvaluator {
     };
   }
 
-  matchArguments(calls, sequenceMatches, expectedParameters, completionAlternatives = {}) {
-    const parametersFor = (call, expectedIndex) => {
+  matchArguments(
+    calls,
+    sequenceMatches,
+    expectedParameters,
+    completionAlternatives = {},
+    useExecutionEvidence = false
+  ) {
+    const compare = (call, expectedIndex) => {
       const name = this.normalizeToolName(call.tool_name);
-      return Object.hasOwn(completionAlternatives, name)
+      const expected = Object.hasOwn(completionAlternatives, name)
         ? completionAlternatives[name]
         : expectedParameters[expectedIndex] || {};
+      let parameters = call.parameters;
+      const id = parameters?.id;
+      if (
+        useExecutionEvidence &&
+        name === 'remove_highlight' &&
+        id !== undefined &&
+        Number.isInteger(expected.start) &&
+        Number.isInteger(expected.end)
+      ) {
+        // The runtime uses the ID in preference to coordinates. Compare the
+        // removed interval from this call and keep its original args for schema validation.
+        parameters = { ...parameters };
+        delete parameters.start;
+        delete parameters.end;
+        const removed = call.removedHighlight;
+        if (removed && (removed.id === id || this.isToolResultReference(id))) {
+          parameters.start = removed.start;
+          parameters.end = removed.end;
+        }
+      }
+      return this.compareParameters(parameters, expected, call.tool_name);
     };
     const used = new Set();
     return sequenceMatches.map(sequenceMatch => {
@@ -1067,13 +1126,7 @@ class StrictAutomaticEvaluator {
         const candidates = calls
           .map((call, index) => ({ call, index }))
           .filter(item => !used.has(item.index) && this.callMatchesTool(item.call, sequenceMatch.expectedTool));
-        const exactCandidates = candidates.filter(item =>
-          this.parametersMatch(
-            item.call.parameters,
-            parametersFor(item.call, sequenceMatch.expectedIndex),
-            item.call.tool_name
-          )
-        );
+        const exactCandidates = candidates.filter(({ call }) => compare(call, sequenceMatch.expectedIndex).match);
         const successfulCandidate =
           this.completionMode && this.requireExecutionForCompletion
             ? exactCandidates.find(({ call }) => call.executionObserved && call.executionSuccess === true)
@@ -1082,11 +1135,7 @@ class StrictAutomaticEvaluator {
       }
       used.add(actualIndex);
       const call = calls[actualIndex];
-      const comparison = this.compareParameters(
-        call.parameters,
-        parametersFor(call, sequenceMatch.expectedIndex),
-        call.tool_name
-      );
+      const comparison = compare(call, sequenceMatch.expectedIndex);
       return {
         ...sequenceMatch,
         actualIndex,
@@ -1184,7 +1233,8 @@ class StrictAutomaticEvaluator {
       calls,
       sequence.matches,
       expectedParameters,
-      this.getCompletionAlternatives(test)
+      this.getCompletionAlternatives(test),
+      assessmentMode === 'completion'
     );
     const parameterMatches = argumentMatches.filter(match => match.parametersMatch).length;
     const schemaChecks = calls.map(call => this.validateObservedCall(call));
