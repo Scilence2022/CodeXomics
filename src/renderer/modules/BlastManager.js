@@ -6358,6 +6358,10 @@ class BlastManager {
     if (window.UnifiedDNATranslation) {
       let fastaContent = '';
       const cleanSeq = dnaSequence.toUpperCase().replace(/[^ATGC]/g, '');
+      // Six-frame translation reads the genome with the code it is annotated with.
+      const geneticCode = window.GeneticCodes
+        ? window.GeneticCodes.forContext(null, this.app?.currentAnnotations?.[chromosome]).id
+        : 'standard';
 
       // Forward frames (1, 2, 3)
       for (let frame = 0; frame < 3; frame++) {
@@ -6365,7 +6369,7 @@ class BlastManager {
           sequence: cleanSeq,
           frame: frame,
           strand: 1,
-          geneticCode: 'standard',
+          geneticCode,
           includeStops: false,
           validateInput: false,
         });
@@ -6382,7 +6386,7 @@ class BlastManager {
           sequence: revSeq,
           frame: frame,
           strand: 1,
-          geneticCode: 'standard',
+          geneticCode,
           includeStops: false,
           validateInput: false,
         });

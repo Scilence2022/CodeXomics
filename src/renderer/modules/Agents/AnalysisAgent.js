@@ -88,7 +88,7 @@ class AnalysisAgent extends AgentBase {
     // Codon usage analysis
     this.toolMapping.set('codon_usage_analysis', this.codonUsageAnalysis.bind(this));
     this.toolMapping.set('analyze_codon_usage', this.analyzeCodonUsage.bind(this));
-    this.toolMapping.set('genome_codon_usage_analysis', this.codonUsageAnalysis.bind(this));
+    this.toolMapping.set('genome_codon_usage_analysis', this.genomeCodonUsageAnalysis.bind(this));
 
     // Advanced analysis
     this.toolMapping.set('calculate_entropy', this.calculateEntropy.bind(this));
@@ -174,17 +174,14 @@ class AnalysisAgent extends AgentBase {
    */
   async translateSequence(parameters, strategy) {
     try {
-      const { sequence, frame = 0 } = parameters;
+      const sequence = parameters.sequence || parameters.dna || parameters.dna_sequence;
 
-      if (!sequence) {
+      if (!sequence || typeof sequence !== 'string') {
         throw new Error('Sequence is required');
       }
 
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const protein = this.sequenceUtils.translateDNA(sequence, frame);
+      const { frame, options } = window.MicrobeGenomicsFunctions.translationArgsFromParameters(parameters);
+      const protein = window.MicrobeGenomicsFunctions.translateDNA(sequence, frame, options);
 
       return {
         success: true,
@@ -205,23 +202,16 @@ class AnalysisAgent extends AgentBase {
    */
   async translateDNA(parameters, strategy) {
     try {
-      const { dna } = parameters;
-      const frame =
-        parameters.frame !== undefined
-          ? Number(parameters.frame)
-          : parameters.reading_frame !== undefined
-            ? Math.max(0, Number(parameters.reading_frame) - 1)
-            : 0;
+      const dna = parameters.dna || parameters.sequence || parameters.dna_sequence;
 
-      if (!dna) {
+      if (!dna || typeof dna !== 'string') {
         throw new Error('DNA sequence is required');
       }
 
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const protein = this.sequenceUtils.translateDNA(dna, frame);
+      // SequenceUtils.translateDNA(sequence, strand) takes a strand, not a
+      // frame; passing a frame there returned an empty protein for frame 0.
+      const { frame, options } = window.MicrobeGenomicsFunctions.translationArgsFromParameters(parameters);
+      const protein = window.MicrobeGenomicsFunctions.translateDNA(dna, frame, options);
 
       return {
         success: true,
@@ -330,23 +320,34 @@ class AnalysisAgent extends AgentBase {
    */
   async codonUsageAnalysis(parameters, strategy) {
     try {
-      const { dna } = parameters;
-
-      if (!dna) {
-        throw new Error('DNA sequence is required');
+      const analysisService = this.multiAgentSystem?.chatManager?.services?.analysis;
+      if (!analysisService || typeof analysisService.codonUsageAnalysis !== 'function') {
+        throw new Error('GenomeAnalysisService.codonUsageAnalysis not available');
       }
 
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const codonUsage = this.sequenceUtils.analyzeCodonUsage(dna);
-
+      // The registry schema names the sequence `sequence`; `dna` is the legacy spelling.
+      const normalized = { ...parameters };
+      if (!normalized.sequence && normalized.dna) normalized.sequence = normalized.dna;
+      return await analysisService.codonUsageAnalysis(normalized);
+    } catch (error) {
       return {
-        success: true,
-        codonUsage,
-        totalCodons: Object.values(codonUsage).reduce((sum, count) => sum + count, 0),
+        success: false,
+        error: error.message,
       };
+    }
+  }
+
+  /**
+   * Genome-wide codon usage analysis
+   */
+  async genomeCodonUsageAnalysis(parameters, strategy) {
+    try {
+      const analysisService = this.multiAgentSystem?.chatManager?.services?.analysis;
+      if (!analysisService || typeof analysisService.genomeCodonUsageAnalysis !== 'function') {
+        throw new Error('GenomeAnalysisService.genomeCodonUsageAnalysis not available');
+      }
+
+      return await analysisService.genomeCodonUsageAnalysis(parameters || {});
     } catch (error) {
       return {
         success: false,

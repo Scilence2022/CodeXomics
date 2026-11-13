@@ -83,9 +83,10 @@ describe('GenBank round trip', () => {
     expect(manager.extractFeatureProtein('TTTGGGGGCATC', feature)).toBe('MK');
     const annotated = { ...feature, qualifiers: { translation: 'MW', transl_table: '4' } };
     expect(manager.extractFeatureProtein('TTTGGGGGCATC', annotated)).toBe('MW');
+    // A table the application does not carry is refused rather than guessed.
     expect(() =>
-      manager.extractFeatureProtein('TTTGGGGGCATC', { ...annotated, qualifiers: { transl_table: '4' } })
-    ).toThrow(/table 4/);
+      manager.extractFeatureProtein('TTTGGGGGCATC', { ...annotated, qualifiers: { transl_table: '7' } })
+    ).toThrow(/table 7/);
   });
 
   it('keeps circular-origin order and rejects extraction that requires a remote record', () => {

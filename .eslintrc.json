@@ -1,4 +1,5 @@
 {
+  "root": true,
   "extends": ["eslint:recommended", "google"],
   "env": {
     "browser": true,
@@ -52,6 +53,7 @@
     "FeatureGlyphLegend": "readonly",
     "FunctionCallsOrganizer": "readonly",
     "GeneShapeCreators": "readonly",
+    "GeneticCodes": "readonly",
     "LLMBenchmarkFramework": "readonly",
     "LLMConfigManager": "readonly",
     "LLMStreamClient": "readonly",

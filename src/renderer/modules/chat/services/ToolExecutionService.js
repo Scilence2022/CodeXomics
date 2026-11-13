@@ -508,13 +508,25 @@ class ToolExecutionService {
     if (toolName === 'translate_dna' && parameters) {
       const seq = parameters.dna || parameters.sequence || parameters.dna_sequence;
       if (typeof seq === 'string') {
-        const frame =
-          parameters.frame !== undefined
-            ? Number(parameters.frame)
-            : parameters.reading_frame !== undefined
-              ? Math.max(0, Number(parameters.reading_frame) - 1)
-              : 0;
-        return [seq, frame];
+        const { frame, options } = window.MicrobeGenomicsFunctions.translationArgsFromParameters(parameters);
+        return [seq, frame, options];
+      }
+    }
+
+    if (toolName === 'find_orfs' && parameters) {
+      const seq = parameters.dna || parameters.sequence || parameters.dna_sequence;
+      if (typeof seq === 'string') {
+        const minLength = Number(parameters.min_length ?? parameters.minLength);
+        const geneticCode = parameters.genetic_code ?? parameters.geneticCode ?? parameters.transl_table;
+        const alternativeStarts = parameters.alternative_starts ?? parameters.alternativeStarts;
+        return [
+          seq,
+          Number.isFinite(minLength) && minLength > 0 ? minLength : 30,
+          {
+            ...(geneticCode !== undefined && geneticCode !== null && geneticCode !== '' ? { geneticCode } : {}),
+            alternativeStarts: alternativeStarts === true || String(alternativeStarts).toLowerCase() === 'true',
+          },
+        ];
       }
     }
 

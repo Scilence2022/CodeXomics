@@ -617,7 +617,15 @@ class ExportManager {
     const first = value => (Array.isArray(value) ? value[0] : value);
     const qualifiers = feature.qualifiers || {};
     const featureTable = Number(first(qualifiers.transl_table) || 1);
-    const table = requestedTable === undefined ? featureTable : Number(requestedTable);
+    const translator =
+      typeof module !== 'undefined' && module.exports
+        ? require('./UnifiedDNATranslation')
+        : window.UnifiedDNATranslation;
+    // A requested table may be an NCBI id or a name such as 'bacterial'.
+    const table =
+      requestedTable === undefined || requestedTable === null || requestedTable === ''
+        ? featureTable
+        : translator.getGeneticCodes().require(requestedTable).id;
     if (Object.hasOwn(feature, 'genbankCdsTranslationBeforeEdit')) {
       if (table !== featureTable) throw new Error(`Cannot verify an edited CDS using translation table ${table}`);
       const Exporter = this.getGenBankExporter();
@@ -625,20 +633,20 @@ class ExportManager {
     }
     const annotated = String(first(qualifiers.translation) || '').replace(/\s+/g, '');
     if (table === featureTable && /^[A-Z*]+$/i.test(annotated)) return annotated.replace(/\*+$/, '');
-    if (table !== 1 || qualifiers.transl_except) {
+    // /transl_except recodes individual codons, which a table lookup cannot reproduce.
+    if (!translator.getGeneticCodes().resolve(table) || qualifiers.transl_except) {
       throw new Error(`No supported translation is available for ${feature.name || feature.type} (table ${table})`);
     }
     const startCodon = Number(first(qualifiers.codon_start) || 1);
     if (![1, 2, 3].includes(startCodon)) throw new Error(`Invalid codon_start: ${startCodon}`);
     const bases = this.extractFeatureSequence(sequence, feature).slice(startCodon - 1);
-    const translator =
-      typeof module !== 'undefined' && module.exports
-        ? require('./UnifiedDNATranslation')
-        : window.UnifiedDNATranslation;
     const result = translator.translateDNA({
       sequence: bases,
-      geneticCode: 'standard',
+      geneticCode: table,
       includeStops: true,
+      // A CDS read from its first base begins on an initiation codon, which
+      // is Met even when it is GTG or TTG.
+      cds: startCodon === 1,
     });
     if (!result.success) throw new Error(result.error);
     return result.protein.replace(/\*+$/, '');

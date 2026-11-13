@@ -256,16 +256,13 @@ class ToolsIntegrator {
         if (toolName === 'compute_gc') {
           return { gcContent: this.sequenceTools.calculateGCContent(parameters.sequence) };
         } else if (toolName === 'translate_dna') {
-          const frame =
-            parameters.frame !== undefined
-              ? Number(parameters.frame)
-              : parameters.reading_frame !== undefined
-                ? Math.max(0, Number(parameters.reading_frame) - 1)
-                : 0;
+          const microbeFunctions = require('../renderer/modules/MicrobeGenomicsFunctions');
+          const { frame, options } = microbeFunctions.translationArgsFromParameters(parameters);
           return {
-            protein: this.sequenceTools.translateDNA(parameters.dna, frame),
+            protein: this.sequenceTools.translateDNA(parameters.dna, frame, options),
             frame,
             reading_frame: frame + 1,
+            genetic_code: options.geneticCode ?? 'standard',
           };
         } else if (toolName === 'reverse_complement') {
           return { reverseComplement: this.sequenceTools.reverseComplement(parameters.dna) };

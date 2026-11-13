@@ -5644,15 +5644,31 @@ class GenomeBrowser {
     this.sequenceUtils.displayEnhancedSequence(chromosome, sequence);
   }
 
-  translateDNA(dnaSequence, strand) {
+  /**
+   * Translation options for a feature of the loaded genome: its own
+   * /transl_table, else the code the current chromosome is annotated with.
+   * A CDS read from its first base starts on an initiation codon (Met).
+   */
+  getTranslationOptions(feature = null, chromosome = this.currentChromosome) {
+    if (!window.GeneticCodes) return {};
+    const table = window.GeneticCodes.forContext(feature, this.currentAnnotations?.[chromosome]);
+    const codonStart = Number(this.getQualifierValue(feature?.qualifiers, 'codon_start')) || 1;
+    return { geneticCode: table.id, cds: feature?.type === 'CDS' && codonStart === 1 };
+  }
+
+  translateDNA(dnaSequence, strand, feature = null) {
     // Use unified translation implementation
     if (window.UnifiedDNATranslation) {
-      const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(dnaSequence, strand);
+      const result = window.UnifiedDNATranslation.strandBasedTranslateDNA(
+        dnaSequence,
+        strand,
+        this.getTranslationOptions(feature)
+      );
       return result;
     }
 
     // Fallback to sequenceUtils implementation
-    return this.sequenceUtils.translateDNA(dnaSequence, strand);
+    return this.sequenceUtils.translateDNA(dnaSequence, strand, feature);
   }
 
   makeDraggable(element, chromosome) {
@@ -7653,7 +7669,7 @@ class GenomeBrowser {
       // For CDS features, the DNA sequence is the CDS
       const cdsSequence = dnaSequence;
       const translationStr =
-        this.getQualifierValue(gene.qualifiers, 'translation') || this.translateDNA(cdsSequence, gene.strand);
+        this.getQualifierValue(gene.qualifiers, 'translation') || this.translateDNA(cdsSequence, gene.strand, gene);
       const translation = Array.isArray(translationStr) ? translationStr[0] : translationStr;
 
       // CDS Sequence section
@@ -8014,7 +8030,7 @@ class GenomeBrowser {
     // The translation qualifier might be truncated during GenBank parsing for memory efficiency
     const sequence = this.currentSequence[currentChr];
     const geneSequence = sequence.substring(gene.start - 1, gene.end);
-    const translation = this.translateDNA(geneSequence, gene.strand);
+    const translation = this.translateDNA(geneSequence, gene.strand, gene);
 
     // Remove stop codons (*) from the translation
     const cleanTranslation = translation.replace(/\*/g, '');

@@ -41,9 +41,11 @@ parameters:
       default: false
     genetic_code:
       type: string
-      description: Genetic code table for translation
-      enum: ['standard', 'vertebrate_mitochondrial', 'yeast_mitochondrial', 'mold_mitochondrial', 'bacterial']
-      default: 'standard'
+      description: >-
+        Override the genetic code for every CDS: an NCBI translation table id ("11", "4") or a name
+        (standard, bacterial, vertebrate_mitochondrial, yeast_mitochondrial, mold_mitochondrial, mycoplasma).
+        Omit it to use each CDS's own /transl_table and annotated /translation, which is almost always what
+        the user wants. An unknown code is rejected.
     include_gene_names:
       type: boolean
       description: Include gene names in FASTA headers

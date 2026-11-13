@@ -7803,7 +7803,7 @@ class TrackRenderer {
       }
     } else {
       dnaSequence = sequence.substring(protein.start, protein.end);
-      proteinSequence = this.genomeBrowser.translateDNA(dnaSequence, protein.strand);
+      proteinSequence = this.genomeBrowser.translateDNA(dnaSequence, protein.strand, protein);
     }
 
     const details = [];

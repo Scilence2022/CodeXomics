@@ -142,6 +142,218 @@ class GenomeAnalysisService {
     };
   }
 
+  _geneticCodes() {
+    const codes = typeof window !== 'undefined' ? window.GeneticCodes : undefined;
+    if (!codes) throw new Error('Genetic code tables are not loaded');
+    return codes;
+  }
+
+  /**
+   * Pick the genetic code for a codon analysis: the one the caller asked for,
+   * else the one the features are annotated with, else the standard code.
+   */
+  _resolveCodonModel(params = {}, features = []) {
+    const codes = this._geneticCodes();
+    const requested = params.genetic_code ?? params.geneticCode ?? params.transl_table ?? params.translation_table;
+    const table =
+      requested !== undefined && requested !== null && requested !== ''
+        ? codes.require(requested)
+        : codes.forAnnotations(features) || codes.resolve(1);
+    return { table, geneticCode: table.codons, synonymousCodons: codes.synonymousCodons(table) };
+  }
+
+  _isReverseStrand(strand) {
+    return strand === -1 || strand === '-' || strand === '-1';
+  }
+
+  _reverseComplement(sequence) {
+    return window.UnifiedSequenceProcessing.reverseComplement(sequence, {
+      caseSensitive: false,
+      validateInput: false,
+    }).sequence;
+  }
+
+  /**
+   * Coding-strand sequence of a feature, starting at its first complete codon
+   * (/codon_start). Joined locations are spliced when the export manager can
+   * resolve them; otherwise the feature span is used.
+   */
+  async _codingSequence(chromosome, feature) {
+    let sequence = null;
+    const fullSequence = this.app.currentSequence?.[chromosome];
+    if (typeof fullSequence === 'string' && typeof this.app.exportManager?.extractFeatureSequence === 'function') {
+      try {
+        sequence = this.app.exportManager.extractFeatureSequence(fullSequence, feature);
+      } catch (error) {
+        sequence = null;
+      }
+    }
+    if (!sequence) {
+      sequence = await this.app.getSequenceForRegion(chromosome, feature.start, feature.end);
+      if (this._isReverseStrand(feature.strand)) sequence = this._reverseComplement(sequence);
+    }
+    const codonStartValue = feature.qualifiers?.codon_start;
+    const codonStart = Number(Array.isArray(codonStartValue) ? codonStartValue[0] : codonStartValue) || 1;
+    return String(sequence || '')
+      .toUpperCase()
+      .slice([1, 2, 3].includes(codonStart) ? codonStart - 1 : 0);
+  }
+
+  /**
+   * Find the feature a gene name or locus tag refers to. An exact match wins
+   * over a partial one, and a CDS over the gene feature that shares its name.
+   */
+  _findCodingFeature(identifier, chromosome) {
+    const wanted = String(identifier).trim().toLowerCase();
+    const annotations = this.app.currentAnnotations || {};
+    const chromosomes = chromosome
+      ? [chromosome]
+      : [this.app.currentChromosome, ...Object.keys(annotations)].filter(
+          (chr, index, all) => chr && all.indexOf(chr) === index
+        );
+    const namesOf = feature => {
+      const qualifiers = feature.qualifiers || {};
+      return [feature.name, feature.locusTag, qualifiers.gene, qualifiers.locus_tag, qualifiers.old_locus_tag]
+        .flat()
+        .filter(value => typeof value === 'string' && value)
+        .map(value => value.toLowerCase());
+    };
+
+    let partial = null;
+    for (const chr of chromosomes) {
+      const features = annotations[chr] || [];
+      const exact = features.filter(feature => namesOf(feature).includes(wanted));
+      if (exact.length > 0) {
+        return { chromosome: chr, feature: exact.find(feature => feature.type === 'CDS') || exact[0], features };
+      }
+      if (!partial) {
+        const loose = features.filter(feature => namesOf(feature).some(name => name.includes(wanted)));
+        if (loose.length > 0) {
+          partial = { chromosome: chr, feature: loose.find(feature => feature.type === 'CDS') || loose[0], features };
+        }
+      }
+    }
+    return partial;
+  }
+
+  /**
+   * Codon usage of one coding sequence, given directly or by gene name or locus tag.
+   */
+  async codonUsageAnalysis(params = {}) {
+    const { sequence, chromosome } = params;
+    const geneName = params.geneName ?? params.gene_name ?? params.gene;
+    const locusTag = params.locusTag ?? params.locus_tag;
+
+    let analysisSequence;
+    let geneInfo = null;
+    let contextFeatures = [];
+
+    if (sequence && typeof sequence === 'string') {
+      analysisSequence = sequence.replace(/\s/g, '').toUpperCase().replace(/U/g, 'T');
+      if (!/^[ACGTRYSWKMBDHVN]+$/.test(analysisSequence)) {
+        throw new Error('Sequence must contain only nucleotide codes (A, C, G, T/U and IUPAC ambiguity codes)');
+      }
+      if (this.app?.currentAnnotations && this.app.currentChromosome) {
+        contextFeatures = this.app.currentAnnotations[this.app.currentChromosome] || [];
+      }
+    } else if (geneName || locusTag) {
+      if (!this.app || !this.app.currentAnnotations) throw new Error('No annotations loaded');
+      const searchTerm = geneName || locusTag;
+      const match = this._findCodingFeature(searchTerm, chromosome);
+      if (!match) throw new Error(`Gene "${searchTerm}" not found`);
+
+      const feature = match.feature;
+      analysisSequence = await this._codingSequence(match.chromosome, feature);
+      // The gene's own /transl_table decides before the rest of the record does.
+      contextFeatures = feature.qualifiers?.transl_table ? [{ ...feature, type: 'CDS' }] : match.features;
+      const qualifier = key => {
+        const value = feature.qualifiers?.[key];
+        return Array.isArray(value) ? value[0] : value;
+      };
+      geneInfo = {
+        name: qualifier('gene') || feature.name || qualifier('locus_tag') || 'Unknown',
+        type: feature.type,
+        chromosome: match.chromosome,
+        start: feature.start,
+        end: feature.end,
+        strand: this._isReverseStrand(feature.strand) ? '-' : '+',
+        length: feature.end - feature.start + 1,
+        product: qualifier('product') || 'Unknown function',
+        locusTag: qualifier('locus_tag') || feature.locusTag || 'N/A',
+      };
+    } else {
+      throw new Error('Either sequence, geneName, or locusTag must be provided');
+    }
+
+    const { table, geneticCode, synonymousCodons } = this._resolveCodonModel(params, contextFeatures);
+    const codonCounts = {};
+    const aminoAcidCounts = {};
+
+    // Codons holding an ambiguity code are skipped; a trailing partial codon is ignored.
+    for (let i = 0; i < analysisSequence.length - 2; i += 3) {
+      const codon = analysisSequence.substring(i, i + 3);
+      const aminoAcid = geneticCode[codon];
+      if (aminoAcid) {
+        codonCounts[codon] = (codonCounts[codon] || 0) + 1;
+        aminoAcidCounts[aminoAcid] = (aminoAcidCounts[aminoAcid] || 0) + 1;
+      }
+    }
+
+    const totalCodons = Object.values(codonCounts).reduce((sum, count) => sum + count, 0);
+    if (totalCodons === 0) throw new Error('Sequence is empty or too short to contain a codon');
+
+    // Relative Synonymous Codon Usage
+    const rscu = {};
+    const codonPreferences = {};
+    for (const [aa, codons] of Object.entries(synonymousCodons)) {
+      const aaCount = aminoAcidCounts[aa] || 0;
+      if (aaCount === 0 || codons.length < 2) continue;
+      const expectedFreq = aaCount / codons.length;
+
+      codonPreferences[aa] = { aminoAcid: aa, totalCount: aaCount, synonymousCodons: codons.length, codons: [] };
+      for (const codon of codons) {
+        const observedCount = codonCounts[codon] || 0;
+        const rscuValue = observedCount / expectedFreq;
+        rscu[codon] = rscuValue;
+        codonPreferences[aa].codons.push({
+          codon,
+          count: observedCount,
+          percentage: parseFloat(((observedCount / aaCount) * 100).toFixed(2)),
+          rscu: parseFloat(rscuValue.toFixed(3)),
+          preference: rscuValue > 1.0 ? 'preferred' : rscuValue < 0.5 ? 'rare' : 'neutral',
+        });
+      }
+      codonPreferences[aa].codons.sort((a, b) => b.percentage - a.percentage);
+      codonPreferences[aa].mostPreferred = codonPreferences[aa].codons[0].codon;
+      codonPreferences[aa].leastPreferred = codonPreferences[aa].codons[codonPreferences[aa].codons.length - 1].codon;
+    }
+
+    const codonUsage = Object.entries(codonCounts)
+      .map(([codon, count]) => ({
+        codon,
+        aminoAcid: geneticCode[codon],
+        count,
+        frequency: parseFloat(((count / totalCodons) * 100).toFixed(2)),
+        rscu: rscu[codon] !== undefined ? parseFloat(rscu[codon].toFixed(3)) : null,
+      }))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    return {
+      geneName: geneName || (geneInfo ? geneInfo.name : null),
+      locusTag: locusTag || (geneInfo && geneInfo.locusTag !== 'N/A' ? geneInfo.locusTag : null),
+      gene: geneInfo,
+      geneticCode: { id: table.id, name: table.name },
+      totalCodons,
+      uniqueCodons: Object.keys(codonCounts).length,
+      codonUsage,
+      aminoAcidComposition: aminoAcidCounts,
+      codonPreferences,
+      mostFrequentCodons: codonUsage.slice(0, 10),
+      sequenceLength: analysisSequence.length,
+      analysisType: sequence ? 'sequence' : geneName ? 'geneName' : 'locusTag',
+    };
+  }
+
   async genomeCodonUsageAnalysis(params) {
     const { featureType = 'CDS', minLength = 300, maxGenes } = params;
     const { chromosome } = this._normalizeRegionParams(params);
@@ -192,97 +404,12 @@ class GenomeAnalysisService {
       );
     }
 
-    // Genetic code and synonymous codon groups
-    const geneticCode = {
-      TTT: 'F',
-      TTC: 'F',
-      TTA: 'L',
-      TTG: 'L',
-      TCT: 'S',
-      TCC: 'S',
-      TCA: 'S',
-      TCG: 'S',
-      TAT: 'Y',
-      TAC: 'Y',
-      TAA: '*',
-      TAG: '*',
-      TGT: 'C',
-      TGC: 'C',
-      TGA: '*',
-      TGG: 'W',
-      CTT: 'L',
-      CTC: 'L',
-      CTA: 'L',
-      CTG: 'L',
-      CCT: 'P',
-      CCC: 'P',
-      CCA: 'P',
-      CCG: 'P',
-      CAT: 'H',
-      CAC: 'H',
-      CAA: 'Q',
-      CAG: 'Q',
-      CGT: 'R',
-      CGC: 'R',
-      CGA: 'R',
-      CGG: 'R',
-      ATT: 'I',
-      ATC: 'I',
-      ATA: 'I',
-      ATG: 'M',
-      ACT: 'T',
-      ACC: 'T',
-      ACA: 'T',
-      ACG: 'T',
-      AAT: 'N',
-      AAC: 'N',
-      AAA: 'K',
-      AAG: 'K',
-      AGT: 'S',
-      AGC: 'S',
-      AGA: 'R',
-      AGG: 'R',
-      GTT: 'V',
-      GTC: 'V',
-      GTA: 'V',
-      GTG: 'V',
-      GCT: 'A',
-      GCC: 'A',
-      GCA: 'A',
-      GCG: 'A',
-      GAT: 'D',
-      GAC: 'D',
-      GAA: 'E',
-      GAG: 'E',
-      GGT: 'G',
-      GGC: 'G',
-      GGA: 'G',
-      GGG: 'G',
-    };
-
-    const synonymousCodons = {
-      F: ['TTT', 'TTC'],
-      L: ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
-      S: ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
-      Y: ['TAT', 'TAC'],
-      C: ['TGT', 'TGC'],
-      W: ['TGG'],
-      P: ['CCT', 'CCC', 'CCA', 'CCG'],
-      H: ['CAT', 'CAC'],
-      Q: ['CAA', 'CAG'],
-      R: ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
-      I: ['ATT', 'ATC', 'ATA'],
-      M: ['ATG'],
-      T: ['ACT', 'ACC', 'ACA', 'ACG'],
-      N: ['AAT', 'AAC'],
-      K: ['AAA', 'AAG'],
-      V: ['GTT', 'GTC', 'GTA', 'GTG'],
-      A: ['GCT', 'GCC', 'GCA', 'GCG'],
-      D: ['GAT', 'GAC'],
-      E: ['GAA', 'GAG'],
-      G: ['GGT', 'GGC', 'GGA', 'GGG'],
-      '*': ['TAA', 'TAG', 'TGA'],
-    };
+    // Genetic code and synonymous codon groups. An explicit genetic_code wins;
+    // otherwise the code the genome's own CDS features are annotated with.
+    const annotatedFeatures = chromosomes.flatMap(chr => this.app.currentAnnotations[chr] || []);
+    const codonModel = this._resolveCodonModel(params, annotatedFeatures);
+    const geneticCode = codonModel.geneticCode;
+    const synonymousCodons = codonModel.synonymousCodons;
 
     // Genome-wide codon counts
     const genomeCodonCounts = {};
@@ -312,13 +439,8 @@ class GenomeAnalysisService {
         }
 
         try {
-          // Get sequence for this feature
-          let featureSeq = await this.app.getSequenceForRegion(chr, feature.start, feature.end);
-
-          // Handle negative strand
-          if (feature.strand === '-') {
-            featureSeq = this.reverseComplement(featureSeq);
-          }
+          // Coding-strand sequence of this feature, read from its first full codon
+          const featureSeq = await this._codingSequence(chr, feature);
 
           // Count codons in this feature
           for (let i = 0; i < featureSeq.length - 2; i += 3) {
@@ -504,6 +626,7 @@ class GenomeAnalysisService {
       chromosomes: chromosomes,
       featureType: featureType,
       minLength: minLength,
+      geneticCode: { id: codonModel.table.id, name: codonModel.table.name },
       uniqueCodons: Object.keys(genomeCodonCounts).length,
       // Only include top/bottom codons, not full array
       mostFrequentCodons: genomeCodonUsage.slice(0, 10),

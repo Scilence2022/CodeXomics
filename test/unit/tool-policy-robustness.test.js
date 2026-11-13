@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 
 function evaluateRendererGlobal(relativePath, globalName) {
   const filePath = path.join(process.cwd(), relativePath);
@@ -33,11 +34,11 @@ function loadLLMContextServiceClass() {
   return fn({});
 }
 
-function loadToolExecutionServiceClass() {
+function loadToolExecutionServiceClass(windowObject = {}) {
   const servicePath = path.join(process.cwd(), 'src/renderer/modules/chat/services/ToolExecutionService.js');
   const content = fs.readFileSync(servicePath, 'utf-8');
   const fn = new Function('window', `${content}; return ToolExecutionService;`);
-  return fn({});
+  return fn(windowObject);
 }
 
 // Helper to load ChatManager in a node-compatible way
@@ -947,11 +948,23 @@ describe('Tool Policy - Parameter Normalization and Matching', () => {
   });
 
   it('should translate one-based reading_frame into zero-based MicrobeGenomics frame arguments', () => {
-    const service = new ToolExecutionService({}, {});
+    const MicrobeGenomicsFunctions = createRequire(import.meta.url)(
+      '../../src/renderer/modules/MicrobeGenomicsFunctions'
+    );
+    const Service = loadToolExecutionServiceClass({ MicrobeGenomicsFunctions });
+    const service = new Service({}, {});
 
-    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', reading_frame: 1 })).toEqual(['AAATTT', 0]);
-    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', reading_frame: 2 })).toEqual(['AAATTT', 1]);
-    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', frame: 2 })).toEqual(['AAATTT', 2]);
+    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', reading_frame: 1 })).toEqual(['AAATTT', 0, {}]);
+    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', reading_frame: 2 })).toEqual(['AAATTT', 1, {}]);
+    expect(service._extractMGFArgs('translate_dna', { dna: 'AAATTT', frame: 2 })).toEqual(['AAATTT', 2, {}]);
+    // The genetic code and stop handling the schema advertises reach the translator.
+    expect(
+      service._extractMGFArgs('translate_dna', {
+        dna: 'AAATTT',
+        genetic_code: 'vertebrate_mitochondrial',
+        include_stop_codons: false,
+      })
+    ).toEqual(['AAATTT', 0, { geneticCode: 'vertebrate_mitochondrial', includeStops: false }]);
   });
 
   it('should consume pending tool calls as each item is dispatched', async () => {
