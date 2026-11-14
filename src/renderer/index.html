@@ -57,6 +57,7 @@
          from module construction onward is gated. See DebugLogger.js. -->
     <script src="modules/DebugLogger.js"></script>
     <link rel="stylesheet" href="css/evo2.css">
+    <link rel="stylesheet" href="css/text-selection.css">
 </head>
 
 <body class="no-genome-loaded">
@@ -1038,7 +1039,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="primerDetailsContent" class="primer-details-content">
+                        <div id="primerDetailsContent" class="primer-details-content" data-selectable-text tabindex="0" role="region" aria-label="Primer details">
                             <div class="no-primer-selected">
                                 <i class="fas fa-vial gene-icon"></i>
                                 <p>Click on a primer in the Primers track to view details</p>
@@ -1053,7 +1054,7 @@
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <div id="readDetailsContent" class="read-details-content">
+                        <div id="readDetailsContent" class="read-details-content" data-selectable-text tabindex="0" role="region" aria-label="Read details">
                             <div class="no-read-selected">
                                 <i class="fas fa-align-left read-icon"></i>
                                 <p>Click on a read in the Aligned Reads track to view details</p>
@@ -1068,7 +1069,7 @@
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <div id="variantDetailsContent" class="variant-details-content">
+                        <div id="variantDetailsContent" class="variant-details-content" data-selectable-text tabindex="0" role="region" aria-label="Variant details">
                             <div class="no-variant-selected">
                                 <i class="fas fa-dna variant-icon"></i>
                                 <p>Click on a variant in the VCF track to view detailed analysis</p>
@@ -1092,7 +1093,7 @@
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <div id="searchResultsList" class="search-results-list">
+                        <div id="searchResultsList" class="search-results-list" data-selectable-text tabindex="0" role="region" aria-label="Search results">
                             <p class="no-results">No search results</p>
                         </div>
                     </div>
@@ -1137,7 +1138,7 @@
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <div id="fileInfo" class="file-info">
+                        <div id="fileInfo" class="file-info" data-selectable-text tabindex="0" role="region" aria-label="File information">
                             <p class="no-file">No file loaded</p>
                         </div>
                     </div>
@@ -1149,7 +1150,7 @@
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <div id="stats" class="stats">
+                        <div id="stats" class="stats" data-selectable-text tabindex="0" role="region" aria-label="Genome statistics">
                             <div class="stat-item">
                                 <span class="stat-label">Length:</span>
                                 <span class="stat-value" id="sequenceLength">-</span>
@@ -1294,7 +1295,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="sequenceContent" class="sequence-content"></div>
+                        <div id="sequenceContent" class="sequence-content" tabindex="-1"></div>
                     </div>
                 </div>
             </div>
@@ -1462,7 +1463,7 @@
                     </div>
                     <div class="annotation-review-workspace">
                         <div id="annotationReviewQueue" class="annotation-review-queue"></div>
-                        <aside id="annotationReviewDetail" class="annotation-review-detail" aria-live="polite"></aside>
+                        <aside id="annotationReviewDetail" class="annotation-review-detail" data-selectable-text tabindex="0" role="region" aria-label="Annotation review details" aria-live="polite"></aside>
                     </div>
                     <div class="annotation-review-batch-bar">
                         <span id="annotationReviewSelectedCount">0 selected</span>

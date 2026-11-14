@@ -485,7 +485,7 @@ class GenomeBrowser {
     const bodyHtml = sections.body
       ? this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(sections.body))
       : '';
-    let html = `<div class="gene-annotation-note-text">${bodyHtml}</div>`;
+    let html = `<div class="gene-annotation-note-text" data-selectable-text tabindex="0">${bodyHtml}</div>`;
     if (sections.sources.length > 0) {
       html += this.renderAnnotationNoteSources(sections.sources);
     }
@@ -1415,14 +1415,20 @@ class GenomeBrowser {
       }
     });
 
-    // Update copy button state when text selection changes
-    document.addEventListener('selectionchange', () => {
-      // Debounce to avoid too frequent updates
-      clearTimeout(this.selectionChangeTimeout);
-      this.selectionChangeTimeout = setTimeout(() => {
-        this.updateCopyButtonState();
-      }, 100);
-    });
+    // An unselectable control can leave the previous text selection in place
+    // after a click. Clear it before the control starts its own gesture.
+    document.addEventListener(
+      'mousedown',
+      event => {
+        if (event.button !== 0 || getComputedStyle(event.target).userSelect !== 'none') return;
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) selection.removeAllRanges();
+        if (!event.target.closest('button, select, a, [role="button"]')) {
+          event.target.closest('#genomeViewer .track-content')?.focus({ preventScroll: true });
+        }
+      },
+      true
+    );
 
     // Modal controls
     this.uiManager.setupModalControls();
@@ -6269,7 +6275,7 @@ class GenomeBrowser {
           const attrHtml = `
                         <div class="gene-attribute">
                             <div class="gene-attribute-label">${displayLabel}</div>
-                            <div class="gene-attribute-value">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(val)))}</div>
+                            <div class="gene-attribute-value" data-selectable-text tabindex="0" aria-label="${this.escapeHtml(key.replace(/_/g, ' '))}">${this.processUnifiedCitations(this.enhanceGeneAttributeWithLinks(String(val)))}</div>
                         </div>
                     `;
           const looksLikeEcValue = /\b(?:EC[:\s]*)?\d{1,2}\.\d{1,3}\.\d{1,3}\.(?:\d{1,3}|-)\b/i.test(String(val));
@@ -6320,7 +6326,7 @@ class GenomeBrowser {
     let html = `
             <div class="gene-details-info">
                 <div class="gene-basic-info">
-                    <div class="gene-name">${this.escapeHtml(geneName)}</div>
+                    <div class="gene-name" data-selectable-text tabindex="0">${this.escapeHtml(geneName)}</div>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                         <span class="gene-type-badge" style="margin-bottom: 0;">${this.escapeHtml(geneType)}</span>
                         ${
@@ -8175,16 +8181,17 @@ class GenomeBrowser {
     // Check if there's any active selection (gene or manual)
     const hasGeneSelection =
       this.sequenceSelection && this.sequenceSelection.active && this.sequenceSelection.source === 'gene';
-    const hasManualSelection = this.currentSequenceSelection !== null;
-    const hasTextSelection = window.getSelection() && window.getSelection().toString().length > 0;
+    const hasManualSelection = this.currentSequenceSelection && this.currentSequenceSelection.active !== false;
     const hasVisualSelection =
-      !hasGeneSelection && !hasManualSelection && document.querySelector('.gene-sequence-selected') !== null;
+      !hasGeneSelection &&
+      !hasManualSelection &&
+      document.querySelector('#sequenceContent .gene-sequence-selected') !== null;
 
     if (hasGeneSelection) {
       copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
       copyBtn.title = `Copy ${this.sequenceSelection.geneName} sequence`;
       copyBtn.classList.add('gene-copy-active');
-    } else if (hasManualSelection || hasTextSelection || hasVisualSelection) {
+    } else if (hasManualSelection || hasVisualSelection) {
       copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
       copyBtn.title = 'Copy selected sequence';
       copyBtn.classList.add('gene-copy-active');
@@ -10244,8 +10251,7 @@ class GenomeBrowser {
     if (this._sequenceSelectionListeners) {
       sequenceContent.removeEventListener('mousedown', this._sequenceSelectionListeners.mousedown);
       sequenceContent.removeEventListener('mousemove', this._sequenceSelectionListeners.mousemove);
-      sequenceContent.removeEventListener('mouseup', this._sequenceSelectionListeners.mouseup);
-      document.removeEventListener('mouseup', this._sequenceSelectionListeners.docMouseup);
+      document.removeEventListener('mouseup', this._sequenceSelectionListeners.mouseup);
       sequenceContent.removeEventListener('mouseover', this._sequenceSelectionListeners.mouseover);
       sequenceContent.removeEventListener('mouseleave', this._sequenceSelectionListeners.mouseleave);
     }
@@ -10253,64 +10259,48 @@ class GenomeBrowser {
     let isSelecting = false;
     let selectionStart = null;
     let selectionEnd = null;
-    let mouseDownPosition = null; // Track initial mouse position
-    let hasMoved = false; // Track if mouse has actually moved
+    const baseSelector = '.sequence-bases span[data-position]';
 
     const mousedownHandler = e => {
-      if (e.target.matches('.sequence-bases span')) {
-        console.log('🖱️ [Selection] mousedown on base span');
-        isSelecting = true;
-        selectionStart = this.getSequencePosition(e.target);
-        mouseDownPosition = selectionStart; // Store initial position
-        hasMoved = false; // Reset movement flag
-        // Clear all existing selections when starting a new manual selection
-        this.clearSequenceSelection();
-        e.preventDefault();
-      }
+      const base = e.target.closest(baseSelector);
+      if (e.button !== 0 || !base) return;
+
+      selectionStart = this.getSequencePosition(base);
+      if (!selectionStart) return;
+
+      selectionEnd = null;
+      isSelecting = true;
+      this.clearSequenceSelection();
+      window.getSelection()?.removeAllRanges();
+      sequenceContent.focus({ preventScroll: true });
+      e.preventDefault();
     };
 
     const mousemoveHandler = e => {
-      if (isSelecting && e.target.matches('.sequence-bases span')) {
-        const currentPosition = this.getSequencePosition(e.target);
-
-        // Check if mouse has actually moved to a different base
-        if (currentPosition && mouseDownPosition && currentPosition.position !== mouseDownPosition.position) {
-          console.log(`👁️ [Selection] Mouse moved from ${mouseDownPosition.position} to ${currentPosition.position}`);
-          hasMoved = true;
-          selectionEnd = currentPosition;
-          this.updateSequenceSelection(selectionStart, selectionEnd);
-        }
+      if (!isSelecting) return;
+      const base = e.target.closest(baseSelector);
+      const currentPosition = base && this.getSequencePosition(base);
+      if (!currentPosition || currentPosition.displayPosition === (selectionEnd || selectionStart).displayPosition) {
+        return;
       }
+
+      selectionEnd = currentPosition;
+      this.updateSequenceSelection(selectionStart, selectionEnd);
     };
 
     const mouseupHandler = e => {
-      console.log(`⬆️ [Selection] mouseup - isSelecting: ${isSelecting}, hasMoved: ${hasMoved}`);
+      if (!isSelecting || e.button !== 0) return;
 
-      // Only finalize selection if there was actual movement (drag)
-      if (isSelecting && hasMoved && selectionStart && selectionEnd) {
-        console.log(`✅ [Selection] Finalizing selection from ${selectionStart.position} to ${selectionEnd.position}`);
+      if (selectionEnd) {
         this.finalizeSequenceSelection(selectionStart, selectionEnd);
-      } else if (isSelecting && !hasMoved && e.target.matches('.sequence-bases span')) {
-        // Single click detected - place cursor instead of creating selection
-        console.log('📌 [Selection] Single click detected - placing cursor');
-
-        // Call SequenceUtils to place cursor at clicked position
-        if (this.sequenceUtils && this.sequenceUtils.handleSequenceClick) {
-          this.sequenceUtils.handleSequenceClick(e, e.target);
-        }
+      } else {
+        const base = e.target.closest(baseSelector);
+        if (base && sequenceContent.contains(base)) this.sequenceUtils?.handleSequenceClick(e, base);
       }
 
-      // Reset all selection state
       isSelecting = false;
-      hasMoved = false;
-      mouseDownPosition = null;
-    };
-
-    const docMouseupHandler = () => {
-      // Also reset movement tracking when mouse up occurs outside
-      isSelecting = false;
-      hasMoved = false;
-      mouseDownPosition = null;
+      selectionStart = null;
+      selectionEnd = null;
     };
 
     // Codon <-> residue hover association: hovering a base highlights the residue
@@ -10352,7 +10342,6 @@ class GenomeBrowser {
       mousedown: mousedownHandler,
       mousemove: mousemoveHandler,
       mouseup: mouseupHandler,
-      docMouseup: docMouseupHandler,
       mouseover: mouseoverHandler,
       mouseleave: mouseleaveHandler,
     };
@@ -10360,8 +10349,7 @@ class GenomeBrowser {
     // Add event listeners
     sequenceContent.addEventListener('mousedown', mousedownHandler);
     sequenceContent.addEventListener('mousemove', mousemoveHandler);
-    sequenceContent.addEventListener('mouseup', mouseupHandler);
-    document.addEventListener('mouseup', docMouseupHandler);
+    document.addEventListener('mouseup', mouseupHandler);
     sequenceContent.addEventListener('mouseover', mouseoverHandler);
     sequenceContent.addEventListener('mouseleave', mouseleaveHandler);
   }
@@ -10520,7 +10508,7 @@ class GenomeBrowser {
     const displayEnd = Math.max(start.displayPosition, end.displayPosition);
 
     // Use the same styling as gene selection for consistency
-    const sequenceBases = document.querySelectorAll('.sequence-bases span');
+    const sequenceBases = document.querySelectorAll('#sequenceContent .sequence-bases span[data-position]');
     sequenceBases.forEach(baseElement => {
       const pos = this.getSequencePosition(baseElement);
       if (pos && pos.displayPosition >= displayStart && pos.displayPosition <= displayEnd) {
@@ -11373,66 +11361,43 @@ class GenomeBrowser {
   /**
    * Handle Copy action from Edit menu
    */
-  handleMenuCopy() {
+  async handleMenuCopy() {
     try {
-      // Allow Edit menu to work regardless of focus state
-      // This ensures menu copy/paste work when accessed via menu bar
-
-      // Get the currently focused element
       const activeElement = document.activeElement;
-
-      // If there's a text selection anywhere on the page
-      const selection = window.getSelection();
-      if (selection && selection.toString().trim()) {
-        navigator.clipboard
-          .writeText(selection.toString())
-          .then(() => {
-            this.showNotification('Text copied to clipboard', 'success');
-          })
-          .catch(err => {
-            console.error('Failed to copy selection:', err);
-            this.showNotification('❌ Failed to copy text', 'error');
-          });
-        return;
-      }
-
-      // If focused on an input field with selected text
-      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
-        const start = activeElement.selectionStart;
-        const end = activeElement.selectionEnd;
-        if (start !== end) {
-          const selectedText = activeElement.value.substring(start, end);
-          navigator.clipboard
-            .writeText(selectedText)
-            .then(() => {
-              this.showNotification('Text copied to clipboard', 'success');
-            })
-            .catch(err => {
-              console.error('Failed to copy input text:', err);
-              this.showNotification('❌ Failed to copy text', 'error');
-            });
-          return;
+      let text;
+      if (activeElement.matches('input, textarea')) {
+        const { selectionStart, selectionEnd, value } = activeElement;
+        if (selectionStart !== null && selectionEnd !== null) {
+          text = value.slice(selectionStart, selectionEnd);
+        }
+      } else {
+        const selection = window.getSelection();
+        const textRegion = activeElement.closest('[data-selectable-text]');
+        const scope = activeElement.isContentEditable ? activeElement : textRegion;
+        if (!scope || (scope.contains(selection?.anchorNode) && scope.contains(selection?.focusNode))) {
+          text = selection?.toString();
         }
       }
 
-      // Check if there's a sequence to copy (gene or sequence selection)
-      if (this.sequenceUtils && this.currentSequence && Object.keys(this.currentSequence).length > 0) {
-        // Use existing sequence copy functionality
-        this.sequenceUtils.copySequence();
+      if (text) {
+        await navigator.clipboard.writeText(text);
+        this.showNotification('Text copied to clipboard', 'success');
         return;
       }
 
-      // If ChatManager is available and there's selected text in chat
-      if (window.chatManager && typeof window.chatManager.copySelectedText === 'function') {
-        const chatSelection = window.getSelection();
-        if (chatSelection && chatSelection.toString().trim()) {
-          window.chatManager.copySelectedText();
-          return;
-        }
+      if (activeElement.isContentEditable || activeElement.closest('input, textarea, [data-selectable-text]')) {
+        return;
       }
 
-      // No content to copy
-      this.showNotification('⚠️ No content selected to copy', 'warning');
+      const isGenomeView = activeElement.closest('#viewerContainer');
+      const hasSequenceSelection = this.currentSequenceSelection?.active || this.sequenceSelection?.active;
+      if (
+        (isGenomeView || (activeElement === document.body && hasSequenceSelection)) &&
+        this.sequenceUtils &&
+        this.currentSequence?.[this.currentChromosome]
+      ) {
+        await this.sequenceUtils.copySequence();
+      }
     } catch (error) {
       console.error('Error in handleMenuCopy:', error);
       this.showNotification('❌ Error copying content', 'error');
@@ -11509,47 +11474,27 @@ class GenomeBrowser {
    * Handle Select All action from Edit menu
    */
   handleMenuSelectAll() {
-    try {
-      const activeElement = document.activeElement;
+    const activeElement = document.activeElement;
+    if (activeElement.matches('button, select, [role="button"], [role="menuitem"], [role="tab"]')) return;
 
-      // If focused on an input field or textarea
-      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
-        activeElement.select();
-        this.showNotification('All text selected', 'success');
-        return;
-      }
+    if (activeElement.matches('input, textarea')) {
+      activeElement.select();
+      return;
+    }
 
-      // If there's content in the main genome viewer area
-      const genomeViewer = document.getElementById('genomeViewer');
-      if (genomeViewer && genomeViewer.textContent.trim()) {
-        // Select all text in the genome viewer
-        const range = document.createRange();
-        range.selectNodeContents(genomeViewer);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        this.showNotification('Genome content selected', 'success');
-        return;
-      }
-
-      // If there's chat content
-      const chatMessages = document.getElementById('chatMessages');
-      if (chatMessages && chatMessages.textContent.trim()) {
-        const range = document.createRange();
-        range.selectNodeContents(chatMessages);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        this.showNotification('Chat content selected', 'success');
-        return;
-      }
-
-      // Select all content on the page as fallback
+    if (activeElement.isContentEditable) {
+      // Chromium scopes the native editing command to the focused editing host.
       document.execCommand('selectAll');
-      this.showNotification('All page content selected', 'success');
-    } catch (error) {
-      console.error('Error in handleMenuSelectAll:', error);
-      this.showNotification('❌ Error selecting content', 'error');
+      return;
+    }
+
+    const textRegion = activeElement.closest('[data-selectable-text]');
+    if (textRegion) {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(textRegion);
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
   }
 }

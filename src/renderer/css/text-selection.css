@@ -1,0 +1,74 @@
+/* Desktop controls should not start text selections when clicked or dragged.
+   Apply this to UI surfaces so report contents and diagnostics remain selectable. */
+:where(button, select, [role='button'], [role='tab'], [role='menuitem'], label) {
+  user-select: none;
+}
+
+:where(
+  .app-title,
+  .app-header,
+  .workspace-titlebar,
+  .topbar,
+  .tab-bar,
+  .toolbar,
+  .status-bar,
+  .dropdown-menu,
+  .modal-header,
+  .sidebar-header,
+  .content-header,
+  .sidebar-view-title,
+  .section-header,
+  .feature-group-title,
+  .sidebar-splitter,
+  .splitter,
+  .chat-dock-splitter,
+  .tasks-dock-splitter,
+  .settings-center-pane-header,
+  .chat-header,
+  .chat-input-options,
+  .chat-actions,
+  .tasks-panel-header,
+  .tasks-toolbar,
+  .welcome-screen,
+  .gene-attribute-label,
+  .read-attribute-label,
+  .gene-attributes > h4,
+  .gene-annotation-note-header,
+  .gene-annotation-note-source-badge,
+  .gene-type-badge,
+  .track-header,
+  .track-stats,
+  .track-splitter,
+  .no-data-message,
+  .genome-navigation-bar,
+  .coordinate-ruler-bar,
+  .detailed-ruler-container
+) {
+  user-select: none;
+}
+
+/* Charts and the bottom sequence viewer handle selection as genomic coordinates. */
+#genomeViewer .track-content,
+#sequenceContent {
+  user-select: none;
+}
+
+/* The welcome screen shares the visual styles of an assistant message. */
+.welcome-message :is(.message-text, p, ul, li, code),
+.chat-messages .message-time {
+  user-select: none;
+}
+
+.welcome-message .message-text {
+  cursor: default;
+}
+
+/* Includes read-only input values and temporary editors, such as track rename. */
+:is(input, textarea, [contenteditable]:not([contenteditable='false']), [data-selectable-text]) {
+  user-select: text;
+}
+
+[data-selectable-text]:focus-visible {
+  outline: 2px solid var(--primary-color, Highlight);
+  outline-offset: -2px;
+}

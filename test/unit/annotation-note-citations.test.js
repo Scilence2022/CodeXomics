@@ -119,7 +119,11 @@ describe('Genome annotation note citation rendering', () => {
     const { renderNote } = createRenderer();
     const html = renderNote('Original annotation text without citations.');
 
-    expect(html).toContain('<div class="gene-annotation-note-text">Original annotation text without citations.</div>');
+    const note = document.createElement('div');
+    note.innerHTML = html;
+    expect(note.querySelector('.gene-annotation-note-text').textContent).toBe(
+      'Original annotation text without citations.'
+    );
     expect(html).not.toContain('gene-annotation-note-sources');
   });
 

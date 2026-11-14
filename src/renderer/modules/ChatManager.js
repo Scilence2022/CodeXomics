@@ -13832,7 +13832,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     const safeDisplayId = displayId.replace(/[^a-zA-Z0-9_-]/g, '');
     // Only the user's turn carries an avatar; assistant replies use the full width.
     const icon = sender === 'user' ? `<div class="message-icon"><i class="fas fa-user"></i></div>` : '';
-    messageDiv.innerHTML = `<div class="message-content">${icon}<div class="message-text" id="${safeDisplayId}">${safeMessage}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${safeDisplayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
+    messageDiv.innerHTML = `<div class="message-content">${icon}<div class="message-text" id="${safeDisplayId}" data-selectable-text tabindex="0">${safeMessage}</div><div class="message-actions"><button class="copy-message-btn" onclick="chatManager.copyMessage('${safeDisplayId}')" title="Copy message"><i class="fas fa-copy"></i></button></div></div><div class="message-time">${displayTime}</div>`;
 
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -18255,6 +18255,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const text = document.createElement('div');
     text.className = 'message-text streaming-text';
+    text.setAttribute('data-selectable-text', '');
+    text.tabIndex = 0;
 
     const textNode = document.createTextNode('');
     text.appendChild(textNode);

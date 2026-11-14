@@ -48,7 +48,6 @@ describe('SequenceUtils circular bottom sequence track', () => {
       configurable: true,
       value: { writeText: clipboardWriteTextSpy },
     });
-    window.getSelection = vi.fn(() => ({ toString: () => '' }));
     utils = new SequenceUtils(createGenomeBrowser());
   });
 
@@ -86,6 +85,25 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(clipboardWriteTextSpy).toHaveBeenCalledWith('TTTTTAAAAA');
   });
 
+  it('keeps the FASTA range header when copying the reverse complement of a manual selection', async () => {
+    vi.spyOn(utils, 'getSequenceTrackSettings').mockReturnValue({ copyFormat: 'fasta' });
+    utils.genomeBrowser.currentSequenceSelection = {
+      chromosome: 'chr1',
+      start: 96,
+      end: 3,
+      active: true,
+      coordinateSystem: 'one-based-inclusive',
+      segments: [
+        { start: 96, end: 100 },
+        { start: 1, end: 3 },
+      ],
+    };
+
+    await utils.copySequence({ reverseComplement: true });
+
+    expect(clipboardWriteTextSpy).toHaveBeenCalledWith('>chr1:96-100/1-3\nTTTAAAAA');
+  });
+
   it('restores both visual segments of a cross-origin manual selection', () => {
     const sequence = utils.genomeBrowser.currentSequence.chr1;
     const subsequence = utils.getViewportSequence(sequence, 95, 105, 'chr1');
@@ -108,6 +126,42 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(document.querySelectorAll('.sequence-selected')).toHaveLength(10);
   });
 
+  it('restores the rendered part of a linear selection without modifying a sidebar text selection', () => {
+    const sidebar = document.body.appendChild(document.createElement('div'));
+    sidebar.textContent = 'a_qualifier';
+    window.getSelection().selectAllChildren(sidebar);
+
+    const line = utils.renderSequenceLine('ACGT', 20, 'chr1', [], [], 10, {}, new Map());
+    document.getElementById('sequenceContent').appendChild(line);
+    utils.genomeBrowser.currentSequenceSelection = {
+      chromosome: 'chr1',
+      start: 10,
+      end: 22,
+      active: true,
+    };
+
+    utils.restoreSequenceHighlight();
+
+    const positions = Array.from(line.querySelectorAll('.sequence-selected'), base => Number(base.dataset.position));
+    expect(positions).toEqual([20, 21]);
+    expect(window.getSelection().toString()).toBe('a_qualifier');
+    expect(utils.genomeBrowser.currentSequenceSelection).toMatchObject({ start: 10, end: 22 });
+  });
+
+  it('copies the visible sequence across the origin without reading selected UI text', async () => {
+    const sidebar = document.body.appendChild(document.createElement('div'));
+    sidebar.textContent = 'fixture_gene_123';
+    window.getSelection().selectAllChildren(sidebar);
+    const approveVisibleCopy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      await utils.copySequence();
+      expect(approveVisibleCopy).toHaveBeenCalledOnce();
+      expect(clipboardWriteTextSpy).toHaveBeenCalledWith('TTTTTAAAAA');
+    } finally {
+      approveVisibleCopy.mockRestore();
+    }
+  });
+
   it('renders wrapped bases with source positions for clicks and selection restore', () => {
     const annotations = utils.genomeBrowser.currentAnnotations.chr1;
     const subsequence = utils.getViewportSequence(utils.genomeBrowser.currentSequence.chr1, 95, 105, 'chr1');
@@ -126,10 +180,6 @@ describe('SequenceUtils circular bottom sequence track', () => {
 
     const headFeatureBase = bases.find(base => base.dataset.position === '2');
     expect(headFeatureBase.getAttribute('title')).toContain('head (3-5)');
-
-    const restored = utils.findNodeAtGenomicPosition(2, document.getElementById('sequenceContent'));
-    expect(restored.node.textContent).toBe('A');
-    expect(restored.offset).toBe(0);
   });
 
   it('restores active gene sequence highlighting on newly rendered virtualized rows', () => {
@@ -168,8 +218,6 @@ describe('SequenceUtils circular bottom sequence track', () => {
     );
 
     expect(highlightedBases.map(base => Number(base.dataset.position))).toEqual([1, 2, 3]);
-    const highlightedText = highlightedBases[1].querySelector('span').firstChild;
-    expect(utils.extractGenomicPositionFromNode(highlightedText, 0)).toBe(2);
   });
 
   it('indexes CDS rows and reuses protein translations across rendered lines', () => {

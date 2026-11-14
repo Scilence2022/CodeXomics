@@ -475,6 +475,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="renderer/css/text-selection.css" />
   </head>
   <body>
     <div class="shell">
@@ -495,7 +496,7 @@
               <p>Saved BLAST+ executable and installation metadata</p>
             </div>
             <div class="status-body">
-              <div id="currentConfig" class="current-config version-info">Loading current configuration...</div>
+              <div id="currentConfig" class="current-config version-info" data-selectable-text tabindex="0" role="region" aria-label="Current BLAST+ configuration">Loading current configuration...</div>
             </div>
           </aside>
 
@@ -520,7 +521,7 @@
                   </button>
                 </div>
                 <div id="detectionStatus" class="status-box"></div>
-                <div id="detectionResults" class="detection-results"></div>
+                <div id="detectionResults" class="detection-results" data-selectable-text tabindex="0" role="region" aria-label="BLAST+ detection results"></div>
               </div>
             </div>
 
@@ -699,7 +700,8 @@
               ) {
                 document.activeElement.select();
               } else {
-                window.getSelection().selectAllChildren(document.body);
+                const region = document.activeElement.closest('[data-selectable-text]') || document.getElementById('currentConfig');
+                window.getSelection().selectAllChildren(region);
               }
               break;
           }
