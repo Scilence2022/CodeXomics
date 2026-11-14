@@ -11,7 +11,6 @@ class SequenceUtils {
 
     // Make this instance globally accessible for click handlers
     window.sequenceUtils = this;
-    this._cachedCharWidth = null; // Cache for character width measurement
     // VSCode editor and SequenceEditor removed - only using view mode
 
     // Only using view mode - edit mode functionality removed
@@ -33,15 +32,6 @@ class SequenceUtils {
     this.svgCache = new Map(); // Cache for SVG indicators
     this.renderedOperonContexts = new Map(); // Reuse operons already calculated for visible sequence indicators
     this.lastRenderParams = null; // Track last render parameters
-
-    // Virtual scrolling parameters - FIXED: Use actual line height + spacing
-    this.virtualScrolling = {
-      enabled: false,
-      visibleLines: 20,
-      bufferLines: 5,
-      lineHeight: 36, // FIXED: lineHeight + lineSpacing = 28 + 8 = 36
-      scrollTop: 0,
-    };
 
     // Search highlighting
     this.searchHighlights = [];
@@ -746,6 +736,7 @@ class SequenceUtils {
     // Line height / spacing controls now live in the sequence track Settings
     // panel (Indicators tab), so no dynamic header selectors are injected here.
     this.syncSequenceHeaderToggleButtons(this.getSequenceTrackSettings());
+    if (isSequenceCollapsed) return;
 
     // Update CSS variables for line height
     this.updateSequenceLineHeightCSS();
@@ -1016,45 +1007,15 @@ class SequenceUtils {
     }
   }
 
-  /**
-   * Update sequence line height CSS variables and recalculate virtual scrolling
-   */
   updateSequenceLineHeightCSS() {
-    const root = document.documentElement;
-
-    // Line height / spacing are configured in the sequence track Settings panel
-    // (Indicators tab). Pull the persisted values so every render path — panel
-    // apply, navigation, resize — reflects the current setting.
     this.syncLineMetricsFromSettings();
 
-    // Remove existing properties first
-    root.style.removeProperty('--sequence-line-height');
-    root.style.removeProperty('--sequence-line-ratio');
-    root.style.removeProperty('--sequence-line-spacing');
-    root.style.removeProperty('--min-sequence-line-spacing');
-
-    // Calculate line height ratio for better text rendering
-    const lineHeightRatio = Math.max(1.2, this.lineHeight / 16); // Ensure minimum ratio of 1.2
-
-    // Set CSS custom properties with important flag
-    root.style.setProperty('--sequence-line-height', `${this.lineHeight}px`, 'important');
-    root.style.setProperty('--sequence-line-ratio', lineHeightRatio.toString(), 'important');
-    root.style.setProperty('--sequence-line-spacing', `${this.lineSpacing}px`, 'important');
-    root.style.setProperty('--min-sequence-line-spacing', `${this.minLineSpacing}px`, 'important');
-
-    // FIXED: Update virtual scrolling line height to match actual rendering
-    this.virtualScrolling.lineHeight = this.lineHeight + this.lineSpacing;
-
-    console.log(
-      `🔧 [SequenceUtils] Updated line height: ${this.lineHeight}px, spacing: ${this.lineSpacing}px, virtual line height: ${this.virtualScrolling.lineHeight}px`
-    );
-
-    // Verify the CSS properties were applied correctly
-    setTimeout(() => {
-      const appliedLineHeight = getComputedStyle(root).getPropertyValue('--sequence-line-height');
-      const appliedSpacing = getComputedStyle(root).getPropertyValue('--sequence-line-spacing');
-      console.log(`🔧 [SequenceUtils] Applied CSS - line height: ${appliedLineHeight}, spacing: ${appliedSpacing}`);
-    }, 10);
+    const style = document.documentElement.style;
+    const lineHeightRatio = Math.max(1.2, this.lineHeight / 16);
+    style.setProperty('--sequence-line-height', `${this.lineHeight}px`, 'important');
+    style.setProperty('--sequence-line-ratio', String(lineHeightRatio), 'important');
+    style.setProperty('--sequence-line-spacing', `${this.lineSpacing}px`, 'important');
+    style.setProperty('--min-sequence-line-spacing', `${this.minLineSpacing}px`, 'important');
   }
 
   /**
@@ -1228,61 +1189,54 @@ class SequenceUtils {
 
   // VSCode sequence editor method removed - only using view mode
 
-  measureCharacterWidth(container) {
-    // Return cached value if available
-    if (this._cachedCharWidth) {
-      return this._cachedCharWidth;
-    }
-
-    // Use multiple measurements for better accuracy
-    const measurements = [];
-    const charCounts = [16, 32, 64]; // Use different character counts for validation
-
-    charCounts.forEach(count => {
-      const testElement = document.createElement('span');
-      testElement.textContent = 'ATCG'.repeat(count / 4);
-      testElement.style.cssText = `
-                font-family: 'Courier New', monospace;
-                font-size: 14px;
-                font-weight: 600;
-                visibility: hidden;
-                position: absolute;
-                white-space: nowrap;
-                letter-spacing: 1px;
-            `;
-
-      container.appendChild(testElement);
-      const totalWidth = testElement.offsetWidth;
-      const charWidth = totalWidth / count;
-      container.removeChild(testElement);
-
-      if (charWidth > 0) {
-        measurements.push(charWidth);
-      }
-    });
-
-    // Calculate average and standard deviation for validation
-    const average = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-    const variance = measurements.reduce((a, b) => a + Math.pow(b - average, 2), 0) / measurements.length;
-    const stdDev = Math.sqrt(variance);
-
-    // Use the most consistent measurement (lowest variance)
-    const mostConsistent = measurements.reduce((prev, current) =>
-      Math.abs(current - average) < Math.abs(prev - average) ? current : prev
+  measureSequenceLayout(view, chromosome, viewStart, settings, renderContext) {
+    // Measure an actual sequence row so padding, the scrollbar gutter, and the
+    // base pitch all match the space available to the rendered columns.
+    const probe = this.renderSequenceLine(
+      'A',
+      viewStart,
+      chromosome,
+      [],
+      [],
+      1,
+      settings,
+      new Map(),
+      { indicators: [], cds: [], primers: [] },
+      renderContext
     );
-
-    // Use actual measured width, with a fallback if measurement fails
-    this._cachedCharWidth = mostConsistent > 0 ? mostConsistent : 9.5;
-
-    console.log('🔧 [SequenceUtils] Character width measurement:', {
-      measurements: measurements.map(m => m.toFixed(3)),
-      average: average.toFixed(3),
-      stdDev: stdDev.toFixed(3),
-      selectedWidth: this._cachedCharWidth.toFixed(3),
-      effectiveCharWidth: (this._cachedCharWidth + 1).toFixed(3),
+    // Use an empty aligned row with the same children as a real marker row.
+    const proteinRow = this.createAlignedSequenceRow({
+      className: 'sequence-protein-row',
+      label: 'A',
+      marks: [],
+      charWidth: 1,
+      lineLength: 1,
     });
+    const primerRow = proteinRow.cloneNode(true);
+    primerRow.className = 'sequence-aligned-row sequence-primer-binding-row';
+    probe.append(proteinRow, primerRow);
+    probe.style.visibility = 'hidden';
+    view.appendChild(probe);
 
-    return this._cachedCharWidth;
+    const groupRect = probe.getBoundingClientRect();
+    const bases = probe.querySelector('.main-strand-row .sequence-bases');
+    const basesRect = bases.getBoundingClientRect();
+    const viewRect = view.getBoundingClientRect();
+    const paddingRight = parseFloat(getComputedStyle(view).paddingRight) || 0;
+    const availableWidth = viewRect.right - paddingRight - basesRect.left;
+    const charWidth = bases.firstElementChild.getBoundingClientRect().width || 9.4;
+    const proteinHeight = this.getSequenceRowHeight(proteinRow);
+    const primerHeight = this.getSequenceRowHeight(primerRow);
+    const baseHeight = this.getSequenceRowHeight(probe, groupRect.height) - proteinHeight - primerHeight;
+    const basesPerLine = Math.max(1, Math.floor(availableWidth / charWidth));
+    probe.remove();
+
+    return { charWidth, basesPerLine, baseHeight, proteinHeight, primerHeight };
+  }
+
+  getSequenceRowHeight(row, height = row.getBoundingClientRect().height) {
+    const style = getComputedStyle(row);
+    return height + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
   }
 
   displayDetailedSequence(chromosome, fullSequence, viewStart, viewEnd) {
@@ -1308,15 +1262,13 @@ class SequenceUtils {
 
     const container = document.getElementById('sequenceContent');
 
-    // Clean container and reset styles for view mode
-    container.innerHTML = '';
-    container.style.removeProperty('font-family');
-    container.style.removeProperty('background');
-    container.style.removeProperty('color');
-    // Reset overflow and height - they will be set properly in render methods
-    container.style.removeProperty('overflow');
-    container.style.removeProperty('height');
+    if (this.sequenceScrollHandler) {
+      container.removeEventListener('scroll', this.sequenceScrollHandler);
+      this.sequenceScrollHandler = null;
+    }
+    container.replaceChildren();
     container.className = 'sequence-content';
+    container.scrollTop = 0;
 
     const subsequence = this.getViewportSequence(fullSequence, viewStart, viewEnd, chromosome);
     const annotations = this.genomeBrowser.currentAnnotations[chromosome] || [];
@@ -1339,112 +1291,53 @@ class SequenceUtils {
       console.log('🔧 [SequenceUtils] Cache invalidated due to parameter changes');
     }
 
-    const containerWidth = container.offsetWidth || 800;
-    const charWidth = this.measureCharacterWidth(container);
-    const positionWidth = 100;
-    const marginRight = 15; // Position span margin-right
-    const padding = 30; // Container padding
-    const strandLabelWidth = 20; // 5'/3' label width
-    const availableWidth = containerWidth - positionWidth - marginRight - padding - strandLabelWidth;
+    const sequenceView = document.createElement('div');
+    sequenceView.className = 'detailed-sequence-view';
+    container.appendChild(sequenceView);
 
-    // Calculate optimal line length with better precision
-    // FIX: Letter-spacing is already included in character width measurement
-    const effectiveCharWidth = charWidth; // Remove +1 extra spacing
-    let optimalLineLength = Math.max(10, Math.floor(availableWidth / effectiveCharWidth));
-
-    // Calculate actual width that will be used
-    const actualUsedWidth = optimalLineLength * effectiveCharWidth;
-    const remainingWidth = availableWidth - actualUsedWidth;
-
-    console.log('🔧 [SequenceUtils] Width calculation details:', {
-      containerWidth,
-      availableWidth,
-      charWidth,
-      effectiveCharWidth,
-      optimalLineLength,
-      actualUsedWidth,
-      remainingWidth,
-    });
-
-    console.log('🔧 [SequenceUtils] Line calculation:', {
-      containerWidth,
-      charWidth,
-      effectiveCharWidth,
-      availableWidth,
-      optimalLineLength,
-      actualUsedWidth,
-      remainingWidth,
-      utilizationPercentage: ((actualUsedWidth / availableWidth) * 100).toFixed(1) + '%',
-    });
-
-    // If there's significant unused space, try to optimize
-    if (remainingWidth > effectiveCharWidth && optimalLineLength < 100) {
-      const additionalChars = Math.floor(remainingWidth / effectiveCharWidth);
-      const newOptimalLength = optimalLineLength + additionalChars;
-      console.log('🔧 [SequenceUtils] Optimizing line length:', {
-        originalLength: optimalLineLength,
-        additionalChars,
-        newLength: newOptimalLength,
-        newUsedWidth: newOptimalLength * effectiveCharWidth,
-      });
-      // Use the optimized length if it doesn't exceed container
-      if (newOptimalLength * effectiveCharWidth <= availableWidth) {
-        optimalLineLength = newOptimalLength;
-      }
-    }
-
-    // Pre-compute feature lookups for better performance
+    const renderContext = this.createRenderContext(chromosome);
+    const layout = this.measureSequenceLayout(sequenceView, chromosome, viewStart, sequenceSettings, renderContext);
+    const { charWidth, basesPerLine } = layout;
+    const totalLines = Math.ceil(subsequence.length / basesPerLine);
     const featureLookup = this.buildFeatureLookup(annotations, viewStart, viewEnd, chromosome);
-
-    // Enable virtual scrolling for sequences that actually need it
-    const totalLines = Math.ceil(subsequence.length / optimalLineLength);
     const lineFeatureIndex = this.buildLineFeatureIndex(
       annotations,
       viewStart,
-      viewEnd,
-      optimalLineLength,
+      viewStart + subsequence.length,
+      basesPerLine,
       chromosome,
       sequenceSettings,
       primerBindings
     );
-    const renderContext = this.createRenderContext(chromosome);
-    this.applySequenceSpacingVariables(sequenceSettings);
-    // Estimate if the content will overflow the container
-    const estimatedContentHeight = totalLines * this.getSequenceLineBlockHeight(sequenceSettings);
-    const estimatedContainerHeight = container.getBoundingClientRect().height || 400;
-    const enableVirtualScrolling = totalLines > 50 && estimatedContentHeight > estimatedContainerHeight * 1.5;
+    const offsets = this.getSequenceLineOffsets(lineFeatureIndex, layout);
+    sequenceView.dataset.basesPerLine = String(basesPerLine);
+    this.sequenceLayout = { container, sequenceView, viewStart, basesPerLine, offsets };
 
+    const renderLine = lineIndex => {
+      const offset = lineIndex * basesPerLine;
+      return this.renderSequenceLine(
+        subsequence.slice(offset, offset + basesPerLine),
+        viewStart + offset,
+        chromosome,
+        annotations,
+        operons,
+        charWidth,
+        sequenceSettings,
+        featureLookup,
+        lineFeatureIndex[lineIndex],
+        renderContext
+      );
+    };
+
+    const enableVirtualScrolling = totalLines > 50;
     if (enableVirtualScrolling) {
-      this.renderVirtualizedSequence(
-        container,
-        chromosome,
-        subsequence,
-        viewStart,
-        annotations,
-        operons,
-        charWidth,
-        optimalLineLength,
-        sequenceSettings,
-        featureLookup,
-        lineFeatureIndex,
-        renderContext
-      );
+      this.renderVirtualizedSequence(offsets, renderLine);
     } else {
-      this.renderFullSequence(
-        container,
-        chromosome,
-        subsequence,
-        viewStart,
-        annotations,
-        operons,
-        charWidth,
-        optimalLineLength,
-        sequenceSettings,
-        featureLookup,
-        lineFeatureIndex,
-        renderContext
-      );
+      this.renderSequenceLinesBatch(sequenceView, totalLines, renderLine);
     }
+
+    this.attachSequenceClickHandlers(container);
+    if (this.getCursorPosition() >= 0) this.renderCursor();
 
     // Update render parameters
     this.updateLastRenderParams(chromosome, viewStart, viewEnd, annotations, sequenceSettings);
@@ -1456,8 +1349,6 @@ class SequenceUtils {
       cacheHits: this.performanceStats.cacheHits,
       cacheMisses: this.performanceStats.cacheMisses,
       totalLines: totalLines,
-      estimatedContentHeight: estimatedContentHeight,
-      estimatedContainerHeight: estimatedContainerHeight,
       virtualScrolling: enableVirtualScrolling,
     });
   }
@@ -1652,165 +1543,27 @@ class SequenceUtils {
     return Boolean(this.genomeBrowser.getQualifierValue?.(feature?.qualifiers, 'translation'));
   }
 
-  applySequenceSpacingVariables(sequenceSettings = {}) {
-    const verticalOffset = sequenceSettings.verticalOffset || 0;
-    const indicatorMarginBottom = 4;
-    const correctedMarginBottom = indicatorMarginBottom - verticalOffset;
-
-    document.documentElement.style.setProperty('--sequence-line-spacing', `${Math.max(4, correctedMarginBottom)}px`);
-    document.documentElement.style.setProperty(
-      '--min-sequence-line-spacing',
-      `${Math.max(4, correctedMarginBottom)}px`
-    );
-  }
-
-  /**
-   * Render full sequence (for smaller sequences)
-   */
-  renderFullSequence(
-    container,
-    chromosome,
-    subsequence,
-    viewStart,
-    annotations,
-    operons,
-    charWidth,
-    optimalLineLength,
-    sequenceSettings,
-    featureLookup,
-    lineFeatureIndex,
-    renderContext
-  ) {
-    // Ensure parent container has proper scrolling enabled
-    container.style.overflow = 'auto';
-    container.style.height = '100%';
-
-    const tempDiv = document.createElement('div');
-    tempDiv.className = 'detailed-sequence-view';
-    tempDiv.dataset.basesPerLine = String(optimalLineLength);
-    tempDiv.dataset.lineHeight = String(this.getSequenceLineBlockHeight(sequenceSettings));
-
-    // Batch DOM operations
-    const linesToRender = [];
-    for (let i = 0; i < subsequence.length; i += optimalLineLength) {
-      const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
-      const lineStartPos = viewStart + i;
-      linesToRender.push({ lineSubsequence, lineStartPos, index: i });
-    }
-
-    this.renderSequenceLinesBatch(
-      tempDiv,
-      linesToRender,
-      chromosome,
-      annotations,
-      operons,
-      charWidth,
-      sequenceSettings,
-      featureLookup,
-      0,
-      lineFeatureIndex,
-      viewStart,
-      optimalLineLength,
-      renderContext
-    );
-
-    container.appendChild(tempDiv);
-
-    // Add click event listener for cursor positioning
-    this.attachSequenceClickHandlers(container);
-
-    // Restore cursor if it was visible before render
-    if (this.getCursorPosition() >= 0) {
-      console.log('🔄 [SequenceUtils] Re-rendering cursor after full sequence render');
-      this.renderCursor();
-    }
-
-    // Log container info for debugging
-    const totalLines = Math.ceil(subsequence.length / optimalLineLength);
-    console.log('🔧 [SequenceUtils] Full sequence render:', {
-      totalLines,
-      containerHeight: container.getBoundingClientRect().height,
-      scrollHeight: container.scrollHeight,
-      needsScrolling: container.scrollHeight > container.clientHeight,
+  getSequenceLineOffsets(lineFeatures, { baseHeight, proteinHeight, primerHeight }) {
+    const offsets = new Float64Array(lineFeatures.length + 1);
+    lineFeatures.forEach(({ cds, primers }, index) => {
+      // A CDS that only touches the edge may have no residue on this line.
+      // Reserving one slot per overlapping CDS keeps the other rows clear.
+      offsets[index + 1] = offsets[index] + baseHeight + cds.length * proteinHeight + primers.length * primerHeight;
     });
+    return offsets;
   }
 
-  /**
-   * Render sequence lines in batches to avoid UI blocking
-   */
-  renderSequenceLinesBatch(
-    container,
-    linesToRender,
-    chromosome,
-    annotations,
-    operons,
-    charWidth,
-    sequenceSettings,
-    featureLookup,
-    batchStart,
-    lineFeatureIndex = null,
-    viewStart = 0,
-    optimalLineLength = 1,
-    renderContext = null
-  ) {
-    // Skip rendering if we're dragging (optimization)
-    if (this.dragOptimization.isDragging) {
-      console.log('🔧 [SequenceUtils] Skipping batch render during drag');
-      return;
+  renderSequenceLinesBatch(view, totalLines, renderLine, batchStart = 0) {
+    if (this.dragOptimization.isDragging || !view.isConnected) return;
+
+    const batchEnd = Math.min(batchStart + 10, totalLines);
+    for (let lineIndex = batchStart; lineIndex < batchEnd; lineIndex++) {
+      view.appendChild(renderLine(lineIndex));
     }
 
-    const batchSize = 10; // Render 10 lines at a time
-    const batchEnd = Math.min(batchStart + batchSize, linesToRender.length);
-
-    for (let i = batchStart; i < batchEnd; i++) {
-      const { lineSubsequence, lineStartPos } = linesToRender[i];
-      const lineElement = this.renderSequenceLine(
-        lineSubsequence,
-        lineStartPos,
-        chromosome,
-        annotations,
-        operons,
-        charWidth,
-        sequenceSettings,
-        featureLookup,
-        this.getLineFeatureSet(lineFeatureIndex, lineStartPos, viewStart, optimalLineLength),
-        renderContext
-      );
-      container.appendChild(lineElement);
+    if (batchEnd < totalLines) {
+      requestAnimationFrame(() => this.renderSequenceLinesBatch(view, totalLines, renderLine, batchEnd));
     }
-
-    // Continue with next batch if there are more lines
-    if (batchEnd < linesToRender.length) {
-      // Use requestAnimationFrame to avoid blocking the UI
-      requestAnimationFrame(() => {
-        // Check again if we're still not dragging before continuing
-        if (!this.dragOptimization.isDragging) {
-          this.renderSequenceLinesBatch(
-            container,
-            linesToRender,
-            chromosome,
-            annotations,
-            operons,
-            charWidth,
-            sequenceSettings,
-            featureLookup,
-            batchEnd,
-            lineFeatureIndex,
-            viewStart,
-            optimalLineLength,
-            renderContext
-          );
-        } else {
-          console.log('🔧 [SequenceUtils] Stopping batch render due to drag start');
-        }
-      });
-    }
-  }
-
-  getLineFeatureSet(lineFeatureIndex, lineStartPos, viewStart, optimalLineLength) {
-    if (!lineFeatureIndex) return null;
-    const lineIndex = Math.floor((lineStartPos - viewStart) / optimalLineLength);
-    return lineFeatureIndex[lineIndex] || null;
   }
 
   /**
@@ -1830,6 +1583,7 @@ class SequenceUtils {
   ) {
     const cacheKey = [
       this.getSequenceLineCacheKey(lineSubsequence, lineStartPos, chromosome),
+      charWidth,
       this.getAnnotationHash(lineFeatureSet?.indicators || []),
       this.getAnnotationHash(lineFeatureSet?.cds || []),
       this.getAnnotationHash(lineFeatureSet?.primers || []),
@@ -1852,9 +1606,7 @@ class SequenceUtils {
     const horizontalOffset = sequenceSettings.horizontalOffset || 0;
     const verticalOffset = sequenceSettings.verticalOffset || 0;
     // Position indicator directly below the sequence text with minimal gap
-    const indicatorMarginTop = -6; // Negative to move up closer to sequence text
     const indicatorMarginBottom = 4; // Small gap before next sequence line
-    const correctedMarginTop = indicatorMarginTop + verticalOffset;
     const correctedMarginBottom = indicatorMarginBottom - verticalOffset;
 
     const lineGroup = document.createElement('div');
@@ -1862,16 +1614,8 @@ class SequenceUtils {
     lineGroup.dataset.displayStart = String(lineStartPos);
     const context = renderContext || this.createRenderContext(chromosome);
     lineGroup.dataset.sourceStart = String(this.displayToSourcePositionFast(lineStartPos, context));
-    lineGroup.style.marginBottom = `${this.lineSpacing}px`;
-
-    // Create sequence line with configurable height to prevent compression
     const sequenceLine = document.createElement('div');
     sequenceLine.className = 'sequence-line';
-    // Use configurable line height with appropriate line-height ratio
-    const lineHeightRatio = Math.max(1.2, this.lineHeight / 16); // Ensure minimum ratio of 1.2
-    // Use dynamic margin-bottom that works with gene indicator positioning
-    const sequenceLineMarginBottom = Math.max(4, correctedMarginBottom + 6); // Ensure enough space for gene indicators
-    sequenceLine.style.cssText = `display: flex; margin-bottom: ${sequenceLineMarginBottom}px; font-family: "Courier New", monospace; font-size: 14px; line-height: ${lineHeightRatio}; min-height: ${this.lineHeight}px; padding: 4px 0;`;
 
     // Position label
     const positionSpan = document.createElement('span');
@@ -1955,7 +1699,7 @@ class SequenceUtils {
     const correctedHeight = this.getGeneIndicatorHitHeight(sequenceSettings.indicatorHeight || 8, sequenceSettings);
 
     // Use both inline styles and CSS variables to ensure our spacing takes effect
-    indicatorLine.style.cssText = `height: ${correctedHeight}px; margin-left: ${finalLeftMargin}px; margin-bottom: ${correctedMarginBottom}px; margin-top: ${correctedMarginTop}px;`;
+    indicatorLine.style.cssText = `height: ${correctedHeight}px; margin-left: ${finalLeftMargin}px; margin-bottom: ${correctedMarginBottom}px; margin-top: ${verticalOffset}px;`;
 
     indicatorLine.innerHTML = this.createGeneIndicatorBarOptimized(
       lineSubsequence,
@@ -2009,20 +1753,12 @@ class SequenceUtils {
       ).forEach(row => lineGroup.appendChild(row));
     }
 
-    lineGroup.appendChild(indicatorLine);
+    if (sequenceSettings.showIndicators !== false) lineGroup.appendChild(indicatorLine);
 
     // Cache the rendered line
     this.renderCache.set(cacheKey, lineGroup.cloneNode(true));
 
     return lineGroup;
-  }
-
-  getSequenceLineBlockHeight(settings = {}) {
-    const indicatorHeight = settings.showIndicators === false ? 0 : (settings.indicatorHeight || 8) + 8;
-    const proteinHeight = settings.showProteinSequence ? 22 : 0;
-    const primerHeight = settings.showPrimers ? 44 : 0;
-    const complementaryHeight = settings.showComplementary ? 22 : 0;
-    return this.lineHeight + this.lineSpacing + indicatorHeight + proteinHeight + primerHeight + complementaryHeight;
   }
 
   createAlignedProteinRows(
@@ -2575,6 +2311,7 @@ class SequenceUtils {
     const settingsHash = settings ? this.getSettingsHash(settings) : '';
     const cacheKey = [
       'indicator',
+      charWidth,
       lineStartAbs,
       sequence.length,
       chromosome || '',
@@ -2650,270 +2387,87 @@ class SequenceUtils {
     return result;
   }
 
-  /**
-   * Render virtualized sequence with corrected line height calculation
-   */
-  renderVirtualizedSequence(
-    container,
-    chromosome,
-    subsequence,
-    viewStart,
-    annotations,
-    operons,
-    charWidth,
-    optimalLineLength,
-    sequenceSettings,
-    featureLookup,
-    lineFeatureIndex,
-    renderContext
-  ) {
-    console.log('🔧 [SequenceUtils] Using virtualized rendering for large sequence');
+  renderVirtualizedSequence(offsets, renderLine) {
+    const { container, sequenceView } = this.sequenceLayout;
+    sequenceView.classList.add('virtualized');
 
-    const totalLines = Math.ceil(subsequence.length / optimalLineLength);
-
-    const actualLineHeight = this.getSequenceLineBlockHeight(sequenceSettings);
-
-    // Calculate actual available height from the parent container
-    const parentContainer = document.getElementById('sequenceContent');
-    const sequenceDisplaySection = document.getElementById('sequenceDisplaySection');
-    let availableHeight = 400; // Default fallback
-
-    if (parentContainer) {
-      // Get the actual available height from the parent container
-      const parentRect = parentContainer.getBoundingClientRect();
-      const parentStyles = window.getComputedStyle(parentContainer);
-      const paddingTop = parseInt(parentStyles.paddingTop) || 0;
-      const paddingBottom = parseInt(parentStyles.paddingBottom) || 0;
-      availableHeight = Math.max(200, parentRect.height - paddingTop - paddingBottom);
-
-      console.log('🔧 [SequenceUtils] Parent container height calculation:', {
-        parentHeight: parentRect.height,
-        paddingTop,
-        paddingBottom,
-        availableHeight,
-      });
-    } else if (sequenceDisplaySection) {
-      const sectionRect = sequenceDisplaySection.getBoundingClientRect();
-      const sequenceHeader = document.querySelector('.sequence-header');
-      const headerHeight = sequenceHeader ? sequenceHeader.offsetHeight : 60;
-      availableHeight = Math.max(200, sectionRect.height - headerHeight - 40);
-    }
-
-    // Calculate total content height
-    const maxPossibleHeight = totalLines * actualLineHeight;
-
-    // Determine if we need scrolling based on content exceeding available space
-    const needsScrolling = maxPossibleHeight > availableHeight;
-    const containerHeight = needsScrolling ? availableHeight : maxPossibleHeight;
-
-    // Optional rows such as primers and protein translations are line-specific, so
-    // the fixed virtual row height is intentionally conservative. Render from a
-    // smaller base estimate to avoid an under-filled viewport when most visible
-    // lines do not contain those optional rows.
-    const minimumLineHeight = Math.max(1, this.lineHeight + this.lineSpacing);
-    const visibleLineHeightEstimate = Math.max(minimumLineHeight, Math.ceil(actualLineHeight * 0.6));
-    const dynamicVisibleLines = Math.max(1, Math.ceil(availableHeight / visibleLineHeightEstimate));
-
-    console.log(
-      `🔧 [SequenceUtils] Container sizing: available=${availableHeight}px, calculated=${containerHeight}px, lines=${totalLines}, visible=${dynamicVisibleLines}, needsScrolling=${needsScrolling}, actualLineHeight=${actualLineHeight}px`
-    );
-
-    // Disable parent container scrolling to avoid conflicts
-    container.style.overflow = 'hidden';
-    container.style.height = '100%';
-
-    // Create virtualized container that takes full parent space
-    const virtualContainer = document.createElement('div');
-    virtualContainer.className = 'detailed-sequence-view virtualized';
-    virtualContainer.dataset.basesPerLine = String(optimalLineLength);
-    virtualContainer.dataset.lineHeight = String(actualLineHeight);
-    virtualContainer.style.cssText = `
-            height: 100%;
-            width: 100%;
-            overflow-y: ${needsScrolling ? 'auto' : 'hidden'};
-            overflow-x: hidden;
-            position: relative;
-            box-sizing: border-box;
-        `;
-
-    // Viewport for visible lines - set proper height for scrolling
     const viewport = document.createElement('div');
     viewport.className = 'virtual-viewport';
-    viewport.style.cssText = `
-            height: ${maxPossibleHeight}px;
-            position: relative;
-            width: 100%;
-        `;
+    viewport.style.height = `${offsets[offsets.length - 1]}px`;
+    sequenceView.appendChild(viewport);
 
-    // Visible content container
-    const visibleContent = document.createElement('div');
-    visibleContent.className = 'virtual-visible-content';
-    visibleContent.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-        `;
+    let scrollFrame = null;
+    let renderedStart = -1;
+    let renderedEnd = -1;
+    const update = () => {
+      if (!viewport.isConnected) return;
 
-    viewport.appendChild(visibleContent);
-    virtualContainer.appendChild(viewport);
+      const visibleHeight = container.clientHeight;
+      const scrollTop = container.scrollTop - this.getSequenceViewContentTop(sequenceView);
+      const start = this.findSequenceLineAtOffset(offsets, scrollTop - visibleHeight);
+      const end = this.findSequenceLineAtOffset(offsets, scrollTop + visibleHeight * 2) + 1;
+      if (start === renderedStart && end === renderedEnd) return;
 
-    // Store dynamic parameters for scroll handling
-    const virtualScrollingParams = {
-      ...this.virtualScrolling,
-      lineHeight: actualLineHeight, // FIXED: Use actual line height
-      visibleLines: dynamicVisibleLines,
-      bufferLines: Math.max(this.virtualScrolling.bufferLines || 5, Math.ceil(dynamicVisibleLines * 0.75)),
-      containerHeight: containerHeight,
-      totalLines: totalLines,
-      needsScrolling: needsScrolling,
+      const savedSelection = this.saveSelectionState();
+      const rows = document.createDocumentFragment();
+      for (let lineIndex = start; lineIndex < end; lineIndex++) {
+        const row = renderLine(lineIndex);
+        row.style.top = `${offsets[lineIndex]}px`;
+        rows.appendChild(row);
+      }
+      viewport.replaceChildren(rows);
+      renderedStart = start;
+      renderedEnd = end;
+      this.restoreActiveGeneSequenceHighlight();
+      if (savedSelection) {
+        this.restoreSelectionState(savedSelection);
+      } else if (this.genomeBrowser.currentSequenceSelection) {
+        this.restoreManualSelection(this.genomeBrowser.currentSequenceSelection);
+      }
     };
 
-    this.updateVirtualizedContent(
-      visibleContent,
-      0,
-      chromosome,
-      subsequence,
-      viewStart,
-      annotations,
-      operons,
-      charWidth,
-      optimalLineLength,
-      sequenceSettings,
-      featureLookup,
-      totalLines,
-      virtualScrollingParams,
-      lineFeatureIndex,
-      renderContext
-    );
-
-    // Scroll handler for virtual scrolling (only if scrolling is needed)
-    if (needsScrolling) {
-      let scrollFrame = null;
-      let pendingScrollTop = 0;
-      virtualContainer.addEventListener('scroll', () => {
-        pendingScrollTop = virtualContainer.scrollTop;
-
-        if (scrollFrame !== null) {
-          return;
-        }
-
-        scrollFrame = requestAnimationFrame(() => {
-          scrollFrame = null;
-          this.updateVirtualizedContent(
-            visibleContent,
-            pendingScrollTop,
-            chromosome,
-            subsequence,
-            viewStart,
-            annotations,
-            operons,
-            charWidth,
-            optimalLineLength,
-            sequenceSettings,
-            featureLookup,
-            totalLines,
-            virtualScrollingParams,
-            lineFeatureIndex,
-            renderContext
-          );
-        });
+    this.sequenceScrollHandler = () => {
+      if (scrollFrame !== null) return;
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = null;
+        update();
       });
-    }
-
-    container.appendChild(virtualContainer);
-
-    // Add click event listener for cursor positioning
-    this.attachSequenceClickHandlers(container);
-
-    // Restore cursor if it was visible before render
-    if (this.getCursorPosition() >= 0) {
-      console.log('🔄 [SequenceUtils] Re-rendering cursor after virtualized sequence render');
-      this.renderCursor();
-    }
+    };
+    container.addEventListener('scroll', this.sequenceScrollHandler);
+    update();
   }
 
-  /**
-   * Update virtualized content based on scroll position with corrected line height
-   */
-  updateVirtualizedContent(
-    visibleContent,
-    scrollTop,
-    chromosome,
-    subsequence,
-    viewStart,
-    annotations,
-    operons,
-    charWidth,
-    optimalLineLength,
-    sequenceSettings,
-    featureLookup,
-    totalLines,
-    virtualScrollingParams = null,
-    lineFeatureIndex = null,
-    renderContext = null
-  ) {
-    // Use dynamic parameters if provided, otherwise fall back to instance parameters
-    const params = virtualScrollingParams || this.virtualScrolling;
-    const lineHeight = params.lineHeight || this.lineHeight + this.lineSpacing; // FIXED: Use actual line height
-    const visibleLines = params.visibleLines || this.virtualScrolling.visibleLines || 20;
-    const bufferLines = params.bufferLines || this.virtualScrolling.bufferLines || 5;
-
-    const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - bufferLines);
-    const endLine = Math.min(totalLines, startLine + visibleLines + bufferLines * 2);
-
-    // FIXED: Save selection state before clearing content
-    const savedSelection = this.saveSelectionState();
-
-    // Clear existing content
-    visibleContent.innerHTML = '';
-
-    // Render visible lines
-    for (let lineIndex = startLine; lineIndex < endLine; lineIndex++) {
-      const i = lineIndex * optimalLineLength;
-      if (i >= subsequence.length) break;
-
-      const lineSubsequence = subsequence.substring(i, i + optimalLineLength);
-      const lineStartPos = viewStart + i;
-
-      const lineElement = this.renderSequenceLine(
-        lineSubsequence,
-        lineStartPos,
-        chromosome,
-        annotations,
-        operons,
-        charWidth,
-        sequenceSettings,
-        featureLookup,
-        this.getLineFeatureSet(lineFeatureIndex, lineStartPos, viewStart, optimalLineLength),
-        renderContext
-      );
-      lineElement.style.position = 'absolute';
-      lineElement.style.top = `${lineIndex * lineHeight}px`; // FIXED: Use correct line height
-      lineElement.style.left = '0';
-      // Calculate actual width needed instead of using right: 0
-      const effectiveCharWidth = charWidth; // FIX: Remove +1 extra spacing
-      const positionWidth = 100;
-      const marginRight = 15;
-      const padding = 30;
-      const actualLineWidth = positionWidth + marginRight + lineSubsequence.length * effectiveCharWidth + padding;
-      lineElement.style.width = `${actualLineWidth}px`;
-
-      visibleContent.appendChild(lineElement);
+  findSequenceLineAtOffset(offsets, top) {
+    let first = 0;
+    let last = offsets.length - 2;
+    while (first < last) {
+      const middle = Math.floor((first + last + 1) / 2);
+      if (offsets[middle] <= top) {
+        first = middle;
+      } else {
+        last = middle - 1;
+      }
     }
+    return first;
+  }
 
-    this.restoreActiveGeneSequenceHighlight();
+  getSequenceViewContentTop(view) {
+    return view.offsetTop + (parseFloat(getComputedStyle(view).paddingTop) || 0);
+  }
 
-    // FIXED: Restore selection state after content update - use setTimeout to ensure DOM is ready
-    if (savedSelection) {
-      setTimeout(() => {
-        this.restoreSelectionState(savedSelection);
-      }, 0);
-    }
+  scrollToPosition(position) {
+    const layout = this.sequenceLayout;
+    if (!layout?.sequenceView.isConnected || !layout.container.clientHeight) return;
 
-    console.log(
-      `🔧 [SequenceUtils] Virtual scroll update: lines ${startLine}-${endLine} of ${totalLines}, scrollTop=${scrollTop}px, lineHeight=${lineHeight}px`
-    );
+    const { container, sequenceView, viewStart, basesPerLine, offsets } = layout;
+    const lineIndex = Math.floor((position - viewStart) / basesPerLine);
+    if (lineIndex < 0 || lineIndex >= offsets.length - 1) return;
+
+    const line = sequenceView.classList.contains('virtualized') ? null : sequenceView.children[lineIndex];
+    const top = line
+      ? sequenceView.offsetTop + line.offsetTop
+      : this.getSequenceViewContentTop(sequenceView) + offsets[lineIndex];
+    container.scrollTo({ top, behavior: 'smooth' });
   }
 
   getBaseElementSourcePosition(baseElement) {
@@ -3929,6 +3483,7 @@ class SequenceUtils {
       settings.showIndicators,
       settings.showProteinSequence,
       settings.showPrimers,
+      settings.showComplementary,
       settings.indicatorHeight,
       settings.indicatorOpacity,
       settings.showStartMarkers,
