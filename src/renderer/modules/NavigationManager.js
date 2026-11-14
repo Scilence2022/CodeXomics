@@ -1493,61 +1493,7 @@ class NavigationManager {
 
   // Auto-scroll to match position in sequence tracks
   scrollToMatchPosition(match) {
-    // Scroll bottom sequence panel to show the match
-    const sequenceContent = document.getElementById('sequenceContent');
-    if (sequenceContent) {
-      const sequenceView = sequenceContent.querySelector('.detailed-sequence-view');
-      const scrollContainer = sequenceContent.querySelector('.detailed-sequence-view.virtualized') || sequenceContent;
-      const isVirtualized = scrollContainer.classList?.contains('virtualized');
-      // Calculate the line number where the match is located
-      const currentPos = this.genomeBrowser.currentPosition;
-
-      // Get actual bases per line from the first sequence line
-      const firstSequenceLine = sequenceView?.querySelector('.sequence-line .sequence-bases');
-      let basesPerLine = parseInt(sequenceView?.dataset?.basesPerLine, 10) || 100; // Default fallback
-
-      if (firstSequenceLine && !isVirtualized) {
-        // Count actual characters in the first line
-        const textContent = firstSequenceLine.textContent || '';
-        // Remove any whitespace and count actual bases
-        const bases = textContent.replace(/\s/g, '');
-        if (bases.length > 0) {
-          basesPerLine = bases.length;
-        }
-      }
-
-      // Get actual line height from rendered elements
-      const firstLineGroup = sequenceView?.querySelector('.sequence-line-group');
-      let lineHeight = parseFloat(sequenceView?.dataset?.lineHeight) || 40; // Default fallback
-
-      if (firstLineGroup && !isVirtualized) {
-        const rect = firstLineGroup.getBoundingClientRect();
-        const style = window.getComputedStyle(firstLineGroup);
-        const marginBottom = parseInt(style.marginBottom) || 0;
-        lineHeight = rect.height + marginBottom;
-      }
-
-      const relativePosition = match.position - currentPos.start;
-      const lineNumber = Math.floor(relativePosition / basesPerLine);
-      const scrollPosition = lineNumber * lineHeight;
-
-      console.log('🔍 Scrolling to match:', {
-        matchPosition: match.position,
-        currentStart: currentPos.start,
-        relativePosition,
-        basesPerLine,
-        lineNumber,
-        lineHeight,
-        scrollPosition,
-        scrollTarget: scrollContainer === sequenceContent ? 'sequenceContent' : 'virtualizedSequenceView',
-      });
-
-      // Scroll to the line containing the match
-      scrollContainer.scrollTo({
-        top: scrollPosition,
-        behavior: 'smooth',
-      });
-    }
+    this.genomeBrowser.sequenceUtils?.scrollToPosition?.(match.position);
 
     // Also scroll sequence track containers
     const sequenceTracks = document.querySelectorAll('.sequence-track, .sequence-line-track');

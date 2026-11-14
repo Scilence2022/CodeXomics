@@ -297,42 +297,35 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(showGeneDetails).toHaveBeenCalledWith(gene, operonInfo, { scrollBottomSequence: false });
   });
 
-  it('scrolls the virtualized bottom sequence view when auto-scrolling to a selected gene', () => {
+  it('scrolls to the indexed row offset when a gene is outside the rendered buffer', () => {
     document.body.innerHTML = `
       <div id="sequenceContent">
-        <div class="detailed-sequence-view virtualized" data-bases-per-line="50" data-line-height="32">
-          <div class="sequence-line-group">
-            <div class="sequence-line">
-              <div class="sequence-bases">ACG</div>
-            </div>
-          </div>
-        </div>
+        <div class="detailed-sequence-view virtualized" style="padding-top: 15px"></div>
       </div>
     `;
 
-    const virtualSequenceView = document.querySelector('.detailed-sequence-view.virtualized');
-    const renderedBufferLine = document.querySelector('.sequence-line-group');
-    const outerSequenceContent = document.getElementById('sequenceContent');
-    renderedBufferLine.getBoundingClientRect = vi.fn(() => ({ height: 96 }));
-    virtualSequenceView.scrollTo = vi.fn();
-    outerSequenceContent.scrollTo = vi.fn();
+    const container = document.getElementById('sequenceContent');
+    const sequenceView = container.firstElementChild;
+    Object.defineProperty(container, 'clientHeight', { value: 40 });
+    container.scrollTo = vi.fn();
+    const features = [
+      { cds: [{}, {}], primers: [] },
+      { cds: [], primers: [{}] },
+      { cds: [], primers: [] },
+    ];
+    const offsets = utils.getSequenceLineOffsets(features, { baseHeight: 32, proteinHeight: 20, primerHeight: 25 });
+    expect([...offsets]).toEqual([0, 72, 129, 161]);
+    expect(utils.findSequenceLineAtOffset(offsets, 71)).toBe(0);
+    expect(utils.findSequenceLineAtOffset(offsets, 72)).toBe(1);
+    expect(utils.findSequenceLineAtOffset(offsets, 160)).toBe(2);
+    utils.sequenceLayout = { container, sequenceView, viewStart: 1000, basesPerLine: 50, offsets };
 
     const navigationManager = Object.create(NavigationManager.prototype);
-    navigationManager.genomeBrowser = {
-      currentPosition: { start: 1000, end: 6000 },
-    };
+    navigationManager.genomeBrowser = { sequenceUtils: utils };
 
-    navigationManager.scrollToMatchPosition({
-      position: 3500,
-      end: 3600,
-      type: 'gene',
-    });
+    navigationManager.scrollToMatchPosition({ position: 1110, end: 1120, type: 'gene' });
 
-    expect(virtualSequenceView.scrollTo).toHaveBeenCalledWith({
-      top: 1600,
-      behavior: 'smooth',
-    });
-    expect(outerSequenceContent.scrollTo).not.toHaveBeenCalled();
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 144, behavior: 'smooth' });
   });
 
   it('copies the reverse-complement gene sequence when Shift is pressed', async () => {
