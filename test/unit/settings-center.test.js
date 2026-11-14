@@ -10,6 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import NavigationManager from '../../src/renderer/modules/NavigationManager.js';
 import SettingsCenter from '../../src/renderer/modules/SettingsCenter.js';
 
 const indexHtml = fs.readFileSync(path.join(process.cwd(), 'src/renderer/index.html'), 'utf8');
@@ -209,6 +210,49 @@ describe('SettingsCenter adoption and navigation', () => {
     expect(switchTab).toHaveBeenLastCalledWith('appearance');
   });
 
+  it('keeps the latest General Settings tab when the initial load finishes', async () => {
+    center = mount();
+    let finish;
+    const loading = new Promise(resolve => {
+      finish = resolve;
+    });
+    const switchTab = vi.fn();
+    window.genomeBrowser = { showGeneralSettingsModal: vi.fn(() => loading) };
+    window.generalSettingsManager = { switchTab };
+
+    center.open('general.appearance');
+    center.open('system.memory');
+    finish();
+    await flush();
+
+    expect(window.genomeBrowser.showGeneralSettingsModal).toHaveBeenCalledTimes(1);
+    expect(switchTab.mock.calls).toEqual([['memory']]);
+    expect(center.activePaneId).toBe('system.memory');
+  });
+
+  it('stays closed if a settings manager shows its modal after closing', async () => {
+    center = mount();
+    let finish;
+    const loading = new Promise(resolve => {
+      finish = resolve;
+    });
+    const modal = document.getElementById('generalSettingsModal');
+    window.genomeBrowser = {
+      showGeneralSettingsModal: async () => {
+        await loading;
+        modal.classList.add('show');
+      },
+    };
+
+    center.open('general.appearance');
+    center.close();
+    finish();
+    await flush();
+
+    expect(center.isOpen).toBe(false);
+    expect(modal.classList.contains('show')).toBe(false);
+  });
+
   it('adopts a modal its manager builds on first use', async () => {
     center = mount();
     const modal = document.createElement('div');
@@ -270,6 +314,23 @@ describe('SettingsCenter search', () => {
     expect(switchSearchSettingsTab).toHaveBeenCalledWith('history');
   });
 
+  it('opens a collapsed section from a search result and clears the results', async () => {
+    center = mount();
+    const url = document.getElementById('mcpServerUrl');
+    const legacy = url.closest('details');
+    center.open('ai.mcp');
+    center.searchInput.value = 'legacy server url';
+    center.runSearch(center.searchInput.value);
+    expect(center.searchInput.getAttribute('aria-expanded')).toBe('true');
+    expect(center.searchInput.getAttribute('aria-activedescendant')).toBe('settings-center-result-0');
+    expect(legacy.open).toBe(false);
+
+    await center.openResult(0);
+    expect(legacy.open).toBe(true);
+    expect(center.searchInput.value).toBe('');
+    expect(center.nav.hidden).toBe(false);
+  });
+
   it('shows a message when nothing matches and restores the sections when cleared', () => {
     center = mount();
     center.runSearch('zzzz-not-a-setting');
@@ -298,5 +359,26 @@ describe('Settings entry points', () => {
     expect(preload).toContain("'open-blast-downloader-window'");
     expect(read('src/main/ipc-handlers.js')).toContain("ipcMain.on('open-blast-config-window'");
     expect(read('src/renderer/renderer-modular.js')).toContain("ipcRenderer.on('open-settings'");
+  });
+});
+
+describe('Search settings form', () => {
+  it('keeps zero context length and opens the tab with an invalid number', async () => {
+    center = mount();
+    const setSearchSettings = vi.fn();
+    const navigation = Object.create(NavigationManager.prototype);
+    navigation.genomeBrowser = { configManager: { setSearchSettings } };
+    window.genomeBrowser = { navigationManager: navigation };
+    center.open('view.search');
+    await flush();
+
+    document.getElementById('searchContextLength').value = '0';
+    expect(navigation.saveSearchSettings()).toBe(true);
+    expect(setSearchSettings).toHaveBeenCalledWith(expect.objectContaining({ contextLength: 0 }));
+
+    document.getElementById('searchTimeout').value = '301';
+    expect(navigation.saveSearchSettings()).toBe(false);
+    expect(document.querySelector('.search-settings-tab-content.active').dataset.tab).toBe('advanced');
+    expect(setSearchSettings).toHaveBeenCalledTimes(1);
   });
 });

@@ -236,9 +236,6 @@ class GeneralSettingsManager {
         const styleName = card.dataset.style;
         this.updateSetting('uiStyle', styleName);
         this.applyUIStyle(styleName);
-        // Update card active states
-        stylePresetCards.forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
       });
     });
 
@@ -491,17 +488,12 @@ class GeneralSettingsManager {
       });
     }
 
-    // Save settings button - use event delegation since button might not exist during init
+    // Handle clicks on the button and its icon.
     document.addEventListener('click', e => {
-      if (e.target && e.target.id === 'saveGeneralSettings') {
+      if (e.target.closest?.('#saveGeneralSettings')) {
         e.preventDefault();
         console.log('🔄 [GeneralSettings] Save Settings button clicked');
         this.saveAllSettings();
-      }
-      if (e.target && e.target.id === 'applyGeneralSettings') {
-        e.preventDefault();
-        console.log('🔄 [GeneralSettings] Apply button clicked');
-        this.applySettingsOnly();
       }
     });
 
@@ -548,14 +540,6 @@ class GeneralSettingsManager {
       resetPositionBtn.addEventListener('click', () => {
         window.modalDragManager?.resetPosition('#generalSettingsModal');
         window.resizableModalManager?.resetSize('#generalSettingsModal');
-      });
-    }
-
-    // Add reset to defaults button handler
-    const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
-    if (resetDefaultsBtn) {
-      resetDefaultsBtn.addEventListener('click', () => {
-        this.resetToDefaults();
       });
     }
 
@@ -694,11 +678,7 @@ class GeneralSettingsManager {
     const themeSelect = document.getElementById('themeMode');
     if (themeSelect) themeSelect.value = this.settings.themeMode;
 
-    // UI Style preset cards
-    const stylePresetCards = document.querySelectorAll('.style-preset-card[data-style]');
-    stylePresetCards.forEach(card => {
-      card.classList.toggle('active', card.dataset.style === (this.settings.uiStyle || 'midnight'));
-    });
+    this.updateStylePresetSelection(this.settings.uiStyle || 'midnight');
 
     // Accent color
     const accentColorInput = document.getElementById('accentColor');
@@ -841,27 +821,6 @@ class GeneralSettingsManager {
     }
   }
 
-  /**
-   * Save all settings and close modal
-   */
-  async applySettingsOnly() {
-    try {
-      this.applySettings();
-
-      if (this.configManager) {
-        await this.configManager.set('generalSettings', this.settings);
-        await this.configManager.saveConfig();
-      }
-
-      this.showNotification('Settings applied!', 'success');
-
-      console.log('✅ [GeneralSettings] Settings applied (modal stays open)');
-    } catch (error) {
-      console.error('❌ [GeneralSettings] Failed to apply settings:', error);
-      this.showNotification('Failed to apply settings. Please try again.', 'error');
-    }
-  }
-
   async saveAllSettings() {
     try {
       // Apply all current settings
@@ -948,10 +907,14 @@ class GeneralSettingsManager {
       }
     }
 
-    // Update style preset card active states
-    const stylePresetCards = document.querySelectorAll('.style-preset-card[data-style]');
-    stylePresetCards.forEach(card => {
-      card.classList.toggle('active', card.dataset.style === styleName);
+    this.updateStylePresetSelection(styleName);
+  }
+
+  updateStylePresetSelection(styleName) {
+    document.querySelectorAll('.style-preset-card[data-style]').forEach(card => {
+      const selected = card.dataset.style === styleName;
+      card.classList.toggle('active', selected);
+      card.setAttribute('aria-pressed', String(selected));
     });
   }
 
@@ -1483,7 +1446,8 @@ class GeneralSettingsManager {
   showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
+    notification.className = `notification notification-${type} show`;
+    notification.setAttribute('role', type === 'error' ? 'alert' : 'status');
     notification.textContent = message;
 
     // Style the notification
@@ -1553,12 +1517,7 @@ class GeneralSettingsManager {
     testNext();
   }
 
-  /**
-   * Reset settings to default values
-   */
-  /**
-   * Header "Reset to Defaults" button.
-   */
+  /** Reset General Settings to their defaults. */
   resetToDefaults() {
     return this.resetAllSettings();
   }

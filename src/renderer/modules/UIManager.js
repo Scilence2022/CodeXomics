@@ -822,8 +822,10 @@ class UIManager {
     if (searchSettingsModal) {
       // Save search settings
       document.getElementById('searchSettingsSave').addEventListener('click', () => {
-        this.genomeBrowser.navigationManager.saveSearchSettings();
-        searchSettingsModal.classList.remove('show');
+        if (this.genomeBrowser.navigationManager.saveSearchSettings()) {
+          searchSettingsModal.classList.remove('show');
+          this.genomeBrowser.showNotification('Search settings saved.', 'success');
+        }
       });
 
       // Reset search settings

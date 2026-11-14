@@ -510,15 +510,6 @@ class MultiAgentSettingsManager {
     if (window.resizableModalManager) {
       window.resizableModalManager.makeResizable('#multiAgentSettingsModal');
     }
-
-    // Add reset to defaults button handler (once: this runs on every open)
-    const resetDefaultsBtn = this.modal.querySelector('.reset-defaults-btn');
-    if (resetDefaultsBtn && !resetDefaultsBtn.dataset.bound) {
-      resetDefaultsBtn.dataset.bound = 'true';
-      resetDefaultsBtn.addEventListener('click', () => {
-        this.resetToDefaults();
-      });
-    }
   }
 
   switchTab(tabName) {

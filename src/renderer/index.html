@@ -1658,7 +1658,7 @@
                             <h4><i class="fas fa-cogs"></i> Advanced Options</h4>
                             <div class="settings-row">
                                 <div class="setting-item">
-                                    <label class="setting-label">Minimum Match Length</label>
+                                    <label class="setting-label" for="searchMinLength">Minimum Match Length</label>
                                     <input type="number" id="searchMinLength" class="setting-input" value="3" min="1"
                                         max="100">
                                     <span class="setting-description">Minimum length for sequence matches</span>
@@ -1666,7 +1666,7 @@
                             </div>
                             <div class="settings-row">
                                 <div class="setting-item">
-                                    <label class="setting-label">Maximum Results</label>
+                                    <label class="setting-label" for="searchMaxResults">Maximum Results</label>
                                     <input type="number" id="searchMaxResults" class="setting-input" value="100"
                                         min="10" max="1000">
                                     <span class="setting-description">Maximum number of results to display</span>
@@ -1674,7 +1674,7 @@
                             </div>
                             <div class="settings-row">
                                 <div class="setting-item">
-                                    <label class="setting-label">Search Timeout (seconds)</label>
+                                    <label class="setting-label" for="searchTimeout">Search Timeout (seconds)</label>
                                     <input type="number" id="searchTimeout" class="setting-input" value="30" min="5"
                                         max="300">
                                     <span class="setting-description">Maximum time to spend searching</span>
@@ -1704,7 +1704,7 @@
                             </div>
                             <div class="settings-row">
                                 <div class="setting-item">
-                                    <label class="setting-label">Context Length</label>
+                                    <label class="setting-label" for="searchContextLength">Context Length</label>
                                     <input type="number" id="searchContextLength" class="setting-input" value="50"
                                         min="0" max="500">
                                     <span class="setting-description">Number of bases to show around matches</span>
@@ -1726,7 +1726,7 @@
                             </div>
                             <div class="settings-row">
                                 <div class="setting-item">
-                                    <label class="setting-label">History Limit</label>
+                                    <label class="setting-label" for="searchHistoryLimit">History Limit</label>
                                     <input type="number" id="searchHistoryLimit" class="setting-input" value="50"
                                         min="10" max="200">
                                     <span class="setting-description">Maximum number of searches to remember</span>
@@ -1737,7 +1737,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="searchSettingsReset" class="btn btn-secondary">
+                <button id="searchSettingsReset" class="btn btn-secondary settings-center-actions-end">
                     <i class="fas fa-undo"></i> Reset to Defaults
                 </button>
                 <button id="searchSettingsSave" class="btn btn-primary">
@@ -1848,6 +1848,7 @@
             </div>
             <div class="modal-body">
                 <div class="llm-provider-tabs">
+                    <button class="tab-button" data-provider="models">Default Model</button>
                     <button class="tab-button active" data-provider="openai">OpenAI</button>
                     <button class="tab-button" data-provider="anthropic">Anthropic</button>
                     <button class="tab-button" data-provider="google">Google</button>
@@ -1858,7 +1859,6 @@
                     <button class="tab-button" data-provider="minimax_cn">MiniMax CN</button>
                     <button class="tab-button" data-provider="zhongkeyu">Zhongkeyu</button>
                     <button class="tab-button" data-provider="local">Custom Endpoint</button>
-                    <button class="tab-button" data-provider="models">Default Model</button>
                 </div>
 
                 <div class="llm-provider-config">
@@ -2616,9 +2616,6 @@
                     <button class="reset-position-btn" title="Reset Position">
                         <i class="fas fa-crosshairs"></i>
                     </button>
-                    <button class="reset-defaults-btn" title="Reset to Defaults">
-                        <i class="fas fa-undo"></i>
-                    </button>
                     <button class="modal-close">&times;</button>
                 </div>
             </div>
@@ -2679,12 +2676,6 @@
                             automatically when the application starts. (Requires automatic activation to be
                             enabled)</small>
                     </div>
-
-                    <div class="form-group">
-                        <label for="mcpGlobalReconnectDelay">Global Reconnection Delay (seconds):</label>
-                        <input type="number" id="mcpGlobalReconnectDelay" value="5" min="1" max="60" class="input-full">
-                        <small class="help-text">Default delay between reconnection attempts for all servers.</small>
-                    </div>
                 </div>
 
                 <!-- Connection Status Section -->
@@ -2719,9 +2710,8 @@
                 </div>
 
                 <!-- Legacy Single Server Settings (for backward compatibility) -->
-                <div class="mcp-legacy-settings"
-                    style="border-top: 1px solid #e0e0e0; margin-top: 20px; padding-top: 20px;">
-                    <h4><i class="fas fa-history"></i> Legacy Single Server Settings</h4>
+                <details class="mcp-legacy-settings settings-section">
+                    <summary>Legacy Single Server Settings</summary>
                     <small class="help-text">These settings are for backward compatibility with the old single-server
                         configuration.</small>
 
@@ -2748,21 +2738,8 @@
                             Disconnect Legacy
                         </button>
                     </div>
-                </div>
+                </details>
 
-                <div class="mcp-info">
-                    <h4><i class="fas fa-info-circle"></i> About MCP Servers</h4>
-                    <p>The Model Context Protocol (MCP) enables advanced AI integration with external tools and data
-                        sources. When connected, MCP servers allow LLMs to:</p>
-                    <ul>
-                        <li>Access real-time genome data and annotations</li>
-                        <li>Perform advanced analysis operations</li>
-                        <li>Interact with external bioinformatics tools</li>
-                        <li>Provide more contextual and accurate responses</li>
-                        <li>Access specialized databases and APIs</li>
-                    </ul>
-                    <p><strong>Note:</strong> MCP servers are optional. The application works fully without them.</p>
-                </div>
             </div>
             <div class="modal-footer">
                 <button id="saveMCPSettingsBtn" class="btn btn-primary">Save Settings</button>
@@ -3547,10 +3524,15 @@ Supported formats:
                     <div class="settings-center-search">
                         <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
                         <input type="search" id="settingsCenterSearch" placeholder="Search settings"
-                            aria-label="Search settings" aria-controls="settingsCenterResults" autocomplete="off"
-                            spellcheck="false">
+                            role="combobox" aria-label="Search settings" aria-controls="settingsCenterResults"
+                            aria-expanded="false" aria-autocomplete="list" autocomplete="off" spellcheck="false">
+                        <button type="button" class="settings-center-clear-search" aria-label="Clear settings search" hidden>
+                            <i class="fas fa-xmark" aria-hidden="true"></i>
+                        </button>
                     </div>
+                    <select id="settingsCenterSection" aria-label="Settings section"></select>
                     <nav class="settings-center-nav" id="settingsCenterNav" aria-label="Settings sections"></nav>
+                    <span class="settings-center-sr-only" id="settingsCenterSearchStatus" role="status"></span>
                     <div class="settings-center-results" id="settingsCenterResults" role="listbox"
                         aria-label="Matching settings" hidden></div>
                 </aside>
@@ -3558,7 +3540,7 @@ Supported formats:
                     <header class="settings-center-pane-header">
                         <div class="settings-center-icon settings-center-pane-icon" id="settingsCenterPaneIcon"></div>
                         <div class="settings-center-pane-heading">
-                            <h2 id="settingsCenterPaneTitle"></h2>
+                            <h2 id="settingsCenterPaneTitle" tabindex="-1"></h2>
                             <p id="settingsCenterPaneDescription"></p>
                         </div>
                     </header>
@@ -3585,9 +3567,6 @@ Supported formats:
                 <div class="modal-controls">
                     <button class="reset-position-btn" title="Reset Position &amp; Size">
                         <i class="fas fa-crosshairs"></i>
-                    </button>
-                    <button class="reset-defaults-btn" title="Reset to Defaults">
-                        <i class="fas fa-undo"></i>
                     </button>
                     <button class="modal-close">&times;</button>
                 </div>
@@ -3642,80 +3621,81 @@ Supported formats:
                         <div class="settings-section">
                             <h4><i class="fas fa-palette"></i> Theme Settings</h4>
                             <div class="form-group">
-                                <label>UI Style:</label>
-                                <div class="style-preset-cards" id="stylePresetCards">
-                                    <div class="style-preset-card active" data-style="default">
-                                        <div class="style-preview-swatch default-swatch">
+                                <span class="settings-center-field-label" id="settingsStyleLabel">UI Style</span>
+                                <div class="style-preset-cards" id="stylePresetCards" role="group"
+                                    aria-labelledby="settingsStyleLabel">
+                                    <button type="button" class="style-preset-card active" data-style="default" aria-pressed="true">
+                                        <span class="style-preview-swatch default-swatch">
                                             <i class="fas fa-wand-magic-sparkles"></i>
-                                        </div>
-                                        <div class="style-preset-info">
-                                            <div class="style-preset-name">AI Dynamic</div>
-                                            <div class="style-preset-desc">Vibrant blue-purple gradient style</div>
-                                        </div>
-                                    </div>
-                                    <div class="style-preset-card" data-style="professional">
-                                        <div class="style-preview-swatch professional-swatch">
+                                        </span>
+                                        <span class="style-preset-info">
+                                            <span class="style-preset-name">AI Dynamic</span>
+                                            <span class="style-preset-desc">Vibrant blue-purple gradient style</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="style-preset-card" data-style="professional" aria-pressed="false">
+                                        <span class="style-preview-swatch professional-swatch">
                                             <i class="fas fa-flask"></i>
-                                        </div>
-                                        <div class="style-preset-info">
-                                            <div class="style-preset-name">Professional</div>
-                                            <div class="style-preset-desc">Clean teal-neutral tones for scientific work</div>
-                                        </div>
-                                    </div>
-                                    <div class="style-preset-card" data-style="minimal">
-                                        <div class="style-preview-swatch minimal-swatch">
+                                        </span>
+                                        <span class="style-preset-info">
+                                            <span class="style-preset-name">Professional</span>
+                                            <span class="style-preset-desc">Clean teal-neutral tones for scientific work</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="style-preset-card" data-style="minimal" aria-pressed="false">
+                                        <span class="style-preview-swatch minimal-swatch">
                                             <i class="fas fa-feather"></i>
-                                        </div>
-                                        <div class="style-preset-info">
-                                            <div class="style-preset-name">Minimal</div>
-                                            <div class="style-preset-desc">Elegant warm-gray with amber accent</div>
-                                        </div>
-                                    </div>
-                                    <div class="style-preset-card" data-style="pastel">
-                                        <div class="style-preview-swatch pastel-swatch">
+                                        </span>
+                                        <span class="style-preset-info">
+                                            <span class="style-preset-name">Minimal</span>
+                                            <span class="style-preset-desc">Elegant warm-gray with amber accent</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="style-preset-card" data-style="pastel" aria-pressed="false">
+                                        <span class="style-preview-swatch pastel-swatch">
                                             <i class="fas fa-cloud"></i>
-                                        </div>
-                                        <div class="style-preset-info">
-                                            <div class="style-preset-name">Pastel</div>
-                                            <div class="style-preset-desc">Soft lavender-rose with light airy tones</div>
-                                        </div>
-                                    </div>
-                                    <div class="style-preset-card" data-style="amy">
-                                        <div class="style-preview-swatch amy-swatch">
+                                        </span>
+                                        <span class="style-preset-info">
+                                            <span class="style-preset-name">Pastel</span>
+                                            <span class="style-preset-desc">Soft lavender-rose with light airy tones</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="style-preset-card" data-style="amy" aria-pressed="false">
+                                        <span class="style-preview-swatch amy-swatch">
                                             <i class="fas fa-heart"></i>
-                                        </div>
-                                        <div class="style-preset-info">
-                                            <div class="style-preset-name">Amy</div>
-                                            <div class="style-preset-desc">Bright pink-blue tones with a soft airy feel</div>
-                                        </div>
-                                    </div>
-                                    <div class="style-preset-card" data-style="red">
-                                        <div class="style-preview-swatch red-swatch">
+                                        </span>
+                                        <span class="style-preset-info">
+                                            <span class="style-preset-name">Amy</span>
+                                            <span class="style-preset-desc">Bright pink-blue tones with a soft airy feel</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="style-preset-card" data-style="red" aria-pressed="false">
+                                        <span class="style-preview-swatch red-swatch">
                                             <i class="fas fa-fire"></i>
-                                        </div>
-                                        <div class="style-preset-info">
-                                            <div class="style-preset-name">Red</div>
-                                            <div class="style-preset-desc">Focused crimson tones with warm light surfaces</div>
-                                        </div>
-                                    </div>
-                                    <div class="style-preset-card" data-style="elegant">
-                                        <div class="style-preview-swatch elegant-swatch">
+                                        </span>
+                                        <span class="style-preset-info">
+                                            <span class="style-preset-name">Red</span>
+                                            <span class="style-preset-desc">Focused crimson tones with warm light surfaces</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="style-preset-card" data-style="elegant" aria-pressed="false">
+                                        <span class="style-preview-swatch elegant-swatch">
                                             <i class="fas fa-gem"></i>
-                                        </div>
-                                        <div class="style-preset-info">
-                                            <div class="style-preset-name">Elegant Gray</div>
-                                            <div class="style-preset-desc">Sophisticated monochrome with silver accents</div>
-                                        </div>
-                                    </div>
-                                    <div class="style-preset-card" data-style="midnight">
-                                        <div class="style-preview-swatch midnight-swatch">
+                                        </span>
+                                        <span class="style-preset-info">
+                                            <span class="style-preset-name">Elegant Gray</span>
+                                            <span class="style-preset-desc">Sophisticated monochrome with silver accents</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="style-preset-card" data-style="midnight" aria-pressed="false">
+                                        <span class="style-preview-swatch midnight-swatch">
                                             <i class="fas fa-snowflake"></i>
-                                        </div>
-                                        <div class="style-preset-info">
-                                            <div class="style-preset-name">Midnight</div>
-                                            <div class="style-preset-desc">Deep navy with icy cyan-blue accents</div>
-                                        </div>
-                                    </div>
+                                        </span>
+                                        <span class="style-preset-info">
+                                            <span class="style-preset-name">Midnight</span>
+                                            <span class="style-preset-desc">Deep navy with icy cyan-blue accents</span>
+                                        </span>
+                                    </button>
                                 </div>
                                 <small class="help-text">Choose the overall interface style preset</small>
                             </div>
@@ -3731,32 +3711,34 @@ Supported formats:
 
                         <div class="settings-section">
                             <h4><i class="fas fa-text-height"></i> Typography</h4>
-                            <div class="form-group">
-                                <label for="fontSize">Base Font Size:</label>
-                                <select id="fontSize" class="input-full">
-                                    <option value="small">Small (13px)</option>
-                                    <option value="medium" selected>Medium (14px)</option>
-                                    <option value="large">Large (16px)</option>
-                                    <option value="extra-large">Extra Large (18px)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="fontFamily">Interface Font:</label>
-                                <select id="fontFamily" class="input-full">
-                                    <option value="system">System Default</option>
-                                    <option value="inter">Inter (Recommended)</option>
-                                    <option value="roboto">Roboto</option>
-                                    <option value="open-sans">Open Sans</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="sequenceFont">Sequence Font:</label>
-                                <select id="sequenceFont" class="input-full">
-                                    <option value="courier">Courier New</option>
-                                    <option value="monaco">Monaco</option>
-                                    <option value="menlo">Menlo</option>
-                                    <option value="consolas">Consolas</option>
-                                </select>
+                            <div class="settings-center-field-grid">
+                                <div class="form-group">
+                                    <label for="fontSize">Base Font Size:</label>
+                                    <select id="fontSize" class="input-full">
+                                        <option value="small">Small (13px)</option>
+                                        <option value="medium" selected>Medium (14px)</option>
+                                        <option value="large">Large (16px)</option>
+                                        <option value="extra-large">Extra Large (18px)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fontFamily">Interface Font:</label>
+                                    <select id="fontFamily" class="input-full">
+                                        <option value="system">System Default</option>
+                                        <option value="inter">Inter (Recommended)</option>
+                                        <option value="roboto">Roboto</option>
+                                        <option value="open-sans">Open Sans</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sequenceFont">Sequence Font:</label>
+                                    <select id="sequenceFont" class="input-full">
+                                        <option value="courier">Courier New</option>
+                                        <option value="monaco">Monaco</option>
+                                        <option value="menlo">Menlo</option>
+                                        <option value="consolas">Consolas</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -3884,17 +3866,19 @@ Supported formats:
                                 <div class="range-display">Current: <span id="wheelZoomSensitivityValue">0.1</span>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="wheelZoomMinRange">Minimum Zoom Range (bp):</label>
-                                <input type="number" id="wheelZoomMinRange" value="100" min="10" max="10000"
-                                    class="input-full">
-                                <small class="help-text">Minimum genomic range when fully zoomed in</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="wheelZoomMaxRange">Maximum Zoom Range (bp):</label>
-                                <input type="number" id="wheelZoomMaxRange" value="1000000" min="1000" max="10000000"
-                                    class="input-full">
-                                <small class="help-text">Maximum genomic range when fully zoomed out</small>
+                            <div class="settings-center-field-grid">
+                                <div class="form-group">
+                                    <label for="wheelZoomMinRange">Minimum Zoom Range (bp):</label>
+                                    <input type="number" id="wheelZoomMinRange" value="100" min="10" max="10000"
+                                        class="input-full">
+                                    <small class="help-text">Minimum genomic range when fully zoomed in</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="wheelZoomMaxRange">Maximum Zoom Range (bp):</label>
+                                    <input type="number" id="wheelZoomMaxRange" value="1000000" min="1000" max="10000000"
+                                        class="input-full">
+                                    <small class="help-text">Maximum genomic range when fully zoomed out</small>
+                                </div>
                             </div>
                         </div>
 
@@ -3991,25 +3975,27 @@ Supported formats:
                     <div id="memory-tab" class="tab-content">
                         <div class="settings-section">
                             <h4><i class="fas fa-memory"></i> Memory Management</h4>
-                            <div class="form-group">
-                                <label for="maxSequenceLength">Maximum Sequence Length (bp):</label>
-                                <select id="maxSequenceLength" class="input-full">
-                                    <option value="1000000">1 Million</option>
-                                    <option value="5000000" selected>5 Million</option>
-                                    <option value="10000000">10 Million</option>
-                                    <option value="50000000">50 Million</option>
-                                    <option value="unlimited">Unlimited (Use with caution)</option>
-                                </select>
-                                <small class="help-text">Limit sequence length to prevent memory issues</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="renderingMode">Rendering Mode:</label>
-                                <select id="renderingMode" class="input-full">
-                                    <option value="adaptive" selected>Adaptive (Recommended)</option>
-                                    <option value="performance">Performance (Lower Quality)</option>
-                                    <option value="quality">Quality (Higher Memory)</option>
-                                </select>
-                                <small class="help-text">Balance between visual quality and performance</small>
+                            <div class="settings-center-field-grid">
+                                <div class="form-group">
+                                    <label for="maxSequenceLength">Maximum Sequence Length (bp):</label>
+                                    <select id="maxSequenceLength" class="input-full">
+                                        <option value="1000000">1 Million</option>
+                                        <option value="5000000" selected>5 Million</option>
+                                        <option value="10000000">10 Million</option>
+                                        <option value="50000000">50 Million</option>
+                                        <option value="unlimited">Unlimited (Use with caution)</option>
+                                    </select>
+                                    <small class="help-text">Limit sequence length to prevent memory issues</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="renderingMode">Rendering Mode:</label>
+                                    <select id="renderingMode" class="input-full">
+                                        <option value="adaptive" selected>Adaptive (Recommended)</option>
+                                        <option value="performance">Performance (Lower Quality)</option>
+                                        <option value="quality">Quality (Higher Memory)</option>
+                                    </select>
+                                    <small class="help-text">Balance between visual quality and performance</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -4286,10 +4272,6 @@ Supported formats:
                     <i class="fas fa-save"></i>
                     Save Settings
                 </button>
-                <button id="applyGeneralSettings" class="btn btn-secondary">
-                    <i class="fas fa-check"></i>
-                    Apply
-                </button>
                 <button class="btn modal-close">Cancel</button>
             </div>
             <!-- Resize handles -->
@@ -4312,9 +4294,6 @@ Supported formats:
                 <div class="modal-controls">
                     <button class="reset-position-btn" title="Reset Position">
                         <i class="fas fa-crosshairs"></i>
-                    </button>
-                    <button class="reset-defaults-btn" title="Reset to Defaults">
-                        <i class="fas fa-undo"></i>
                     </button>
                     <button class="modal-close">&times;</button>
                 </div>
@@ -4357,6 +4336,9 @@ Supported formats:
                 </div>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary reset-defaults-btn settings-center-actions-end">
+                    <i class="fas fa-undo"></i> Reset to Defaults
+                </button>
                 <button id="saveExternalTools" class="btn btn-primary">
                     <i class="fas fa-save"></i>
                     Save Settings
@@ -4680,9 +4662,6 @@ Supported formats:
                     <button class="reset-position-btn" title="Reset Position &amp; Size">
                         <i class="fas fa-crosshairs"></i>
                     </button>
-                    <button class="reset-defaults-btn" title="Reset to Defaults">
-                        <i class="fas fa-undo"></i>
-                    </button>
                     <button class="modal-close">&times;</button>
                 </div>
             </div>
@@ -4946,9 +4925,6 @@ Supported formats:
                 <div class="modal-controls">
                     <button class="reset-position-btn" title="Reset Position">
                         <i class="fas fa-crosshairs"></i>
-                    </button>
-                    <button class="reset-defaults-btn" title="Reset to Defaults">
-                        <i class="fas fa-undo"></i>
                     </button>
                     <button class="modal-close">&times;</button>
                 </div>

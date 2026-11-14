@@ -2242,14 +2242,6 @@ class TabManager {
       });
     }
 
-    // Reset defaults button functionality
-    const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
-    if (resetDefaultsBtn) {
-      resetDefaultsBtn.addEventListener('click', () => {
-        this.resetTabSettings();
-      });
-    }
-
     // Cache enabled toggle
     tabCacheEnabled.addEventListener('change', () => {
       const isEnabled = tabCacheEnabled.checked;

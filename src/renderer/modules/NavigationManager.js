@@ -2709,7 +2709,6 @@ class NavigationManager {
     // Update tab buttons
     modal.querySelectorAll('.search-settings-tabs .tab-button').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tabName);
-      btn.blur();
     });
 
     // Update tab content panels
@@ -2778,7 +2777,16 @@ class NavigationManager {
    */
   saveSearchSettings() {
     const configManager = this.genomeBrowser.configManager;
-    if (!configManager) return;
+    if (!configManager) return false;
+
+    const modal = document.getElementById('searchSettingsModal');
+    const invalid = modal?.querySelector('input[type="number"]:invalid');
+    if (invalid) {
+      const tab = invalid.closest('.search-settings-tab-content');
+      if (tab) this.switchSearchSettingsTab(tab.dataset.tab);
+      invalid.reportValidity();
+      return false;
+    }
 
     const searchSettings = {
       caseSensitive: document.getElementById('searchCaseSensitive')?.checked || false,
@@ -2793,13 +2801,14 @@ class NavigationManager {
       timeout: parseInt(document.getElementById('searchTimeout')?.value) || 30,
       highlightMatches: document.getElementById('searchHighlightMatches')?.checked || false,
       showContext: document.getElementById('searchShowContext')?.checked || false,
-      contextLength: parseInt(document.getElementById('searchContextLength')?.value) || 50,
+      contextLength: Number(document.getElementById('searchContextLength')?.value || 50),
       saveHistory: document.getElementById('searchSaveHistory')?.checked || false,
       historyLimit: parseInt(document.getElementById('searchHistoryLimit')?.value) || 50,
     };
 
     configManager.setSearchSettings(searchSettings);
     console.log('Search settings saved:', searchSettings);
+    return true;
   }
 
   /**

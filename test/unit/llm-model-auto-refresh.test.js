@@ -564,6 +564,32 @@ describe('LLMConfigManager model list auto-refresh', () => {
       expect(requestedUrls.some(url => url.includes('generativelanguage'))).toBe(false);
       expect(requestedUrls.some(url => url.includes('openrouter'))).toBe(false);
     });
+
+    it('preserves an unsaved default model while switching tabs and refreshing the catalog', async () => {
+      mountConfigModal();
+      const manager = createManager();
+      await manager.waitForInitialization();
+      manager.providers.openai.enabled = true;
+      const refresh = vi.spyOn(manager, 'maybeAutoRefreshProviderModels').mockResolvedValue({ success: true });
+      const provider = document.getElementById('mainProvider');
+      const model = document.getElementById('mainModel');
+      const custom = document.getElementById('mainCustomModel');
+      provider.value = 'openai';
+      provider.dispatchEvent(new Event('change'));
+      model.value = 'custom';
+      model.dispatchEvent(new Event('change'));
+      custom.value = 'draft-model';
+
+      manager.switchProviderTab('openai');
+      manager.switchProviderTab('models');
+      await manager.autoRefreshAllProviderModels();
+
+      expect(provider.value).toBe('openai');
+      expect(model.value).toBe('custom');
+      expect(custom.value).toBe('draft-model');
+      expect(document.getElementById('mainCustomModelGroup').style.display).not.toBe('none');
+      expect(refresh).toHaveBeenCalled();
+    });
   });
 
   describe('custom endpoint dropdown', () => {

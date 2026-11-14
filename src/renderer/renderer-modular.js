@@ -1595,7 +1595,7 @@ class GenomeBrowser {
       try {
         this.externalToolsManager = new ExternalToolsManager(this);
         window.externalToolsManager = this.externalToolsManager;
-        this.externalToolsManager
+        return this.externalToolsManager
           .init()
           .then(() => {
             console.log('✅ [ExternalTools] ExternalToolsManager initialized successfully');
@@ -11253,6 +11253,7 @@ class GenomeBrowser {
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
+    notification.setAttribute('role', type === 'error' ? 'alert' : 'status');
     notification.innerHTML = `
             <div class="notification-content">
                 <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>

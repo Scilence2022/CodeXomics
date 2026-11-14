@@ -12,6 +12,7 @@
    window is open, any other dialog that opens (add a server, confirm, a file
    picker modal, ...) is lifted above it. */
 #settingsCenterModal {
+  --settings-inset: 24px;
   z-index: 10010;
 }
 
@@ -20,24 +21,32 @@ body.settings-center-open .literature-settings-modal-overlay {
   z-index: 10020 !important;
 }
 
+body.settings-center-open > :is(.notification, .success-message, .error-message) {
+  z-index: 10030 !important;
+  max-width: min(400px, calc(100vw - 32px));
+  min-width: 0;
+}
+
 /* Id selector: ModalDragManager tags the window `.large`/`.extra-large`
    (it finds the adopted LLM tabs inside), whose size caps must not apply. */
 #settingsCenterModal > .settings-center-window {
   display: flex;
   flex-direction: column;
-  width: min(1180px, 94vw);
-  height: min(820px, 90vh);
-  max-width: none;
-  max-height: 94vh;
-  min-width: 640px;
-  min-height: 460px;
+  width: min(1152px, calc(100vw - 32px));
+  height: min(824px, calc(100vh - 32px));
+  max-width: calc(100vw - 16px) !important;
+  max-height: calc(100vh - 16px);
+  min-width: min(620px, calc(100vw - 16px));
+  min-height: min(420px, calc(100vh - 16px));
+  border: 1px solid var(--border-color);
+  container: settings-window / inline-size;
   padding: 0;
   overflow: hidden;
 }
 
 .settings-center-titlebar {
   flex: 0 0 auto;
-  padding: 10px 14px 10px 18px;
+  padding: 8px 14px 8px 18px;
   background: var(--bg-secondary);
   color: var(--text-primary);
 }
@@ -77,7 +86,7 @@ body.settings-center-open .literature-settings-modal-overlay {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: 252px minmax(0, 1fr);
+  grid-template-columns: 232px minmax(0, 1fr);
 }
 
 /* ---------------------------------------------------------------- Sidebar */
@@ -92,10 +101,10 @@ body.settings-center-open .literature-settings-modal-overlay {
 
 .settings-center-search {
   position: relative;
-  padding: 12px 12px 6px;
+  padding: 14px 12px 8px;
 }
 
-.settings-center-search i {
+.settings-center-search > i {
   position: absolute;
   left: 23px;
   top: 50%;
@@ -108,7 +117,8 @@ body.settings-center-open .literature-settings-modal-overlay {
 .settings-center-search input {
   width: 100%;
   box-sizing: border-box;
-  padding: 7px 10px 7px 30px;
+  min-height: 36px;
+  padding: 7px 34px 7px 30px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-primary);
@@ -137,7 +147,7 @@ body.settings-center-open .literature-settings-modal-overlay {
 }
 
 .settings-center-nav-heading {
-  padding: 12px 10px 4px;
+  padding: 8px 10px 4px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -151,7 +161,7 @@ body.settings-center-open .literature-settings-modal-overlay {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 6px 10px;
+  padding: 4px 10px;
   border: none;
   border-radius: 7px;
   background: none;
@@ -175,18 +185,18 @@ body.settings-center-open .literature-settings-modal-overlay {
 
 .settings-center-nav-item.active,
 .settings-center-result.selected {
-  background: var(--primary-color);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-primary));
+  color: var(--text-primary);
 }
 
-/* Colored square behind each section icon */
+/* Section icons share their group color without competing with the label. */
 .settings-center-icon {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 6px;
   background: var(--settings-center-icon-bg, #64748b);
   color: #ffffff;
@@ -196,7 +206,7 @@ body.settings-center-open .literature-settings-modal-overlay {
 
 .settings-center-nav-item.active .settings-center-icon,
 .settings-center-result.selected .settings-center-icon {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px var(--border-color);
 }
 
 .settings-center-nav-label {
@@ -237,7 +247,7 @@ body.settings-center-open .literature-settings-modal-overlay {
 }
 
 .settings-center-result.selected .settings-center-result-crumb {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-secondary);
 }
 
 .settings-center-no-results {
@@ -250,8 +260,7 @@ body.settings-center-open .literature-settings-modal-overlay {
 /* ---------------------------------------------------------------- Main area */
 
 .settings-center-main {
-  /* Containing block for the adopted panels' header buttons */
-  position: relative;
+  container: settings-content / inline-size;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -266,8 +275,7 @@ body.settings-center-open .literature-settings-modal-overlay {
   gap: 14px;
   min-height: 74px;
   box-sizing: border-box;
-  /* Room on the right for a panel's own header buttons (reset, ...) */
-  padding: 16px 132px 14px 24px;
+  padding: 14px var(--settings-inset) 14px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -284,7 +292,7 @@ body.settings-center-open .literature-settings-modal-overlay {
 
 .settings-center-pane-heading h2 {
   margin: 0;
-  font-size: 19px;
+  font-size: 21px;
   font-weight: 650;
   color: var(--text-primary);
 }
@@ -356,82 +364,152 @@ body.settings-center-open .literature-settings-modal-overlay {
   cursor: default !important;
 }
 
-/* The window shows the panel title; keep only the header's action buttons,
-   placed at the right of the panel title row. */
-.settings-center-embedded .modal-header {
-  position: absolute;
-  top: 21px;
-  right: 22px;
-  padding: 0 !important;
-  border: none !important;
-  background: none !important;
-  color: var(--text-secondary) !important;
-  overflow: visible;
-  cursor: default !important;
-  z-index: 2;
-}
-
-.settings-center-embedded .modal-header::before {
+/* Each adopted modal keeps its real controls and event handlers. */
+#settingsCenterModal .settings-center-embedded > .modal-content > .modal-header,
+#settingsCenterModal .settings-center-embedded .resize-handle,
+#settingsCenterModal .settings-center-embedded .settings-center-hidden,
+#settingsCenterModal .settings-center-embedded.settings-center-load-failed {
   display: none !important;
 }
 
-.settings-center-embedded .modal-header > h3,
-.settings-center-embedded .modal-header .modal-close,
-.settings-center-embedded .modal-header .reset-position-btn {
-  display: none !important;
-}
-
-.settings-center-embedded .modal-header .modal-controls {
-  gap: 6px;
-}
-
-.settings-center-embedded .modal-header .modal-controls button,
-.settings-center-embedded .modal-header > button:not(.modal-close) {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border-color) !important;
-  border-radius: var(--radius-md);
-  background: var(--bg-primary) !important;
-  color: var(--text-secondary) !important;
-  cursor: pointer;
-}
-
-.settings-center-embedded .modal-header .modal-controls button:hover,
-.settings-center-embedded .modal-header > button:not(.modal-close):hover {
-  background: var(--bg-tertiary) !important;
-  color: var(--text-primary) !important;
-}
-
-.settings-center-embedded .modal-body {
+#settingsCenterModal .settings-center-embedded > .modal-content > .modal-body {
   flex: 1 1 auto;
   min-height: 0;
   max-height: none !important;
-  overflow-y: auto;
-  padding: 18px 24px 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 18px var(--settings-inset) 24px;
 }
 
-.settings-center-embedded .modal-footer {
+#settingsCenterModal .settings-center-embedded > .modal-content > .modal-footer {
   flex: 0 0 auto;
-  padding: 12px 24px;
+  position: static;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px var(--settings-inset);
   background: var(--bg-secondary);
 }
 
-.settings-center-embedded .resize-handle,
-.settings-center-embedded .settings-center-hidden {
+#settingsCenterModal .settings-center-embedded .modal-footer .btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: normal;
+}
+
+#settingsCenterModal [data-pane='system.about'] #generalSettingsModal .modal-footer,
+#settingsCenterModal #pluginManagementModal:not(:has(#settings-plugins-tab.active)) .modal-footer {
+  display: none;
+}
+
+#settingsCenterModal .settings-center-embedded .llm-provider-config,
+#settingsCenterModal .settings-center-embedded .multi-agent-content,
+#settingsCenterModal .settings-center-embedded .search-settings-container,
+#settingsCenterModal .settings-center-embedded .tab-content,
+#settingsCenterModal .settings-center-embedded .provider-config {
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+#settingsCenterModal .settings-center-embedded .llm-provider-config {
+  overflow: visible;
+}
+
+#settingsCenterModal .settings-center-split-tabs .llm-provider-tabs {
   display: none !important;
 }
 
-/* General Settings: the sidebar picks the tab */
-.settings-center-split-tabs .llm-provider-tabs {
+/* Subsections use the same tab treatment across the hosted managers. */
+#settingsCenterModal [role='tablist'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 5px;
+  margin: 0 0 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  position: static;
+}
+
+#settingsCenterModal [role='tablist'] [role='tab'] {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+}
+
+#settingsCenterModal [role='tablist'] [role='tab']:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+#settingsCenterModal [role='tablist'] [role='tab'].active {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+#settingsCenterModal [role='tablist'] [role='tab']::after {
+  display: none;
+}
+
+#settingsCenterModal #tabSettingsModal .tab-settings-nav {
+  margin: 12px var(--settings-inset) 0;
+}
+
+#settingsCenterModal #tabSettingsModal .tab-settings-preview {
+  padding: 10px var(--settings-inset);
+}
+
+/* The preview applies to the two appearance tabs. */
+#settingsCenterModal #tabSettingsModal:has([data-pane='cache'].active) .tab-settings-preview {
+  display: none;
+}
+
+#settingsCenterModal #llmConfigModal:has(#models-config.active) .llm-config-status {
+  display: none;
+}
+
+#settingsCenterModal #llmConfigModal .llm-config-status {
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  justify-content: flex-start;
+  background: transparent;
+}
+
+#settingsCenterModal #testConnectionBtn {
+  width: auto;
+  align-self: flex-start;
+}
+
+#settingsCenterModal .settings-center-host:is([aria-busy='true']) > .modal {
   display: none !important;
 }
 
-.settings-center-split-tabs .llm-provider-config .tab-content {
-  padding-left: 0;
-  padding-right: 0;
+#settingsCenterModal .settings-center-loading {
+  display: none;
+  margin: auto;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 /* ------------------------------------------------------- Rendered panels */
@@ -440,7 +518,7 @@ body.settings-center-open .literature-settings-modal-overlay {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 18px 24px 24px;
+  padding: 18px var(--settings-inset) 24px;
 }
 
 .settings-center-native-body .settings-section {
@@ -503,39 +581,15 @@ body.settings-center-open .literature-settings-modal-overlay {
 /* Track type picker above the adopted Track Settings panel */
 .settings-center-track-picker {
   flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 24px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  padding: 12px var(--settings-inset) 0;
 }
 
-.settings-center-track-type {
-  padding: 5px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-}
-
-.settings-center-track-type:hover {
-  color: var(--text-primary);
-  border-color: var(--border-hover);
-}
-
-.settings-center-track-type.active {
-  border-color: var(--primary-color);
-  background: var(--primary-color);
-  color: #ffffff;
+#settingsCenterModal .settings-center-track-tabs {
+  margin-bottom: 0;
 }
 
 .settings-center-track-note {
-  flex-basis: 100%;
+  margin: 8px 0 0;
   font-size: 12px;
   color: var(--text-secondary);
 }
@@ -578,15 +632,295 @@ body.settings-center-open .literature-settings-modal-overlay {
   color: var(--text-muted);
 }
 
-@media (max-width: 760px) {
-  .settings-center-layout {
-    grid-template-columns: 200px minmax(0, 1fr);
-  }
-}
-
 /* About > Documentation & Support */
 .support-links {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.settings-center-host[aria-busy='true'] > .settings-center-loading {
+  display: block !important;
+}
+
+.settings-center-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+#settingsCenterSection {
+  display: none;
+}
+
+.settings-center-search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.settings-center-clear-search {
+  position: absolute;
+  top: 50%;
+  right: 17px;
+  transform: translateY(-40%);
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.settings-center-clear-search:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+#settingsCenterModal :is(button, a, select, summary):focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+#settingsCenterModal
+  :is(
+    .settings-section,
+    .settings-group,
+    .form-section,
+    .model-selection-header,
+    .mcp-servers-section,
+    .mcp-global-settings,
+    .mcp-connection-status,
+    .mcp-tools-section,
+    .plugin-section,
+    .plugin-directory
+  ) {
+  min-width: 0;
+  margin: 0 0 14px;
+  padding: clamp(12px, 2.7cqw, 22px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+#settingsCenterModal
+  :is(
+    .settings-section,
+    .settings-group,
+    .form-section,
+    .model-selection-header,
+    .mcp-servers-section,
+    .mcp-global-settings,
+    .mcp-connection-status,
+    .mcp-tools-section,
+    .plugin-section
+  )
+  h4 {
+  margin: 0 0 12px;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+#settingsCenterModal :is(.help-text, .setting-description, .form-text) {
+  color: var(--text-secondary);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+#settingsCenterModal :is(.form-group, .setting-item, .setting-control, .input-with-button, .setting-input) {
+  min-width: 0;
+}
+
+#settingsCenterModal :is(.settings-section, .settings-group, .form-section) > .form-group:last-child {
+  margin-bottom: 0;
+}
+
+#settingsCenterModal .settings-center-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
+  gap: 12px;
+}
+
+#settingsCenterModal .settings-center-field-grid .form-group {
+  margin-bottom: 0;
+}
+
+#settingsCenterModal :is(.input-full, .setting-input, .select, textarea, input[type='range']) {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#settingsCenterModal
+  :is(
+    .server-actions,
+    .section-header,
+    .mcp-connection-controls,
+    .plugin-actions,
+    .model-field-header,
+    .llm-config-status,
+    .color-picker-group
+  ) {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#settingsCenterModal .model-selection-header .help-text {
+  margin: 0;
+}
+
+#settingsCenterModal .settings-center-field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+#settingsCenterModal .style-preset-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 9px;
+}
+
+#settingsCenterModal .style-preset-card {
+  min-width: 0;
+  gap: 10px;
+  padding: 10px 24px 10px 10px;
+  text-align: left;
+  font: inherit;
+}
+
+#settingsCenterModal .style-preset-card .style-preview-swatch {
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+}
+
+#settingsCenterModal :is(.style-preset-name, .style-preset-desc) {
+  display: block;
+}
+
+#settingsCenterModal .settings-center-actions-end {
+  margin-inline-end: auto;
+}
+
+#settingsCenterModal #deepGeneResearchPrompt {
+  min-height: 9em;
+  resize: vertical;
+}
+
+#settingsCenterModal .mcp-legacy-settings summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#settingsCenterModal .mcp-legacy-settings[open] summary {
+  margin-bottom: 10px;
+}
+
+#settingsCenterModal .settings-center-inline-status {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.settings-center-inline-status:empty {
+  display: none;
+}
+
+@container settings-window (max-width: 799px) {
+  .settings-center-layout {
+    --settings-inset: 16px;
+    grid-template-columns: 192px minmax(0, 1fr);
+  }
+}
+
+@container settings-window (max-width: 699px) {
+  .settings-center-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .settings-center-sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  #settingsCenterModal .settings-center-nav {
+    display: none;
+  }
+
+  .settings-center-search {
+    padding: 0;
+  }
+
+  .settings-center-sidebar:has(.settings-center-results:not([hidden])) .settings-center-search {
+    grid-column: 1 / -1;
+  }
+
+  .settings-center-search > i {
+    left: 10px;
+    transform: translateY(-50%);
+  }
+
+  .settings-center-clear-search {
+    right: 5px;
+    transform: translateY(-50%);
+  }
+
+  #settingsCenterSection:not([hidden]) {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font: inherit;
+  }
+
+  .settings-center-results {
+    grid-column: 1 / -1;
+    max-height: min(28vh, 240px);
+  }
+
+  .settings-center-pane-header {
+    min-height: 0;
+    padding-block: 10px;
+  }
+}
+
+@container settings-content (max-width: 540px) {
+  #settingsCenterModal :is(.settings-grid, .model-type-grid, .cache-stats, .agent-toggles-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #settingsCenterModal :is(.setting-item, .settings-row) {
+    flex-wrap: wrap;
+  }
+
+  #settingsCenterModal .system-info .info-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-center-flash {
+    animation: none;
+    outline: 2px solid var(--primary-color);
+  }
+}
+
+.no-animations .settings-center-flash {
+  outline: 2px solid var(--primary-color);
 }

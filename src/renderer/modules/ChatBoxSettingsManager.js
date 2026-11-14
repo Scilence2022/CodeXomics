@@ -530,16 +530,6 @@ class ChatBoxSettingsManager {
       document.body.appendChild(modal);
     }
 
-    // Add reset to defaults button handler (once: this runs on every open)
-    const resetDefaultsBtn = modal.querySelector('.reset-defaults-btn');
-    if (resetDefaultsBtn && !resetDefaultsBtn.dataset.bound) {
-      resetDefaultsBtn.dataset.bound = 'true';
-      resetDefaultsBtn.addEventListener('click', async () => {
-        await this.resetToDefaults();
-        this.populateSettingsForm(modal);
-      });
-    }
-
     // Add reset position button handler
     const resetPositionBtn = modal.querySelector('.reset-position-btn');
     if (resetPositionBtn && !resetPositionBtn.dataset.bound) {
@@ -595,9 +585,6 @@ class ChatBoxSettingsManager {
                     <div class="modal-controls">
                         <button class="reset-position-btn" title="Reset Position">
                             <i class="fas fa-crosshairs"></i>
-                        </button>
-                        <button class="reset-defaults-btn" title="Reset to Defaults">
-                            <i class="fas fa-undo"></i>
                         </button>
                         <button class="modal-close" onclick="this.closest('.modal').style.display='none'; this.closest('.modal').classList.remove('show');">
                             &times;
@@ -931,17 +918,12 @@ class ChatBoxSettingsManager {
                 </div>
                 
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="window.chatBoxSettingsManager.resetToDefaults(); window.chatBoxSettingsManager.populateSettingsForm(this.closest('.modal'));">
+                    <button type="button" class="btn btn-secondary settings-center-actions-end" id="chatboxResetSettingsBtn">
                         <i class="fas fa-undo"></i> Reset to Defaults
                     </button>
-                    <div style="display: flex; gap: 12px;">
-                        <button class="btn btn-secondary" onclick="this.closest('.modal').style.display='none'; this.closest('.modal').classList.remove('show');">
-                            Cancel
-                        </button>
-                        <button class="btn btn-primary" id="chatboxSaveSettingsBtn">
-                            <i class="fas fa-save"></i> Save Settings
-                        </button>
-                    </div>
+                    <button class="btn btn-primary" id="chatboxSaveSettingsBtn">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
                 </div>
                 
                 <!-- Resize handles -->
@@ -955,6 +937,11 @@ class ChatBoxSettingsManager {
                 <div class="resize-handle resize-handle-sw"></div>
             </div>
         `;
+
+    modal.querySelector('#chatboxResetSettingsBtn').addEventListener('click', async () => {
+      await this.resetToDefaults();
+      this.populateSettingsForm(modal);
+    });
 
     // Add event listeners for tabs
     const tabButtons = modal.querySelectorAll('.tab-button');
@@ -1899,8 +1886,9 @@ class ChatBoxSettingsManager {
    * Show notification
    */
   showNotification(message, type = 'info') {
-    // Try to use existing notification system
-    if (window.chatManager && window.chatManager.showNotification) {
+    if (window.settingsCenter?.isPaneOpen('ai.chatbox') && window.genomeBrowser?.showNotification) {
+      window.genomeBrowser.showNotification(message, type);
+    } else if (window.chatManager && window.chatManager.showNotification) {
       window.chatManager.showNotification(message, type);
     } else {
       // Fallback to alert

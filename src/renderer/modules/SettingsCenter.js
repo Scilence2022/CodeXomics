@@ -75,8 +75,8 @@ class SettingsCenter {
       tab: 'features',
       label: 'Features',
       icon: 'fa-toggle-on',
-      description: 'Turn analysis features, auto-save and notifications on or off.',
-      keywords: ['auto save', 'notifications', 'shortcuts', 'operon', 'translation', '功能', '自动保存', '通知'],
+      description: 'Sequence analysis, AI integration and shortcuts to external tools.',
+      keywords: ['gc content', 'operon', 'translation', 'suggestions', '功能', '翻译'],
     },
     {
       id: 'general.tabs',
@@ -244,8 +244,8 @@ class SettingsCenter {
       tab: 'memory',
       label: 'Memory',
       icon: 'fa-memory',
-      description: 'Limits on sequence length and features drawn at once.',
-      keywords: ['performance', 'sequence length', 'max genes', '内存', '性能'],
+      description: 'The sequence length limit and the rendering mode used for large genomes.',
+      keywords: ['performance', 'sequence length', 'renderer', '内存', '性能'],
     },
     {
       id: 'system.caching',
@@ -303,11 +303,16 @@ class SettingsCenter {
 
   /** Labels the search index reads from adopted panels. */
   static SEARCHABLE_SELECTOR =
-    'h4, h5, label, legend, .setting-label, .form-label, .checkbox-label, .modal-body button.btn, .settings-center-native-body button.btn';
+    'h4, h5, label, legend, summary, .setting-label, .form-label, .checkbox-label, .settings-center-field-label, .modal-body button.btn, .settings-center-native-body button.btn';
 
   /** Internal tab panels of adopted modals, for revealing a search hit. */
   static TAB_PANEL_SELECTOR =
     '.tab-content, .provider-config, .search-settings-tab-content, .tab-settings-pane, [data-tab-panel]';
+
+  static TAB_LIST_SELECTOR =
+    '.llm-provider-tabs, .search-settings-tabs, .multi-agent-tabs, .tab-settings-nav, .plugin-management-tabs .tab-header';
+
+  static TAB_BUTTON_SELECTOR = '.tab-button, .tab-btn, .tab-settings-nav-btn, .settings-center-track-type';
 
   static DEFAULT_PANE = 'general.appearance';
 
@@ -320,7 +325,8 @@ class SettingsCenter {
     this.adoptedModals = new Map(); // hostId -> modal element
     this.modalToHost = new Map();
     this.visitedHosts = new Set(); // hosts loaded during the current opening
-    this.activatingHost = null;
+    this.loadingHosts = new Map();
+    this.selection = 0;
     this.closing = false;
     this.searchIndex = null;
     this.searchResults = [];
@@ -349,6 +355,9 @@ class SettingsCenter {
     this.nav = this.modal.querySelector('#settingsCenterNav');
     this.results = this.modal.querySelector('#settingsCenterResults');
     this.searchInput = this.modal.querySelector('#settingsCenterSearch');
+    this.searchStatus = this.modal.querySelector('#settingsCenterSearchStatus');
+    this.clearSearchButton = this.modal.querySelector('.settings-center-clear-search');
+    this.sectionSelect = this.modal.querySelector('#settingsCenterSection');
     this.hostsContainer = this.modal.querySelector('#settingsCenterHosts');
     this.paneTitle = this.modal.querySelector('#settingsCenterPaneTitle');
     this.paneDescription = this.modal.querySelector('#settingsCenterPaneDescription');
@@ -368,11 +377,14 @@ class SettingsCenter {
 
   renderNav() {
     const fragment = document.createDocumentFragment();
+    this.sectionSelect.replaceChildren();
     for (const group of SettingsCenter.GROUPS) {
       const panes = SettingsCenter.PANES.filter(pane => pane.group === group.id);
       if (panes.length === 0) continue;
 
       const section = document.createElement('div');
+      const options = document.createElement('optgroup');
+      options.label = group.label;
       section.className = 'settings-center-nav-group';
       section.setAttribute('role', 'group');
       section.setAttribute('aria-label', group.label);
@@ -391,8 +403,10 @@ class SettingsCenter {
         button.innerHTML = `<span class="settings-center-icon"><i class="fas ${pane.icon}" aria-hidden="true"></i></span><span class="settings-center-nav-label"></span>`;
         button.querySelector('.settings-center-nav-label').textContent = pane.label;
         section.appendChild(button);
+        options.appendChild(new Option(pane.label, pane.id));
       }
       fragment.appendChild(section);
+      this.sectionSelect.appendChild(options);
     }
     this.nav.replaceChildren(fragment);
   }
@@ -412,6 +426,10 @@ class SettingsCenter {
         element.appendChild(this.buildTrackPicker());
       }
 
+      const loading = document.createElement('div');
+      loading.className = 'settings-center-loading';
+      loading.textContent = 'Loading settings…';
+      element.appendChild(loading);
       this.hostsContainer.appendChild(element);
       this.hostElements.set(hostId, element);
     }
@@ -433,17 +451,37 @@ class SettingsCenter {
     const hostElement = this.hostElements.get(hostId);
     if (!hostElement || this.adoptedModals.get(hostId) === modal) return;
 
-    const wasShown = modal.classList.contains('show');
+    const wasShown = modal.classList.contains('show') || ['flex', 'block'].includes(modal.style.display);
     modal.classList.add('settings-center-embedded');
     modal.dataset.settingsHost = hostId;
     if (SettingsCenter.HOSTS[hostId].hidesTabs) modal.classList.add('settings-center-split-tabs');
     hostElement.appendChild(modal);
     this.adoptedModals.set(hostId, modal);
     this.hideDismissButtons(modal);
+    this.syncHostTabs(modal);
     this.searchIndex = null;
 
-    const observer = new MutationObserver(() => this.onModalStateChange(hostId, modal));
-    observer.observe(modal, { attributes: true, attributeFilter: ['class', 'style'] });
+    const observer = new MutationObserver(mutations => {
+      if (mutations.some(mutation => mutation.target === modal)) this.onModalStateChange(hostId, modal);
+      if (mutations.some(mutation => mutation.addedNodes.length || mutation.removedNodes.length)) {
+        this.searchIndex = null;
+      }
+      if (
+        mutations.some(
+          mutation =>
+            mutation.target.matches?.(SettingsCenter.TAB_BUTTON_SELECTOR) ||
+            [...mutation.addedNodes].some(node => node.matches?.(SettingsCenter.TAB_BUTTON_SELECTOR))
+        )
+      ) {
+        this.syncHostTabs(modal);
+      }
+    });
+    observer.observe(modal, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'data-track-type', 'data-file-id'],
+      childList: true,
+      subtree: true,
+    });
     this.observers.push(observer);
 
     if (wasShown) this.onModalStateChange(hostId, modal);
@@ -477,16 +515,18 @@ class SettingsCenter {
   }
 
   /** Listen on document/window and remember it, so destroy() can undo it. */
-  listen(target, type, handler) {
-    target.addEventListener(type, handler);
-    this.documentListeners.push([target, type, handler]);
+  listen(target, type, handler, capture = false) {
+    target.addEventListener(type, handler, capture);
+    this.documentListeners.push([target, type, handler, capture]);
   }
 
   /** Stop observing and listening (tests, or a renderer being torn down). */
   destroy() {
     this.close();
     this.observers.forEach(observer => observer.disconnect());
-    this.documentListeners.forEach(([target, type, handler]) => target.removeEventListener(type, handler));
+    this.documentListeners.forEach(([target, type, handler, capture]) =>
+      target.removeEventListener(type, handler, capture)
+    );
     this.observers = [];
     this.documentListeners = [];
     this.initialized = false;
@@ -498,6 +538,7 @@ class SettingsCenter {
       if (item) this.open(item.dataset.pane);
     });
     this.nav.addEventListener('keydown', event => this.onNavKeydown(event));
+    this.sectionSelect.addEventListener('change', () => this.open(this.sectionSelect.value));
 
     this.modal
       .querySelectorAll('.settings-center-close')
@@ -507,17 +548,21 @@ class SettingsCenter {
       window.resizableModalManager?.resetSize?.('#settingsCenterModal');
     });
 
-    this.searchInput.addEventListener('input', () => this.runSearch(this.searchInput.value));
+    this.searchInput.addEventListener('input', event => {
+      if (!event.isComposing) this.runSearch(this.searchInput.value);
+    });
+    this.searchInput.addEventListener('compositionend', () => this.runSearch(this.searchInput.value));
     this.searchInput.addEventListener('keydown', event => this.onSearchKeydown(event));
+    this.clearSearchButton.addEventListener('click', () => {
+      this.clearSearch();
+      this.searchInput.focus();
+    });
     this.results.addEventListener('click', event => {
       const item = event.target.closest('.settings-center-result');
       if (item) this.openResult(Number(item.dataset.index));
     });
 
-    // Adopted modals keep their draggable headers; do not let them drag here.
-    this.hostsContainer.addEventListener('mousedown', event => {
-      if (event.target.closest('.settings-center-embedded .draggable-handle')) event.stopPropagation();
-    });
+    this.hostsContainer.addEventListener('keydown', event => this.onHostTabKeydown(event));
 
     // Generic modal code (a shared `.modal-close` handler, "close all dialogs")
     // may hide the window directly; treat that as closing it.
@@ -527,7 +572,7 @@ class SettingsCenter {
     windowObserver.observe(this.modal, { attributes: true, attributeFilter: ['class'] });
     this.observers.push(windowObserver);
 
-    this.listen(document, 'keydown', event => this.onDocumentKeydown(event));
+    this.listen(document, 'keydown', event => this.onDocumentKeydown(event), true);
     this.listen(window, 'storage', event => {
       if (event.key === 'blast-config' && this.activeHost === 'blast') this.renderBlastStatus();
     });
@@ -576,7 +621,8 @@ class SettingsCenter {
     const pane =
       this.getPane(paneId) || this.getPane(this.getLastPaneId()) || this.getPane(SettingsCenter.DEFAULT_PANE);
 
-    if (!this.isOpen) {
+    const opening = !this.isOpen;
+    if (opening) {
       this.lastFocused = document.activeElement;
       this.visitedHosts.clear();
       this.isOpen = true;
@@ -586,8 +632,8 @@ class SettingsCenter {
     }
 
     this.selectPane(pane, options);
-    if (options.focusSearch || !paneId) {
-      requestAnimationFrame(() => this.searchInput?.focus());
+    if (options.focusSearch || opening) {
+      this.searchInput.focus({ preventScroll: true });
     }
     return true;
   }
@@ -595,6 +641,7 @@ class SettingsCenter {
   close() {
     if (!this.isOpen) return;
     this.closing = true;
+    this.selection++;
     try {
       if (this.activeHost) this.leaveHost(this.activeHost);
       for (const modal of this.adoptedModals.values()) {
@@ -644,8 +691,10 @@ class SettingsCenter {
   }
 
   async selectPane(pane, options = {}) {
+    const selection = ++this.selection;
     const hostId = pane.host;
     const previousHost = this.activeHost;
+    const previousPane = this.activePaneId;
     if (previousHost && previousHost !== hostId) this.leaveHost(previousHost);
 
     this.activePaneId = pane.id;
@@ -654,26 +703,51 @@ class SettingsCenter {
     this.nav.querySelectorAll('.settings-center-nav-item').forEach(item => {
       const isActive = item.dataset.pane === pane.id;
       item.classList.toggle('active', isActive);
+      item.tabIndex = isActive ? 0 : -1;
       if (isActive) item.setAttribute('aria-current', 'page');
       else item.removeAttribute('aria-current');
     });
+    if (previousHost === null) {
+      this.nav.querySelector('.active')?.scrollIntoView({ block: 'nearest' });
+    }
     for (const [id, element] of this.hostElements) element.hidden = id !== hostId;
+    this.sectionSelect.value = pane.id;
+    const hostElement = this.hostElements.get(hostId);
+    hostElement.dataset.pane = pane.id;
     this.rememberPane(pane.id);
 
-    const needsLoad = !this.visitedHosts.has(hostId) && !options.alreadyLoaded;
-    this.visitedHosts.add(hostId);
-
-    if (needsLoad) {
-      await this.loadHost(hostId, pane, options);
+    if (this.loadingHosts.has(hostId)) {
+      await this.loadingHosts.get(hostId);
+    } else if (!this.visitedHosts.has(hostId) && !options.alreadyLoaded) {
+      const loading = this.loadHost(hostId, pane, options);
+      this.loadingHosts.set(hostId, loading);
+      hostElement.setAttribute('aria-busy', 'true');
+      try {
+        await loading;
+      } finally {
+        this.loadingHosts.delete(hostId);
+        hostElement.removeAttribute('aria-busy');
+        if (this.activeHost !== hostId) this.leaveHost(hostId);
+      }
     } else {
+      this.visitedHosts.add(hostId);
       this.markShown(hostId);
+      if (hostId === 'literature') this.renderLiterature();
+      if (hostId === 'blast') this.renderBlastStatus();
       if (hostId === 'tabs') window.genomeBrowser?.tabManager?.startCacheStatsPolling?.();
-      if (hostId === 'tracks' && options.trackType) this.selectTrackType(options.trackType, options.fileId);
+      if (hostId === 'tracks' && options.trackType) {
+        const modal = this.adoptedModals.get(hostId);
+        if (modal?.dataset.trackType !== options.trackType || modal.dataset.fileId !== (options.fileId || '')) {
+          this.selectTrackType(options.trackType, options.fileId);
+        }
+      }
     }
 
+    if (selection !== this.selection) return false;
     if (pane.tab || options.tab) this.selectHostTab(hostId, options.tab || pane.tab);
     const body = this.adoptedModals.get(hostId)?.querySelector('.modal-body');
-    if (body && previousHost !== hostId) body.scrollTop = 0;
+    if (body && previousPane !== pane.id) body.scrollTop = 0;
+    return true;
   }
 
   /**
@@ -682,7 +756,7 @@ class SettingsCenter {
    */
   async loadHost(hostId, pane, options = {}) {
     const gb = window.genomeBrowser;
-    this.activatingHost = hostId;
+    let failed = false;
     try {
       switch (hostId) {
         case 'general':
@@ -716,7 +790,7 @@ class SettingsCenter {
           gb?.showMCPSettingsModal?.();
           break;
         case 'external':
-          gb?.showExternalToolsModal?.();
+          await gb?.showExternalToolsModal?.();
           break;
         case 'plugins':
           await window.pluginManagementUI?.showPluginModal?.();
@@ -731,17 +805,18 @@ class SettingsCenter {
           break;
       }
     } catch (error) {
+      failed = true;
       console.error(`[SettingsCenter] Could not load the ${hostId} panel:`, error);
-    } finally {
-      this.activatingHost = null;
     }
 
     // A modal built on first use was appended to <body> just now
     this.adoptAvailableModals();
     // Panels can rebuild their content when they load; index it afresh
     this.searchIndex = null;
-    this.updateUnavailableNotice(hostId);
-    if (this.activeHost === hostId) this.markShown(hostId);
+    if (this.updateUnavailableNotice(hostId, failed)) {
+      if (this.activeHost === hostId) this.markShown(hostId);
+      if (this.activeHost) this.visitedHosts.add(hostId);
+    }
   }
 
   /**
@@ -777,31 +852,24 @@ class SettingsCenter {
     const shown = modal.classList.contains('show') || ['flex', 'block'].includes(modal.style.display);
 
     if (shown) {
-      if (this.activatingHost === hostId) return;
+      if (this.loadingHosts.has(hostId)) return;
+      if (hostId === 'tracks' && modal.dataset.trackType) {
+        this.trackType = modal.dataset.trackType;
+        this.updateTrackPicker(this.trackType, modal.dataset.fileId);
+      }
       if (!this.isOpen || this.activeHost !== hostId) {
+        this.updateUnavailableNotice(hostId);
         const paneId = this.defaultPaneForHost(hostId);
         // The caller already loaded the values; do not load them again
-        this.visitedHosts.add(hostId);
-        this.open(paneId, { alreadyLoaded: true, ...this.contextFromModal(hostId, modal) });
+        this.open(paneId, { alreadyLoaded: true });
       }
       return;
     }
 
-    if (this.isOpen && this.activeHost === hostId && this.activatingHost !== hostId) {
+    if (this.isOpen && this.activeHost === hostId && !this.loadingHosts.has(hostId)) {
       this.markShown(hostId);
       if (hostId === 'tabs') window.genomeBrowser?.tabManager?.startCacheStatsPolling?.();
     }
-  }
-
-  contextFromModal(hostId, modal) {
-    if (hostId === 'tracks') {
-      const trackType = modal.dataset.trackType;
-      if (trackType) {
-        this.trackType = trackType;
-        this.updateTrackPicker(trackType, modal.dataset.fileId || null);
-      }
-    }
-    return {};
   }
 
   /** Switch an adopted modal to one of its internal tabs. */
@@ -812,10 +880,10 @@ class SettingsCenter {
       return;
     }
     const modal = this.adoptedModals.get(hostId);
-    const button = modal?.querySelector(
-      `.tab-button[data-tab="${tab}"], .tab-btn[data-tab="${tab}"], [data-provider="${tab}"], .tab-settings-nav-btn[data-pane="${tab}"]`
+    const button = [...(modal?.querySelectorAll(SettingsCenter.TAB_BUTTON_SELECTOR) || [])].find(
+      button => SettingsCenter.tabName(button) === tab
     );
-    button?.click();
+    if (button && !button.classList.contains('active')) button.click();
   }
 
   renderPaneHeader(pane) {
@@ -827,17 +895,17 @@ class SettingsCenter {
   }
 
   /** Shown when a panel's manager has not been created yet. */
-  updateUnavailableNotice(hostId) {
+  updateUnavailableNotice(hostId, failed = false) {
     const host = SettingsCenter.HOSTS[hostId];
     const element = this.hostElements.get(hostId);
-    if (!element || host.native) return;
-    const missing = !this.adoptedModals.has(hostId);
+    if (!element) return false;
+    const missing = failed || (!host.native && !this.adoptedModals.has(hostId));
+    this.adoptedModals.get(hostId)?.classList.toggle('settings-center-load-failed', missing);
     let notice = element.querySelector('.settings-center-unavailable');
     if (missing && !notice) {
       notice = document.createElement('div');
       notice.className = 'settings-center-unavailable';
-      notice.innerHTML =
-        '<i class="fas fa-hourglass-half" aria-hidden="true"></i><p>This section is still starting up.</p>';
+      notice.innerHTML = '<i class="fas fa-circle-exclamation" aria-hidden="true"></i><p role="status"></p>';
       const retry = document.createElement('button');
       retry.type = 'button';
       retry.className = 'btn btn-secondary';
@@ -852,7 +920,12 @@ class SettingsCenter {
     } else if (!missing && notice) {
       notice.remove();
     }
-    if (missing) this.visitedHosts.delete(hostId);
+    if (missing) {
+      notice.querySelector('p').textContent = failed
+        ? 'This section could not be loaded.'
+        : 'This section is still starting up.';
+    }
+    return !missing;
   }
 
   getLastPaneId() {
@@ -872,17 +945,103 @@ class SettingsCenter {
   // ---------------------------------------------------------------------------
 
   onDocumentKeydown(event) {
-    if (!this.isOpen || event.key !== 'Escape' || event.defaultPrevented) return;
+    if (!this.isOpen || event.defaultPrevented || event.isComposing || !['Escape', 'Tab'].includes(event.key)) return;
     // A dialog opened from a panel (add server, confirm, ...) closes first
-    const otherDialog = [...document.querySelectorAll('.modal.show')].some(
-      element => element !== this.modal && !this.modal.contains(element)
+    const otherDialog = [
+      ...document.querySelectorAll('.modal, .literature-settings-modal-overlay, .notification-overlay'),
+    ].some(
+      element =>
+        element !== this.modal &&
+        !this.modal.contains(element) &&
+        (element.classList.contains('show') || element.getClientRects().length > 0)
     );
     if (otherDialog) return;
+    if (event.key === 'Tab') {
+      this.trapTabFocus(event);
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
     if (document.activeElement === this.searchInput && this.searchInput.value) {
       this.clearSearch();
       return;
     }
     this.close();
+  }
+
+  trapTabFocus(event) {
+    const controls = [
+      ...this.modal.querySelectorAll('button, input, select, textarea, a[href], summary, [tabindex]'),
+    ].filter(
+      control =>
+        control.tabIndex >= 0 &&
+        !control.matches(':disabled') &&
+        control.getClientRects().length > 0 &&
+        getComputedStyle(control).visibility === 'visible'
+    );
+    if (!controls.length) return;
+    const active = document.activeElement;
+    if (!this.modal.contains(active) || active === controls[event.shiftKey ? 0 : controls.length - 1]) {
+      event.preventDefault();
+      controls[event.shiftKey ? controls.length - 1 : 0].focus();
+    }
+  }
+
+  static tabName(element) {
+    return (
+      element.dataset.tab ||
+      element.dataset.provider ||
+      element.dataset.pane ||
+      element.id.replace(/(-plugins)?-(tab|config)$/, '')
+    );
+  }
+
+  syncHostTabs(modal) {
+    if (modal.classList.contains('settings-center-split-tabs')) return;
+    modal.querySelectorAll(SettingsCenter.TAB_LIST_SELECTOR).forEach(list => {
+      list.setAttribute('role', 'tablist');
+      if (!list.hasAttribute('aria-label')) {
+        list.setAttribute('aria-label', this.getPane(this.defaultPaneForHost(modal.dataset.settingsHost)).label);
+      }
+      const panels = new Map(
+        [...modal.querySelectorAll(SettingsCenter.TAB_PANEL_SELECTOR)].map(panel => [
+          SettingsCenter.tabName(panel),
+          panel,
+        ])
+      );
+      list.querySelectorAll(SettingsCenter.TAB_BUTTON_SELECTOR).forEach(button => {
+        const name = SettingsCenter.tabName(button);
+        const selected = button.classList.contains('active');
+        button.id ||= `${modal.id}-tab-${name}`;
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+        const panel = panels.get(name);
+        if (!panel) return;
+        panel.id ||= `${modal.id}-panel-${name}`;
+        button.setAttribute('aria-controls', panel.id);
+        panel.setAttribute('role', 'tabpanel');
+        panel.setAttribute('aria-labelledby', button.id);
+      });
+    });
+  }
+
+  onHostTabKeydown(event) {
+    const button = event.target.closest('[role="tab"]');
+    const list = button?.closest('[role="tablist"]');
+    if (!list || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tabs = [...list.querySelectorAll('[role="tab"]:not(:disabled)')];
+    const index = tabs.indexOf(button);
+    const offset = event.key === 'ArrowLeft' ? -1 : 1;
+    const target =
+      {
+        Home: tabs[0],
+        End: tabs.at(-1),
+      }[event.key] || tabs[(index + offset + tabs.length) % tabs.length];
+    if (!target) return;
+    event.preventDefault();
+    target.focus();
+    if (target !== button) target.click();
   }
 
   onNavKeydown(event) {
@@ -902,7 +1061,7 @@ class SettingsCenter {
   }
 
   onSearchKeydown(event) {
-    if (!this.searchResults.length) return;
+    if (event.isComposing || !this.searchResults.length) return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       const delta = event.key === 'ArrowDown' ? 1 : -1;
@@ -965,12 +1124,38 @@ class SettingsCenter {
       });
     }
 
+    for (const { type, label } of SettingsCenter.TRACK_TYPES) {
+      add({
+        kind: 'tab',
+        paneId: 'view.tracks',
+        text: label,
+        trackType: type,
+        context: '',
+        haystack: SettingsCenter.normalize(`${label} tracks`),
+      });
+    }
+
     const roots = [...this.adoptedModals];
     for (const [hostId, element] of this.hostElements) {
       if (SettingsCenter.HOSTS[hostId].native) roots.push([hostId, element]);
     }
 
     for (const [hostId, root] of roots) {
+      root.querySelectorAll(SettingsCenter.TAB_LIST_SELECTOR).forEach(list => {
+        if (SettingsCenter.HOSTS[hostId].hidesTabs) return;
+        list.querySelectorAll(SettingsCenter.TAB_BUTTON_SELECTOR).forEach(button => {
+          const paneId = this.defaultPaneForHost(hostId);
+          const text = SettingsCenter.labelText(button);
+          add({
+            kind: 'tab',
+            paneId,
+            text,
+            tab: SettingsCenter.tabName(button),
+            context: '',
+            haystack: SettingsCenter.normalize(`${text} ${this.getPane(paneId).label}`),
+          });
+        });
+      });
       root.querySelectorAll(SettingsCenter.SEARCHABLE_SELECTOR).forEach(element => {
         if (element.closest('.settings-center-hidden, .modal-header')) return;
         if (element.matches('.tab-button, .tab-btn')) return;
@@ -980,6 +1165,7 @@ class SettingsCenter {
         if (text.length < 3 || text.length > 90 || /^[\d\s.:%-]+$/.test(text)) return;
         const paneId = this.paneIdForElement(hostId, element);
         if (!paneId) return;
+        const panel = element.closest(SettingsCenter.TAB_PANEL_SELECTOR);
         const context = this.contextForElement(element, text);
         const pane = this.getPane(paneId);
         add({
@@ -988,6 +1174,10 @@ class SettingsCenter {
           text: text.replace(/:$/, ''),
           context,
           element,
+          tab: panel && SettingsCenter.tabName(panel),
+          trackType: root.dataset.trackType,
+          fileId: root.dataset.fileId,
+          controlId: this.controlForElement(element)?.id,
           haystack: SettingsCenter.normalize(`${text} ${context} ${pane.label}`),
         });
       });
@@ -1015,18 +1205,24 @@ class SettingsCenter {
       const label = button ? SettingsCenter.labelText(button) : '';
       if (label) parts.push(label);
     }
-    const section = element.closest('.settings-section, .form-section, .config-section, fieldset');
-    const headingElement = section?.querySelector('h4, h5, legend');
+    if (modal?.dataset.settingsHost === 'tracks') {
+      const track = SettingsCenter.TRACK_TYPES.find(track => track.type === modal.dataset.trackType);
+      if (track) parts.push(track.label);
+    }
+    const section = element.closest(
+      '.settings-section, .settings-group, .form-section, .config-section, fieldset, details'
+    );
+    const headingElement = section?.querySelector('h4, h5, legend, summary');
     const heading = headingElement ? SettingsCenter.labelText(headingElement) : '';
     if (heading && heading !== text) parts.push(heading);
     return parts.join(' › ');
   }
 
   tabButtonForPanel(modal, panel) {
-    const name = panel.dataset.tab || panel.dataset.pane || (panel.id || '').replace(/(-plugins)?-(tab|config)$/, '');
-    if (!name) return null;
-    return modal.querySelector(
-      `.tab-button[data-tab="${name}"], .tab-btn[data-tab="${name}"], .tab-button[data-provider="${name}"], .tab-settings-nav-btn[data-pane="${name}"]`
+    if (!panel) return null;
+    const name = SettingsCenter.tabName(panel);
+    return [...modal.querySelectorAll(SettingsCenter.TAB_BUTTON_SELECTOR)].find(
+      button => SettingsCenter.tabName(button) === name
     );
   }
 
@@ -1048,7 +1244,7 @@ class SettingsCenter {
       if (text === phrase) score += 100;
       else if (text.startsWith(phrase)) score += 60;
       else if (text.includes(phrase)) score += 35;
-      if (entry.kind === 'pane') score += 25;
+      if (entry.kind === 'pane' || entry.kind === 'tab') score += 25;
       score -= Math.min(text.length, 60) / 10;
       scored.push({ entry, score });
     }
@@ -1066,7 +1262,14 @@ class SettingsCenter {
     this.searchResults = this.search(trimmed);
     this.selectedResult = this.searchResults.length ? 0 : -1;
     this.nav.hidden = true;
+    this.sectionSelect.hidden = true;
     this.results.hidden = false;
+    this.clearSearchButton.hidden = false;
+    this.searchInput.setAttribute('aria-expanded', 'true');
+    this.searchInput.removeAttribute('aria-activedescendant');
+    this.searchStatus.textContent = this.searchResults.length
+      ? `${this.searchResults.length} matching settings`
+      : 'No matching settings';
 
     if (this.searchResults.length === 0) {
       const empty = document.createElement('div');
@@ -1084,6 +1287,8 @@ class SettingsCenter {
       button.type = 'button';
       button.className = 'settings-center-result';
       button.dataset.index = String(index);
+      button.id = `settings-center-result-${index}`;
+      button.tabIndex = -1;
       button.setAttribute('role', 'option');
       button.style.setProperty('--settings-center-icon-bg', group?.color || '#64748b');
       button.innerHTML = `<span class="settings-center-icon"><i class="fas ${pane.icon}" aria-hidden="true"></i></span><span class="settings-center-result-text"><span class="settings-center-result-title"></span><span class="settings-center-result-crumb"></span></span>`;
@@ -1101,12 +1306,19 @@ class SettingsCenter {
       const selected = index === this.selectedResult;
       item.classList.toggle('selected', selected);
       item.setAttribute('aria-selected', selected ? 'true' : 'false');
-      if (selected) item.scrollIntoView({ block: 'nearest' });
+      if (selected) {
+        this.searchInput.setAttribute('aria-activedescendant', item.id);
+        item.scrollIntoView({ block: 'nearest' });
+      }
     });
   }
 
   clearSearch({ keepInput = false } = {}) {
     if (!keepInput && this.searchInput) this.searchInput.value = '';
+    this.searchInput.removeAttribute('aria-activedescendant');
+    this.searchInput.setAttribute('aria-expanded', 'false');
+    this.searchStatus.textContent = '';
+    this.clearSearchButton.hidden = true;
     this.searchResults = [];
     this.selectedResult = -1;
     if (this.results) {
@@ -1114,37 +1326,56 @@ class SettingsCenter {
       this.results.replaceChildren();
     }
     if (this.nav) this.nav.hidden = false;
+    this.sectionSelect.hidden = false;
   }
 
   async openResult(index) {
     const entry = this.searchResults[index];
     if (!entry) return;
-    await this.selectPane(this.getPane(entry.paneId));
-    if (entry.element) this.revealElement(entry.element);
+    this.clearSearch();
+    const pane = this.getPane(entry.paneId);
+    const selected = await this.selectPane(pane, {
+      tab: pane.tab || entry.tab,
+      trackType: entry.trackType,
+      fileId: entry.fileId,
+    });
+    if (!selected) return;
+    const control = entry.controlId && document.getElementById(entry.controlId);
+    if (entry.element?.isConnected || (control && this.hostElements.get(pane.host).contains(control))) {
+      this.revealElement(entry.element?.isConnected ? entry.element : control);
+    } else this.paneTitle.focus({ preventScroll: true });
   }
 
-  /** Bring a setting into view: open its tab, scroll to it, flash it. */
+  controlForElement(element) {
+    const label = element.closest('label');
+    return (
+      label?.control ||
+      element.closest('button, input, select, textarea, summary') ||
+      element.closest('.setting-item')?.querySelector('input, select, textarea')
+    );
+  }
+
+  /** Bring a setting into view, including collapsed sections. */
   revealElement(element) {
-    const modal = element.closest('.settings-center-embedded');
-    const panel = element.closest(SettingsCenter.TAB_PANEL_SELECTOR);
-    if (modal && panel && !modal.classList.contains('settings-center-split-tabs')) {
-      this.tabButtonForPanel(modal, panel)?.click();
+    for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+      if (parent.matches('details')) parent.open = true;
     }
 
-    const target = element.closest('.form-group, .setting-item, .settings-section, .form-section') || element;
-    requestAnimationFrame(() => {
-      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      target.classList.remove('settings-center-flash');
-      // Restart the animation when the same setting is opened twice
-      void target.offsetWidth;
-      target.classList.add('settings-center-flash');
-      setTimeout(() => target.classList.remove('settings-center-flash'), 1800);
+    const target =
+      element.closest('.form-group, .setting-item, .settings-section, .settings-group, .form-section') || element;
+    const reducedMotion =
+      document.body.classList.contains('no-animations') ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ block: 'center', behavior: reducedMotion ? 'auto' : 'smooth' });
+    target.classList.remove('settings-center-flash');
+    // Restart the animation when the same setting is opened twice.
+    void target.offsetWidth;
+    target.classList.add('settings-center-flash');
+    setTimeout(() => target.classList.remove('settings-center-flash'), 1800);
 
-      const control =
-        (element.htmlFor && document.getElementById(element.htmlFor)) ||
-        element.querySelector?.('input, select, textarea');
-      if (control && typeof control.focus === 'function') control.focus({ preventScroll: true });
-    });
+    const control = this.controlForElement(element);
+    const focus = control?.getClientRects().length && !control.matches(':disabled') ? control : this.paneTitle;
+    focus.focus({ preventScroll: true });
   }
 
   // ---------------------------------------------------------------------------
@@ -1154,17 +1385,23 @@ class SettingsCenter {
   buildTrackPicker() {
     const bar = document.createElement('div');
     bar.className = 'settings-center-track-picker';
-    bar.setAttribute('role', 'tablist');
-    bar.setAttribute('aria-label', 'Track type');
+    const list = document.createElement('div');
+    list.className = 'settings-center-track-tabs';
+    list.setAttribute('role', 'tablist');
+    list.setAttribute('aria-label', 'Track type');
+    bar.appendChild(list);
     for (const { type, label } of SettingsCenter.TRACK_TYPES) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'settings-center-track-type';
       button.dataset.trackType = type;
+      button.id = `settings-track-tab-${type}`;
       button.setAttribute('role', 'tab');
+      button.setAttribute('aria-controls', 'trackSettingsBody');
+      button.tabIndex = type === this.trackType ? 0 : -1;
       button.textContent = label;
       button.addEventListener('click', () => this.selectTrackType(type));
-      bar.appendChild(button);
+      list.appendChild(button);
     }
     const note = document.createElement('div');
     note.className = 'settings-center-track-note';
@@ -1175,17 +1412,13 @@ class SettingsCenter {
 
   selectTrackType(type, fileId = null) {
     const trackRenderer = window.genomeBrowser?.trackRenderer;
-    this.trackType = type || 'genes';
-    this.updateTrackPicker(this.trackType, fileId);
     if (!trackRenderer?.openTrackSettings) return;
-    const previous = this.activatingHost;
-    this.activatingHost = 'tracks';
-    try {
-      trackRenderer.openTrackSettings(this.trackType, fileId || null);
-    } finally {
-      this.activatingHost = previous;
-    }
+    this.trackType = type || 'genes';
+    trackRenderer.openTrackSettings(this.trackType, fileId);
     this.adoptAvailableModals();
+    this.updateTrackPicker(this.trackType, fileId);
+    const body = this.adoptedModals.get('tracks')?.querySelector('.modal-body');
+    if (body) body.scrollTop = 0;
     this.searchIndex = null;
     this.updateUnavailableNotice('tracks');
     if (this.activeHost === 'tracks') this.markShown('tracks');
@@ -1197,8 +1430,14 @@ class SettingsCenter {
     host.querySelectorAll('.settings-center-track-type').forEach(button => {
       const selected = button.dataset.trackType === type;
       button.classList.toggle('active', selected);
-      button.setAttribute('aria-selected', selected ? 'true' : 'false');
+      button.tabIndex = selected ? 0 : -1;
+      button.setAttribute('aria-selected', String(selected));
     });
+    const body = this.adoptedModals.get('tracks')?.querySelector('.modal-body');
+    body?.setAttribute('role', 'tabpanel');
+    const selected = host.querySelector('.settings-center-track-type.active');
+    if (selected) body?.setAttribute('aria-labelledby', selected.id);
+    else body?.removeAttribute('aria-labelledby');
     const note = host.querySelector('.settings-center-track-note');
     if (note) {
       note.hidden = !fileId;
@@ -1218,7 +1457,7 @@ class SettingsCenter {
         <div class="settings-section">
           <h4><i class="fas fa-list-ol"></i> Citation List</h4>
           <div class="form-group">
-            <label for="settingsLiteraturePageSize">Citations per page:</label>
+            <label for="settingsLiteraturePageSize">Citations per page</label>
             <input type="number" id="settingsLiteraturePageSize" class="input-full" min="5" max="50" step="1">
             <small class="help-text">How many citations a literature result shows at a time (5–50). Changes apply immediately.</small>
           </div>
@@ -1227,28 +1466,32 @@ class SettingsCenter {
               <i class="fas fa-undo"></i> Reset to Default
             </button>
           </div>
+          <p class="settings-center-inline-status" role="status"></p>
         </div>`;
       const input = body.querySelector('#settingsLiteraturePageSize');
+      const status = body.querySelector('[role="status"]');
       input.addEventListener('change', () => {
         const literature = window.literatureSettings;
         if (!literature) return;
         literature.setPageSize(input.value);
         input.value = literature.getPageSize();
         window.enhancedCitationDisplay?.onSettingsChanged?.();
+        status.textContent = `Showing ${input.value} citations per page.`;
       });
       body.querySelector('#settingsLiteratureReset').addEventListener('click', () => {
         window.literatureSettings?.resetToDefaults();
         this.renderLiterature();
+        status.textContent = `Restored the default of ${input.value} citations per page.`;
       });
     } else if (hostId === 'blast') {
       body.innerHTML = `
         <div class="settings-section">
           <h4><i class="fas fa-terminal"></i> BLAST+ Installation</h4>
           <div class="system-info settings-center-blast-status">
-            <div class="info-row"><span class="info-label">Status:</span><span class="info-value" data-blast="status">—</span></div>
-            <div class="info-row"><span class="info-label">Executable:</span><span class="info-value" data-blast="path">—</span></div>
-            <div class="info-row"><span class="info-label">Version:</span><span class="info-value" data-blast="version">—</span></div>
-            <div class="info-row"><span class="info-label">Last detection:</span><span class="info-value" data-blast="detected">—</span></div>
+            <div class="info-row"><span class="info-label">Status</span><span class="info-value" data-blast="status" role="status">—</span></div>
+            <div class="info-row"><span class="info-label">Executable</span><span class="info-value" data-blast="path">—</span></div>
+            <div class="info-row"><span class="info-label">Version</span><span class="info-value" data-blast="version">—</span></div>
+            <div class="info-row"><span class="info-label">Last detection</span><span class="info-value" data-blast="detected">—</span></div>
           </div>
           <small class="help-text">BLAST+ runs on this computer. Setup finds or verifies the installation; the download assistant installs it.</small>
           <div class="settings-center-button-row">
