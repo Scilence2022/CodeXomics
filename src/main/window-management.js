@@ -11,6 +11,7 @@ const {
   restrictExternalToolContents,
 } = require('./security-utils');
 const workspaceHostManager = require('./workspace-host-manager');
+const { bindCircosSource } = require('./circos-ipc');
 
 // External references (set by main module via setWindowMgmtDependencies)
 let mainWindow;
@@ -259,6 +260,7 @@ function createCircosWindow() {
       show: false,
     });
 
+    bindCircosSource(circosWindow, getCurrentMainWindow());
     const circosPath = path.join(__dirname, '..', 'circos-plotter.html');
 
     // Load the Circos plotter HTML
@@ -299,11 +301,6 @@ function createCircosWindow() {
     console.error('Failed to open Circos Genome Plotter:', error);
   }
 }
-
-// NOTE: Circos-related IPC handlers (get-circos-genome-data, navigate-to-chromosome,
-// navigate-to-gene, get-gene-sequence, get-region-sequence) have been moved to
-// src/main/ipc-handlers.js (Section 11) to avoid duplicate registration errors.
-// See: https://github.com/electron/electron/blob/main/docs/api/ipc-main.md#ipcmainhandlechannel-listener
 
 // ========== BIOLOGICAL DATABASES TOOLS ==========
 
