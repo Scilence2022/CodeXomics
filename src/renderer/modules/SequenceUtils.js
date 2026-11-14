@@ -1563,6 +1563,10 @@ class SequenceUtils {
 
     if (batchEnd < totalLines) {
       requestAnimationFrame(() => this.renderSequenceLinesBatch(view, totalLines, renderLine, batchEnd));
+    } else if (this.sequenceLayout?.sequenceView === view && this.sequenceLayout.pendingNavigation) {
+      const { position, mode } = this.sequenceLayout.pendingNavigation;
+      this.restoreActiveGeneSequenceHighlight();
+      this.scrollToPosition(position, mode);
     }
   }
 
@@ -2433,6 +2437,7 @@ class SequenceUtils {
         update();
       });
     };
+    this.sequenceLayout.updateVisibleRows = update;
     container.addEventListener('scroll', this.sequenceScrollHandler);
     update();
   }
@@ -2455,19 +2460,67 @@ class SequenceUtils {
     return view.offsetTop + (parseFloat(getComputedStyle(view).paddingTop) || 0);
   }
 
-  scrollToPosition(position) {
+  scrollToPosition(position, mode = 'smooth') {
     const layout = this.sequenceLayout;
     if (!layout?.sequenceView.isConnected || !layout.container.clientHeight) return;
 
+    // A new click supersedes a request waiting for batched rows to finish.
+    layout.pendingNavigation = null;
     const { container, sequenceView, viewStart, basesPerLine, offsets } = layout;
     const lineIndex = Math.floor((position - viewStart) / basesPerLine);
-    if (lineIndex < 0 || lineIndex >= offsets.length - 1) return;
+    if (!Number.isInteger(lineIndex) || lineIndex < 0 || lineIndex >= offsets.length - 1) return;
 
-    const line = sequenceView.classList.contains('virtualized') ? null : sequenceView.children[lineIndex];
-    const top = line
-      ? sequenceView.offsetTop + line.offsetTop
+    const virtualized = sequenceView.classList.contains('virtualized');
+    const row = virtualized ? null : sequenceView.children[lineIndex];
+    const top = row
+      ? sequenceView.offsetTop + row.offsetTop
       : this.getSequenceViewContentTop(sequenceView) + offsets[lineIndex];
-    container.scrollTo({ top, behavior: 'smooth' });
+    if (mode === 'smooth') {
+      container.scrollTo({ top, behavior: 'smooth' });
+      return;
+    }
+
+    if (!virtualized && sequenceView.children.length < offsets.length - 1) {
+      // Layout and scroll height are final once the last batch is mounted.
+      layout.pendingNavigation = { position, mode };
+      container.scrollTo({ top: container.scrollTop, behavior: 'instant' });
+      return;
+    }
+
+    const { clientHeight, scrollHeight, scrollTop } = container;
+    const visibleRow =
+      row || sequenceView.querySelector(`[data-display-start="${viewStart + lineIndex * basesPerLine}"]`);
+    const bases = visibleRow?.querySelector('.sequence-line');
+    let basesTop = top;
+    let basesBottom = top + offsets[lineIndex + 1] - offsets[lineIndex];
+    if (bases) {
+      const viewportTop = container.getBoundingClientRect().top + container.clientTop;
+      const bounds = bases.getBoundingClientRect();
+      basesTop = scrollTop + bounds.top - viewportTop;
+      basesBottom = scrollTop + bounds.bottom - viewportTop;
+    }
+    if (basesTop >= scrollTop && basesBottom <= scrollTop + clientHeight) {
+      // Cancel any smooth scroll from the previous click.
+      container.scrollTo({ top: scrollTop, behavior: 'instant' });
+      return;
+    }
+
+    if (
+      mode === 'smooth-nearby' &&
+      !document.body.classList.contains('no-animations') &&
+      !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    ) {
+      const nearestTop = Math.max(basesBottom - clientHeight, Math.min(scrollTop, basesTop));
+      const nearbyTop = Math.max(0, Math.min(nearestTop, scrollHeight - clientHeight));
+      if (Math.abs(nearbyTop - scrollTop) <= clientHeight) {
+        container.scrollTo({ top: nearbyTop, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    container.scrollTo({ top, behavior: 'instant' });
+    // Render the destination before the next scroll event or paint.
+    layout.updateVisibleRows?.();
   }
 
   getBaseElementSourcePosition(baseElement) {
@@ -2512,14 +2565,13 @@ class SequenceUtils {
       return 0;
     }
 
-    const start = Math.min(selectionStart, selectionEnd);
-    const end = Math.max(selectionStart, selectionEnd);
+    const selection = { start: selectionStart, end: selectionEnd };
     let highlightedCount = 0;
 
     const sequenceContainer = document.getElementById('sequenceContent') || document;
     sequenceContainer.querySelectorAll('.sequence-bases span').forEach(baseElement => {
       const sourcePosition = this.getBaseElementSourcePosition(baseElement);
-      const isSelected = sourcePosition !== null && sourcePosition >= start && sourcePosition <= end;
+      const isSelected = sourcePosition !== null && this.positionWithinFeature(sourcePosition, selection);
       baseElement.classList.toggle('sequence-selected', isSelected);
       baseElement.classList.toggle('gene-sequence-selected', isSelected);
       if (isSelected) highlightedCount++;
@@ -2863,7 +2915,10 @@ class SequenceUtils {
       this.genomeBrowser.sequenceSelection.source === 'gene'
     ) {
       const geneSeq = this.genomeBrowser.sequenceSelection;
-      textToCopy = sequence.substring(geneSeq.start - 1, geneSeq.end); // Convert to 0-based indexing
+      textToCopy =
+        geneSeq.start > geneSeq.end
+          ? sequence.substring(geneSeq.start - 1) + sequence.substring(0, geneSeq.end)
+          : sequence.substring(geneSeq.start - 1, geneSeq.end);
       textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
       copyMessage = this.formatSequenceCopyMessage(
         `${geneSeq.geneName} sequence`,

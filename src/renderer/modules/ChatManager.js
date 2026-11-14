@@ -20413,6 +20413,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             default: true,
             description: 'Auto-scroll Bottom Sequence Track to the selected gene when a gene is clicked',
           },
+          bottomSequenceScrollMode: {
+            type: 'string',
+            enum: ['instant', 'smooth-nearby'],
+            default: 'instant',
+            description: 'Movement when automatic positioning is enabled. Smooth scrolling is limited to one screen.',
+          },
           showSequence: { type: 'boolean', default: false, description: 'Show reference sequence' },
           sequenceHeight: {
             type: 'number',

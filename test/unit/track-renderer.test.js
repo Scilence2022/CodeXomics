@@ -110,7 +110,8 @@ describe('Viewport Filtering', () => {
     renderer.showGeneDetails(visible, null);
     expect(renderer.genomeBrowser.selectGene).toHaveBeenCalledWith(source, null);
     expect(renderer.genomeBrowser.scrollBottomSequenceToGene).toHaveBeenCalledWith(
-      expect.objectContaining({ start: 10, end: 20 })
+      expect.objectContaining({ start: 10, end: 20 }),
+      'instant'
     );
   });
 
