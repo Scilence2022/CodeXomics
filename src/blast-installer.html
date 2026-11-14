@@ -519,10 +519,11 @@
       }
     </style>
     <link rel="stylesheet" href="renderer/vendor/fontawesome/css/all.min.css" />
+    <link rel="stylesheet" href="renderer/css/text-selection.css" />
   </head>
   <body>
     <div class="container">
-      <div class="header">
+      <div class="header app-header">
         <h1><i class="fas fa-download"></i> BLAST+ Tools Installer</h1>
         <p class="subtitle">Automated installation of NCBI BLAST+ tools for your system</p>
         <div id="statusIndicator" class="status-indicator status-ready">
@@ -651,7 +652,7 @@
       <!-- Log Container -->
       <div class="card">
         <h2><i class="fas fa-terminal"></i> Installation Log</h2>
-        <div class="log-container" id="logContainer">
+        <div class="log-container" id="logContainer" data-selectable-text tabindex="0" aria-label="BLAST+ log" role="region">
           <div class="log-entry">
             <span class="log-timestamp">00:00:00</span>
             <span class="log-level log-info">[INFO]</span>
@@ -2171,7 +2172,7 @@ pause`;
               ) {
                 document.activeElement.select();
               } else {
-                window.getSelection().selectAllChildren(document.body);
+                window.getSelection().selectAllChildren(document.getElementById('logContainer'));
               }
               break;
             case 'new-analysis':

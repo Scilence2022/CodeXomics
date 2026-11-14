@@ -743,22 +743,6 @@ class SequenceUtils {
 
     // Display sequence using traditional detailed sequence display
     this.displayDetailedSequence(chromosome, sequence, start, end);
-
-    // Re-highlight selected gene sequence if there is one
-    if (this.genomeBrowser.selectedGene && this.genomeBrowser.selectedGene.gene) {
-      // Use setTimeout to ensure the DOM is updated before highlighting
-      setTimeout(() => {
-        this.genomeBrowser.highlightGeneSequence(this.genomeBrowser.selectedGene.gene);
-      }, 100);
-    }
-
-    // Re-highlight manual text selection if there is one
-    if (this.genomeBrowser.currentSequenceSelection) {
-      // Use setTimeout to ensure the DOM is updated before highlighting
-      setTimeout(() => {
-        this.restoreManualSelection(this.genomeBrowser.currentSequenceSelection);
-      }, 100);
-    }
   }
 
   isCircularModeEnabled() {
@@ -1563,10 +1547,12 @@ class SequenceUtils {
 
     if (batchEnd < totalLines) {
       requestAnimationFrame(() => this.renderSequenceLinesBatch(view, totalLines, renderLine, batchEnd));
-    } else if (this.sequenceLayout?.sequenceView === view && this.sequenceLayout.pendingNavigation) {
-      const { position, mode } = this.sequenceLayout.pendingNavigation;
-      this.restoreActiveGeneSequenceHighlight();
-      this.scrollToPosition(position, mode);
+    } else {
+      this.restoreSequenceHighlight(view);
+      if (this.sequenceLayout?.sequenceView === view && this.sequenceLayout.pendingNavigation) {
+        const { position, mode } = this.sequenceLayout.pendingNavigation;
+        this.scrollToPosition(position, mode);
+      }
     }
   }
 
@@ -2412,7 +2398,6 @@ class SequenceUtils {
       const end = this.findSequenceLineAtOffset(offsets, scrollTop + visibleHeight * 2) + 1;
       if (start === renderedStart && end === renderedEnd) return;
 
-      const savedSelection = this.saveSelectionState();
       const rows = document.createDocumentFragment();
       for (let lineIndex = start; lineIndex < end; lineIndex++) {
         const row = renderLine(lineIndex);
@@ -2422,12 +2407,7 @@ class SequenceUtils {
       viewport.replaceChildren(rows);
       renderedStart = start;
       renderedEnd = end;
-      this.restoreActiveGeneSequenceHighlight();
-      if (savedSelection) {
-        this.restoreSelectionState(savedSelection);
-      } else if (this.genomeBrowser.currentSequenceSelection) {
-        this.restoreManualSelection(this.genomeBrowser.currentSequenceSelection);
-      }
+      this.restoreSequenceHighlight(viewport);
     };
 
     this.sequenceScrollHandler = () => {
@@ -2523,37 +2503,7 @@ class SequenceUtils {
     layout.updateVisibleRows?.();
   }
 
-  getBaseElementSourcePosition(baseElement) {
-    const sourceDataset = baseElement?.dataset?.position;
-    if (sourceDataset !== undefined) {
-      const sourcePosition = parseInt(sourceDataset, 10);
-      return Number.isNaN(sourcePosition) ? null : sourcePosition + 1;
-    }
-
-    const parentLine = baseElement?.closest?.('.sequence-line');
-    if (!parentLine) return null;
-
-    const positionElement = parentLine.querySelector('.sequence-position');
-    if (!positionElement) return null;
-
-    let lineStartPos;
-    const displayStartDataset = positionElement.dataset?.displayStart;
-    if (displayStartDataset !== undefined) {
-      lineStartPos = parseInt(displayStartDataset, 10) + 1;
-    } else {
-      lineStartPos = parseInt(positionElement.textContent.replace(/,/g, ''), 10);
-    }
-
-    if (Number.isNaN(lineStartPos)) return null;
-
-    const basesDiv = baseElement.closest('.sequence-bases');
-    if (!basesDiv) return null;
-
-    const baseIndex = Array.from(basesDiv.querySelectorAll('span')).indexOf(baseElement);
-    return baseIndex < 0 ? null : lineStartPos + baseIndex;
-  }
-
-  restoreActiveGeneSequenceHighlight() {
+  restoreActiveGeneSequenceHighlight(container = document.getElementById('sequenceContent') || document) {
     const geneSelection = this.genomeBrowser?.sequenceSelection;
     if (!geneSelection?.active || geneSelection.source !== 'gene') {
       return 0;
@@ -2568,10 +2518,13 @@ class SequenceUtils {
     const selection = { start: selectionStart, end: selectionEnd };
     let highlightedCount = 0;
 
-    const sequenceContainer = document.getElementById('sequenceContent') || document;
-    sequenceContainer.querySelectorAll('.sequence-bases span').forEach(baseElement => {
-      const sourcePosition = this.getBaseElementSourcePosition(baseElement);
-      const isSelected = sourcePosition !== null && this.positionWithinFeature(sourcePosition, selection);
+    if (!container || (geneSelection.chromosome && geneSelection.chromosome !== this.genomeBrowser.currentChromosome)) {
+      return 0;
+    }
+
+    container.querySelectorAll('.sequence-bases span[data-position]').forEach(baseElement => {
+      const sourcePosition = Number(baseElement.dataset.position) + 1;
+      const isSelected = this.positionWithinFeature(sourcePosition, selection);
       baseElement.classList.toggle('sequence-selected', isSelected);
       baseElement.classList.toggle('gene-sequence-selected', isSelected);
       if (isSelected) highlightedCount++;
@@ -2886,182 +2839,69 @@ class SequenceUtils {
   }
 
   copySequence(eventOrOptions = {}) {
-    console.log('🔖 [SequenceUtils] copySequence() called!');
-
-    const currentChr = document.getElementById('chromosomeSelect').value;
-    if (!currentChr || !this.genomeBrowser.currentSequence || !this.genomeBrowser.currentSequence[currentChr]) {
-      const errorMessage = 'No sequence to copy';
-      if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-        this.genomeBrowser.uiManager.updateStatus(errorMessage);
+    const chromosome = document.getElementById('chromosomeSelect')?.value;
+    const sequence = this.genomeBrowser.currentSequence?.[chromosome];
+    if (!chromosome || !sequence) {
+      if (this.genomeBrowser.uiManager) {
+        this.genomeBrowser.uiManager.updateStatus('No sequence to copy');
       } else {
         const statusElement = document.getElementById('statusText');
-        if (statusElement) {
-          statusElement.textContent = errorMessage;
-        }
+        if (statusElement) statusElement.textContent = 'No sequence to copy';
       }
       return;
     }
 
-    const sequence = this.genomeBrowser.currentSequence[currentChr];
     const copyOptions = this.getCopySequenceOptions(eventOrOptions);
-    let textToCopy;
-    let copyMessage;
-    let copySource;
-
-    // Priority 1: Check if there's a selected gene sequence
-    if (
-      this.genomeBrowser.sequenceSelection &&
-      this.genomeBrowser.sequenceSelection.active &&
-      this.genomeBrowser.sequenceSelection.source === 'gene'
-    ) {
-      const geneSeq = this.genomeBrowser.sequenceSelection;
-      textToCopy =
-        geneSeq.start > geneSeq.end
-          ? sequence.substring(geneSeq.start - 1) + sequence.substring(0, geneSeq.end)
-          : sequence.substring(geneSeq.start - 1, geneSeq.end);
-      textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
-      copyMessage = this.formatSequenceCopyMessage(
-        `${geneSeq.geneName} sequence`,
-        textToCopy.length,
-        'bp',
-        copyOptions
-      );
-      copySource = 'gene';
-    } else if (this.genomeBrowser.currentSequenceSelection) {
-      // Priority 2: Check if there's a manual sequence selection (drag selection)
-      const manualSelection = this.genomeBrowser.currentSequenceSelection;
-      console.log('Manual selection:', manualSelection);
-      const manualSegments = this.getManualSelectionSourceSegments(manualSelection);
-      if (!manualSegments.length) return;
-      textToCopy = manualSegments.map(segment => sequence.substring(segment.start, segment.end + 1)).join('');
-      textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
-      console.log('Extracted sequence:', textToCopy);
-      copyMessage = this.formatSequenceCopyMessage('selected sequence', textToCopy.length, 'bp', copyOptions);
-      copySource = 'manual';
-    } else {
-      // Priority 3: Check if there's a text selection
-      const selection = window.getSelection();
-      if (selection.toString().length > 0) {
-        // Use selected text
-        textToCopy = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
-        textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
-        copyMessage = this.formatSequenceCopyMessage('text selection', textToCopy.length, 'bases', copyOptions);
-        copySource = 'text';
-      } else {
-        // Priority 4: Use entire visible sequence
-        const copyModePrompt =
-          copyOptions.copyMode === 'reverse-complement'
-            ? 'Reverse-complement copy mode is active because Shift is pressed.'
-            : 'Forward copy mode is active.';
-        const userChoice = confirm(
-          `No sequence selected. ${copyModePrompt} Click OK to copy the entire visible sequence, or Cancel to select a specific region first.`
-        );
-        if (!userChoice) {
-          const errorMessage =
-            'Please click on a gene in the Gene Track or drag to select sequence, then click Copy again.';
-          if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-            this.genomeBrowser.uiManager.updateStatus(errorMessage);
-          } else {
-            const statusElement = document.getElementById('statusText');
-            if (statusElement) {
-              statusElement.textContent = errorMessage;
-            }
-          }
-          return;
-        }
-        textToCopy = sequence.substring(
-          this.genomeBrowser.currentPosition.start,
-          this.genomeBrowser.currentPosition.end
-        );
-        textToCopy = this.applySequenceCopyMode(textToCopy, copyOptions);
-        copyMessage = this.formatSequenceCopyMessage('visible sequence', textToCopy.length, 'bases', copyOptions);
-        copySource = 'visible';
-      }
-    }
-
-    // Create FASTA format for gene sequences and manual selections
-    let selectionInfo;
-    if (copySource === 'gene') {
-      const geneSeq = this.genomeBrowser.sequenceSelection;
-      selectionInfo = {
-        chromosome: currentChr,
-        start: geneSeq.start - 1,
-        end: geneSeq.end - 1,
+    const { sequenceSelection: gene, currentSequenceSelection: manual } = this.genomeBrowser;
+    if (gene?.active && gene.source === 'gene' && (!gene.chromosome || gene.chromosome === chromosome)) {
+      const selected =
+        gene.start > gene.end
+          ? sequence.substring(gene.start - 1) + sequence.substring(0, gene.end)
+          : sequence.substring(gene.start - 1, gene.end);
+      const text = this.applySequenceCopyMode(selected, copyOptions);
+      const selectionInfo = {
+        chromosome,
+        start: gene.start - 1,
+        end: gene.end - 1,
         coordinateSystem: 'zero-based-inclusive',
-        name: geneSeq.geneName,
+        name: gene.geneName,
       };
-    } else if (copySource === 'manual') {
-      const manualSelection = this.genomeBrowser.currentSequenceSelection;
-      selectionInfo = {
-        chromosome: currentChr,
-        start: manualSelection.start,
-        end: manualSelection.end,
-        coordinateSystem: manualSelection.coordinateSystem || 'one-based-inclusive',
-        segments: manualSelection.segments,
-        wrapsOrigin: manualSelection.wrapsOrigin,
-        name: null,
-      };
-    } else {
-      // For text and visible selections, just use navigator.clipboard directly
-      return navigator.clipboard
-        .writeText(textToCopy)
-        .then(() => {
-          // ... existing code ...
-          console.log('🔧 [SequenceUtils] Copy successful, updating status:', copyMessage);
-          console.log(
-            '🔧 [SequenceUtils] UIManager available:',
-            !!(this.genomeBrowser && this.genomeBrowser.uiManager)
-          );
-
-          if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-            this.genomeBrowser.uiManager.updateStatus(copyMessage, {
-              highlight: true,
-              color: '#10b981',
-              duration: 4000,
-            });
-          }
-          // ... existing code ...
-          if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
-            this.genomeBrowser.showNotification(copyMessage, 'success');
-          } else {
-            const statusElement = document.getElementById('statusText');
-            if (statusElement) {
-              console.log('📐 [SequenceUtils] Using fallback status update');
-              statusElement.textContent = copyMessage;
-              statusElement.style.color = '#10b981';
-              statusElement.style.fontWeight = 'bold';
-              statusElement.style.fontSize = '14px';
-              setTimeout(() => {
-                statusElement.style.color = '';
-                statusElement.style.fontWeight = '';
-                statusElement.style.fontSize = '';
-              }, 4000);
-            }
-          }
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-          const errorMessage = '❌ Failed to copy to clipboard';
-          if (this.genomeBrowser && this.genomeBrowser.uiManager) {
-            this.genomeBrowser.uiManager.updateStatus(errorMessage, {
-              highlight: true,
-              color: '#ef4444',
-              duration: 3000,
-            });
-          }
-          if (this.genomeBrowser && typeof this.genomeBrowser.showNotification === 'function') {
-            this.genomeBrowser.showNotification(errorMessage, 'error');
-          } else {
-            const statusElement = document.getElementById('statusText');
-            if (statusElement) {
-              statusElement.textContent = errorMessage;
-            }
-          }
-        });
+      const message = this.formatSequenceCopyMessage(`${gene.geneName} sequence`, text.length, 'bp', copyOptions);
+      return this.copyToSystemClipboard(text, selectionInfo, message);
     }
 
-    // Use copyToSystemClipboard for gene and manual selections
-    return this.copyToSystemClipboard(textToCopy, selectionInfo, copyMessage);
+    if (manual && manual.active !== false && (!manual.chromosome || manual.chromosome === chromosome)) {
+      const segments = this.getManualSelectionSourceSegments(manual);
+      if (!segments.length) return;
+      const selected = segments.map(segment => sequence.substring(segment.start, segment.end + 1)).join('');
+      const text = this.applySequenceCopyMode(selected, copyOptions);
+      const selectionInfo = { ...manual, chromosome, name: null };
+      const message = this.formatSequenceCopyMessage('selected sequence', text.length, 'bp', copyOptions);
+      return this.copyToSystemClipboard(text, selectionInfo, message);
+    }
+
+    const copyModePrompt = copyOptions.reverseComplement
+      ? 'Reverse-complement copy mode is active.'
+      : 'Forward copy mode is active.';
+    if (
+      !confirm(
+        `No sequence selected. ${copyModePrompt} Click OK to copy the entire visible sequence, or Cancel to select a specific region first.`
+      )
+    ) {
+      const message = 'Click a gene in the Gene Track or drag to select a sequence, then click Copy again.';
+      if (this.genomeBrowser.uiManager) {
+        this.genomeBrowser.uiManager.updateStatus(message);
+      } else {
+        const statusElement = document.getElementById('statusText');
+        if (statusElement) statusElement.textContent = message;
+      }
+      return;
+    }
+
+    const { start, end } = this.genomeBrowser.currentPosition;
+    const text = this.applySequenceCopyMode(this.getViewportSequence(sequence, start, end, chromosome), copyOptions);
+    const message = this.formatSequenceCopyMessage('visible sequence', text.length, 'bases', copyOptions);
+    return this.copyToSystemClipboard(text, null, message);
   }
 
   // Statistics and analysis
@@ -3737,351 +3577,30 @@ class SequenceUtils {
     }
   }
 
-  /**
-   * Save current text selection state for virtual scrolling
-   */
-  saveSelectionState() {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
-      return null;
-    }
-
-    const range = selection.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-
-    // Find the sequence container - handle both element and text nodes
-    let sequenceContainer;
-    if (container.nodeType === Node.ELEMENT_NODE) {
-      sequenceContainer = container.closest('.detailed-sequence-view');
+  restoreSequenceHighlight(container = document.getElementById('sequenceContent')) {
+    const manualSelection = this.genomeBrowser.currentSequenceSelection;
+    if (manualSelection && manualSelection.active !== false) {
+      this.restoreManualSelection(manualSelection, container);
     } else {
-      // If it's a text node, check its parent element
-      sequenceContainer = container.parentElement?.closest('.detailed-sequence-view');
-    }
-    if (!sequenceContainer) {
-      return null;
-    }
-
-    const startNode = range.startContainer;
-    const endNode = range.endContainer;
-
-    // Get genomic positions if possible
-    let startPos = null;
-    let endPos = null;
-
-    // Try to extract genomic position from sequence spans - improved method
-    startPos = this.extractGenomicPositionFromNode(startNode, range.startOffset);
-    endPos = this.extractGenomicPositionFromNode(endNode, range.endOffset);
-
-    // Fallback: try to find position from line context
-    if (startPos === null || endPos === null) {
-      const startLineElement =
-        startNode.nodeType === Node.TEXT_NODE
-          ? startNode.parentElement?.closest('.sequence-line-group')
-          : startNode.closest?.('.sequence-line-group');
-      const endLineElement =
-        endNode.nodeType === Node.TEXT_NODE
-          ? endNode.parentElement?.closest('.sequence-line-group')
-          : endNode.closest?.('.sequence-line-group');
-
-      if (startLineElement && startPos === null) {
-        startPos = this.extractPositionFromLineElement(startLineElement, startNode, range.startOffset);
-      }
-      if (endLineElement && endPos === null) {
-        endPos = this.extractPositionFromLineElement(endLineElement, endNode, range.endOffset);
-      }
-    }
-
-    return {
-      startPos,
-      endPos,
-      startOffset: range.startOffset,
-      endOffset: range.endOffset,
-      startContainer: startNode,
-      endContainer: endNode,
-      collapsed: range.collapsed,
-      timestamp: Date.now(),
-    };
-  }
-
-  /**
-   * Extract genomic position from a DOM node
-   */
-  extractGenomicPositionFromNode(node, offset) {
-    if (node.nodeType === Node.TEXT_NODE && node.parentElement) {
-      const span =
-        node.parentElement.closest('.sequence-bases span[data-position]') ||
-        node.parentElement.closest('.sequence-bases span');
-      if (span?.dataset?.position !== undefined) {
-        const position = parseInt(span.dataset.position, 10);
-        return Number.isNaN(position) ? null : position + offset;
-      }
-
-      if (span && span.onclick) {
-        const match = span.onclick.toString().match(/handleSequenceClick\(event,\s*(\d+)\)/);
-        if (match) {
-          return parseInt(match[1]) + offset;
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Extract position from line element context
-   */
-  extractPositionFromLineElement(lineElement, node, offset) {
-    // Find the position span within the line
-    const positionSpan = lineElement.querySelector('.sequence-position');
-    if (!positionSpan) return null;
-
-    let lineStartPos;
-    const lineStartDataset = positionSpan.dataset?.displayStart;
-    if (lineStartDataset !== undefined) {
-      lineStartPos = parseInt(lineStartDataset, 10);
-    } else {
-      // Extract the line start position from the position span
-      const positionText = positionSpan.textContent;
-      const lineStartMatch = positionText.match(/^(\d+)/);
-      if (!lineStartMatch) return null;
-
-      lineStartPos = parseInt(lineStartMatch[1], 10) - 1; // Convert to 0-based
-    }
-
-    if (Number.isNaN(lineStartPos)) return null;
-
-    // Calculate character offset within the line
-    const sequenceBases = lineElement.querySelector('.sequence-bases');
-    if (!sequenceBases) return null;
-
-    // Walk through text nodes to find offset
-    let charOffset = 0;
-    const walker = document.createTreeWalker(sequenceBases, NodeFilter.SHOW_TEXT, null, false);
-
-    let currentNode;
-    while ((currentNode = walker.nextNode())) {
-      if (currentNode === node) {
-        return this.displayToSourcePosition(lineStartPos + charOffset + offset, this.genomeBrowser.currentChromosome);
-      }
-      charOffset += currentNode.textContent.length;
-    }
-
-    return this.displayToSourcePosition(lineStartPos + charOffset, this.genomeBrowser.currentChromosome);
-  }
-
-  /**
-   * Find DOM node and offset for a given genomic position
-   */
-  findNodeAtGenomicPosition(genomicPosition, sequenceContainer) {
-    if (!sequenceContainer) return null;
-
-    const directSpan = sequenceContainer.querySelector(`.sequence-bases span[data-position="${genomicPosition}"]`);
-    const directTextNode = directSpan
-      ? document.createTreeWalker(directSpan, NodeFilter.SHOW_TEXT, null, false).nextNode()
-      : null;
-    if (directTextNode) {
-      return {
-        node: directTextNode,
-        offset: 0,
-      };
-    }
-
-    // Find all sequence lines
-    const sequenceLines = sequenceContainer.querySelectorAll('.sequence-line-group');
-
-    for (const lineElement of sequenceLines) {
-      // Get the position span to find the line start position
-      const positionSpan = lineElement.querySelector('.sequence-position');
-      if (!positionSpan) continue;
-
-      let lineStartPos;
-      const lineStartDataset = positionSpan.dataset?.displayStart;
-      if (lineStartDataset !== undefined) {
-        lineStartPos = parseInt(lineStartDataset, 10);
-      } else {
-        // Extract the line start position
-        const positionText = positionSpan.textContent;
-        const lineStartMatch = positionText.match(/^(\d+)/);
-        if (!lineStartMatch) continue;
-
-        lineStartPos = parseInt(lineStartMatch[1], 10) - 1; // Convert to 0-based
-      }
-
-      if (Number.isNaN(lineStartPos)) continue;
-
-      // Get the sequence bases container
-      const sequenceBases = lineElement.querySelector('.sequence-bases');
-      if (!sequenceBases) continue;
-
-      // Calculate the total length of this line
-      let lineLength = 0;
-      const walker = document.createTreeWalker(sequenceBases, NodeFilter.SHOW_TEXT, null, false);
-
-      let node;
-      while ((node = walker.nextNode())) {
-        lineLength += node.textContent.length;
-      }
-
-      const lineEndPos = lineStartPos + lineLength;
-
-      // Check if our genomic position falls within this line
-      if (genomicPosition >= lineStartPos && genomicPosition < lineEndPos) {
-        // Find the exact node and offset within this line
-        const targetOffset = genomicPosition - lineStartPos;
-        let currentOffset = 0;
-
-        // Walk through text nodes again to find the exact position
-        const nodeWalker = document.createTreeWalker(sequenceBases, NodeFilter.SHOW_TEXT, null, false);
-
-        let textNode;
-        while ((textNode = nodeWalker.nextNode())) {
-          const nodeLength = textNode.textContent.length;
-
-          if (currentOffset + nodeLength >= targetOffset) {
-            // Found the node containing our position
-            const offsetInNode = targetOffset - currentOffset;
-            return {
-              node: textNode,
-              offset: offsetInNode,
-            };
-          }
-
-          currentOffset += nodeLength;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Restore manual text selection visual highlighting after sequence re-render
-   */
-  restoreManualSelection(selectionInfo) {
-    if (!selectionInfo || selectionInfo.active === false) {
-      console.log('🔧 [SequenceUtils] No active manual selection to restore');
-      return;
-    }
-
-    console.log('🔧 [SequenceUtils] Restoring manual selection highlighting:', selectionInfo);
-
-    const sequenceContainer = document.getElementById('sequenceContent');
-    if (!sequenceContainer) {
-      console.warn('🔧 [SequenceUtils] Sequence container not found for manual selection restore');
-      return;
-    }
-
-    const sourceSegments = this.getManualSelectionSourceSegments(selectionInfo);
-    if (!sourceSegments.length) return;
-
-    if (sourceSegments.length > 1) {
-      sequenceContainer.querySelectorAll('.sequence-bases span[data-position]').forEach(baseElement => {
-        const sourcePosition = parseInt(baseElement.dataset.position, 10);
-        if (
-          !Number.isNaN(sourcePosition) &&
-          sourceSegments.some(segment => sourcePosition >= segment.start && sourcePosition <= segment.end)
-        ) {
-          baseElement.classList.add('sequence-selected', 'gene-sequence-selected');
-        }
-      });
-      return;
-    }
-
-    // Find the DOM nodes for the selection range
-    const sourceRange = sourceSegments[0];
-    const startResult = this.findNodeAtGenomicPosition(sourceRange.start, sequenceContainer);
-    const endResult = this.findNodeAtGenomicPosition(sourceRange.end, sequenceContainer);
-
-    if (!startResult || !endResult) {
-      console.warn('🔧 [SequenceUtils] Could not find DOM nodes for manual selection restore:', {
-        startPos: sourceRange.start,
-        endPos: sourceRange.end,
-        startResult: !!startResult,
-        endResult: !!endResult,
-      });
-      return;
-    }
-
-    // Create and apply the selection
-    const selection = window.getSelection();
-    const range = document.createRange();
-
-    try {
-      // Set range with calculated positions
-      range.setStart(startResult.node, startResult.offset);
-      range.setEnd(endResult.node, Math.min(endResult.node.textContent.length, endResult.offset + 1));
-
-      // Apply selection
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      console.log('✅ [SequenceUtils] Manual selection highlighting restored successfully');
-    } catch (error) {
-      console.warn('🔧 [SequenceUtils] Error restoring manual selection highlighting:', error);
+      this.restoreActiveGeneSequenceHighlight(container);
     }
   }
 
   /**
-   * Restore text selection state after virtual scrolling
+   * Restore visible bases from the saved interval, including when only part
+   * of the selection is currently rendered by the virtual scroller.
    */
-  restoreSelectionState(savedSelection) {
-    if (!savedSelection || savedSelection.startPos === null || savedSelection.endPos === null) {
-      console.log('🔧 [SequenceUtils] No valid selection to restore');
-      return;
-    }
+  restoreManualSelection(selectionInfo, container = document.getElementById('sequenceContent')) {
+    if (!container || !selectionInfo || selectionInfo.active === false) return;
+    if (selectionInfo.chromosome && selectionInfo.chromosome !== this.genomeBrowser.currentChromosome) return;
 
-    // Find the sequence container
-    const sequenceContainer = document.querySelector('.detailed-sequence-view');
-    if (!sequenceContainer) {
-      console.warn('🔧 [SequenceUtils] Sequence container not found');
-      return;
-    }
-
-    // Use improved position finding
-    const startResult = this.findNodeAtGenomicPosition(savedSelection.startPos, sequenceContainer);
-    const endResult = this.findNodeAtGenomicPosition(savedSelection.endPos, sequenceContainer);
-
-    if (!startResult || !endResult) {
-      console.warn('🔧 [SequenceUtils] Could not find nodes for positions:', {
-        startPos: savedSelection.startPos,
-        endPos: savedSelection.endPos,
-        startResult: !!startResult,
-        endResult: !!endResult,
-      });
-      return;
-    }
-
-    // Create new selection
-    const selection = window.getSelection();
-    const range = document.createRange();
-
-    try {
-      // Set range with calculated offsets
-      range.setStart(startResult.node, startResult.offset);
-      range.setEnd(endResult.node, endResult.offset);
-
-      // Apply selection
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      // Update genome browser selection state if it exists
-      if (window.genomeBrowser && window.genomeBrowser.currentSequenceSelection) {
-        const inclusiveEndPos = Math.max(savedSelection.startPos, savedSelection.endPos - 1);
-        window.genomeBrowser.currentSequenceSelection = {
-          chromosome: window.genomeBrowser.currentChromosome,
-          start: savedSelection.startPos + 1,
-          end: inclusiveEndPos + 1,
-          active: true,
-          length: inclusiveEndPos - savedSelection.startPos + 1,
-          coordinateSystem: 'one-based-inclusive',
-        };
-      }
-
-      console.log(
-        `🔧 [SequenceUtils] Selection restored: ${savedSelection.startPos}-${savedSelection.endPos} (${savedSelection.endPos - savedSelection.startPos + 1} bp)`
-      );
-    } catch (error) {
-      console.warn('🔧 [SequenceUtils] Failed to restore selection:', error);
-    }
+    const segments = this.getManualSelectionSourceSegments(selectionInfo);
+    container.querySelectorAll('.sequence-bases span[data-position]').forEach(base => {
+      const position = Number(base.dataset.position);
+      const selected = segments.some(({ start, end }) => position >= start && position <= end);
+      base.classList.toggle('sequence-selected', selected);
+      base.classList.toggle('gene-sequence-selected', selected);
+    });
   }
 
   /**

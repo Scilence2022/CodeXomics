@@ -684,9 +684,10 @@
         background: #484f58;
       }
     </style>
+    <link rel="stylesheet" href="renderer/css/text-selection.css" />
   </head>
   <body>
-    <div class="header">
+    <div class="header app-header">
       <h1><span class="header-icon">🛰️</span> MCP Server Manager</h1>
       <span id="status-badge" class="status-badge stopped">Stopped</span>
     </div>
@@ -812,7 +813,7 @@
           Server Logs
           <button id="clear-logs-btn" class="clear-logs-btn">Clear Logs</button>
         </h2>
-        <div id="log-container" class="log-container">
+        <div id="log-container" class="log-container" data-selectable-text tabindex="0" role="region" aria-label="MCP server logs">
           <div class="empty-state">
             <div class="empty-state-icon">📝</div>
             <p>No logs yet</p>
@@ -1292,11 +1293,7 @@
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
               active.select();
             } else {
-              const range = document.createRange();
-              range.selectNodeContents(document.body);
-              const sel = window.getSelection();
-              sel.removeAllRanges();
-              sel.addRange(range);
+              window.getSelection().selectAllChildren(document.getElementById('log-container'));
             }
             break;
           }
