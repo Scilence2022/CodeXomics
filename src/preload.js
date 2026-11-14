@@ -389,6 +389,10 @@ ipcRenderer.on('project-manager-action', (event, request) => {
 });
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  getCircosGenome: () => ipcRenderer.invoke('get-circos-genome-data'),
+  getCircosTracks: request => ipcRenderer.invoke('get-circos-tracks', request),
+  navigateFromCircos: target => ipcRenderer.invoke('circos-navigate', target),
+  onCircosMenuAction: callback => ipcRenderer.on('circos-menu-action', (_event, action) => callback(action)),
   projectManagerAction: options => ipcRenderer.invoke('project-manager-action', options),
   onProjectManagerAction: callback => {
     projectManagerActionHandler = callback;
