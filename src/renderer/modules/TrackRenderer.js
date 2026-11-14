@@ -7781,7 +7781,8 @@ class TrackRenderer {
 
     const genesSettings = this.getTrackSettings('genes');
     if (options.scrollBottomSequence !== false && genesSettings.autoScrollBottomSequenceOnGeneSelect !== false) {
-      this.genomeBrowser.scrollBottomSequenceToGene?.(localDisplay || gene);
+      const mode = genesSettings.bottomSequenceScrollMode === 'smooth-nearby' ? 'smooth-nearby' : 'instant';
+      this.genomeBrowser.scrollBottomSequenceToGene?.(localDisplay || gene, mode);
     }
   }
 
@@ -11628,6 +11629,8 @@ This action cannot be undone.`;
    * Create genes track settings content
    */
   createGenesSettingsContent(settings) {
+    const autoNavigate = settings.autoScrollBottomSequenceOnGeneSelect !== false;
+    const smoothNearby = settings.bottomSequenceScrollMode === 'smooth-nearby';
     return `
             <div class="genes-settings-tabs">
                 <div class="llm-provider-tabs">
@@ -11722,11 +11725,13 @@ This action cannot be undone.`;
                                 <div class="help-text">When enabled, automatically highlights the corresponding sequence region in the reference sequence when a gene is selected.</div>
                             </div>
                             <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="genesAutoScrollBottomSequence" ${settings.autoScrollBottomSequenceOnGeneSelect !== false ? 'checked' : ''}>
-                                    Auto-scroll Bottom Sequence Track to selected gene
-                                </label>
-                                <div class="help-text">When enabled, clicking a gene in this track scrolls the Bottom Sequence Track to the selected gene position.</div>
+                                <label for="genesBottomSequenceNavigation">Bottom Sequence Track navigation</label>
+                                <select id="genesBottomSequenceNavigation" class="form-select">
+                                    <option value="instant" ${autoNavigate && !smoothNearby ? 'selected' : ''}>Jump directly (Default)</option>
+                                    <option value="smooth-nearby" ${autoNavigate && smoothNearby ? 'selected' : ''}>Smooth scroll for nearby genes</option>
+                                    <option value="off" ${!autoNavigate ? 'selected' : ''}>Off</option>
+                                </select>
+                                <div class="help-text">Smooth scrolling covers up to one screen of travel. Farther targets jump directly.</div>
                             </div>
                         </div>
                     </div>
@@ -12652,7 +12657,8 @@ This action cannot be undone.`;
         layoutMode: 'packed', // 'packed' | 'singleRow' | 'groupByType'
         highlightEffect: 'pulse', // 'pulse', 'border', 'both'
         autoHighlightSequence: true, // Auto-highlight sequence region when gene is selected
-        autoScrollBottomSequenceOnGeneSelect: true, // Scroll Bottom Sequence Track to selected gene
+        autoScrollBottomSequenceOnGeneSelect: true,
+        bottomSequenceScrollMode: 'instant',
         showSequence: false, // Show reference sequence
         sequenceHeight: 25, // Height of reference sequence display
         renderingMode: 'svg', // 'svg' or 'canvas'
@@ -12915,7 +12921,7 @@ This action cannot be undone.`;
         const sequenceHeightElement = modal.querySelector('#genesSequenceHeight');
         const highlightEffectElement = modal.querySelector('#genesHighlightEffect');
         const autoHighlightSequenceElement = modal.querySelector('#genesAutoHighlightSequence');
-        const autoScrollBottomSequenceElement = modal.querySelector('#genesAutoScrollBottomSequence');
+        const sequenceNavigationElement = modal.querySelector('#genesBottomSequenceNavigation');
 
         console.log('Form elements found:', {
           renderingModeElement: !!renderingModeElement,
@@ -12946,7 +12952,9 @@ This action cannot be undone.`;
         settings.sequenceHeight = parseInt(sequenceHeightElement?.value) || 25;
         settings.highlightEffect = highlightEffectElement?.value || 'pulse';
         settings.autoHighlightSequence = autoHighlightSequenceElement?.checked !== false;
-        settings.autoScrollBottomSequenceOnGeneSelect = autoScrollBottomSequenceElement?.checked !== false;
+        settings.autoScrollBottomSequenceOnGeneSelect = sequenceNavigationElement?.value !== 'off';
+        settings.bottomSequenceScrollMode =
+          sequenceNavigationElement?.value === 'smooth-nearby' ? 'smooth-nearby' : 'instant';
 
         const maxBorderWidthElement = modal.querySelector('#genesMaxBorderWidth');
         settings.maxBorderWidth = parseFloat(maxBorderWidthElement?.value) || 1;
@@ -15192,15 +15200,6 @@ This action cannot be undone.`;
       autoHighlightSequenceCheckbox.addEventListener('change', e => {
         console.log(
           `🔧 [setupGenesSettingsEventListeners] Auto-highlight sequence changed to: ${e.target.checked} (will apply on Apply button)`
-        );
-      });
-    }
-
-    const autoScrollBottomSequenceCheckbox = bodyElement.querySelector('#genesAutoScrollBottomSequence');
-    if (autoScrollBottomSequenceCheckbox) {
-      autoScrollBottomSequenceCheckbox.addEventListener('change', e => {
-        console.log(
-          `🔧 [setupGenesSettingsEventListeners] Auto-scroll Bottom Sequence Track changed to: ${e.target.checked} (will apply on Apply button)`
         );
       });
     }

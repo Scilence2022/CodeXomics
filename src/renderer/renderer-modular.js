@@ -5802,23 +5802,16 @@ class GenomeBrowser {
     }
   }
 
-  scrollBottomSequenceToGene(gene) {
-    if (!gene || !this.navigationManager?.scrollToMatchPosition) return;
+  scrollBottomSequenceToGene(gene, mode = 'instant') {
+    if (!gene || !this.sequenceUtils || !this.currentPosition) return;
 
-    const currentStart = this.currentPosition?.start ?? 0;
-    const currentEnd = this.currentPosition?.end ?? 0;
-    const geneStartZeroBased = Math.max(0, (parseInt(gene.start, 10) || 1) - 1);
-
-    if (geneStartZeroBased < currentStart || geneStartZeroBased >= currentEnd) {
-      console.log('Gene is outside current view, skipping bottom sequence scroll');
-      return;
-    }
-
-    this.navigationManager.scrollToMatchPosition({
-      position: geneStartZeroBased,
-      end: Math.max(geneStartZeroBased, (parseInt(gene.end, 10) || gene.start) - 1),
-      type: 'gene',
+    const start = Number(gene._sourceStart ?? gene.start) - 1;
+    const end = Number(gene._sourceEnd ?? gene.end);
+    const [segment] = this.trackRenderer.getFeatureRangeDisplaySegments(start, end, this.currentPosition, {
+      includeZeroLength: false,
+      chromosome: this.currentChromosome,
     });
+    if (segment) this.sequenceUtils.scrollToPosition(Math.max(segment.start, this.currentPosition.start), mode);
   }
 
   /**
@@ -8081,21 +8074,23 @@ class GenomeBrowser {
   }
 
   highlightGeneSequence(gene) {
-    // Only highlight if the gene is within the current view
-    const currentStart = this.currentPosition.start;
-    const currentEnd = this.currentPosition.end;
-
-    if (gene.end < currentStart || gene.start > currentEnd) {
+    const currentChr = document.getElementById('chromosomeSelect').value;
+    const start = Number(gene._sourceStart ?? gene.start);
+    const end = Number(gene._sourceEnd ?? gene.end);
+    const visibleSegments = this.trackRenderer.getFeatureRangeDisplaySegments(start - 1, end, this.currentPosition, {
+      includeZeroLength: false,
+      chromosome: currentChr,
+    });
+    if (!visibleSegments.length) {
       this.clearSequenceSelection();
       console.log('Gene is outside current view, skipping sequence highlight');
       return;
     }
 
     // Set the sequence selection to the gene region
-    const currentChr = document.getElementById('chromosomeSelect').value;
     this.sequenceSelection = {
-      start: gene.start,
-      end: gene.end,
+      start,
+      end,
       active: true,
       chromosome: currentChr,
       strand: gene.strand,
@@ -8136,7 +8131,9 @@ class GenomeBrowser {
         }
 
         // Update the old and new visual ranges in the same pass.
-        const isSelected = absolutePos !== null && absolutePos >= gene.start && absolutePos <= gene.end;
+        const isSelected =
+          absolutePos !== null &&
+          (start <= end ? absolutePos >= start && absolutePos <= end : absolutePos >= start || absolutePos <= end);
         baseElement.classList.toggle('sequence-selected', isSelected);
         baseElement.classList.toggle('gene-sequence-selected', isSelected);
       });
@@ -8146,9 +8143,9 @@ class GenomeBrowser {
     this.updateCopyButtonState();
 
     // Update status bar with gene selection information
-    const selectionLength = gene.end - gene.start + 1;
+    const selectionLength = start <= end ? end - start + 1 : this.currentSequence[currentChr].length - start + end + 1;
     const geneName = this.sequenceSelection.geneName;
-    const statusMessage = `🔵 Gene Selection: ${geneName} (${gene.start.toLocaleString()}-${gene.end.toLocaleString()}, ${selectionLength.toLocaleString()} bp)`;
+    const statusMessage = `🔵 Gene Selection: ${geneName} (${start.toLocaleString()}-${end.toLocaleString()}, ${selectionLength.toLocaleString()} bp)`;
 
     if (this.uiManager) {
       this.uiManager.updateStatus(statusMessage);
@@ -8168,7 +8165,7 @@ class GenomeBrowser {
       }
     }
 
-    console.log(`Selected gene sequence for ${this.sequenceSelection.geneName} (${gene.start}-${gene.end})`);
+    console.log(`Selected gene sequence for ${geneName} (${start}-${end})`);
   }
 
   updateCopyButtonState() {

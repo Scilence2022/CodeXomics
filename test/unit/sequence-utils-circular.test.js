@@ -297,7 +297,7 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(showGeneDetails).toHaveBeenCalledWith(gene, operonInfo, { scrollBottomSequence: false });
   });
 
-  it('scrolls to the indexed row offset when a gene is outside the rendered buffer', () => {
+  it('uses indexed row offsets and animates only nearby gene targets', () => {
     document.body.innerHTML = `
       <div id="sequenceContent">
         <div class="detailed-sequence-view virtualized" style="padding-top: 15px"></div>
@@ -306,7 +306,10 @@ describe('SequenceUtils circular bottom sequence track', () => {
 
     const container = document.getElementById('sequenceContent');
     const sequenceView = container.firstElementChild;
-    Object.defineProperty(container, 'clientHeight', { value: 40 });
+    Object.defineProperties(container, {
+      clientHeight: { value: 40 },
+      scrollHeight: { value: 176 },
+    });
     container.scrollTo = vi.fn();
     const features = [
       { cds: [{}, {}], primers: [] },
@@ -318,14 +321,85 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(utils.findSequenceLineAtOffset(offsets, 71)).toBe(0);
     expect(utils.findSequenceLineAtOffset(offsets, 72)).toBe(1);
     expect(utils.findSequenceLineAtOffset(offsets, 160)).toBe(2);
-    utils.sequenceLayout = { container, sequenceView, viewStart: 1000, basesPerLine: 50, offsets };
+    const updateVisibleRows = vi.fn();
+    utils.sequenceLayout = { container, sequenceView, viewStart: 1000, basesPerLine: 50, offsets, updateVisibleRows };
 
     const navigationManager = Object.create(NavigationManager.prototype);
     navigationManager.genomeBrowser = { sequenceUtils: utils };
 
-    navigationManager.scrollToMatchPosition({ position: 1110, end: 1120, type: 'gene' });
+    navigationManager.scrollToMatchPosition({ position: 1110, end: 1120 });
 
     expect(container.scrollTo).toHaveBeenCalledWith({ top: 144, behavior: 'smooth' });
+
+    utils.scrollToPosition(1110, 'instant');
+    expect(container.scrollTo).toHaveBeenLastCalledWith({ top: 144, behavior: 'instant' });
+    expect(updateVisibleRows).toHaveBeenCalledTimes(1);
+    utils.scrollToPosition(1110, 'smooth-nearby');
+    expect(container.scrollTo).toHaveBeenLastCalledWith({ top: 144, behavior: 'instant' });
+
+    container.scrollTop = 116;
+    utils.scrollToPosition(1110, 'smooth-nearby');
+    expect(container.scrollTo).toHaveBeenLastCalledWith({ top: 136, behavior: 'smooth' });
+
+    document.body.classList.add('no-animations');
+    try {
+      utils.scrollToPosition(1110, 'smooth-nearby');
+      expect(container.scrollTo).toHaveBeenLastCalledWith({ top: 144, behavior: 'instant' });
+    } finally {
+      document.body.classList.remove('no-animations');
+    }
+
+    container.scrollTop = 136;
+    utils.scrollToPosition(1110, 'instant');
+    expect(container.scrollTo).toHaveBeenLastCalledWith({ top: 136, behavior: 'instant' });
+  });
+
+  it('highlights and copies both sides of a gene that crosses the circular origin', async () => {
+    const sequence = utils.getViewportSequence(utils.genomeBrowser.currentSequence.chr1, 95, 105, 'chr1');
+    const line = utils.renderSequenceLine(sequence, 95, 'chr1', [], [], 10, {}, new Map());
+    document.getElementById('sequenceContent').appendChild(line);
+    utils.genomeBrowser.sequenceSelection = {
+      start: 98,
+      end: 2,
+      active: true,
+      source: 'gene',
+      geneName: 'wrapped',
+    };
+
+    expect(utils.restoreActiveGeneSequenceHighlight()).toBe(5);
+    expect([...line.querySelectorAll('.gene-sequence-selected')].map(base => Number(base.dataset.position))).toEqual([
+      97, 98, 99, 0, 1,
+    ]);
+    await utils.copySequence();
+    expect(clipboardWriteTextSpy).toHaveBeenCalledWith('TTTAA');
+  });
+
+  it('uses the latest gene target after pending sequence rows are mounted', () => {
+    const container = document.getElementById('sequenceContent');
+    const sequenceView = container.appendChild(document.createElement('div'));
+    Object.defineProperty(container, 'clientHeight', { value: 40 });
+    container.scrollTo = vi.fn();
+    const offsets = Float64Array.from({ length: 13 }, (_, index) => index * 30);
+    utils.sequenceLayout = { container, sequenceView, viewStart: 0, basesPerLine: 50, offsets };
+    const renderLine = index => {
+      const row = document.createElement('div');
+      Object.defineProperty(row, 'offsetTop', { value: offsets[index] });
+      return row;
+    };
+    const frame = vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
+    try {
+      utils.renderSequenceLinesBatch(sequenceView, 12, renderLine);
+      utils.scrollToPosition(500, 'instant');
+      utils.scrollToPosition(550, 'instant');
+      expect(container.scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: 'instant' });
+
+      frame.mock.calls[0][0]();
+
+      expect(container.scrollTo).toHaveBeenLastCalledWith({ top: 330, behavior: 'instant' });
+      expect(utils.sequenceLayout.pendingNavigation).toBeNull();
+    } finally {
+      frame.mockRestore();
+    }
   });
 
   it('copies the reverse-complement gene sequence when Shift is pressed', async () => {
