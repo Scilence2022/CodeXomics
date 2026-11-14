@@ -397,6 +397,7 @@ class LLMConfigManager {
     if (mainProviderSelect) {
       mainProviderSelect.addEventListener('change', () => {
         this.updateModelTypeOptions('main');
+        this.toggleCustomModelInput('main');
       });
     }
 
@@ -533,13 +534,13 @@ class LLMConfigManager {
           if (mainCustomModelInput) {
             mainCustomModelInput.value = this.modelTypes.main.model;
           }
-          this.toggleCustomModelInput('main');
         } else {
           mainModelSelect.value = this.modelTypes.main.model;
         }
       } else {
         mainModelSelect.value = 'auto';
       }
+      this.toggleCustomModelInput('main');
     }
   }
 
@@ -786,9 +787,6 @@ class LLMConfigManager {
 
     document.getElementById('llmConfigModal').classList.add('show');
 
-    // Ensure no element has initial focus to prevent blue scrollbar
-    document.activeElement.blur();
-
     // Keep the visible tab's model list current (runs in the background)
     const activeTab = document.querySelector('#llmConfigModal .tab-button.active');
     this.autoRefreshModelsForTab(activeTab ? activeTab.dataset.provider : null);
@@ -813,23 +811,12 @@ class LLMConfigManager {
     // Update tab buttons - ONLY in LLM config modal
     document.querySelectorAll('#llmConfigModal .tab-button').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.provider === provider);
-      // Remove focus from all buttons to prevent blue outline
-      btn.blur();
     });
 
     // Update provider config panels
-    document.querySelectorAll('.provider-config').forEach(panel => {
+    document.querySelectorAll('#llmConfigModal .provider-config').forEach(panel => {
       panel.classList.toggle('active', panel.id === `${provider}-config`);
-      // Ensure no element in the panel has focus
-      if (panel.id === `${provider}-config`) {
-        panel.focus();
-      }
     });
-
-    // The Default Model tab mirrors the current main selection on reveal.
-    if (provider === 'models') {
-      this.loadModelTypeSelectionToUI();
-    }
 
     // Refresh the newly revealed tab's model list when it has gone stale
     this.autoRefreshModelsForTab(provider);
@@ -2033,7 +2020,16 @@ class LLMConfigManager {
 
     // Rebuild the Default Model dropdown if any list actually changed
     if (results.some(result => result && result.success)) {
-      this.loadModelTypeSelectionToUI();
+      const select = document.getElementById('mainModel');
+      if (select) {
+        const draft = select.selectedOptions[0]?.cloneNode(true);
+        this.updateModelTypeOptions('main');
+        if (draft) {
+          if (![...select.options].some(option => option.value === draft.value)) select.appendChild(draft);
+          select.value = draft.value;
+        }
+        this.toggleCustomModelInput('main');
+      }
     }
     return results;
   }
@@ -4585,12 +4581,15 @@ Current context summary:
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
+    notification.setAttribute('role', type === 'error' ? 'alert' : 'status');
     notification.innerHTML = `
             <div class="notification-content">
                 <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                <span>${message}</span>
+                <span></span>
             </div>
         `;
+
+    notification.querySelector('span').textContent = message;
 
     // Add to page
     document.body.appendChild(notification);

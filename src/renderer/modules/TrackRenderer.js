@@ -11456,9 +11456,6 @@ This action cannot be undone.`;
                 <div class="modal-header">
                     <h3 id="trackSettingsTitle"><i class="fas fa-cog"></i> Track Settings</h3>
                     <div class="modal-controls">
-                        <button class="reset-defaults-btn" title="Reset to Defaults">
-                            <i class="fas fa-undo"></i>
-                        </button>
                         <button class="modal-close" id="closeTrackSettingsModal">&times;</button>
                     </div>
                 </div>
@@ -11466,6 +11463,9 @@ This action cannot be undone.`;
                     <!-- Settings will be loaded here -->
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary reset-defaults-btn settings-center-actions-end">
+                        <i class="fas fa-undo"></i> Reset to Defaults
+                    </button>
                     <button class="btn btn-secondary modal-close">Cancel</button>
                     <button class="btn btn-primary" id="applyTrackSettings">Apply</button>
                 </div>
