@@ -268,12 +268,10 @@ function openFileInNewMainWindow(filePath) {
   const newWindow = createWindow();
 
   const sendFileToNewWindow = () => {
-    setTimeout(() => {
-      if (newWindow && !newWindow.isDestroyed()) {
-        newWindow.webContents.send('file-opened', filePath);
-        newWindow.focus();
-      }
-    }, 500);
+    if (newWindow && !newWindow.isDestroyed()) {
+      newWindow.webContents.send('file-opened', filePath);
+      newWindow.focus();
+    }
   };
 
   if (newWindow.webContents.isLoading()) {

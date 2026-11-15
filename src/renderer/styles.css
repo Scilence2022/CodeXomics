@@ -1,15 +1,3 @@
-/* Renderer legacy CSS entry point.
- * Keep these imports ordered; they preserve the original cascade from the former monolithic styles.css.
- */
-@import url('./css/legacy/01-main-interface.css');
-@import url('./css/legacy/02-primer-gene-details.css');
-@import url('./css/legacy/03-gene-annotation-actions.css');
-@import url('./css/legacy/04-chatbox.css');
-@import url('./css/legacy/05-chatbox-settings.css');
-@import url('./css/legacy/06-blast-and-sequence-modals.css');
-@import url('./css/legacy/07-action-history-and-track-settings.css');
-@import url('./css/legacy/08-mcp-tools.css');
-
 /* VS Code-style splitters: keep a comfortable hit target, but render as a thin line. */
 :root {
   --splitter-hit-size: 6px;

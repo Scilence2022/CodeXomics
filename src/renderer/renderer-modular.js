@@ -3309,8 +3309,9 @@ class GenomeBrowser {
     });
 
     // Handle file opened from main process
-    ipcRenderer.on('file-opened', (event, filePath) => {
-      this.fileManager.loadFile(filePath);
+    ipcRenderer.on('file-opened', async (event, filePath) => {
+      await this.configManager.waitForInit();
+      await this.fileManager.loadFile(filePath);
     });
 
     // Handle menu actions
