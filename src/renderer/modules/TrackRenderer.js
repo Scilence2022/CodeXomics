@@ -3559,12 +3559,7 @@ class TrackRenderer {
       trackContent.style.height = `${settingsHeight}px`;
     }
 
-    // Get subsequence for current viewport
-    const subsequence = this.getWrappedSequence(sequence, viewport.start, viewport.end, chromosome);
-
-    // Create enhanced GC content and skew visualization
-    const gcDisplay = this.createEnhancedGCVisualization(subsequence, viewport.start, viewport.end);
-    trackContent.appendChild(gcDisplay);
+    trackContent.appendChild(this.createGCVisualizationForViewport(chromosome, sequence, viewport));
 
     // Restore header state if it was previously hidden
     this.restoreHeaderState(track, 'gc');
@@ -7087,7 +7082,48 @@ class TrackRenderer {
     });
   }
 
-  createEnhancedGCVisualization(sequence, viewStart, viewEnd) {
+  createGCVisualizationForViewport(chromosome, sequence, viewport) {
+    const { start, end } = viewport;
+    const subsequence = this.getWrappedSequence(sequence, start, end, chromosome);
+    if (this.gcCompositionCache && this.gcCompositionCache.sequence !== sequence) {
+      this.gcCompositionCache = null;
+    }
+
+    // For short views, scanning the visible bases is already cheap.
+    let countWindow;
+    if (subsequence.length >= 256 * 1024 && Number.isSafeInteger(start) && Number.isSafeInteger(end)) {
+      const segments = this.isCircularModeEnabled()
+        ? this.getViewportSegments(viewport, chromosome)
+        : [{ sourceStart: Math.max(0, start), sourceEnd: Math.min(sequence.length, end) }];
+
+      // The cache uses chromosome coordinates, while GC windows use offsets
+      // into the displayed sequence. A window can span multiple source segments.
+      let offset = 0;
+      const ranges = segments.map(({ sourceStart, sourceEnd }) => {
+        const range = { sourceStart, start: offset, end: offset + sourceEnd - sourceStart };
+        offset = range.end;
+        return range;
+      });
+      if (offset === subsequence.length) {
+        const cache = (this.gcCompositionCache ??= new GCCompositionCache(sequence));
+        const counts = new Uint32Array(6);
+        countWindow = (start, end) => {
+          counts.fill(0);
+          for (const range of ranges) {
+            const from = Math.max(start, range.start);
+            const to = Math.min(end, range.end);
+            if (from >= to) continue;
+            const sourceOffset = range.sourceStart - range.start;
+            if (!cache.addCounts(from + sourceOffset, to + sourceOffset, counts)) return null;
+          }
+          return this.summarizeGCWindow(counts[0], counts[1], counts[2], counts[3], counts[4]);
+        };
+      }
+    }
+    return this.createEnhancedGCVisualization(subsequence, start, end, countWindow);
+  }
+
+  createEnhancedGCVisualization(sequence, viewStart, viewEnd, countWindow) {
     const container = document.createElement('div');
     container.className = 'gc-content-skew-display';
 
@@ -7154,7 +7190,7 @@ class TrackRenderer {
     );
 
     // Calculate GC content and skew data with dynamic parameters
-    const analysisData = this.calculateDynamicGCData(sequence, windowSize, stepSize, currentRange);
+    const analysisData = this.calculateDynamicGCData(sequence, windowSize, stepSize, currentRange, countWindow);
 
     if (!analysisData || analysisData.positions.length === 0) {
       // No data to display
@@ -7245,7 +7281,7 @@ class TrackRenderer {
    * rather than against the sequence length, so a view that runs past the end of
    * a linear sequence keeps its data where the other tracks put it.
    */
-  calculateDynamicGCData(sequence, windowSize, stepSize, domainLength = 0) {
+  calculateDynamicGCData(sequence, windowSize, stepSize, domainLength = 0, countWindow) {
     const gcData = [];
     const skewData = [];
     const positions = [];
@@ -7266,7 +7302,7 @@ class TrackRenderer {
     // The plotted windows overlap heavily. For ASCII sequence, update the
     // composition using only the bases that enter or leave each window.
     const bases =
-      Number.isInteger(windowSize) && Number.isInteger(stepSize) && !/[^\p{ASCII}]/u.test(sequence)
+      !countWindow && Number.isInteger(windowSize) && Number.isInteger(stepSize) && !/[^\p{ASCII}]/u.test(sequence)
         ? sequence.toUpperCase()
         : null;
     const counts = new Uint32Array(128);
@@ -7278,7 +7314,9 @@ class TrackRenderer {
     let previousSkipped = true;
     for (const i of windowStarts) {
       let analysis;
-      if (bases !== null) {
+      if (countWindow) {
+        analysis = countWindow(i, i + windowSize) ?? this.analyzeGCWindow(sequence.substring(i, i + windowSize));
+      } else if (bases !== null) {
         if (i >= windowEnd) {
           counts.fill(0);
           windowEnd = i;
@@ -16001,6 +16039,66 @@ TrackRenderer.PRIMER_TRACK_STYLE = {
   mismatchColor: '#dc2626',
   labelColor: '#334155',
 };
+
+/**
+ * Reuse composition counts for complete blocks across overlapping windows and
+ * nearby viewports. Partial blocks are read directly to keep window edges exact.
+ * Only the most recently plotted chromosome sequence is retained by TrackRenderer.
+ */
+class GCCompositionCache {
+  static BLOCK_SIZE = 1024;
+  // Five base counts, one slot for other ASCII characters, and a scan status.
+  // Status is 0 before scanning, 1 for ASCII, and 2 for non-ASCII.
+  static BLOCK_STRIDE = 7;
+
+  static BASE_INDEX = (() => {
+    const index = new Uint8Array(128).fill(5);
+    for (const [position, base] of [...'GCATN'].entries()) {
+      index[base.charCodeAt(0)] = position;
+      index[base.toLowerCase().charCodeAt(0)] = position;
+    }
+    return index;
+  })();
+
+  constructor(sequence) {
+    this.sequence = sequence;
+    const blockCount = Math.floor(sequence.length / GCCompositionCache.BLOCK_SIZE);
+    this.blocks = new Uint16Array(blockCount * GCCompositionCache.BLOCK_STRIDE);
+  }
+
+  addCounts(start, end, counts) {
+    const { BLOCK_SIZE: blockSize, BLOCK_STRIDE: stride } = GCCompositionCache;
+    const blocks = this.blocks;
+    const firstBlock = Math.ceil(start / blockSize);
+    const lastBlock = Math.floor(end / blockSize);
+    if (firstBlock >= lastBlock) return this.scan(start, end, counts);
+
+    if (!this.scan(start, firstBlock * blockSize, counts)) return false;
+    for (let block = firstBlock; block < lastBlock; block++) {
+      const offset = block * stride;
+      const status = offset + stride - 1;
+      if (blocks[status] === 0) {
+        const blockStart = block * blockSize;
+        blocks[status] = this.scan(blockStart, blockStart + blockSize, blocks, offset) ? 1 : 2;
+      }
+      if (blocks[status] === 2) return false;
+      for (let base = 0; base < 5; base++) counts[base] += blocks[offset + base];
+    }
+    return this.scan(lastBlock * blockSize, end, counts);
+  }
+
+  scan(start, end, counts, offset = 0) {
+    const index = GCCompositionCache.BASE_INDEX;
+    for (let position = start; position < end; position++) {
+      const code = this.sequence.charCodeAt(position);
+      // Unicode case conversion can expand a character to multiple letters.
+      // Let the existing per-window calculation handle that case.
+      if (code > 127) return false;
+      counts[offset + index[code]]++;
+    }
+    return true;
+  }
+}
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

@@ -102,14 +102,17 @@ function createWindow(options = {}) {
     codeXomicsRPC.setMainWindow(newWindow);
     codeXomicsRPC.initialize();
 
-    // Process any files that were queued before window was ready
-    setTimeout(() => {
+    // File-open requests use isLoading() to detect when navigation is complete.
+    if (newWindow.webContents.isLoading()) {
+      newWindow.webContents.once('did-stop-loading', processFileQueue);
+    } else {
       processFileQueue();
-    }, 500);
+    }
   };
 
   if (newWindow.webContents.isLoading()) {
-    newWindow.webContents.once('did-finish-load', activateWhenReady);
+    // Show the initialized UI while remaining assets finish loading.
+    newWindow.webContents.once('dom-ready', activateWhenReady);
   } else {
     activateWhenReady();
   }

@@ -241,6 +241,23 @@ for (const platform of ['darwin', 'win32', 'linux']) {
       }
     });
 
+    it('opens the selected genome as soon as the new window finishes loading', async () => {
+      const h = harness(platform);
+      const webContents = Object.assign(new EventEmitter(), {
+        isLoading: () => true,
+        send: vi.fn(),
+      });
+      const newWindow = { webContents, isDestroyed: () => false, focus: vi.fn() };
+      h.dependencies.createWindow.mockReturnValueOnce(newWindow);
+      h.dialog.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: ['/tmp/genome.fasta'] });
+
+      await h.find('Open (New Window)').click();
+      expect(webContents.send).not.toHaveBeenCalled();
+      webContents.emit('did-finish-load');
+      expect(webContents.send).toHaveBeenCalledExactlyOnceWith('file-opened', '/tmp/genome.fasta');
+      expect(newWindow.focus).toHaveBeenCalledOnce();
+    });
+
     it('offers supported genome formats consistently in both Open menus', async () => {
       const h = harness(platform);
       await h.find('Open File').click();

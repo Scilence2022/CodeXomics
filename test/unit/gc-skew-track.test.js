@@ -31,6 +31,48 @@ describe('GC content & skew track data', () => {
   });
 });
 
+describe('GC composition across wide viewports', () => {
+  function compareWithUncachedCalculation(r, sequence, viewport) {
+    r.createEnhancedGCVisualization = (viewSequence, start, end, countWindow) => {
+      expect(countWindow).toBeTypeOf('function');
+      const parameters = [viewSequence, 7823, 2339, end - start];
+      const data = r.calculateDynamicGCData(...parameters, countWindow);
+      expect(data).toEqual(r.calculateDynamicGCData(...parameters));
+      return data;
+    };
+    r.genomeBrowser.currentSequence.chr = sequence;
+    return r.createGCVisualizationForViewport('chr', sequence, viewport);
+  }
+
+  it('reuses block counts across pans and reflects edits to the chromosome sequence', () => {
+    const r = renderer();
+    r.genomeBrowser = { currentSequence: {} };
+    r.isCircularModeEnabled = () => false;
+    const sequence = 'gGaNCt'.repeat(65_000);
+    compareWithUncachedCalculation(r, sequence, { start: 341, end: 350_001 });
+    const cache = r.gcCompositionCache;
+    compareWithUncachedCalculation(r, sequence, { start: 589, end: 350_249 });
+    expect(r.gcCompositionCache).toBe(cache);
+
+    const editedSequence = 'C'.repeat(1024) + sequence.slice(1024);
+    compareWithUncachedCalculation(r, editedSequence, { start: 341, end: 350_001 });
+    expect(r.gcCompositionCache).not.toBe(cache);
+  });
+
+  it('counts circular windows across the origin and handles Unicode case conversion', () => {
+    const r = renderer();
+    r.genomeBrowser = { currentSequence: {} };
+    r.isCircularModeEnabled = () => true;
+    const sequence = 'cGtAN'.repeat(40_000) + 'ﬆ' + 'N'.repeat(14_000) + 'gGAtc'.repeat(40_000);
+    for (const viewport of [
+      { start: sequence.length - 80_233, end: sequence.length + 220_183 },
+      { start: -80_233, end: 220_183 },
+    ]) {
+      compareWithUncachedCalculation(r, sequence, viewport);
+    }
+  });
+});
+
 describe('GC content & skew track layout', () => {
   it('puts the skew zero line mid-panel with positive skew above it', () => {
     const r = renderer();
