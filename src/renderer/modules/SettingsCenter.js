@@ -95,7 +95,18 @@ class SettingsCenter {
       label: 'Visualization',
       icon: 'fa-chart-line',
       description: 'Track heights, sequence display and what moves while you drag the view.',
-      keywords: ['track height', 'drag', 'rendering', 'sequence', 'line spacing', '可视化', '拖动', '渲染'],
+      keywords: [
+        'track height',
+        'drag',
+        'rendering',
+        'performance',
+        'sequence',
+        'line spacing',
+        '可视化',
+        '拖动',
+        '渲染',
+        '性能',
+      ],
     },
     {
       id: 'view.tracks',
@@ -112,6 +123,9 @@ class SettingsCenter {
         'variants',
         'wig',
         'primers',
+        'rendering mode',
+        'canvas',
+        'svg',
         'gene height',
         'operon',
         'font size',
@@ -236,16 +250,6 @@ class SettingsCenter {
       icon: 'fa-puzzle-piece',
       description: 'Installed plugins, plugin sources and plugin options.',
       keywords: ['plugin', 'marketplace', 'sandbox', 'extension', '插件'],
-    },
-    {
-      id: 'system.memory',
-      group: 'system',
-      host: 'general',
-      tab: 'memory',
-      label: 'Memory',
-      icon: 'fa-memory',
-      description: 'The sequence length limit and the rendering mode used for large genomes.',
-      keywords: ['performance', 'sequence length', 'renderer', '内存', '性能'],
     },
     {
       id: 'system.caching',
@@ -605,7 +609,9 @@ class SettingsCenter {
   // ---------------------------------------------------------------------------
 
   getPane(paneId) {
-    return SettingsCenter.PANES.find(pane => pane.id === paneId) || null;
+    // Restore the nearest existing page for saved selections from older builds.
+    const id = paneId === 'system.memory' ? 'view.visualization' : paneId;
+    return SettingsCenter.PANES.find(pane => pane.id === id) || null;
   }
 
   /**

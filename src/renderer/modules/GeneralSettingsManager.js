@@ -45,8 +45,6 @@ class GeneralSettingsManager {
       minLineSpacing: 12, // Minimum line spacing for sequence display
 
       // Performance
-      maxSequenceLength: 5000000,
-      renderingMode: 'adaptive',
       maxGenesDisplay: 1000,
       trackHeight: 'normal',
       enableAnimations: true,
@@ -297,20 +295,6 @@ class GeneralSettingsManager {
     }
 
     // Performance settings
-    const maxSequenceLengthSelect = document.getElementById('maxSequenceLength');
-    if (maxSequenceLengthSelect) {
-      maxSequenceLengthSelect.addEventListener('change', e => {
-        this.updateSetting('maxSequenceLength', e.target.value === 'unlimited' ? -1 : parseInt(e.target.value));
-      });
-    }
-
-    const renderingModeSelect = document.getElementById('renderingMode');
-    if (renderingModeSelect) {
-      renderingModeSelect.addEventListener('change', e => {
-        this.updateSetting('renderingMode', e.target.value);
-      });
-    }
-
     const maxGenesInput = document.getElementById('maxGenesDisplay');
     if (maxGenesInput) {
       maxGenesInput.addEventListener('change', e => {
@@ -706,15 +690,6 @@ class GeneralSettingsManager {
     if (minLineSpacingInput) minLineSpacingInput.value = this.settings.minLineSpacing;
 
     // Performance settings
-    const maxSequenceLengthSelect = document.getElementById('maxSequenceLength');
-    if (maxSequenceLengthSelect) {
-      const value = this.settings.maxSequenceLength === -1 ? 'unlimited' : this.settings.maxSequenceLength.toString();
-      maxSequenceLengthSelect.value = value;
-    }
-
-    const renderingModeSelect = document.getElementById('renderingMode');
-    if (renderingModeSelect) renderingModeSelect.value = this.settings.renderingMode;
-
     const maxGenesInput = document.getElementById('maxGenesDisplay');
     if (maxGenesInput) maxGenesInput.value = this.settings.maxGenesDisplay;
 
@@ -1321,7 +1296,7 @@ class GeneralSettingsManager {
   async resetAllSettings() {
     if (
       !confirm(
-        'Reset Appearance, Visualization, Navigation, Features, Memory, Caching and Security to their defaults? This cannot be undone.'
+        'Reset Appearance, Visualization, Navigation, Features, Caching and Security to their defaults? This cannot be undone.'
       )
     ) {
       return;

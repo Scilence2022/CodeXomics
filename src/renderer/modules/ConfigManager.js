@@ -350,8 +350,6 @@ class ConfigManager {
         compactMode: false,
         showWelcomeScreen: true,
         minLineSpacing: 12,
-        maxSequenceLength: 5000000,
-        renderingMode: 'adaptive',
         maxGenesDisplay: 1000,
         trackHeight: 'normal',
         enableAnimations: true,

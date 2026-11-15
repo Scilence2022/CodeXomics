@@ -1,9 +1,7 @@
 /**
  * General Settings tab layout.
  *
- * The old Performance tab held four unrelated panels (memory, visualization,
- * dragging, caching). Each now has a home of its own, and the drag settings sit
- * with the other things that change what the view draws.
+ * Drag settings sit with the other controls that change what the view draws.
  */
 import { describe, expect, it } from 'vitest';
 import fs from 'fs';
@@ -25,7 +23,6 @@ describe('General Settings tab layout', () => {
       'visualization',
       'navigation',
       'features',
-      'memory',
       'caching',
       'security',
       'export',
@@ -37,11 +34,10 @@ describe('General Settings tab layout', () => {
     expect(modal.querySelector('#performance-tab')).toBe(null);
   });
 
-  it('gives Memory and Caching their own tabs', () => {
-    expect(sectionsOf('memory-tab')).toEqual(['Memory Management']);
+  it('keeps Caching and omits the unused general memory controls', () => {
     expect(sectionsOf('caching-tab')).toEqual(['Caching']);
-    expect(tabOf('maxSequenceLength')).toBe('memory-tab');
-    expect(tabOf('renderingMode')).toBe('memory-tab');
+    expect(modal.querySelector('#maxSequenceLength, #renderingMode')).toBeNull();
+    expect(doc.querySelector('#multiAgentSettingsModal .tab-button[data-tab="memory"]')).not.toBeNull();
     expect(tabOf('enableFileCache')).toBe('caching-tab');
     expect(tabOf('clearCacheBtn')).toBe('caching-tab');
   });

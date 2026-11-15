@@ -98,7 +98,7 @@ Every preference lives in one **Settings** window. Open it with <kbd>⌘,</kbd> 
 - The sidebar groups the sections: **General** (Appearance, Navigation, Features, Tabs),
   **Genome View** (Visualization, Tracks, Gene Details, Search), **AI Assistant** (Model
   Providers, ChatBox, Agents & Skills, MCP Servers, Literature), **Tools** (External Tools,
-  BLAST+, Plugins) and **System** (Memory, Caching, Security, Import, Export & Backup, About).
+  BLAST+, Plugins) and **System** (Caching, Security, Import, Export & Backup, About).
 - The search box at the top of the sidebar finds individual settings across every section,
   in English or by Chinese keywords. Use the arrow keys and <kbd>Enter</kbd> to open a result;
   the setting is highlighted in its section.

@@ -201,13 +201,27 @@ describe('SettingsCenter adoption and navigation', () => {
     window.genomeBrowser = { showGeneralSettingsModal };
     window.generalSettingsManager = { switchTab };
 
-    await center.selectPane(center.getPane('system.memory'));
-    expect(showGeneralSettingsModal).toHaveBeenCalledWith('memory');
-    expect(switchTab).toHaveBeenLastCalledWith('memory');
+    await center.selectPane(center.getPane('view.visualization'));
+    expect(showGeneralSettingsModal).toHaveBeenCalledWith('visualization');
+    expect(switchTab).toHaveBeenLastCalledWith('visualization');
 
     await center.selectPane(center.getPane('general.appearance'));
     expect(showGeneralSettingsModal).toHaveBeenCalledTimes(1);
     expect(switchTab).toHaveBeenLastCalledWith('appearance');
+  });
+
+  it('restores Visualization when the old System > Memory page was saved', async () => {
+    center = mount();
+    const configManager = { isInitialized: true, get: vi.fn(() => 'system.memory'), set: vi.fn() };
+    const showGeneralSettingsModal = vi.fn();
+    window.genomeBrowser = { configManager, showGeneralSettingsModal };
+    center.open();
+    await flush();
+
+    expect(center.activePaneId).toBe('view.visualization');
+    expect(showGeneralSettingsModal).toHaveBeenCalledWith('visualization');
+    expect(configManager.set).toHaveBeenCalledWith('ui.settingsCenterLastPane', 'view.visualization');
+    expect(center.nav.querySelector('[data-pane="system.memory"]')).toBeNull();
   });
 
   it('keeps the latest General Settings tab when the initial load finishes', async () => {
@@ -221,13 +235,13 @@ describe('SettingsCenter adoption and navigation', () => {
     window.generalSettingsManager = { switchTab };
 
     center.open('general.appearance');
-    center.open('system.memory');
+    center.open('view.visualization');
     finish();
     await flush();
 
     expect(window.genomeBrowser.showGeneralSettingsModal).toHaveBeenCalledTimes(1);
-    expect(switchTab.mock.calls).toEqual([['memory']]);
-    expect(center.activePaneId).toBe('system.memory');
+    expect(switchTab.mock.calls).toEqual([['visualization']]);
+    expect(center.activePaneId).toBe('view.visualization');
   });
 
   it('stays closed if a settings manager shows its modal after closing', async () => {
