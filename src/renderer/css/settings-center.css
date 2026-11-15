@@ -13,7 +13,27 @@
    picker modal, ...) is lifted above it. */
 #settingsCenterModal {
   --settings-inset: 24px;
+  --settings-font-size: 14px;
+  --settings-secondary-size: max(12px, calc(var(--settings-font-size) - 1px));
+  --settings-caption-size: max(11px, calc(var(--settings-font-size) - 2px));
+  --settings-section-size: calc(var(--settings-font-size) + 2px);
+  --settings-heading-size: calc(var(--settings-font-size) + 8px);
   z-index: 10010;
+  font-family: var(--font-family);
+  font-size: var(--settings-font-size);
+  line-height: 1.5;
+}
+
+.font-small #settingsCenterModal {
+  --settings-font-size: 13px;
+}
+
+.font-large #settingsCenterModal {
+  --settings-font-size: 16px;
+}
+
+.font-extra-large #settingsCenterModal {
+  --settings-font-size: 18px;
 }
 
 body.settings-center-open .modal.show:not(#settingsCenterModal):not(.settings-center-embedded),
@@ -51,9 +71,10 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   color: var(--text-primary);
 }
 
-.settings-center-titlebar h3 {
-  font-size: 14px;
+#settingsCenterModal .settings-center-titlebar h3 {
+  font-size: var(--settings-section-size);
   font-weight: 600;
+  line-height: 1.25;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -124,7 +145,6 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   background: var(--bg-primary);
   color: var(--text-primary);
   font: inherit;
-  font-size: 13px;
 }
 
 .settings-center-search input:focus {
@@ -148,11 +168,11 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
 
 .settings-center-nav-heading {
   padding: 8px 10px 4px;
-  font-size: 11px;
+  font-size: var(--settings-caption-size);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .settings-center-nav-item,
@@ -167,7 +187,7 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   background: none;
   color: var(--text-primary);
   font: inherit;
-  font-size: 13px;
+  line-height: 1.35;
   text-align: left;
   cursor: pointer;
 }
@@ -187,6 +207,10 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
 .settings-center-result.selected {
   background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-primary));
   color: var(--text-primary);
+}
+
+.settings-center-nav-item.active {
+  font-weight: 600;
 }
 
 /* Section icons share their group color without competing with the label. */
@@ -211,9 +235,7 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
 
 .settings-center-nav-label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .settings-center-result {
@@ -232,28 +254,19 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
 }
 
 .settings-center-result-title {
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .settings-center-result-crumb {
-  font-size: 11.5px;
+  font-size: var(--settings-caption-size);
   color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings-center-result.selected .settings-center-result-crumb {
-  color: var(--text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .settings-center-no-results {
   padding: 24px 12px;
   text-align: center;
-  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -290,16 +303,17 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   min-width: 0;
 }
 
-.settings-center-pane-heading h2 {
+#settingsCenterModal .settings-center-pane-heading h2 {
   margin: 0;
-  font-size: 21px;
-  font-weight: 650;
+  font-size: var(--settings-heading-size);
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--text-primary);
 }
 
 .settings-center-pane-heading p {
   margin: 3px 0 0;
-  font-size: 12.5px;
+  font-size: var(--settings-secondary-size);
   color: var(--text-secondary);
 }
 
@@ -450,7 +464,8 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   background: transparent;
   color: var(--text-secondary);
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--settings-secondary-size);
+  line-height: 1.35;
   text-align: left;
   white-space: normal;
   cursor: pointer;
@@ -509,7 +524,6 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   display: none;
   margin: auto;
   color: var(--text-secondary);
-  font-size: 13px;
 }
 
 /* ------------------------------------------------------- Rendered panels */
@@ -552,6 +566,10 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   font-size: 13px;
 }
 
+#settingsCenterModal .system-info .info-row {
+  font-size: var(--settings-secondary-size);
+}
+
 .system-info .info-row:last-child {
   border-bottom: none;
 }
@@ -590,7 +608,7 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
 
 .settings-center-track-note {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--settings-secondary-size);
   color: var(--text-secondary);
 }
 
@@ -685,6 +703,33 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   outline-offset: 2px;
 }
 
+/* Embedded panels inherit the same scale even when their standalone styles
+   specify pixel sizes. Keep code and editable technical values monospace. */
+#settingsCenterModal .settings-center-host :is(input, select, textarea, button) {
+  font-family: inherit;
+}
+
+#settingsCenterModal .settings-center-host :is(input:not([type='checkbox'], [type='radio']), select, textarea, .btn) {
+  font-size: var(--settings-font-size);
+  line-height: 1.35;
+}
+
+#settingsCenterModal .settings-center-host .btn {
+  font-weight: 600;
+}
+
+#settingsCenterModal .settings-center-host :is(.btn-sm, .btn-refresh-models) {
+  font-size: var(--settings-secondary-size);
+}
+
+#settingsCenterModal .settings-center-host :is(code, pre, #customHeaders, #customSystemPrompt) {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+
+#settingsCenterModal .settings-center-host input[type='number'] {
+  font-variant-numeric: tabular-nums;
+}
+
 #settingsCenterModal
   :is(
     .settings-section,
@@ -721,15 +766,55 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   )
   h4 {
   margin: 0 0 12px;
+}
+
+#settingsCenterModal .settings-center-host h4 {
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: var(--settings-section-size);
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+#settingsCenterModal .settings-center-host h5 {
+  color: var(--text-primary);
+  font-size: var(--settings-font-size);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+#settingsCenterModal .settings-center-host :is(label, .setting-label, .form-label, .checkbox-label) {
+  color: var(--text-primary);
+  font-size: var(--settings-font-size);
+  font-weight: 500;
   line-height: 1.4;
 }
 
-#settingsCenterModal :is(.help-text, .setting-description, .form-text) {
+#settingsCenterModal .settings-center-host :is(.help-text, .setting-description, .form-text, .model-refresh-status) {
   color: var(--text-secondary);
-  line-height: 1.45;
+  font-size: var(--settings-secondary-size);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+#settingsCenterModal .model-refresh-status.is-warning {
+  color: var(--warning-color);
+}
+
+#settingsCenterModal .model-refresh-status.is-error {
+  color: var(--error-color);
+}
+
+#settingsCenterModal #chatboxSettingsModal label:has(> .setting-checkbox) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#settingsCenterModal #chatboxSettingsModal label > .setting-checkbox {
+  margin: 0;
+  transform: none;
 }
 
 #settingsCenterModal :is(.form-group, .setting-item, .setting-control, .input-with-button, .setting-input) {
@@ -773,6 +858,11 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   margin: 0;
 }
 
+#settingsCenterModal .mcp-servers-section .server-actions {
+  max-width: 100%;
+  margin-inline: 0;
+}
+
 #settingsCenterModal .settings-center-field-label {
   display: block;
   margin-bottom: 8px;
@@ -801,6 +891,16 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
 
 #settingsCenterModal :is(.style-preset-name, .style-preset-desc) {
   display: block;
+}
+
+#settingsCenterModal .style-preset-name {
+  font-size: var(--settings-font-size);
+  line-height: 1.35;
+}
+
+#settingsCenterModal .style-preset-desc {
+  font-size: var(--settings-secondary-size);
+  line-height: 1.4;
 }
 
 #settingsCenterModal .settings-center-actions-end {
