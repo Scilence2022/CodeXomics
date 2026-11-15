@@ -657,6 +657,53 @@ body.settings-center-open > :is(.notification, .success-message, .error-message)
   gap: 8px;
 }
 
+.settings-about-product {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-about-icon {
+  display: grid;
+  flex: 0 0 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-primary));
+  color: var(--primary-color);
+  font-size: 20px;
+}
+
+#settingsCenterModal .settings-center-host .settings-about-product h4 {
+  margin: 0;
+  font-size: var(--settings-heading-size);
+}
+
+.settings-about-product p,
+.settings-about-description {
+  color: var(--text-secondary);
+}
+
+.settings-about-product p {
+  margin: 2px 0 0;
+  font-size: var(--settings-secondary-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-about-description {
+  max-width: 70ch;
+  margin: 12px 0;
+}
+
+.settings-about-system,
+.settings-about-system dd {
+  margin: 0;
+}
+
+.settings-about-system dd {
+  overflow-wrap: anywhere;
+}
+
 .settings-center-host[aria-busy='true'] > .settings-center-loading {
   display: block !important;
 }

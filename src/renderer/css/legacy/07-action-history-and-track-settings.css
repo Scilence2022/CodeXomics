@@ -1167,19 +1167,6 @@
     font-size: 16px !important;
   }
 
-  .about-info {
-    padding: 15px !important;
-    text-align: center !important;
-  }
-
-  .app-logo {
-    font-size: 36px !important;
-  }
-
-  .about-info h3 {
-    font-size: 20px !important;
-  }
-
   .llm-config-modal .modal-body {
     padding: 0 !important;
     min-height: 0 !important;

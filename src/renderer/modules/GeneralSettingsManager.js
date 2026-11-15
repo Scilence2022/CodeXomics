@@ -453,11 +453,11 @@ class GeneralSettingsManager {
 
     // About > Documentation & Support links open in the system browser
     document.querySelectorAll('#about-tab [data-external-url]').forEach(button => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const url = button.dataset.externalUrl;
         if (!/^https:\/\//.test(url)) return;
         try {
-          window.require?.('electron')?.shell?.openExternal(url);
+          await window.require?.('electron')?.shell?.openExternal(url);
         } catch (error) {
           console.error('Could not open link:', error);
         }
@@ -631,6 +631,7 @@ class GeneralSettingsManager {
       });
 
       this.currentTab = tabName;
+      if (tabName === 'about') this.updateSystemInfo();
       console.log(`✅ [GeneralSettings] Successfully switched to tab: ${tabName}`);
 
       // Verify the switch worked
@@ -797,9 +798,6 @@ class GeneralSettingsManager {
       const checkbox = document.getElementById(id);
       if (checkbox) checkbox.checked = !!this.settings[id];
     });
-
-    // Update system info
-    this.updateSystemInfo();
   }
 
   /**
@@ -1376,45 +1374,45 @@ class GeneralSettingsManager {
     return validated;
   }
 
-  /**
-   * Fill in About > System Information. (This used to rewrite the first
-   * `.system-info` on the page, which is Security > Runtime Protection.)
-   */
-  updateSystemInfo() {
+  /** Populate About with the running application's version and runtime information. */
+  async updateSystemInfo() {
+    const about = document.getElementById('about-tab');
+    if (!about) return;
     const setText = (id, text) => {
-      const el = document.getElementById(id);
+      const el = about.querySelector(`#${id}`);
       if (el) el.textContent = text;
     };
 
-    const version = window.VERSION_INFO;
-    const memory = performance.memory
-      ? `${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB used of ${Math.round(
-          performance.memory.jsHeapSizeLimit / 1048576
-        )} MB`
-      : navigator.deviceMemory
-        ? `${navigator.deviceMemory} GB device memory`
-        : 'Unknown';
-
-    setText('platformInfo', `${navigator.platform} · ${navigator.hardwareConcurrency || '?'} CPU cores`);
-    setText('browserInfo', this.getBrowserName());
+    const appVersion = window.VERSION_INFO?.fullVersion;
+    const platform = window.nodeAPI?.platform;
+    const platformName = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' }[platform];
+    const architecture = window.os?.arch?.();
+    const platformDetails = [platformName || platform || navigator.platform, architecture].filter(Boolean);
+    const electron = navigator.userAgent.match(/\bElectron\/([\w.-]+)/)?.[1];
+    const chromium = navigator.userAgent.match(/\bChrome\/([\w.-]+)/)?.[1];
+    const node = window.nodeAPI?.version;
+    const runtime = [electron && `Electron ${electron}`, chromium && `Chromium ${chromium}`, node && `Node.js ${node}`]
+      .filter(Boolean)
+      .join(' · ');
+    const heap = performance.memory;
+    const memory = heap
+      ? `${Math.round(heap.usedJSHeapSize / 1048576)} MiB used / ${Math.round(heap.jsHeapSizeLimit / 1048576)} MiB limit`
+      : 'Unavailable';
+    setText('about-version', appVersion ? `Version ${appVersion}` : 'Version unavailable');
+    setText('platformInfo', platformDetails.join(' · ') || 'Unavailable');
+    setText('runtimeInfo', runtime || 'Unavailable');
     setText('memoryInfo', memory);
-    setText('appVersionInfo', version?.fullVersion || 'Unknown');
-    setText('languageInfo', navigator.language);
-  }
 
-  /**
-   * Get browser name from user agent
-   */
-  getBrowserName() {
-    const userAgent = navigator.userAgent;
-
-    if (userAgent.includes('Chrome')) return 'Chrome';
-    if (userAgent.includes('Firefox')) return 'Firefox';
-    if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
-    if (userAgent.includes('Edge')) return 'Edge';
-    if (userAgent.includes('Opera')) return 'Opera';
-
-    return 'Unknown';
+    try {
+      const language =
+        window.i18nManager?.getCurrentLanguage?.() ||
+        (await window.electronAPI?.getCurrentLanguage?.()) ||
+        document.documentElement.lang;
+      setText('languageInfo', language || 'Unavailable');
+    } catch (error) {
+      console.warn('Could not read the application language:', error);
+      setText('languageInfo', 'Unavailable');
+    }
   }
 
   /**

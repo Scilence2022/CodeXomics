@@ -284,8 +284,8 @@ class SettingsCenter {
       tab: 'about',
       label: 'About',
       icon: 'fa-circle-info',
-      description: 'Version, credits and system information.',
-      keywords: ['version', 'about', 'help', 'documentation', '关于', '版本'],
+      description: 'Version, releases, documentation and runtime information.',
+      keywords: ['version', 'about', 'changelog', 'downloads', 'license', 'electron', '关于', '版本', '更新日志'],
     },
   ]);
 

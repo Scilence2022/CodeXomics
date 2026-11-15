@@ -840,12 +840,6 @@ class GenomeBrowser {
         versionTag.textContent = VERSION_INFO.displayVersion;
       }
 
-      // Update version in about dialog
-      const aboutVersion = document.getElementById('about-version');
-      if (aboutVersion && typeof VERSION_INFO !== 'undefined') {
-        aboutVersion.textContent = `Version ${VERSION_INFO.fullVersion}`;
-      }
-
       // Update document title
       this.updateAppTitle();
 

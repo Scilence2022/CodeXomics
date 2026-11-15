@@ -4189,38 +4189,35 @@ Supported formats:
 
                     <!-- About Tab -->
                     <div id="about-tab" class="tab-content">
-                        <div class="settings-section">
-                            <h4><i class="fas fa-info-circle"></i> Application Information</h4>
-                            <div class="about-info">
-                                <div class="app-logo">
-                                    <i class="fas fa-dna"></i>
-                                </div>
-                                <h3>CodeXomics</h3>
-                                <p class="version" id="about-version">Version</p>
-                                <p class="description">
-                                    An advanced genome visualization and analysis platform with integrated AI
-                                    capabilities.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="settings-section">
-                            <h4><i class="fas fa-users"></i> Credits</h4>
-                            <div class="credits-list">
-                                <div class="credit-item">
-                                    <strong>Development:</strong> CodeXomics Team
-                                </div>
-                                <div class="credit-item">
-                                    <strong>Libraries:</strong> D3.js, Font Awesome, Inter Font
-                                </div>
-                                <div class="credit-item">
-                                    <strong>AI Integration:</strong> OpenAI, Anthropic, Google
+                        <section class="settings-section" aria-labelledby="about-app-name">
+                            <div class="settings-about-product">
+                                <span class="settings-about-icon" aria-hidden="true"><i class="fas fa-dna"></i></span>
+                                <div>
+                                    <h4 id="about-app-name">CodeXomics</h4>
+                                    <p id="about-version">Version unavailable</p>
                                 </div>
                             </div>
-                        </div>
+                            <p class="settings-about-description">
+                                An AI-native desktop genome browser for exploring genomic tracks, running analyses
+                                from ChatBox, and reviewing annotation proposals. Extend the workspace with plugins
+                                and Model Context Protocol (MCP) integrations.
+                            </p>
+                            <div class="support-links">
+                                <button type="button" class="btn btn-secondary"
+                                    data-external-url="https://github.com/Scilence2022/CodeXomics/blob/main/CHANGELOG.md">
+                                    <i class="fas fa-list-ul" aria-hidden="true"></i>
+                                    Changelog
+                                </button>
+                                <button type="button" class="btn btn-secondary"
+                                    data-external-url="https://github.com/Scilence2022/CodeXomics/releases">
+                                    <i class="fas fa-download" aria-hidden="true"></i>
+                                    Releases &amp; Downloads
+                                </button>
+                            </div>
+                        </section>
 
                         <div class="settings-section">
-                            <h4><i class="fas fa-book"></i> Documentation & Support</h4>
+                            <h4><i class="fas fa-book" aria-hidden="true"></i> Documentation &amp; Support</h4>
                             <div class="support-links">
                                 <button type="button" class="btn btn-secondary"
                                     data-external-url="https://scilence2022.github.io/CodeXomics/user-guides/USER_GUIDE/">
@@ -4241,29 +4238,35 @@ Supported formats:
                         </div>
 
                         <div class="settings-section">
-                            <h4><i class="fas fa-chart-bar"></i> System Information</h4>
-                            <div class="system-info">
+                            <h4><i class="fas fa-desktop" aria-hidden="true"></i> System Information</h4>
+                            <dl class="system-info settings-about-system">
                                 <div class="info-row">
-                                    <span class="info-label">Platform:</span>
-                                    <span class="info-value" id="platformInfo">Loading...</span>
+                                    <dt class="info-label">Platform</dt>
+                                    <dd class="info-value" id="platformInfo">—</dd>
                                 </div>
                                 <div class="info-row">
-                                    <span class="info-label">Browser:</span>
-                                    <span class="info-value" id="browserInfo">Loading...</span>
+                                    <dt class="info-label">Runtime</dt>
+                                    <dd class="info-value" id="runtimeInfo">—</dd>
                                 </div>
                                 <div class="info-row">
-                                    <span class="info-label">Memory Usage:</span>
-                                    <span class="info-value" id="memoryInfo">Loading...</span>
+                                    <dt class="info-label">Renderer JavaScript heap</dt>
+                                    <dd class="info-value" id="memoryInfo">—</dd>
                                 </div>
                                 <div class="info-row">
-                                    <span class="info-label">App Version:</span>
-                                    <span class="info-value" id="appVersionInfo">Loading...</span>
+                                    <dt class="info-label">Language preference</dt>
+                                    <dd class="info-value" id="languageInfo">—</dd>
                                 </div>
-                                <div class="info-row">
-                                    <span class="info-label">Language:</span>
-                                    <span class="info-value" id="languageInfo">Loading...</span>
-                                </div>
-                            </div>
+                            </dl>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4><i class="fas fa-users" aria-hidden="true"></i> Credits &amp; License</h4>
+                            <p class="settings-about-description">Developed by the CodeXomics team and contributors.</p>
+                            <button type="button" class="btn btn-secondary"
+                                data-external-url="https://github.com/Scilence2022/CodeXomics/blob/main/LICENSE">
+                                <i class="fas fa-scale-balanced" aria-hidden="true"></i>
+                                MIT License
+                            </button>
                         </div>
                     </div>
                 </div>

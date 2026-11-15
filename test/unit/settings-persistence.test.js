@@ -194,19 +194,32 @@ describe('General Settings fixes', () => {
     }
   });
 
-  it('fills About > System Information instead of the Security panel', () => {
+  it('fills About with version and runtime data when opened', async () => {
     document.body.innerHTML = `
       <div id="security-tab"><div class="system-info"><span class="info-label">Renderer Node.js Guard:</span></div></div>
-      <div id="about-tab"><div class="system-info">
-        <span id="platformInfo">Loading...</span><span id="browserInfo">Loading...</span>
-        <span id="memoryInfo">Loading...</span><span id="appVersionInfo">Loading...</span>
+      <div id="about-tab"><p id="about-version"></p><div class="system-info">
+        <span id="platformInfo">Loading...</span><span id="runtimeInfo">Loading...</span>
+        <span id="memoryInfo">Loading...</span>
         <span id="languageInfo">Loading...</span></div></div>`;
-    window.VERSION_INFO = { fullVersion: '1.2.3' };
-    manager().updateSystemInfo();
-    expect(document.querySelector('#security-tab .info-label').textContent).toBe('Renderer Node.js Guard:');
-    expect(document.getElementById('appVersionInfo').textContent).toBe('1.2.3');
-    expect(document.getElementById('browserInfo').textContent).not.toBe('Loading...');
-    delete window.VERSION_INFO;
+    vi.stubGlobal('VERSION_INFO', { fullVersion: '1.2.3' });
+    vi.stubGlobal('nodeAPI', { platform: 'darwin', version: 'v22.18.0' });
+    vi.stubGlobal('os', { arch: () => 'arm64' });
+    vi.stubGlobal('electronAPI', { getCurrentLanguage: vi.fn().mockResolvedValue('zh-CN') });
+    const userAgent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Chrome/123.0.4 Electron/32.1.0');
+    try {
+      manager().switchTab('about');
+      await Promise.resolve();
+      expect(document.querySelector('#security-tab .info-label').textContent).toBe('Renderer Node.js Guard:');
+      expect(document.getElementById('about-version').textContent).toBe('Version 1.2.3');
+      expect(document.getElementById('platformInfo').textContent).toBe('macOS · arm64');
+      expect(document.getElementById('runtimeInfo').textContent).toBe(
+        'Electron 32.1.0 · Chromium 123.0.4 · Node.js v22.18.0'
+      );
+      expect(document.getElementById('languageInfo').textContent).toBe('zh-CN');
+    } finally {
+      userAgent.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('opens the tab the Settings window asked for once loading finishes', () => {
