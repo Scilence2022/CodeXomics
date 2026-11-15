@@ -336,6 +336,7 @@ class SettingsCenter {
     this.initialized = false;
     this.observers = [];
     this.documentListeners = [];
+    this.windowBehaviorTimer = null;
 
     for (const [hostId, host] of Object.entries(SettingsCenter.HOSTS)) {
       if (host.modalId) this.modalToHost.set(host.modalId, hostId);
@@ -522,6 +523,8 @@ class SettingsCenter {
 
   /** Stop observing and listening (tests, or a renderer being torn down). */
   destroy() {
+    clearTimeout(this.windowBehaviorTimer);
+    this.windowBehaviorTimer = null;
     this.close();
     this.observers.forEach(observer => observer.disconnect());
     this.documentListeners.forEach(([target, type, handler, capture]) =>
@@ -597,7 +600,12 @@ class SettingsCenter {
       resizeManager.makeResizable('#settingsCenterModal');
       return;
     }
-    if (attempt < 50) setTimeout(() => this.registerWindowBehavior(attempt + 1), 200);
+    if (attempt < 50) {
+      this.windowBehaviorTimer = setTimeout(() => {
+        this.windowBehaviorTimer = null;
+        this.registerWindowBehavior(attempt + 1);
+      }, 200);
+    }
   }
 
   // ---------------------------------------------------------------------------
