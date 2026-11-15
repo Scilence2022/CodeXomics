@@ -28,7 +28,7 @@ describe('genomic download menu window', () => {
             ? { getCurrentProjectInfo: () => project, setActiveProject: vi.fn() }
             : name === './workspace-host-manager'
               ? {}
-              : name === './security-utils'
+              : name === './security-utils' || name === './circos-ipc'
                 ? {}
                 : require(name),
     });
