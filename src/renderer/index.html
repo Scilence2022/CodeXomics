@@ -3586,9 +3586,6 @@ Supported formats:
                     <button class="tab-button" data-tab="features">
                         <i class="fas fa-toggle-on"></i> Features
                     </button>
-                    <button class="tab-button" data-tab="memory">
-                        <i class="fas fa-memory"></i> Memory
-                    </button>
                     <button class="tab-button" data-tab="caching">
                         <i class="fas fa-database"></i> Caching
                     </button>
@@ -3972,35 +3969,6 @@ Supported formats:
                         </div>
                     </div>
 
-                    <!-- Memory Tab -->
-                    <div id="memory-tab" class="tab-content">
-                        <div class="settings-section">
-                            <h4><i class="fas fa-memory"></i> Memory Management</h4>
-                            <div class="settings-center-field-grid">
-                                <div class="form-group">
-                                    <label for="maxSequenceLength">Maximum Sequence Length (bp):</label>
-                                    <select id="maxSequenceLength" class="input-full">
-                                        <option value="1000000">1 Million</option>
-                                        <option value="5000000" selected>5 Million</option>
-                                        <option value="10000000">10 Million</option>
-                                        <option value="50000000">50 Million</option>
-                                        <option value="unlimited">Unlimited (Use with caution)</option>
-                                    </select>
-                                    <small class="help-text">Limit sequence length to prevent memory issues</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="renderingMode">Rendering Mode:</label>
-                                    <select id="renderingMode" class="input-full">
-                                        <option value="adaptive" selected>Adaptive (Recommended)</option>
-                                        <option value="performance">Performance (Lower Quality)</option>
-                                        <option value="quality">Quality (Higher Memory)</option>
-                                    </select>
-                                    <small class="help-text">Balance between visual quality and performance</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Caching Tab -->
                     <div id="caching-tab" class="tab-content">
                         <div class="settings-section">
@@ -4180,7 +4148,7 @@ Supported formats:
                                     <i class="fas fa-undo"></i>
                                     Reset General Settings
                                 </button>
-                                <small class="help-text">Restore Appearance, Visualization, Navigation, Features, Memory,
+                                <small class="help-text">Restore Appearance, Visualization, Navigation, Features,
                                     Caching and Security to their defaults. Model providers, ChatBox, agents, MCP
                                     servers and tools keep their settings.</small>
                             </div>

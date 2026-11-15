@@ -224,13 +224,13 @@ describe('General Settings fixes', () => {
 
   it('opens the tab the Settings window asked for once loading finishes', () => {
     document.body.innerHTML = `<div id="generalSettingsModal"><div class="llm-provider-tabs">
-      <button class="tab-button" data-tab="appearance"></button><button class="tab-button" data-tab="memory"></button></div>
-      <div id="appearance-tab" class="tab-content"></div><div id="memory-tab" class="tab-content"></div></div>`;
+      <button class="tab-button" data-tab="appearance"></button><button class="tab-button" data-tab="visualization"></button></div>
+      <div id="appearance-tab" class="tab-content"></div><div id="visualization-tab" class="tab-content"></div></div>`;
     const instance = manager();
-    instance.pendingTab = 'memory';
+    instance.pendingTab = 'visualization';
     instance.initializeTabs();
-    expect(document.getElementById('memory-tab').classList.contains('active')).toBe(true);
-    expect(instance.currentTab).toBe('memory');
+    expect(document.getElementById('visualization-tab').classList.contains('active')).toBe(true);
+    expect(instance.currentTab).toBe('visualization');
     expect(instance.pendingTab).toBeNull();
   });
 });

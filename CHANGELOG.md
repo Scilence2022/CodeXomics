@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add a single **Settings** window for every preference, opened with <kbd>⌘,</kbd> / <kbd>Ctrl+,</kbd> or **Options → Settings…**. A sidebar groups 21 sections under General, Genome View, AI Assistant, Tools and System, and a search box finds individual settings across all of them (English labels or Chinese keywords) and highlights the match. The existing panels move into the window unchanged; every older entry point (menus, toolbar, track gears, the `toggle_settings_modal` tool) opens the matching section. New sections cover Literature and the BLAST+ installation.
+- Add a single **Settings** window for every preference, opened with <kbd>⌘,</kbd> / <kbd>Ctrl+,</kbd> or **Options → Settings…**. A sidebar groups sections under General, Genome View, AI Assistant, Tools and System, and a search box finds individual settings across all of them (English labels or Chinese keywords) and highlights the match. The existing panels move into the window unchanged; every older entry point (menus, toolbar, track gears, the `toggle_settings_modal` tool) opens the matching section. New sections cover Literature and the BLAST+ installation.
 - Export and import every setting from **System → Import, Export & Backup**. Exports never contain API keys, tokens or Authorization headers; importing keeps the credentials already stored on the computer. Older General Settings exports still import.
 
 ### Changed
@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Remove the System → Memory page. Its sequence-length and global rendering controls saved values that the genome loader and renderer never used. Tracks with a rendering mode expose it in their own settings.
 - Translate with the genetic code that was asked for. `translate_dna` advertised `genetic_code` and `include_stop_codons` but dropped both on every execution path, so a mitochondrial or Mycoplasma translation silently came back in the standard code. The ChatBox, the multi-agent route and MCP clients now share one implementation backed by 20 NCBI translation tables (`GeneticCodes.js`), addressed by id (`11`, `4`) or name (`bacterial`, `vertebrate_mitochondrial`, `mycoplasma`). An unknown code is an error instead of a fallback to the standard code.
 - Fix the Analysis agent's local fallback for `translate_dna`, which returned an empty protein in reading frame 1 because it passed the frame to a function that expects a strand.
 - Restore `codon_usage_analysis`. The single-gene implementation was lost when ChatManager was split into services, so every call failed. It is back in `GenomeAnalysisService`, matches an exact gene name or locus tag before a partial one, splices joined CDS locations and honours `/codon_start`.
