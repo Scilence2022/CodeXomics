@@ -72,6 +72,25 @@ describe('agent loop', () => {
   });
 
   describe('basic round-tripping', () => {
+    it.each(['jump_to_gene', 'zoom_to_gene'])('finishes "show dapA gene" after %s succeeds', async tool => {
+      const harness = createAgentLoopHarness({
+        responses: [openAiToolCall(tool, { geneName: 'dapA' }), 'The genome view now shows dapA.'],
+        tools: { [tool]: () => ({ success: true }) },
+        advertisedTools: [tool],
+        registryTools: [
+          {
+            name: tool,
+            parameters: { type: 'object', properties: { geneName: { type: 'string' } }, required: ['geneName'] },
+          },
+        ],
+      });
+
+      expect(await harness.send('show dapA gene')).toBe('The genome view now shows dapA.');
+      expect(harness.toolCalls).toEqual([{ tool_name: tool, parameters: { geneName: 'dapA' } }]);
+      expect(harness.rounds).toBe(2);
+      expect(harness.requests.flat().some(message => message.content?.includes('[Tool Protocol Repair]'))).toBe(false);
+    });
+
     it('executes a native tool call and feeds the result into the next round', async () => {
       const harness = createAgentLoopHarness({
         responses: [openAiToolCall('jump_to_gene', { geneName: 'lysC' }), 'Moved the view to lysC.'],

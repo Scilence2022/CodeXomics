@@ -58,6 +58,25 @@ function loadClasses() {
 describe('Agent Routing & Recursion Guards', () => {
   const { NavigationAgent, ToolExecutionService } = loadClasses();
 
+  it('uses the same gene zoom and failure result if normal tool dispatch throws', async () => {
+    const params = { geneName: 'dapA', padding: 250 };
+    const failure = { success: false, error: 'No sequence data loaded' };
+    const agent = new NavigationAgent({
+      app: {},
+      chatManager: {
+        async executeToolByName() {
+          throw new Error('Tool dispatch unavailable');
+        },
+        async zoomToGene(received) {
+          expect(received).toEqual(params);
+          return failure;
+        },
+      },
+    });
+
+    await expect(agent.performExecution('zoom_to_gene', params, {})).resolves.toEqual(failure);
+  });
+
   describe('NavigationAgent toggle_track parameter validation', () => {
     let mockMAS;
     let agent;

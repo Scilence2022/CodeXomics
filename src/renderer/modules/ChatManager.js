@@ -2605,13 +2605,16 @@ class ChatManager {
     }
 
     const resolvedChromosome = result.chromosome || chromosome;
+    const appliedPosition = this.toExternalGenomePosition(result);
+    const appliedStart = appliedPosition.start ?? start;
+    const appliedEnd = appliedPosition.end ?? end;
 
     return {
       success: true,
       chromosome: resolvedChromosome,
-      start,
-      end,
-      message: `Navigated to ${resolvedChromosome}:${start}-${end}`,
+      start: appliedStart,
+      end: appliedEnd,
+      message: `Navigated to ${resolvedChromosome}:${appliedStart}-${appliedEnd}`,
       usedDefaultRange: position !== undefined && (params.start === undefined || params.end === undefined),
       ...(result.requestedChromosome && result.requestedChromosome !== resolvedChromosome
         ? { requestedChromosome: result.requestedChromosome }
@@ -8021,6 +8024,49 @@ class ChatManager {
     return Boolean(this.getRequestedGeneSelection(originalMessage));
   }
 
+  getRequestedGeneDisplay(actionText) {
+    const message = String(actionText || '')
+      .trim()
+      .replace(/[.!?。！？]+$/, '');
+    const identifier = '["\'“‘]?([A-Za-z0-9][A-Za-z0-9_.-]*)["\'”’]?';
+    const verb = '\\b(?:show|display)\\s+(?:me\\s+)?(?:the\\s+)?';
+    const view = '(?:\\s+region)?(?:\\s+in\\s+(?:the\\s+)?(?:genome\\s+)?(?:browser|view))?$';
+    const patterns = [
+      new RegExp(`${verb}${identifier}\\s+gene${view}`, 'i'),
+      new RegExp(`${verb}gene\\s+(?:(?:named|called)\\s+)?${identifier}${view}`, 'i'),
+      new RegExp(`^(?:(?:请|帮我|麻烦)\\s*)?(?:显示|展示)\\s*${identifier}\\s*基因$`),
+      new RegExp(`^(?:(?:请|帮我|麻烦)\\s*)?(?:显示|展示)\\s*基因\\s*[:：]?\\s*${identifier}$`),
+    ];
+    const target = patterns
+      .map(pattern => message.match(pattern)?.[1])
+      .find(Boolean)
+      ?.toLowerCase();
+    if (
+      /^(?:all|any|active|current|selected|details?|info(?:rmation)?|track|panel|sequence|region|expression|annotation)$/.test(
+        target || ''
+      )
+    ) {
+      return null;
+    }
+    return target || null;
+  }
+
+  matchesGeneNavigationTarget(record, target) {
+    const result = record?.resultSummary;
+    if (result?.executed === false) return false;
+    const gene = result?.gene;
+    const qualifiers = gene?.feature?.qualifiers;
+    const identifiers = [gene?.name, gene?.locusTag, qualifiers?.gene, qualifiers?.locus_tag]
+      .flat()
+      .filter(value => typeof value === 'string' && value.length > 0);
+    if (identifiers.length === 0) {
+      // Older tool results can omit the resolved annotation.
+      const params = record?.normalizedParameters || record?.parameters || {};
+      identifiers.push(params.geneName || params.gene_name || params.identifier || params.name);
+    }
+    return identifiers.some(value => typeof value === 'string' && value.trim().toLowerCase() === target);
+  }
+
   getSequentialRequestClauses(originalMessage) {
     const actionVerb = this.getActionVerbPattern();
     return String(originalMessage || '')
@@ -8150,6 +8196,18 @@ class ChatManager {
     }
     if (/\b(?:select|highlight|choose|pick|activate)\b|(?:选择|选中|高亮)/.test(message)) {
       return requirement('selection', verbTool('select', 'highlight', 'switch', 'set'), 'select_sequence_region');
+    }
+    const displayedGene = this.getRequestedGeneDisplay(actionText);
+    if (displayedGene) {
+      return {
+        ...requirement(
+          'show_gene',
+          (toolName, record) =>
+            (toolName === 'jump_to_gene' || toolName === 'zoom_to_gene') &&
+            this.matchesGeneNavigationTarget(record, displayedGene)
+        ),
+        target: displayedGene,
+      };
     }
     const trackVisibility = message.match(
       /\b(hide|show|toggle(?:\s+(?:off|on))?)\s+(?:the\s+)?(blast(?:\s+results?)?|gc(?:[\s_-]+content)?|variants?)\s+track\b/
@@ -8454,7 +8512,7 @@ class ChatManager {
   getSequentialActionRequirements(originalMessage) {
     const clauses = this.getSequentialRequestClauses(originalMessage);
     const actionableClauses = [];
-    const requirementsByCapability = new Map();
+    const requirementsByKey = new Map();
     let inheritedDomain = '';
 
     for (const clause of clauses) {
@@ -8469,9 +8527,10 @@ class ChatManager {
       // clauses the splitter produced. Splitting "run the filter and export
       // steps" yields a second export fragment, and counting it demanded two
       // exports of a request that has exactly one export step to perform.
-      const existing = requirementsByCapability.get(requirement.capability);
+      const key = requirement.target ? `${requirement.capability}:${requirement.target}` : requirement.capability;
+      const existing = requirementsByKey.get(key);
       if (!existing) {
-        requirementsByCapability.set(requirement.capability, requirement);
+        requirementsByKey.set(key, requirement);
       } else if (Number(requirement.count) > Number(existing.count)) {
         existing.count = requirement.count;
       }
@@ -8479,7 +8538,7 @@ class ChatManager {
 
     return {
       actionableClauseCount: actionableClauses.length,
-      requirements: [...requirementsByCapability.values()].filter(requirement =>
+      requirements: [...requirementsByKey.values()].filter(requirement =>
         this.isRequirementSatisfiableByAnyTool(requirement)
       ),
     };
@@ -11108,8 +11167,9 @@ Okay, the user wants to search for the gene lacZ. Let me check the available too
     const detailedState = `GENOME BROWSER CURRENT STATE:
 
 NAVIGATION & POSITION:
-- Current Chromosome: ${state.currentChromosome || 'None'}
-- Current Position: ${currentPosition ? `${currentPosition.start}-${currentPosition.end}` : 'None'}
+- Chromosome at request start: ${state.currentChromosome || 'None'}
+- Position at request start: ${currentPosition ? `${currentPosition.start}-${currentPosition.end}` : 'None'}
+- After navigation, use the latest successful navigation result for the current viewport.
 - Position Range: ${currentPosition ? `${(currentPosition.end - currentPosition.start + 1).toLocaleString()} bp` : 'N/A'}
 - Sequence Length: ${state.sequenceLength ? state.sequenceLength.toLocaleString() : 'Unknown'} bp
 
@@ -13957,7 +14017,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   }
 
   // New comprehensive function calls
-  async getGeneDetails(params) {
+  async getGeneDetails(params, { exactIdentifier = false } = {}) {
     const { geneName, chromosome } = params;
 
     if (!this.app || !this.app.currentAnnotations) {
@@ -13971,8 +14031,14 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     const annotations = this.app.currentAnnotations[chr] || [];
     const matchingGenes = annotations.filter(gene => {
-      const name = gene.qualifiers?.gene || gene.qualifiers?.locus_tag || gene.qualifiers?.product || '';
-      return name && typeof name === 'string' && name.toLowerCase().includes(geneName.toLowerCase());
+      const { gene: name, locus_tag: locusTag, product } = gene.qualifiers || {};
+      if (exactIdentifier) {
+        return [name, locusTag]
+          .flat()
+          .some(value => typeof value === 'string' && value.toLowerCase() === geneName.toLowerCase());
+      }
+      const label = name || locusTag || product || '';
+      return label && typeof label === 'string' && label.toLowerCase().includes(geneName.toLowerCase());
     });
 
     if (matchingGenes.length === 0) {
@@ -14286,29 +14352,52 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
   async zoomToGene(params) {
     const { geneName, chromosome, padding = 1000 } = params;
-
-    const geneDetails = await this.getGeneDetails({ geneName, chromosome });
-
-    if (!geneDetails.found || geneDetails.genes.length === 0) {
-      throw new Error(`Gene "${geneName}" not found`);
+    if (!this.app?.currentAnnotations) {
+      return { success: false, error: 'No annotations loaded' };
+    }
+    if (typeof geneName !== 'string' || !geneName.trim()) {
+      return { success: false, error: 'Gene name or locus tag is required' };
+    }
+    const identifier = geneName.trim();
+    const preferredChromosome = chromosome || this.app.currentChromosome;
+    const chromosomes = chromosome
+      ? [chromosome]
+      : [...new Set([preferredChromosome, ...Object.keys(this.app.currentAnnotations)].filter(Boolean))];
+    let target;
+    for (const candidate of chromosomes) {
+      const details = await this.getGeneDetails(
+        { geneName: identifier, chromosome: candidate },
+        { exactIdentifier: true }
+      );
+      if (details.found) {
+        target = details;
+        break;
+      }
+    }
+    if (!target && preferredChromosome) {
+      // Preserve partial matching on the selected or explicitly requested chromosome.
+      target = await this.getGeneDetails({ geneName: identifier, chromosome: preferredChromosome });
+    }
+    if (!target?.found) {
+      return { success: false, error: `Gene "${geneName}" not found` };
     }
 
-    const gene = geneDetails.genes[0]; // Use first match
-    const newStart = Math.max(0, gene.start - padding);
-    const newEnd = gene.end + padding;
-
-    // Navigate to the gene location
-    await this.navigateToPosition({
-      chromosome: geneDetails.chromosome,
-      start: newStart,
-      end: newEnd,
+    const gene = target.genes[0];
+    const navigation = await this.navigateToPosition({
+      chromosome: target.chromosome,
+      start: Math.max(1, gene.start - padding),
+      end: gene.end + padding,
     });
+    if (!navigation.success) return navigation;
+    const viewingRegion = { chromosome: navigation.chromosome, start: navigation.start, end: navigation.end };
 
     return {
-      geneName: geneName,
-      gene: gene,
-      zoomedRegion: `${newStart}-${newEnd}`,
-      padding: padding,
+      success: true,
+      geneName,
+      gene,
+      zoomedRegion: `${viewingRegion.start}-${viewingRegion.end}`,
+      viewingRegion,
+      padding,
       message: `Zoomed to gene ${gene.name} with ${padding}bp padding`,
     };
   }

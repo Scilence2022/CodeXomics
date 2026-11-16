@@ -640,8 +640,9 @@ class SystemIntegration {
     if (context.genomeBrowser) {
       const gb = context.genomeBrowser;
       genomeStateInfo = `
-- **Current Chromosome**: ${gb.currentChromosome || 'None'}
-- **Current Position**: ${gb.currentPosition ? `${gb.currentPosition.start}-${gb.currentPosition.end}` : 'None'}
+- **Chromosome at request start**: ${gb.currentChromosome || 'None'}
+- **Position at request start**: ${gb.currentPosition ? `${gb.currentPosition.start}-${gb.currentPosition.end}` : 'None'}
+- After navigation, use the latest successful navigation result for the current viewport.
 - **Visible Tracks**: ${gb.visibleTracks ? gb.visibleTracks.join(', ') : 'None'}
 - **Loaded Files**: ${gb.loadedFiles ? gb.loadedFiles.length : 0} files
 - **Sequence Length**: ${gb.sequenceLength ? gb.sequenceLength.toLocaleString() + ' bp' : 'Unknown'}

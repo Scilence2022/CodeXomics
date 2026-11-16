@@ -142,6 +142,63 @@ describe('ChatManager.zoomOut', () => {
   });
 });
 
+describe('gene navigation viewport', () => {
+  const feature = {
+    start: 100,
+    end: 300,
+    strand: -1,
+    qualifiers: { gene: 'dapA', locus_tag: 'b2478' },
+  };
+
+  it('adds the applied viewport to the jump result', () => {
+    const { nm, genomeBrowser } = createNavigationManager({ contig: 'A'.repeat(500) });
+    genomeBrowser.searchGeneByName = () => ({ chromosome: 'contig', feature });
+
+    const result = nm.jumpToGene('dapA');
+
+    expect(result).toMatchObject({ success: true, viewingRegion: { chromosome: 'contig', start: 100, end: 300 } });
+    expect(genomeBrowser.currentPosition).toEqual({ start: 99, end: 300 });
+    expect(genomeBrowser.displayGenomeView).toHaveBeenCalledOnce();
+  });
+
+  it('zooms to an exact locus tag on another contig and reports the clipped region', async () => {
+    const manager = createChatManager({ contig: 'A'.repeat(500), second: 'A'.repeat(500) });
+    manager.app.currentAnnotations = {
+      contig: [{ ...feature, qualifiers: { gene: 'b2478-like' } }],
+      second: [feature],
+    };
+
+    const result = await manager.zoomToGene({ geneName: 'B2478' });
+
+    expect(result).toMatchObject({
+      success: true,
+      zoomedRegion: '1-500',
+      viewingRegion: { chromosome: 'second', start: 1, end: 500 },
+    });
+    expect(manager.app.currentPosition).toEqual({ start: 0, end: 500 });
+  });
+
+  it('keeps partial matching on the selected contig when there is no exact identifier', async () => {
+    const manager = createChatManager({ contig: 'A'.repeat(500) });
+    manager.app.currentAnnotations = { contig: [feature] };
+
+    await expect(manager.zoomToGene({ geneName: 'dap' })).resolves.toMatchObject({
+      success: true,
+      gene: { name: 'dapA', locusTag: 'b2478' },
+    });
+  });
+
+  it('propagates navigation failure when the target annotation has no loaded sequence', async () => {
+    const manager = createChatManager({ contig: 'A'.repeat(500) });
+    manager.app.currentAnnotations = { unloaded: [feature] };
+
+    const result = await manager.zoomToGene({ geneName: 'dapA' });
+
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('unloaded') });
+    expect(manager.app.displayGenomeView).not.toHaveBeenCalled();
+  });
+});
+
 describe('NavigationManager chromosome resolution', () => {
   it('refuses an unknown name and lists what is loaded', () => {
     const { nm } = createNavigationManager({ U00096: 'A'.repeat(1000) });
@@ -210,6 +267,14 @@ describe('dynamic system prompt grounding', () => {
     expect(prompt).toContain('Loaded Chromosome/Contig Names: U00096');
     expect(prompt).toMatch(/copied verbatim from the loaded names/);
     expect(prompt).toContain('2000000');
+  });
+
+  it('labels the initial viewport and directs the model to later navigation results', () => {
+    const prompt = buildPrompt({ currentChromosome: 'contig', currentPosition: { start: 101, end: 200 } });
+
+    expect(prompt).toContain('Chromosome at request start: contig');
+    expect(prompt).toContain('Position at request start: 101-200');
+    expect(prompt).toContain('use the latest successful navigation result for the current viewport');
   });
 
   it('caps a long contig list instead of dumping every name', () => {
