@@ -416,7 +416,9 @@ class NavigationManager {
       return { success: false, error: `Gene "${geneName}" not found`, geneName };
     }
     const navResult = this.navigateToPosition(gene.chromosome, gene.feature.start, gene.feature.end);
-    return { ...navResult, gene };
+    if (!navResult.success) return { ...navResult, gene };
+    const viewingRegion = { chromosome: navResult.chromosome, start: navResult.start + 1, end: navResult.end };
+    return { ...navResult, gene, viewingRegion };
   }
 
   scrollLeft(bp = 1000) {

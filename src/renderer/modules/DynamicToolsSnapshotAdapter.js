@@ -1294,9 +1294,10 @@ class DynamicToolsSnapshotAdapter {
 ${introLine}
 
 ## Current Context
-- Current Chromosome: ${genomeContext.currentChromosome || 'None'}
+- Chromosome at request start: ${genomeContext.currentChromosome || 'None'}
 - Loaded Chromosome/Contig Names: ${availableChromosomes}
-- Current Position: ${currentPosition}
+- Position at request start: ${currentPosition}
+- After navigation, use the latest successful navigation result for the current viewport.
 - Visible Tracks: ${visibleTracks}
 - Loaded Files: ${loadedFiles} files
 - Sequence Length: ${genomeContext.sequenceLength || 'Unknown'}

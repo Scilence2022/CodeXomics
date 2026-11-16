@@ -371,9 +371,6 @@ class NavigationAgent extends AgentBase {
         case 'zoom_out':
           return await this.executeZoomOut(parameters, app);
 
-        case 'zoom_to_gene':
-          return await this.executeZoomToGene(parameters, app);
-
         case 'toggle_track':
           return await this.executeToggleTrack(parameters, app);
 
@@ -404,6 +401,7 @@ class NavigationAgent extends AgentBase {
         case 'get_chromosome_list':
         case 'select_gene':
         case 'select_sequence_region':
+        case 'zoom_to_gene':
           // These tools are authoritatively implemented on ChatManager.
           // Delegate directly to ChatManager methods.
           try {
@@ -526,12 +524,6 @@ class NavigationAgent extends AgentBase {
   async executeJumpToGene(parameters, app) {
     const { geneName } = parameters;
 
-    const cacheKey = `gene_${geneName}`;
-    const cached = this.positionCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < 60000) {
-      return cached.result;
-    }
-
     let result;
     try {
       const nm = app.navigationManager || (app.genomeBrowser && app.genomeBrowser.navigationManager);
@@ -541,11 +533,6 @@ class NavigationAgent extends AgentBase {
       console.warn(`NavigationAgent: jumpToGene failed`, error);
       result = { success: false, error: error.message, geneName };
     }
-
-    this.positionCache.set(cacheKey, {
-      result,
-      timestamp: Date.now(),
-    });
 
     this.navigationHistory.push({
       timestamp: Date.now(),
@@ -626,28 +613,6 @@ class NavigationAgent extends AgentBase {
       console.warn(`NavigationAgent: zoomOut failed`, error);
       return { success: false, error: error.message };
     }
-  }
-
-  /**
-   * Execute zoom to gene
-   */
-  async executeZoomToGene(parameters, app) {
-    const { geneName } = parameters;
-
-    // First jump to gene, then zoom
-    const jumpResult = await this.executeJumpToGene(parameters, app);
-    let zoomResult;
-    try {
-      zoomResult = await app.genomeBrowser.zoomToGene(geneName);
-    } catch (error) {
-      console.warn(`NavigationAgent: genomeBrowser.zoomToGene failed`, error);
-      zoomResult = { success: false, error: error.message };
-    }
-
-    return {
-      jump: jumpResult,
-      zoom: zoomResult,
-    };
   }
 
   /**

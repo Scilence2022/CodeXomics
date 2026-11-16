@@ -1262,6 +1262,51 @@ describe('ChatManager requirements match the tools that carry them out', () => {
     expect(requirements.map(requirement => requirement.capability)).toContain('gene_selection');
   });
 
+  it('requires navigation to the requested gene name or locus tag', () => {
+    const manager = managerWithRegistry();
+    const state = manager.createToolExecutionState('Display the gene b2478 in the genome view.');
+    state.records.push(
+      { tool: 'get_current_state', status: 'success' },
+      { tool: 'toggle_track', status: 'success' },
+      { tool: 'get_gene_details', parameters: { geneName: 'b2478' }, status: 'success' },
+      { tool: 'jump_to_gene', parameters: { geneName: 'lacZ' }, status: 'success' },
+      { tool: 'zoom_to_gene', parameters: { geneName: 'b2478' }, status: 'failed' },
+      {
+        tool: 'zoom_to_gene',
+        parameters: { geneName: 'b2478' },
+        status: 'success',
+        resultSummary: { gene: { name: 'lacZ' } },
+      }
+    );
+    expect(manager.getOutstandingRequestSteps(state).map(step => step.capability)).toEqual(['show_gene']);
+
+    state.records.push({
+      tool: 'jump_to_gene',
+      parameters: { geneName: 'dapA' },
+      status: 'success',
+      resultSummary: { gene: { feature: { qualifiers: { gene: 'dapA', locus_tag: 'B2478' } } } },
+    });
+    expect(manager.hasSuccessfulExecutionForRequest(state)).toBe(true);
+  });
+
+  it('preserves other targets, details, and export steps after navigation', () => {
+    const manager = managerWithRegistry();
+    const navigation = { tool: 'jump_to_gene', parameters: { geneName: 'DapA' }, status: 'success' };
+    const state = manager.createToolExecutionState('show dapA gene, then show lacZ gene, then export its sequence');
+    state.records.push(navigation);
+    expect(manager.getOutstandingRequestSteps(state).map(step => step.clause)).toEqual([
+      'show lacZ gene',
+      'export its sequence',
+    ]);
+
+    const details = manager.createToolExecutionState('show dapA gene details');
+    manager.builtInToolsMap.set('get_gene_details', {});
+    details.records.push(navigation);
+    expect(manager.hasSuccessfulExecutionForRequest(details)).toBe(false);
+    details.records.push({ tool: 'get_gene_details', parameters: { geneName: 'dapA' }, status: 'success' });
+    expect(manager.hasSuccessfulExecutionForRequest(details)).toBe(true);
+  });
+
   describe('turn termination signals', () => {
     const LoopSupport = loadLoopSupportClass();
     const manager = new LoopSupport();
