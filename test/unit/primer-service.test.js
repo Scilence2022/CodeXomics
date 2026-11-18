@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
@@ -8,7 +9,7 @@ const PrimerDesigner = require('../../src/renderer/modules/PrimerDesigner.js');
 const PrimerManager = require('../../src/renderer/modules/PrimerManager.js');
 const browserGlobals = { PrimerDesigner };
 const serviceSource = readFileSync('src/renderer/modules/chat/services/PrimerService.js', 'utf8');
-new Function('window', serviceSource)(browserGlobals);
+runInNewContext(serviceSource, { window: browserGlobals, document });
 const { PrimerService } = browserGlobals;
 
 function setup(strand = '+') {
