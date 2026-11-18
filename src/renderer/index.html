@@ -839,47 +839,29 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="primerTrackBtn" class="btn btn-sm toggle-btn" title="Primer Options">
-                    <i class="fas fa-vial"></i>
+                <button id="primerTrackBtn" class="btn btn-sm toggle-btn" title="Primer Options"
+                    popovertarget="primersDropdown">
+                    <i class="fas fa-vial" aria-hidden="true"></i>
                     <span>Primers</span>
                 </button>
-                <div class="actions-dropdown" id="primersDropdown" style="display: none;">
-                    <div class="dropdown-section">
-                        <div class="dropdown-section-title">
-                            <i class="fas fa-vials"></i>
-                            Primer Library
-                        </div>
-                        <button id="openPrimerLibraryBtn" class="dropdown-feature-btn" title="Open the primer library">
-                            <i class="fas fa-book"></i>
-                            Open Primer Library
-                        </button>
-                    </div>
-                    <div class="dropdown-divider"></div>
-                    <div class="dropdown-section">
-                        <div class="dropdown-section-title">
-                            <i class="fas fa-edit"></i>
-                            Manual Primer Tools
-                        </div>
-                        <button id="manualAddPrimerBtn" class="dropdown-feature-btn" title="Add Primer Manually">
-                            <i class="fas fa-plus"></i>
-                            Add Primer
-                        </button>
-                        <button id="manualDeletePrimerBtn" class="dropdown-feature-btn" title="Delete Primer Annotations">
-                            <i class="fas fa-trash-alt"></i>
-                            Delete Primers
-                        </button>
-                    </div>
-                    <div class="dropdown-divider"></div>
-                    <div class="dropdown-section">
-                        <div class="dropdown-section-title">
-                            <i class="fas fa-eye"></i>
-                            Track Display
-                        </div>
-                        <button id="togglePrimerTrackMenuBtn" class="dropdown-feature-btn" title="Toggle Primer Track">
-                            <i class="fas fa-vial"></i>
-                            Toggle Primer Track
-                        </button>
-                    </div>
+                <div class="actions-dropdown" id="primersDropdown" popover>
+                    <button id="manualAddPrimerBtn" class="dropdown-feature-btn">
+                        <i class="fas fa-plus" aria-hidden="true"></i>
+                        Add Primer…
+                    </button>
+                    <button id="manualDeletePrimerBtn" class="dropdown-feature-btn">
+                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                        Delete Primers…
+                    </button>
+                    <button id="togglePrimerTrackMenuBtn" class="dropdown-feature-btn">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                        Show Primer Track
+                    </button>
+                    <div class="dropdown-divider" aria-hidden="true"></div>
+                    <button id="openPrimerLibraryBtn" class="dropdown-feature-btn">
+                        <i class="fas fa-book" aria-hidden="true"></i>
+                        Primer Library
+                    </button>
                 </div>
             </div>
 

@@ -9715,9 +9715,9 @@ class GenomeBrowser {
       this.toggleAddFeaturesDropdown();
     });
 
-    document.getElementById('primerTrackBtn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      this.togglePrimersDropdown();
+    const primerTrackBtn = document.getElementById('primerTrackBtn');
+    document.getElementById('primersDropdown')?.addEventListener('toggle', e => {
+      primerTrackBtn?.classList.toggle('active', e.newState === 'open');
     });
 
     document.getElementById('highlightsBtn')?.addEventListener('click', () => {
@@ -9750,10 +9750,9 @@ class GenomeBrowser {
       this.promptDeletePrimers();
     });
 
-    document.getElementById('togglePrimerTrackMenuBtn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      this.togglePrimerTrack();
+    document.getElementById('togglePrimerTrackMenuBtn')?.addEventListener('click', () => {
       this.hidePrimersDropdown();
+      this.togglePrimerTrack();
     });
 
     // Actions dropdown menu
@@ -9781,7 +9780,6 @@ class GenomeBrowser {
     document.addEventListener('click', () => {
       this.hideAddFeaturesDropdown();
       this.hideActionsDropdown();
-      this.hidePrimersDropdown();
     });
 
     // Enable sequence selection in bottom panel
@@ -9840,30 +9838,13 @@ class GenomeBrowser {
     const trackMenuBtn = document.getElementById('togglePrimerTrackMenuBtn');
     if (trackMenuBtn) {
       trackMenuBtn.innerHTML = isVisible
-        ? '<i class="fas fa-eye-slash"></i> Hide Primer Track'
-        : '<i class="fas fa-eye"></i> Show Primer Track';
-    }
-  }
-
-  togglePrimersDropdown() {
-    const dropdown = document.getElementById('primersDropdown');
-    const button = document.getElementById('primerTrackBtn');
-
-    if (dropdown && button) {
-      const isVisible = dropdown.style.display === 'block';
-      dropdown.style.display = isVisible ? 'none' : 'block';
-      button.classList.toggle('active', !isVisible);
+        ? '<i class="fas fa-eye-slash" aria-hidden="true"></i> Hide Primer Track'
+        : '<i class="fas fa-eye" aria-hidden="true"></i> Show Primer Track';
     }
   }
 
   hidePrimersDropdown() {
-    const dropdown = document.getElementById('primersDropdown');
-    const button = document.getElementById('primerTrackBtn');
-
-    if (dropdown && button) {
-      dropdown.style.display = 'none';
-      button.classList.remove('active');
-    }
+    document.getElementById('primersDropdown')?.hidePopover();
   }
 
   toggleActionsDropdown() {
