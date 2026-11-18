@@ -1033,6 +1033,17 @@ describe('ChatManager requirements read the action, not the goal', () => {
     expect(manager.getOutstandingRequestSteps(stateFor(manager, pairWorkflow, [...calls, 'save_primer']))).toEqual([]);
   });
 
+  it('requires two saves when asked to add the designed primers', () => {
+    const manager = new (loadLoopSupportClass())();
+    const request = 'design primers to amplify purC gene, and add designed primers';
+    const calls = ['design_primers', 'save_primer'];
+
+    expect(manager.getOutstandingRequestSteps(stateFor(manager, request, calls))).toMatchObject([
+      { capability: 'save_primer', remaining: 1 },
+    ]);
+    expect(manager.getOutstandingRequestSteps(stateFor(manager, request, [...calls, 'save_primer']))).toEqual([]);
+  });
+
   // Verbatim instruction from the benchmark run that never finished.
   const PROTEIN_WORKFLOW =
     'Search the UniProt database for the E.coli protein DapA and verify whether the UniProt ID P0A6L2 is present. ' +

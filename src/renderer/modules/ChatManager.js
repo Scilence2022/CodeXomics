@@ -8272,7 +8272,7 @@ class ChatManager {
       (/\bsave\b|保存/.test(message) && /\bprimers?\b|引物/.test(contextMessage))
     ) {
       const save = requirement('save_primer', toolName => toolName === 'save_primer');
-      if (/\bboth\s+(?:designed\s+)?primers\b/.test(message)) save.count = 2;
+      if (/\b(?:both\s+(?:designed\s+)?|designed\s+)primers\b/.test(message)) save.count = 2;
       return save;
     }
     if (/\b(?:create|add)\b|(?:创建|添加)/.test(message) && /\bannotations?\b|注释/.test(contextMessage)) {
