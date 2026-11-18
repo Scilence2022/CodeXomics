@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-11-11T07:27:01.750Z",
-  "registryHash": "f12a4e23abdeccfd89fdf4757d1bd9d319044d937b668fe3327bec10adf8a4bd",
+  "generatedAt": "2026-11-18T03:14:22.107Z",
+  "registryHash": "6807d889cdbf56813b4cc0f0cb01c69dab0e3d66616a529ffb39bfbb139a9c12",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -20277,7 +20277,7 @@
         "add_primer_annotation"
       ],
       "version": "1.1.0",
-      "description": "Save a primer oligo to the primer library (stored separately from the genome, never written into the genome file). Binding sites are predicted automatically; provide chromosome/start/end only to pin a specific manual placement.",
+      "description": "Save one primer oligo to the primer library and pin its genomic binding site. For a designed pair, call once per primer with target.chromosome and the corresponding genomicStart, genomicEnd, strand, and sequence from design_primers.",
       "category": "primer_design",
       "keywords": [
         "add primer",
@@ -20310,11 +20310,11 @@
           },
           "start": {
             "type": "number",
-            "description": "Start position (5' end)"
+            "description": "Lower 1-based genomic coordinate, inclusive. For a designed primer, use genomicStart."
           },
           "end": {
             "type": "number",
-            "description": "End position (3' end)"
+            "description": "Higher 1-based genomic coordinate, inclusive. For a designed primer, use genomicEnd."
           },
           "strand": {
             "type": "string",
@@ -47015,7 +47015,7 @@
         "add_primer_annotation"
       ],
       "version": "1.1.0",
-      "description": "Save a primer oligo to the primer library (stored separately from the genome, never written into the genome file). Binding sites are predicted automatically; provide chromosome/start/end only to pin a specific manual placement.",
+      "description": "Save one primer oligo to the primer library and pin its genomic binding site. For a designed pair, call once per primer with target.chromosome and the corresponding genomicStart, genomicEnd, strand, and sequence from design_primers.",
       "category": "primer_design",
       "keywords": [
         "add primer",
@@ -47048,11 +47048,11 @@
           },
           "start": {
             "type": "number",
-            "description": "Start position (5' end)"
+            "description": "Lower 1-based genomic coordinate, inclusive. For a designed primer, use genomicStart."
           },
           "end": {
             "type": "number",
-            "description": "End position (3' end)"
+            "description": "Higher 1-based genomic coordinate, inclusive. For a designed primer, use genomicEnd."
           },
           "strand": {
             "type": "string",

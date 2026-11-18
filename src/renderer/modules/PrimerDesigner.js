@@ -227,7 +227,8 @@ class PrimerDesigner {
       throw new Error('Target sequence must be at least 150bp to design primers');
     }
 
-    const seq = targetSequence.toUpperCase().replace(/[^ATCG]/g, '');
+    // Keep ambiguous bases in genomic templates so binding offsets still map to the genome.
+    const seq = targetSequence.toUpperCase().replace(/[^ATCG]/g, options.preserveCoordinates ? 'N' : '');
 
     if (seq.length < 150) {
       throw new Error(`After removing non-ATCG characters, only ${seq.length}bp remain. Need at least 150bp.`);
@@ -459,6 +460,7 @@ class PrimerDesigner {
         if (gcContent < gcMin || gcContent > gcMax) continue;
 
         const subSeq = seq.substring(i, i + len);
+        if (subSeq.includes('N')) continue;
         const tm = this.calculateTm(subSeq, reaction);
 
         if (Math.abs(tm - targetTm) > tmTol) continue;

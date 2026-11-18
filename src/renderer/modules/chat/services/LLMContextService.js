@@ -1892,7 +1892,7 @@ Primer Design & PCR:
   - calculate_primer_properties: Calculate melting temp, GC content for a primer
   - design_primers: Design a full PCR primer pair; use upstreamBp/downstreamBp and primer length/Tm/GC options
   - find_primer_binding_sites: Find binding locations of a primer on the genome
-  - save_primer: Save a primer oligo to the library (binding sites are predicted automatically; pass chromosome/start/end only to pin a manual placement)
+  - save_primer: Save one primer to the library at a genomic binding site. To add a designed pair, save both primers using target.chromosome and each primer's genomicStart, genomicEnd, strand, and sequence from design_primers. bindStart and bindEnd are template offsets.
   - list_primers: List primers in the library and their pinned + predicted binding sites
   - delete_primers: Delete primers from the library with confirm=true
 
@@ -1953,7 +1953,6 @@ Primer Tools:
   {"tool_name": "design_primers", "parameters": {"geneName": "lysC", "upstreamBp": 50, "targetTm": 60}}
   {"tool_name": "design_primers", "parameters": {"geneName": "lysC", "upstreamBp": 50, "downstreamBp": 30, "primerLength": 22}}
   {"tool_name": "find_primer_binding_sites", "parameters": {"primerSequence": "ATGCGTAC", "chromosome": "chr1"}}
-  {"tool_name": "save_primer", "parameters": {"name": "Test_Fwd", "sequence": "ATGCGTACGTTAGCCTAGCTAG"}}
   {"tool_name": "list_primers", "parameters": {"chromosome": "chr1"}}
   {"tool_name": "delete_primers", "parameters": {"chromosome": "chr1", "confirm": true}}`;
 

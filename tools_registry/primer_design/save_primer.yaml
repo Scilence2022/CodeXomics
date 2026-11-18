@@ -2,7 +2,7 @@ name: save_primer
 aliases:
   - add_primer_annotation
 version: 1.1.0
-description: 'Save a primer oligo to the primer library (stored separately from the genome, never written into the genome file). Binding sites are predicted automatically; provide chromosome/start/end only to pin a specific manual placement.'
+description: 'Save one primer oligo to the primer library and pin its genomic binding site. For a designed pair, call once per primer with target.chromosome and the corresponding genomicStart, genomicEnd, strand, and sequence from design_primers.'
 category: primer_design
 keywords:
   - add primer
@@ -31,10 +31,10 @@ parameters:
       description: 'Chromosome/replicon ID where the primer binds'
     start:
       type: number
-      description: "Start position (5' end)"
+      description: 'Lower 1-based genomic coordinate, inclusive. For a designed primer, use genomicStart.'
     end:
       type: number
-      description: "End position (3' end)"
+      description: 'Higher 1-based genomic coordinate, inclusive. For a designed primer, use genomicEnd.'
     strand:
       type: string
       description: 'Strand (+ or -)'

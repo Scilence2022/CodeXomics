@@ -29,6 +29,7 @@ class PrimerService {
     await this._resolveTargetSequence(params);
     const Designer = this._getDesigner();
     const options = this._getDesignOptions(params);
+    options.preserveCoordinates = Boolean(params.targetMetadata);
     const pair = Designer.designPrimerPair(params.targetSequence, options);
     if (!pair) {
       return { error: 'Could not find a valid primer pair meeting the criteria in the given sequence' };
@@ -93,8 +94,15 @@ class PrimerService {
   // --- save_primer (alias: add_primer_annotation) ---
 
   async savePrimer(params) {
-    if (!params.chromosome || !params.start || !params.end || !params.name) {
-      throw new Error('Missing required fields for annotation: chromosome, start, end, name');
+    if (!params.chromosome || !params.name) {
+      throw new Error('Primer name and chromosome are required');
+    }
+    const start = this._getNumber(params.start);
+    const end = this._getNumber(params.end);
+    if (!Number.isSafeInteger(start) || start < 1 || !Number.isSafeInteger(end) || end < 1) {
+      throw new Error(
+        'Primer start and end must be 1-based genomic coordinates. For designed primers, use genomicStart and genomicEnd.'
+      );
     }
     const strand = params.strand === '-' || params.strand === -1 ? -1 : 1;
     const primerSequence = params.sequence || params.primerSequence || params.oligoSequence;
@@ -107,8 +115,8 @@ class PrimerService {
       bindingSites: [
         {
           chromosome: params.chromosome,
-          start: parseInt(params.start),
-          end: parseInt(params.end),
+          start,
+          end,
           strand,
           tm: params.tm,
           gcContent: params.gcContent,
@@ -257,30 +265,33 @@ class PrimerService {
           throw new Error(seqData.message || seqData.error || `Could not find sequence for gene ${params.geneName}`);
         }
 
-        if (this._shouldUseGeneAmpliconContext(params)) {
-          await this._resolveGeneAmpliconSequence(params, seqData);
-          return;
-        }
-
-        const targetSequence = seqData?.dnaSequence || seqData?.codingSequence || seqData?.sequence;
-        if (targetSequence) {
-          params.targetSequence = targetSequence;
-          return;
-        }
-        throw new Error(`Could not find sequence for gene ${params.geneName}`);
+        await this._resolveGeneAmpliconSequence(params, seqData);
+        return;
       } catch (e) {
         throw new Error(`Failed to lookup sequence for gene ${params.geneName}: ${e.message}`);
       }
     }
 
-    if (params.chromosome && params.start && params.end) {
+    if (params.chromosome && params.start != null && params.end != null) {
+      const start = this._getNumber(params.start);
+      const end = this._getNumber(params.end);
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start) {
+        throw new Error('The primer design region requires 1-based genomic coordinates with start at or before end');
+      }
       const seq = await this.chatManager.getSequence({
         chromosome: params.chromosome,
-        start: params.start,
-        end: params.end,
+        start,
+        end,
       });
       if (seq && seq.sequence) {
         params.targetSequence = seq.sequence;
+        params.targetMetadata = {
+          source: 'region',
+          chromosome: params.chromosome,
+          regionStart: start,
+          regionEnd: start + seq.sequence.length - 1,
+          inputSequenceOrientation: 'genomic forward strand',
+        };
         return;
       }
       throw new Error('Failed to retrieve sequence for the specified genomic region');
@@ -291,6 +302,7 @@ class PrimerService {
 
   async _resolveGeneAmpliconSequence(params, seqData) {
     const Designer = this._getDesigner();
+    const useAmpliconContext = this._shouldUseGeneAmpliconContext(params);
     const upstreamBp = this._getRequestedUpstreamBp(params);
     const downstreamBp = this._getRequestedDownstreamBp(params);
     const needsFlankingSequence = upstreamBp > 0 || downstreamBp > 0;
@@ -303,10 +315,10 @@ class PrimerService {
       needsFlankingSequence ? 75 : 0
     );
 
-    const chromosome = seqData.chromosome;
-    const geneStart = parseInt(seqData.start, 10);
-    const geneEnd = parseInt(seqData.end, 10);
-    const isReverse = seqData.strand === '-' || seqData.strand === -1;
+    const chromosome = seqData?.chromosome;
+    const geneStart = parseInt(seqData?.start, 10);
+    const geneEnd = parseInt(seqData?.end, 10);
+    const isReverse = seqData?.strand === '-' || seqData?.strand === -1;
 
     if (!chromosome || !Number.isFinite(geneStart) || !Number.isFinite(geneEnd)) {
       throw new Error(`Gene ${params.geneName} was found, but chromosome/start/end metadata were unavailable`);
@@ -354,18 +366,20 @@ class PrimerService {
       availableDownstreamBp = Math.max(0, requiredGenomicEnd - geneEnd);
     }
 
-    const seq = await this.chatManager.getSequence({
-      chromosome,
-      start: regionStart,
-      end: regionEnd,
-    });
-    if (!seq || !seq.sequence) {
-      throw new Error(`Failed to retrieve strand-aware amplicon sequence for gene ${params.geneName}`);
+    if (useAmpliconContext) {
+      const seq = await this.chatManager.getSequence({ chromosome, start: regionStart, end: regionEnd });
+      if (!seq?.sequence) {
+        throw new Error(`Failed to retrieve strand-aware amplicon sequence for gene ${params.geneName}`);
+      }
+      params.targetSequence = isReverse ? Designer.reverseComplement(seq.sequence) : seq.sequence;
+      params.requiredAmpliconStart = requiredAmpliconStart;
+      params.requiredAmpliconEnd = requiredAmpliconEnd;
+    } else {
+      params.targetSequence = seqData.dnaSequence || seqData.codingSequence || seqData.sequence;
+      if (!params.targetSequence) {
+        throw new Error(`Could not find sequence for gene ${params.geneName}`);
+      }
     }
-
-    params.targetSequence = isReverse ? Designer.reverseComplement(seq.sequence) : seq.sequence;
-    params.requiredAmpliconStart = requiredAmpliconStart;
-    params.requiredAmpliconEnd = requiredAmpliconEnd;
     params.targetMetadata = {
       source: 'geneName',
       geneName: seqData.geneName || params.geneName,
@@ -383,8 +397,8 @@ class PrimerService {
       availableDownstreamBp,
       upstreamPrimerBuffer,
       downstreamPrimerBuffer,
-      requiredAmpliconStart,
-      requiredAmpliconEnd,
+      requiredAmpliconStart: params.requiredAmpliconStart,
+      requiredAmpliconEnd: params.requiredAmpliconEnd,
     };
   }
 
@@ -445,6 +459,14 @@ class PrimerService {
 
     const productStart = Math.min(forwardBinding.genomicStart, reverseBinding.genomicStart);
     const productEnd = Math.max(forwardBinding.genomicEnd, reverseBinding.genomicEnd);
+    const mappedPair = {
+      ...pair,
+      forward: { ...pair.forward, ...forwardBinding },
+      reverse: { ...pair.reverse, ...reverseBinding },
+      target: { ...metadata, productStart, productEnd },
+    };
+    if (metadata.source !== 'geneName') return mappedPair;
+
     const upstreamIncludedBp =
       metadata.geneStrand === '-'
         ? Math.max(0, productEnd - metadata.geneEnd)
@@ -486,28 +508,14 @@ class PrimerService {
       warnings.push('Primer pair does not fully cover the annotated gene interval.');
     }
 
-    return {
-      ...pair,
-      forward: {
-        ...pair.forward,
-        ...forwardBinding,
-      },
-      reverse: {
-        ...pair.reverse,
-        ...reverseBinding,
-      },
-      target: {
-        ...metadata,
-        productStart,
-        productEnd,
-        upstreamIncludedBp,
-        downstreamIncludedBp,
-        coversRequestedUpstream,
-        coversRequestedDownstream,
-        coversGene,
-      },
-      warnings: warnings.length > 0 ? warnings : undefined,
-    };
+    Object.assign(mappedPair.target, {
+      upstreamIncludedBp,
+      downstreamIncludedBp,
+      coversRequestedUpstream,
+      coversRequestedDownstream,
+      coversGene,
+    });
+    return warnings.length ? { ...mappedPair, warnings } : mappedPair;
   }
 
   _mapOrientedBindingToGenome(bindStart, bindEnd, metadata, primerType) {
