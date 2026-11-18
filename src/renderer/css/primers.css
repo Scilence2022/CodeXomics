@@ -1,3 +1,23 @@
+/* Primers toolbar dropdown */
+
+#primersDropdown {
+  position: fixed;
+  inset: auto;
+  top: anchor(bottom);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  margin: 4px 0 0;
+  padding: 4px;
+}
+
+#primersDropdown .dropdown-feature-btn {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 8px 10px;
+  transform: none;
+}
+
 /* Primer library panel and primer track styling */
 
 .primer-library-modal .modal-content.large {
