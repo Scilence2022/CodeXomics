@@ -282,6 +282,7 @@ class GelElectrophoresisService {
         this._renderFallbackHTML(container, result);
       }
       modal.classList.add('show');
+      window.modalDragManager?.raiseFloatingWindow(modal);
     }
   }
 

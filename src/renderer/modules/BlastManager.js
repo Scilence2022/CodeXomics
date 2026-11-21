@@ -3546,7 +3546,8 @@ class BlastManager {
   showBlastModal() {
     const modal = document.getElementById('blastSearchModal');
     if (modal) {
-      modal.classList.add('show', 'blast-modal-no-overlay');
+      modal.classList.add('show');
+      window.modalDragManager?.raiseFloatingWindow(modal);
       this.updateCurrentRegionDisplay();
       // Populate loaded genome list when modal is opened
       this.updateLoadedGenomeList();
@@ -3563,7 +3564,8 @@ class BlastManager {
   showResultsModal() {
     const modal = document.getElementById('blastResultsModal');
     if (modal) {
-      modal.classList.add('show', 'blast-modal-no-overlay');
+      modal.classList.add('show');
+      window.modalDragManager?.raiseFloatingWindow(modal);
       // Resizable functionality is now initialized centrally upon app load
     }
   }

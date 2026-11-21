@@ -103,16 +103,6 @@
   justify-content: center;
 }
 
-/* Special style for BLAST modal to not block main interface */
-.modal.blast-modal-no-overlay {
-  background: transparent;
-  pointer-events: none;
-}
-
-.modal.blast-modal-no-overlay .modal-content {
-  pointer-events: auto;
-}
-
 .modal.show {
   display: flex;
 }

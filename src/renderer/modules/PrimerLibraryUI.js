@@ -45,6 +45,7 @@ class PrimerLibraryUI {
     this.refresh();
     const panel = document.getElementById(this.modalId);
     panel.classList.add('show');
+    window.modalDragManager?.raiseFloatingWindow(panel);
     panel.querySelector('[data-role="search"]').focus();
   }
 
@@ -67,12 +68,14 @@ class PrimerLibraryUI {
 
     const modal = document.createElement('div');
     modal.id = this.modalId;
-    modal.className = 'modal primer-floating-panel primer-library-modal';
+    modal.className = 'modal floating-tool-window primer-floating-panel primer-library-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-labelledby', 'primerLibraryTitle');
     // The shared drag and resize managers handle these controls through document-level listeners.
     modal.innerHTML = `
       <div class="modal-content large draggable resizable">
         <div class="modal-header draggable-handle" data-modal-content="#${this.modalId}">
-          <h3><i class="fas fa-vials"></i> Primer library</h3>
+          <h3 id="primerLibraryTitle"><i class="fas fa-vials"></i> Primer library</h3>
           <div class="modal-controls">
             <button class="modal-close" data-action="close" title="Close">&times;</button>
           </div>
@@ -105,7 +108,7 @@ class PrimerLibraryUI {
         ${this._resizeHandles()}
       </div>`;
 
-    this._mountPanel(modal);
+    document.body.appendChild(modal);
 
     // Hidden file input for imports.
     const fileInput = document.createElement('input');
@@ -122,16 +125,6 @@ class PrimerLibraryUI {
       this.searchTerm = String(e.target.value || '').toLowerCase();
       this.refresh();
     });
-  }
-
-  _mountPanel(panel) {
-    document.body.appendChild(panel);
-    const raise = () => {
-      document.querySelector('.primer-floating-panel.front')?.classList.remove('front');
-      panel.classList.add('front');
-    };
-    panel.addEventListener('pointerdown', raise);
-    panel.addEventListener('focusin', raise);
   }
 
   _resizeHandles() {
@@ -471,6 +464,7 @@ class PrimerLibraryUI {
 
     this._refreshEditPreview();
     modal.classList.add('show');
+    window.modalDragManager?.raiseFloatingWindow(modal);
     // Focus the name when a sequence is already present, otherwise the sequence.
     const focusEl = seq ? modal.querySelector('[data-role="f-name"]') : modal.querySelector('[data-role="f-seq"]');
     setTimeout(() => focusEl?.focus(), 0);
@@ -481,11 +475,13 @@ class PrimerLibraryUI {
     if (document.getElementById(this.editId)) return;
     const modal = document.createElement('div');
     modal.id = this.editId;
-    modal.className = 'modal primer-floating-panel primer-edit-modal';
+    modal.className = 'modal floating-tool-window primer-floating-panel primer-edit-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-labelledby', 'primerEditTitle');
     modal.innerHTML = `
       <div class="modal-content draggable resizable">
         <div class="modal-header draggable-handle" data-modal-content="#${this.editId}">
-          <h3 data-role="edit-title">Add primer</h3>
+          <h3 id="primerEditTitle" data-role="edit-title">Add primer</h3>
           <div class="modal-controls"><button class="modal-close" data-action="edit-cancel">&times;</button></div>
         </div>
         <div class="modal-body">
@@ -548,7 +544,7 @@ class PrimerLibraryUI {
         </div>
         ${this._resizeHandles()}
       </div>`;
-    this._mountPanel(modal);
+    document.body.appendChild(modal);
     this._bindSiteNavigation(modal.querySelector('[data-role="binding-preview"]'));
 
     modal.addEventListener('click', e => {

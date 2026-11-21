@@ -181,10 +181,24 @@ class ModalDragManager {
     modalContent.style.transform = '';
   }
 
+  raiseFloatingWindow(modal) {
+    const front = document.querySelector('.floating-tool-window.is-front');
+    if (front === modal) return;
+    front?.classList.remove('is-front');
+    modal.classList.add('is-front');
+  }
+
   /**
    * Auto-initialize all management modals
    */
   initializeAllModals() {
+    const raiseFromEvent = event => {
+      const modal = event.target.closest('.floating-tool-window.show');
+      if (modal) this.raiseFloatingWindow(modal);
+    };
+    document.addEventListener('pointerdown', raiseFromEvent, true);
+    document.addEventListener('focusin', raiseFromEvent, true);
+
     const managementModals = [
       '#pluginManagementModal',
       '#mcpSettingsModal',
