@@ -654,7 +654,7 @@ describe('Primer Track Rendering', () => {
     expect(arrow.getAttribute('d')).toContain('L 352 ');
   });
 
-  it('draws primers as half-arrows whose barb points away from the template strand', () => {
+  it('thins wide primer shafts while keeping the half-arrow tips and barbs in place', () => {
     const renderer = createPrimerRenderer();
     const points = d => d.match(/[ML] [-\d.]+ [-\d.]+/g).map(token => token.slice(2).split(' ').map(Number));
 
@@ -662,16 +662,20 @@ describe('Primer Track Rendering', () => {
     const forward = points(renderer.buildPrimerArrowPath(10, 20, 50, 11, 9, false));
     const reverse = points(renderer.buildPrimerArrowPath(10, 20, 50, 11, 9, true));
 
-    // Forward: flat bottom edge runs into the 3' tip at the bottom-right corner,
-    // and the single barb rises above the body; nothing hangs below it.
-    expect(forward).toContainEqual([60, 31]);
-    expect(Math.min(...forward.map(([, y]) => y))).toBeLessThan(20);
-    expect(Math.max(...forward.map(([, y]) => y))).toBe(31);
-
-    // Reverse: mirror image, tip at the top-left, barb below, flat top edge.
-    expect(reverse).toContainEqual([10, 20]);
-    expect(Math.max(...reverse.map(([, y]) => y))).toBeGreaterThan(31);
-    expect(Math.min(...reverse.map(([, y]) => y))).toBe(20);
+    expect(forward).toEqual([
+      [10, 22.2],
+      [51, 22.2],
+      [51, 15],
+      [60, 31],
+      [10, 31],
+    ]);
+    expect(reverse).toEqual([
+      [10, 20],
+      [60, 20],
+      [60, 28.8],
+      [19, 28.8],
+      [19, 36],
+    ]);
   });
 
   it('keeps forward and reverse barbs on adjacent rows from touching', () => {
@@ -701,6 +705,10 @@ describe('Primer Track Rendering', () => {
     expect(placement.glyphWidth).toBe(8);
     expect(placement.headLength).toBeLessThanOrEqual(9);
     expect(placement.glyphLeft + placement.glyphWidth / 2).toBeCloseTo(500, 0);
+    const { glyphWidth, headLength } = placement;
+    expect(renderer.buildPrimerArrowPath(0, 0, glyphWidth, 11, headLength, false)).toBe(
+      renderer.buildPrimerArrowPath(0, 0, glyphWidth, 11, headLength, false, 11)
+    );
   });
 
   it('lets the track settings move the width below which arrows stop being to scale', () => {
