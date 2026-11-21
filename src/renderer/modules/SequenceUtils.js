@@ -6,6 +6,10 @@
  * Code paths remain for validation only until final removal.
  */
 class SequenceUtils {
+  // Match the CSS triangle and the 16px phosphate badge with its 4px connector.
+  static primerArrowWidth = 9;
+  static primerPhosphateWidth = 20;
+
   constructor(genomeBrowser) {
     this.genomeBrowser = genomeBrowser;
 
@@ -1316,7 +1320,8 @@ class SequenceUtils {
       basesPerLine,
       chromosome,
       sequenceSettings,
-      primerBindings
+      primerBindings,
+      charWidth
     );
     const offsets = this.getSequenceLineOffsets(lineFeatureIndex, layout);
     sequenceView.dataset.basesPerLine = String(basesPerLine);
@@ -1454,7 +1459,8 @@ class SequenceUtils {
     optimalLineLength,
     chromosome = null,
     settings = {},
-    primerBindings = []
+    primerBindings = [],
+    charWidth = 1
   ) {
     const cacheKey = [
       'line-index',
@@ -1465,7 +1471,8 @@ class SequenceUtils {
       this.isCircularModeEnabled() ? 'circular' : 'linear',
       this.getSequenceLength(chromosome),
       this.getAnnotationHash(annotations),
-      this.getAnnotationHash(primerBindings),
+      charWidth,
+      this.getPrimerRenderKey(primerBindings),
       this.getSettingsHash(settings),
     ].join(':');
 
@@ -1532,6 +1539,18 @@ class SequenceUtils {
       });
     }
 
+    index.forEach((features, i) => {
+      if (!features.primers.length) return;
+      const start = viewStart + i * optimalLineLength;
+      features.primerLanes = this.layoutPrimerLanes(
+        features.primers,
+        start,
+        Math.min(optimalLineLength, viewEnd - start),
+        charWidth,
+        optimalLineLength
+      );
+    });
+
     this.lineFeatureCache.set(cacheKey, index);
     return index;
   }
@@ -1565,10 +1584,11 @@ class SequenceUtils {
 
   getSequenceLineOffsets(lineFeatures, { baseHeight, proteinHeight, primerHeight }) {
     const offsets = new Float64Array(lineFeatures.length + 1);
-    lineFeatures.forEach(({ cds, primers }, index) => {
+    lineFeatures.forEach(({ cds, primerLanes }, index) => {
       // A CDS that only touches the edge may have no residue on this line.
       // Reserving one slot per overlapping CDS keeps the other rows clear.
-      offsets[index + 1] = offsets[index] + baseHeight + cds.length * proteinHeight + primers.length * primerHeight;
+      const primerRows = primerLanes ? primerLanes.forward.length + primerLanes.reverse.length : 0;
+      offsets[index + 1] = offsets[index] + baseHeight + cds.length * proteinHeight + primerRows * primerHeight;
     });
     return offsets;
   }
@@ -1607,12 +1627,17 @@ class SequenceUtils {
     lineFeatureSet = null,
     renderContext = null
   ) {
+    const primers = sequenceSettings.showPrimers
+      ? lineFeatureSet?.primers ||
+        annotations.filter(feature => ['primer', 'primer_bind'].includes((feature.type || '').toLowerCase()))
+      : [];
     const cacheKey = [
       this.getSequenceLineCacheKey(lineSubsequence, lineStartPos, chromosome),
       charWidth,
       this.getAnnotationHash(lineFeatureSet?.indicators || []),
       this.getAnnotationHash(lineFeatureSet?.cds || []),
-      this.getAnnotationHash(lineFeatureSet?.primers || []),
+      this.getPrimerRenderKey(primers),
+      lineFeatureSet?.primerLanes?.width,
       this.getSettingsHash(sequenceSettings),
     ].join(':');
 
@@ -1739,32 +1764,15 @@ class SequenceUtils {
       Boolean(lineFeatureSet)
     );
 
-    if (sequenceSettings.showPrimers) {
-      this.createAlignedPrimerRows(
-        lineSubsequence.length,
-        lineStartPos,
-        chromosome,
-        annotations,
-        charWidth,
-        lineFeatureSet?.primers || null,
-        context,
-        '+'
-      ).forEach(row => lineGroup.appendChild(row));
+    const primerLanes = primers.length
+      ? lineFeatureSet?.primerLanes || this.layoutPrimerLanes(primers, lineStartPos, lineSubsequence.length, charWidth)
+      : null;
+    for (const lane of primerLanes?.forward || []) {
+      lineGroup.appendChild(this.createPrimerLaneRow(lane, chromosome, charWidth, lineSubsequence.length));
     }
-
     lineGroup.appendChild(sequenceLine);
-
-    if (sequenceSettings.showPrimers) {
-      this.createAlignedPrimerRows(
-        lineSubsequence.length,
-        lineStartPos,
-        chromosome,
-        annotations,
-        charWidth,
-        lineFeatureSet?.primers || null,
-        context,
-        '-'
-      ).forEach(row => lineGroup.appendChild(row));
+    for (const lane of primerLanes?.reverse || []) {
+      lineGroup.appendChild(this.createPrimerLaneRow(lane, chromosome, charWidth, lineSubsequence.length));
     }
 
     if (sequenceSettings.showProteinSequence) {
@@ -1901,152 +1909,132 @@ class SequenceUtils {
       }));
   }
 
-  createAlignedPrimerRows(
-    lineLength,
-    lineStartAbs,
-    chromosome,
-    annotations,
-    charWidth,
-    indexedPrimers = null,
-    renderContext = null,
-    strandFilter = null
-  ) {
-    void renderContext;
-    const lineEndAbs = lineStartAbs + lineLength;
-    const primers =
-      indexedPrimers ||
-      annotations.filter(feature => {
-        const type = (feature.type || '').toLowerCase();
-        if (type !== 'primer' && type !== 'primer_bind') return false;
-        return this.featureOverlapsDisplayRange(feature, lineStartAbs, lineEndAbs, chromosome);
-      });
-    return primers
-      .filter(primer => {
-        const isReverse = primer.strand === -1 || primer.strand === '-';
-        if (strandFilter === '+') return !isReverse;
-        if (strandFilter === '-') return isReverse;
-        return true;
-      })
-      .map(primer => {
-        const primerSequence = primer.primerSequence || this.getPrimerSequence(primer);
-        const isReverse = primer.strand === -1 || primer.strand === '-';
-        const start = Math.min(primer.start, primer.end);
-        const end = Math.max(primer.start, primer.end);
-        const visibleStart = Math.max(start, lineStartAbs + 1);
-        const visibleEnd = Math.min(end, lineStartAbs + lineLength);
-        if (visibleEnd < visibleStart) return null;
-
-        const visibleBases = [];
-        const mismatchIndexes = new Set((primer.mismatches || []).map(mismatch => mismatch.primerIndex));
-        for (let sourcePos1Based = visibleStart; sourcePos1Based <= visibleEnd; sourcePos1Based++) {
-          const sequenceIndex = isReverse ? end - sourcePos1Based : sourcePos1Based - start;
-          const primerBase = primerSequence ? primerSequence[sequenceIndex] || '' : '';
-          visibleBases.push({
-            text: primerBase || (isReverse ? '<' : '>'),
-            mismatch: mismatchIndexes.has(sequenceIndex),
-          });
-        }
-
-        // Which physical termini fall on this line? A primer points 5'→3', so the
-        // arrowhead belongs at the 3' end and the rounded cap at the 5' end. For a
-        // forward primer 5' is at `start` and 3' at `end`; reverse is mirrored. When
-        // the primer wraps across lines, the off-line edge stays flat (a continuation).
-        const is3PrimeEnd = isReverse ? visibleStart === start : visibleEnd === end;
-        const is5PrimeEnd = isReverse ? visibleEnd === end : visibleStart === start;
-        const accentColor = primer.color || (isReverse ? '#0d9488' : '#7c3aed');
-        const isFivePrimePhosphate = primer.fivePrimePhosphate === true;
-
-        return this.createPrimerBindingRow({
-          className: `sequence-primer-row ${isReverse ? 'reverse' : 'forward'}${
-            isFivePrimePhosphate ? ' phosphorylated' : ''
-          }`,
-          label: this.truncateLabel(this.getFeatureDisplayName(primer), 12),
-          charWidth,
-          lineLength,
-          startIndex: visibleStart - (lineStartAbs + 1),
-          visibleLength: visibleEnd - visibleStart + 1,
-          bases: visibleBases,
-          isReverse,
-          strandLabelWidth: this.strandLabelWidth,
-          accentColor,
-          isFivePrimePhosphate,
-          // Letters are a darkened blend of the accent so they stay legible on the
-          // light tinted fill regardless of a custom primer colour.
-          letterColor: `color-mix(in srgb, ${accentColor} 60%, #0f172a)`,
-          is3PrimeEnd,
-          is5PrimeEnd,
-          title: `${this.getFeatureDisplayName(primer)} primer ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})${
-            isFivePrimePhosphate ? " · 5' phosphorylated" : ''
-          }`,
-          // Identity for the delegated click handler that opens the primer details
-          // sidebar. Encoded as data attributes (not a listener) so the value
-          // survives the renderCache's cloneNode reuse, mirroring gene indicators.
-          selectDataset: {
-            primerId: primer.id != null ? String(primer.id) : '',
-            primerStart: String(primer.start),
-            primerEnd: String(primer.end),
-            primerStrand: isReverse ? '-' : '+',
-            chromosome: primer.chromosome || chromosome || '',
-          },
-        });
-      })
-      .filter(Boolean);
+  getPrimerRenderKey(primers) {
+    if (!primers.length) return '';
+    return JSON.stringify(
+      primers.map(primer => [
+        primer.id,
+        primer.chromosome,
+        primer.start,
+        primer.end,
+        primer.strand,
+        this.getFeatureDisplayName(primer),
+        primer.primerSequence || this.getPrimerSequence(primer),
+        primer.color,
+        primer.fivePrimePhosphate,
+        primer.mismatches?.map(m => m.primerIndex),
+      ])
+    );
   }
 
-  createPrimerBindingRow({
-    className,
-    label,
-    charWidth,
-    lineLength,
-    startIndex,
-    visibleLength,
-    bases,
-    isReverse,
-    strandLabelWidth = 20,
-    accentColor,
-    isFivePrimePhosphate = false,
-    letterColor,
-    is3PrimeEnd = true,
-    is5PrimeEnd = true,
-    title,
-    selectDataset = null,
-  }) {
-    const ARROW_W = 9; // arrowhead width in px (height tracks the bar height via CSS)
+  layoutPrimerLanes(primers, lineStart, lineLength, charWidth, columns = lineLength) {
+    const width = columns * charWidth;
+    const lanes = { width, forward: [], reverse: [] };
+    const segments = [];
+    for (const primer of primers) {
+      const start = Math.min(primer.start, primer.end);
+      const end = Math.max(primer.start, primer.end);
+      const visibleStart = Math.max(start, lineStart + 1);
+      const visibleEnd = Math.min(end, lineStart + lineLength);
+      if (visibleEnd < visibleStart) continue;
+
+      const isReverse = primer.strand === -1 || primer.strand === '-';
+      const is3PrimeEnd = isReverse ? visibleStart === start : visibleEnd === end;
+      const is5PrimeEnd = isReverse ? visibleEnd === end : visibleStart === start;
+      const startIndex = visibleStart - lineStart - 1;
+      const visibleLength = visibleEnd - visibleStart + 1;
+      const left = startIndex * charWidth;
+      const right = (startIndex + visibleLength) * charWidth;
+      const arrow = is3PrimeEnd ? SequenceUtils.primerArrowWidth : 0;
+      const phosphate = is5PrimeEnd && primer.fivePrimePhosphate === true ? SequenceUtils.primerPhosphateWidth : 0;
+      const name = this.getFeatureDisplayName(primer);
+      // Size the caption in the 10px monospace font, allowing for wide characters.
+      const labelWidth = Math.min(
+        width,
+        180,
+        4 + Array.from(name).reduce((sum, c) => sum + (c.charCodeAt(0) < 128 ? 6.1 : 10), 0)
+      );
+      const labelLeft = Math.max(0, Math.min(width - labelWidth, (left + right - labelWidth) / 2));
+      segments.push({
+        primer,
+        name,
+        start,
+        end,
+        visibleStart,
+        startIndex,
+        visibleLength,
+        isReverse,
+        is3PrimeEnd,
+        is5PrimeEnd,
+        bodyLeft: left - (isReverse ? arrow : phosphate),
+        bodyRight: right + (isReverse ? phosphate : arrow),
+        labelLeft,
+        labelWidth,
+      });
+    }
+
+    // Captions and arrows occupy separate bands. Each must clear its own neighbours.
+    segments.sort((a, b) => a.bodyLeft - b.bodyLeft);
+    for (const segment of segments) {
+      const strand = segment.isReverse ? lanes.reverse : lanes.forward;
+      const lane = strand.find(items => {
+        const last = items[items.length - 1];
+        return last.bodyRight + 2 <= segment.bodyLeft && last.labelLeft + last.labelWidth + 2 <= segment.labelLeft;
+      });
+      if (lane) lane.push(segment);
+      else strand.push([segment]);
+    }
+    return lanes;
+  }
+
+  createPrimerLaneRow(lane, chromosome, charWidth, lineLength) {
+    const row = this.createAlignedSequenceRow({
+      className: `sequence-primer-binding-row sequence-primer-row ${lane[0].isReverse ? 'reverse' : 'forward'}`,
+      label: '',
+      marks: [],
+      charWidth,
+      lineLength,
+      strandLabelWidth: this.strandLabelWidth,
+    });
+    const bases = row.lastElementChild;
+    bases.classList.add('sequence-primer-binding-bases');
+    for (const segment of lane) this.appendPrimerBinding(bases, segment, chromosome, charWidth);
+    return row;
+  }
+
+  appendPrimerBinding(basesElement, segment, chromosome, charWidth) {
+    const { primer, name, start, end, visibleStart, startIndex, visibleLength, isReverse, is5PrimeEnd, is3PrimeEnd } =
+      segment;
+    const accentColor = primer.color || (isReverse ? '#0d9488' : '#7c3aed');
+    const letterColor = `color-mix(in srgb, ${accentColor} 60%, #0f172a)`;
+    const isFivePrimePhosphate = primer.fivePrimePhosphate === true;
+    const title = `${name} primer ${primer.start}-${primer.end} (${isReverse ? '-' : '+'})${isFivePrimePhosphate ? " · 5' phosphorylated" : ''}`;
+    const selectDataset = {
+      primerId: String(primer.id ?? ''),
+      primerStart: String(primer.start),
+      primerEnd: String(primer.end),
+      primerStrand: isReverse ? '-' : '+',
+      chromosome: primer.chromosome || chromosome || '',
+    };
     const RADIUS = '5px';
     // Flag a node as a click target for the delegated primer-select handler and
     // stamp it with the primer's identity. Using data attributes (resolved at click
     // time) instead of a per-node listener keeps selection working after the
     // renderCache reuses a line via cloneNode, which drops listeners.
     const markSelectable = node => {
-      if (!selectDataset) return;
       node.classList.add('primer-select-target');
-      node.style.cursor = 'pointer';
-      node.dataset.primerId = selectDataset.primerId;
-      node.dataset.primerStart = selectDataset.primerStart;
-      node.dataset.primerEnd = selectDataset.primerEnd;
-      node.dataset.primerStrand = selectDataset.primerStrand;
-      node.dataset.chromosome = selectDataset.chromosome;
+      Object.assign(node.dataset, selectDataset);
     };
 
-    const row = document.createElement('div');
-    row.className = `sequence-aligned-row sequence-primer-binding-row ${className}`;
-
     const labelElement = document.createElement('span');
-    labelElement.className = `sequence-position sequence-aligned-label sequence-primer-label ${isReverse ? 'reverse' : 'forward'}`;
-    labelElement.textContent = label;
-    labelElement.style.color = letterColor;
-    labelElement.style.borderColor = accentColor;
+    labelElement.className = 'sequence-primer-label';
+    labelElement.textContent = name;
     labelElement.title = title;
+    labelElement.style.color = letterColor;
+    labelElement.style.left = `${segment.labelLeft}px`;
+    labelElement.style.width = `${segment.labelWidth}px`;
     markSelectable(labelElement);
-
-    const strandSpacer = document.createElement('span');
-    strandSpacer.className = 'sequence-aligned-strand-spacer';
-    strandSpacer.style.width = `${strandLabelWidth}px`;
-    strandSpacer.style.flex = `0 0 ${strandLabelWidth}px`;
-
-    const basesElement = document.createElement('div');
-    basesElement.className = 'sequence-aligned-bases sequence-primer-binding-bases';
-    basesElement.style.width = `${Math.max(1, lineLength * charWidth)}px`;
+    basesElement.appendChild(labelElement);
 
     // The primer body: a filled, bordered bar drawn as a directional shape. It is
     // rounded at the true 5' terminus and runs flat into the arrowhead at the 3'
@@ -2069,7 +2057,7 @@ class SequenceUtils {
       box.style.borderRadius = is5PrimeEnd ? `${RADIUS} 0 0 ${RADIUS}` : '0';
       if (is3PrimeEnd) box.style.borderRightWidth = '0';
     }
-    if (selectDataset) box.setAttribute('role', 'button');
+    box.setAttribute('role', 'button');
     markSelectable(box);
     basesElement.appendChild(box);
 
@@ -2080,25 +2068,27 @@ class SequenceUtils {
       phosphate.title = "5' phosphorylated";
       const terminus = startIndex + (isReverse ? visibleLength : 0);
       phosphate.style.left = `${terminus * charWidth}px`;
-      if (selectDataset) {
-        phosphate.style.pointerEvents = 'auto';
-        markSelectable(phosphate);
-      }
+      markSelectable(phosphate);
       basesElement.appendChild(phosphate);
     }
 
     // One absolutely-positioned cell per base, each exactly charWidth wide and
     // anchored at its genome column so primer letters sit directly above/below the
     // matching genome bases (charWidth === the genome row's monospace pitch).
-    bases.forEach((base, i) => {
+    const sequence = primer.primerSequence || this.getPrimerSequence(primer);
+    const mismatchIndexes = new Set((primer.mismatches || []).map(mismatch => mismatch.primerIndex));
+    for (let i = 0; i < visibleLength; i++) {
+      const position = visibleStart + i;
+      const index = isReverse ? end - position : position - start;
+      const mismatch = mismatchIndexes.has(index);
       const cell = document.createElement('span');
-      cell.className = `sequence-primer-binding-base${base.mismatch ? ' mismatch' : ''}`;
-      cell.textContent = base.text || '';
+      cell.className = `sequence-primer-binding-base${mismatch ? ' mismatch' : ''}`;
+      cell.textContent = sequence[index] || (isReverse ? '<' : '>');
       cell.style.left = `${(startIndex + i) * charWidth}px`;
       cell.style.width = `${charWidth}px`;
-      if (!base.mismatch) cell.style.color = letterColor;
+      if (!mismatch) cell.style.color = letterColor;
       basesElement.appendChild(cell);
-    });
+    }
 
     // Solid arrowhead flush with the bar at the 3' terminus, drawn as a CSS
     // triangle so it crisply tracks the bar height and points along the strand.
@@ -2106,23 +2096,15 @@ class SequenceUtils {
       const direction = document.createElement('span');
       direction.className = `sequence-primer-direction ${isReverse ? 'reverse' : 'forward'}`;
       if (isReverse) {
-        direction.style.left = `${startIndex * charWidth - ARROW_W}px`;
+        direction.style.left = `${startIndex * charWidth - SequenceUtils.primerArrowWidth}px`;
         direction.style.borderRightColor = accentColor;
       } else {
         direction.style.left = `${(startIndex + visibleLength) * charWidth}px`;
         direction.style.borderLeftColor = accentColor;
       }
-      if (selectDataset) {
-        direction.style.pointerEvents = 'auto';
-        markSelectable(direction);
-      }
+      markSelectable(direction);
       basesElement.appendChild(direction);
     }
-
-    row.appendChild(labelElement);
-    row.appendChild(strandSpacer);
-    row.appendChild(basesElement);
-    return row;
   }
 
   createAlignedSequenceRow({
