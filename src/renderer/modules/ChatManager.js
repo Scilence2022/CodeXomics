@@ -8279,13 +8279,22 @@ class ChatManager {
       return requirement('open_tab', toolName => toolName === 'open_new_tab', 'open_new_tab');
     }
     const addedObject = message.match(/\badd\s+(.+?)(?=\s+(?:to|into|for)\b|$)/s)?.[1] || '';
+    // In a design-then-save request, "them" can refer to the preceding primer pair.
+    const libraryReference = message.match(
+      /\b(?:add|save)\s+(it|this|that|them|these|those|both(?:\s+of\s+them)?)\s+(?:to|into|in)\s+(?:(?:the|my|our)\s+)?(?:primer\s+)?lib(?:rary)?\b/
+    );
+    const refersToPrimers = inheritedDomain === 'primer' && libraryReference;
     if (
+      refersToPrimers ||
       /\bprimers?\b/.test(addedObject) ||
       /添加(?:两条|设计好的)?引物/.test(message) ||
       (/\bsave\b|保存/.test(message) && /\bprimers?\b|引物/.test(contextMessage))
     ) {
       const save = requirement('save_primer', toolName => toolName === 'save_primer');
-      if (/\b(?:both\s+(?:designed\s+)?|designed\s+)primers\b/.test(message)) save.count = 2;
+      const refersToPair = refersToPrimers && /^(?:them|these|those|both)\b/.test(libraryReference[1]);
+      if (refersToPair || /\b(?:both\s+(?:designed\s+)?|designed\s+)primers\b/.test(message)) {
+        save.count = Math.max(2, save.count);
+      }
       return save;
     }
     if (/\b(?:create|add)\b|(?:创建|添加)/.test(message) && /\bannotations?\b|注释/.test(contextMessage)) {

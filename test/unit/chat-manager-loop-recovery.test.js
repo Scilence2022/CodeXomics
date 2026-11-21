@@ -1044,6 +1044,13 @@ describe('ChatManager requirements read the action, not the goal', () => {
     expect(manager.getOutstandingRequestSteps(stateFor(manager, request, [...calls, 'save_primer']))).toEqual([]);
   });
 
+  it('keeps a missing primer save outstanding when the user refers back to the designed pair', () => {
+    const manager = new (loadLoopSupportClass())();
+    const request = 'design primers to amplify cutC gene then add them to primer library';
+    const state = stateFor(manager, request, ['design_primers', 'save_primer', 'list_primers']);
+    expect(manager.getOutstandingRequestSteps(state)).toMatchObject([{ capability: 'save_primer', remaining: 1 }]);
+  });
+
   it('requires a successful save when adding named primers and keeps other additions distinct', () => {
     const manager = new (loadLoopSupportClass())();
     const request = 'add yfbK primers to lib';
