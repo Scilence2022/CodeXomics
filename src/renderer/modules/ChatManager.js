@@ -8278,8 +8278,10 @@ class ChatManager {
     ) {
       return requirement('open_tab', toolName => toolName === 'open_new_tab', 'open_new_tab');
     }
+    const addedObject = message.match(/\badd\s+(.+?)(?=\s+(?:to|into|for)\b|$)/s)?.[1] || '';
     if (
-      /\badd\s+(?:(?:the|both|designed)\s+)*primers?\b|添加(?:两条|设计好的)?引物/.test(message) ||
+      /\bprimers?\b/.test(addedObject) ||
+      /添加(?:两条|设计好的)?引物/.test(message) ||
       (/\bsave\b|保存/.test(message) && /\bprimers?\b|引物/.test(contextMessage))
     ) {
       const save = requirement('save_primer', toolName => toolName === 'save_primer');

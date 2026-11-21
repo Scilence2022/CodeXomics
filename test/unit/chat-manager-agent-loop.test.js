@@ -72,6 +72,35 @@ describe('agent loop', () => {
   });
 
   describe('basic round-tripping', () => {
+    it('finishes adding primers named for a gene after both saves succeed', async () => {
+      const design = { geneName: 'yfbK' };
+      const forward = { name: 'yfbK_Fwd' };
+      const reverse = { name: 'yfbK_Rev' };
+      const answer = 'Added yfbK_Fwd and yfbK_Rev to the primer library.';
+      const harness = createAgentLoopHarness({
+        responses: [
+          openAiToolCall('design_primers', design, { id: 'design' }),
+          openAiToolCalls([
+            { name: 'save_primer', parameters: forward, id: 'forward' },
+            { name: 'save_primer', parameters: reverse, id: 'reverse' },
+          ]),
+          answer,
+        ],
+        tools: {
+          design_primers: () => ({ success: true }),
+          save_primer: parameters => ({ success: true, primer: parameters }),
+        },
+      });
+
+      expect(await harness.send('add yfbK primers to lib')).toBe(answer);
+      expect(harness.rounds).toBe(3);
+      expect(harness.toolCalls).toEqual([
+        { tool_name: 'design_primers', parameters: design },
+        { tool_name: 'save_primer', parameters: forward },
+        { tool_name: 'save_primer', parameters: reverse },
+      ]);
+    });
+
     it.each(['jump_to_gene', 'zoom_to_gene'])('finishes "show dapA gene" after %s succeeds', async tool => {
       const harness = createAgentLoopHarness({
         responses: [openAiToolCall(tool, { geneName: 'dapA' }), 'The genome view now shows dapA.'],
