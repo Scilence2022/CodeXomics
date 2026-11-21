@@ -253,8 +253,9 @@ class PrimerDetailsPanel {
       const { tm, gcContent } = model.fallback || {};
       if (tm == null && gcContent == null) return '';
       const cards = [];
-      if (tm != null)
+      if (tm != null) {
         cards.push(this._card({ id: 'tm', label: 'Tm', value: tm, status: 'info', message: 'From note' }));
+      }
       if (gcContent != null) {
         cards.push(
           this._card({ id: 'gc', label: 'GC content', value: gcContent, status: 'info', message: 'From note' })
@@ -433,15 +434,6 @@ class PrimerDetailsPanel {
       </div>`;
     }
 
-    html += `
-      <div class="primer-ai-section">
-        <button class="primer-ai-btn primer-analyze-btn">
-          <i class="fas fa-robot"></i> Analyze with AI
-        </button>
-        <button class="primer-ai-btn primer-binding-btn">
-          <i class="fas fa-crosshairs"></i> Find Binding Sites
-        </button>
-      </div>`;
     return html;
   }
 
@@ -480,21 +472,6 @@ class PrimerDetailsPanel {
         () => this._notify('Primer sequence copied', 'success'),
         error => this._notify(`Could not copy sequence: ${error?.message || error}`, 'error')
       );
-    });
-
-    const chatBox = () => (typeof window !== 'undefined' ? window.chatBox : null);
-    container.querySelector('.primer-analyze-btn')?.addEventListener('click', () => {
-      const chat = chatBox();
-      if (!chat) return;
-      chat.setInputText(`Please calculate the properties of this primer sequence: ${model.oligo || model.name}`);
-      chat.focusInput();
-    });
-
-    container.querySelector('.primer-binding-btn')?.addEventListener('click', () => {
-      const chat = chatBox();
-      if (!chat) return;
-      chat.setInputText(`Find binding sites for primer ${model.name} in the current genome`);
-      chat.focusInput();
     });
   }
 }
