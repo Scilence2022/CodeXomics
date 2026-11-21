@@ -973,7 +973,8 @@
     padding: 8px;
   }
 
-  .modal-content {
+  /* The Primer Library keeps its drag and resize dimensions at desktop zoom levels. */
+  .modal-content:not(:where(.primer-library-modal *)) {
     width: 95vw !important;
     max-width: 95vw !important;
     margin: 10px auto !important;
@@ -984,13 +985,13 @@
     min-height: 0 !important;
   }
 
-  .modal-content.large,
+  .modal-content.large:not(:where(.primer-library-modal *)),
   .modal-content.extra-large {
     width: 95vw !important;
     max-width: 95vw !important;
   }
 
-  .modal-body {
+  .modal-body:not(:where(.primer-library-modal *)) {
     max-height: calc(100vh - 140px) !important;
     overflow-y: auto !important;
     padding: 15px !important;

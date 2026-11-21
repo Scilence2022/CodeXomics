@@ -21,12 +21,75 @@
 /* Primer library panel and primer track styling */
 
 .primer-library-modal .modal-content.large {
-  width: min(1100px, 94vw);
-  max-width: 94vw;
+  display: flex;
+  flex-direction: column;
+  width: 1100px;
+  min-width: min(400px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  min-height: min(300px, 85vh);
+  overflow: hidden;
+  cursor: auto;
+}
+
+.primer-library-modal .modal-content.dragging {
+  transform: none;
+}
+
+.primer-library-modal .modal-header {
+  position: relative;
+  flex-shrink: 0;
+  padding-left: 32px;
+  cursor: move;
+}
+
+.primer-library-modal .modal-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  max-height: none;
+}
+
+/* Use the same edge and corner handles at every desktop zoom level. */
+.primer-library-modal .modal-content.resizable::before,
+.primer-library-modal .modal-content.resizable::after {
+  content: none;
+}
+
+.primer-library-modal .resize-handle {
+  display: block;
+}
+
+.primer-library-modal :is(.resize-handle-n, .resize-handle-ne, .resize-handle-nw) {
+  top: 0;
+}
+
+.primer-library-modal :is(.resize-handle-s, .resize-handle-se, .resize-handle-sw) {
+  bottom: 0;
+}
+
+.primer-library-modal :is(.resize-handle-e, .resize-handle-ne, .resize-handle-se) {
+  right: 0;
+}
+
+.primer-library-modal :is(.resize-handle-w, .resize-handle-nw, .resize-handle-sw) {
+  left: 0;
+}
+
+.primer-library-modal .resize-handle-se::before {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid var(--text-secondary);
+  border-bottom: 1px solid var(--text-secondary);
 }
 
 .primer-lib-toolbar {
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
@@ -40,6 +103,7 @@
 
 .primer-lib-stringency {
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
@@ -62,7 +126,7 @@
 }
 
 .primer-lib-table-wrap {
-  max-height: 50vh;
+  min-height: 4rem;
   overflow: auto;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 6px;
@@ -166,6 +230,7 @@
 }
 
 .primer-lib-pairs {
+  flex-shrink: 0;
   margin-top: 14px;
 }
 
