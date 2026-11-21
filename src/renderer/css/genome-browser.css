@@ -93,12 +93,12 @@
   background: var(--bg-tertiary);
 }
 
-.btn.genome-toolbar-button.active {
+.btn.genome-toolbar-button:is(.active, [aria-pressed='true']) {
   background: rgba(var(--primary-rgb), 0.12);
   border-color: rgba(var(--primary-rgb), 0.3);
 }
 
-.genome-toolbar-button.active > i {
+.genome-toolbar-button:is(.active, [aria-pressed='true']) > i {
   color: var(--primary-hover);
 }
 
