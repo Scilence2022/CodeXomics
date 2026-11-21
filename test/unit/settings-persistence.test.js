@@ -19,6 +19,10 @@ function memoryStorage(initial = {}) {
   const store = { ...initial };
   return {
     store,
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: index => Object.keys(store)[index] ?? null,
     getItem: key => (key in store ? store[key] : null),
     setItem: (key, value) => {
       store[key] = String(value);
@@ -81,6 +85,20 @@ describe('preferences.json', () => {
 
   it('encrypts Authorization headers like other credentials', () => {
     expect(configurationCredentials.CONFIG_CREDENTIAL_FIELDS).toContain('authorization');
+  });
+});
+
+describe('chat fallback storage', () => {
+  it('recovers the previous launch of the same window slot, including its tool rounds', () => {
+    const history = [{ id: 'prompt', sender: 'user', message: 'Check status', toolRounds: [] }];
+    const storage = memoryStorage({
+      'chatHistory::win_1_1001': JSON.stringify(history),
+      'chatHistory::win_2_1002': JSON.stringify([{ message: 'Other window' }]),
+    });
+    const { manager } = loadConfigManager(storage);
+    manager.resolveWindowId = () => 'win_1_2001';
+    manager.loadFromLocalStorage();
+    expect(manager.getChatHistory()).toEqual(history);
   });
 });
 

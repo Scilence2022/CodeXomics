@@ -648,6 +648,19 @@ class ConfigManager {
       // don't overwrite each other's saved history — see getChatHistoryKey()).
       const chatHistoryKey = this.getChatHistoryKey();
       let chatHistory = localStorage.getItem(chatHistoryKey);
+      if (!chatHistory) {
+        // Electron assigns a fresh timestamp on every launch. In fallback
+        // storage, recover the previous history for this window ordinal only.
+        const slot = /^(chatHistory::win_\d+_)\d+$/.exec(chatHistoryKey)?.[1];
+        if (slot) {
+          const candidates = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i));
+          const previousKey = candidates
+            .filter(key => key?.startsWith(slot))
+            .sort()
+            .pop();
+          if (previousKey) chatHistory = localStorage.getItem(previousKey);
+        }
+      }
       if (!chatHistory && chatHistoryKey !== 'chatHistory') {
         // One-time migration: the first window after upgrade adopts the legacy
         // shared history, then consumes the legacy key so other windows start
@@ -890,12 +903,11 @@ class ConfigManager {
       if (data.historyData) {
         console.warn('Returning minimal evolution config due to data size issues');
         return this.getDefaultEvolutionConfig();
-      } else if (data.history) {
-        console.warn('Returning minimal chat config due to data size issues');
-        return {
-          ...data,
-          history: data.history ? data.history.slice(-100) : [], // Keep only last 100 messages
-        };
+      } else if (Array.isArray(data.history)) {
+        // Respect the configured retention limit even when a detailed trace
+        // exceeds the advisory cleaning size. The file writer enforces its
+        // byte limit atomically and preserves the previous file on failure.
+        return { ...data, history: data.history.slice(-(data.maxHistoryLength || 1000)) };
       }
 
       return data; // Return original if we can't clean it
@@ -1310,11 +1322,36 @@ class ConfigManager {
       this.config.chat.history = this.config.chat.history.slice(-this.config.chat.maxHistoryLength);
     }
 
-    if (this.config.llm.autoSave && this.debouncedSave) {
-      this.debouncedSave();
-    }
-
+    this.saveChatCheckpoint();
     return chatMessage.id;
+  }
+
+  /** Save a chat checkpoint without waiting for the general settings debounce. */
+  saveChatCheckpoint() {
+    if (!this.config.llm.autoSave || this.chatCheckpointQueued) return;
+    this.chatCheckpointQueued = true;
+    queueMicrotask(async () => {
+      this.chatCheckpointQueued = false;
+      await this.writeChatCheckpoint();
+    });
+  }
+
+  async writeChatCheckpoint() {
+    try {
+      if (window.electronAPI?.saveConfigData) {
+        const result = await window.electronAPI.saveConfigData({ chat: this.config.chat });
+        if (result?.success) return;
+        throw new Error(result?.error || 'Chat history save failed');
+      }
+    } catch (error) {
+      console.warn('Chat checkpoint IPC failed, saving to local storage:', error);
+    }
+    try {
+      localStorage.setItem(this.getChatHistoryKey(), JSON.stringify(this.config.chat.history));
+      this.pruneOrphanChatHistories();
+    } catch (error) {
+      console.error('Error saving chat checkpoint:', error);
+    }
   }
 
   /**

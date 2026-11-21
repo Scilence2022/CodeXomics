@@ -301,6 +301,41 @@ class SanitizeService {
     return this._purify.sanitize(dirty, this._markdownConfig);
   }
 
+  /** Read-only ChatBox activity, including expandable round and result details. */
+  sanitizeChatActivity(dirty) {
+    if (typeof dirty !== 'string') return '';
+    return this._purify.sanitize(dirty, {
+      ALLOWED_TAGS: [
+        'div',
+        'span',
+        'i',
+        'b',
+        'strong',
+        'em',
+        'small',
+        'p',
+        'br',
+        'pre',
+        'code',
+        'details',
+        'summary',
+        'ul',
+        'ol',
+        'li',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
+        'h3',
+        'h4',
+      ],
+      ALLOWED_ATTR: ['class', 'open', 'role', 'aria-expanded', 'aria-hidden', 'tabindex', 'title'],
+      ALLOW_DATA_ATTR: false,
+    });
+  }
+
   /**
    * Sanitize HTML for genome browser track tooltips and labels
    * Very restrictive: only basic inline formatting allowed

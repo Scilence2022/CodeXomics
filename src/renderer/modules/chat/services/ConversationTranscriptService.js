@@ -192,7 +192,86 @@ class ConversationTranscriptService {
     );
   }
 
+  appendSavedHistory(history, currentMessageId) {
+    const config = this.chatManager.configManager;
+    const messages = config.getChatHistory();
+    const separator = messages.findLastIndex(
+      msg => msg.sender === 'system' && msg.message === '--- CONVERSATION_SEPARATOR ---'
+    );
+    const previous = messages.slice(separator + 1).filter(msg => !currentMessageId || msg.id !== currentMessageId);
+    const memory = config.get('llm.conversationMemory', 10);
+    for (const msg of previous.slice(-memory * 2)) {
+      if (msg.sender === 'user') {
+        history.push({ role: 'user', content: msg.message });
+        if (!Array.isArray(msg.toolRounds)) continue;
+        for (const round of msg.toolRounds) {
+          history.push(...this.restoreToolRound(round));
+        }
+      } else if (msg.sender === 'assistant' && !this.chatManager.isAppGeneratedNotice(msg.message)) {
+        history.push({ role: 'assistant', content: msg.message });
+      }
+    }
+  }
+
+  // Rebuild only provider fields, on fresh objects so context trimming cannot
+  // mutate the archive. A damaged batch must never replay an orphan result.
+  restoreToolRound(round) {
+    if (!Array.isArray(round) || round.length < 2) return [];
+    const [assistant, ...results] = round;
+    if (assistant?.role !== 'assistant' || !results.every(msg => typeof msg?.content === 'string')) return [];
+    const content = assistant.content;
+    if (!assistant.tool_calls) {
+      if (typeof content !== 'string' || !results.every(msg => msg.role === 'user')) return [];
+      return [{ role: 'assistant', content }, ...results.map(msg => ({ role: 'user', content: msg.content }))];
+    }
+    const calls = assistant.tool_calls;
+    if (!Array.isArray(calls) || calls.length !== results.length || (content !== null && typeof content !== 'string')) {
+      return [];
+    }
+    const ids = new Set();
+    for (const [i, call] of calls.entries()) {
+      const result = results[i];
+      if (
+        typeof call?.id !== 'string' ||
+        !call.id ||
+        ids.has(call.id) ||
+        typeof call.function?.name !== 'string' ||
+        typeof call.function.arguments !== 'string' ||
+        result.role !== 'tool' ||
+        result.tool_call_id !== call.id ||
+        typeof result.name !== 'string'
+      ) {
+        return [];
+      }
+      ids.add(call.id);
+    }
+    return [
+      {
+        role: 'assistant',
+        content,
+        tool_calls: calls.map(({ id, function: fn }) => ({
+          id,
+          type: 'function',
+          function: { name: fn.name, arguments: fn.arguments },
+        })),
+      },
+      ...results.map(({ name, tool_call_id, content }) => ({ role: 'tool', name, tool_call_id, content })),
+    ];
+  }
+
   appendToolRoundToHistory(conversationHistory, options = {}) {
+    const round = [];
+    const protocol = this.buildToolRound(round, options);
+    conversationHistory.push(...round);
+    if (options.savedTurn) {
+      // Keep the provider-facing messages as an atomic batch. Non-enumerable
+      // reasoning signatures and the execution-policy ledger are turn-local.
+      (options.savedTurn.toolRounds ??= []).push(structuredClone(round));
+    }
+    return protocol;
+  }
+
+  buildToolRound(conversationHistory, options) {
     const {
       assistantText = '',
       toolsToExecute = [],
