@@ -66,9 +66,10 @@ class PrimerLibraryUI {
     const modal = document.createElement('div');
     modal.id = this.modalId;
     modal.className = 'modal primer-library-modal';
+    // The shared drag and resize managers handle these controls through document-level listeners.
     modal.innerHTML = `
-      <div class="modal-content large">
-        <div class="modal-header">
+      <div class="modal-content large draggable resizable">
+        <div class="modal-header draggable-handle" data-modal-content="#${this.modalId}">
           <h3><i class="fas fa-vials"></i> Primer library</h3>
           <div class="modal-controls">
             <button class="modal-close" data-action="close" title="Close">&times;</button>
@@ -99,6 +100,14 @@ class PrimerLibraryUI {
           </div>
           <div class="primer-lib-pairs" data-role="pairs"></div>
         </div>
+        <div class="resize-handle resize-handle-n" aria-hidden="true"></div>
+        <div class="resize-handle resize-handle-s" aria-hidden="true"></div>
+        <div class="resize-handle resize-handle-e" aria-hidden="true"></div>
+        <div class="resize-handle resize-handle-w" aria-hidden="true"></div>
+        <div class="resize-handle resize-handle-ne" aria-hidden="true"></div>
+        <div class="resize-handle resize-handle-nw" aria-hidden="true"></div>
+        <div class="resize-handle resize-handle-se" aria-hidden="true"></div>
+        <div class="resize-handle resize-handle-sw" aria-hidden="true"></div>
       </div>`;
 
     document.body.appendChild(modal);
