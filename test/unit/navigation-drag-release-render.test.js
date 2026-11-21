@@ -97,18 +97,86 @@ function setup({ globalDragging = true } = {}) {
   nm.makeDraggable(geneContent(), 'chr1');
   const mouse = (target, type, x) =>
     target.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: 10, button: 0, bubbles: true }));
-  const move = x => nm.handleDocumentMouseMove({ clientX: x });
+  const frames = new Map();
+  let nextFrame = 0;
+  vi.stubGlobal('requestAnimationFrame', callback => {
+    frames.set(++nextFrame, callback);
+    return nextFrame;
+  });
+  vi.stubGlobal('cancelAnimationFrame', id => frames.delete(id));
+  const queueMove = x => nm.handleDocumentMouseMove({ clientX: x });
+  const paint = () => {
+    const pending = [...frames.values()];
+    frames.clear();
+    pending.forEach(callback => callback());
+  };
+  const move = x => {
+    queueMove(x);
+    paint();
+  };
   const up = x => nm.handleDocumentMouseUp({ clientX: x });
 
-  return { nm, browser, renders, geneContent, uc, reads, mouse, move, up };
+  return { nm, browser, renders, geneContent, uc, reads, mouse, move, queueMove, paint, up };
 }
 
 afterEach(() => {
   document.body.innerHTML = '';
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
 describe('drag release render', () => {
+  it('paints only the latest move in a frame and follows the pointer between bases', () => {
+    const { nm, browser, geneContent, uc, mouse, queueMove, paint, move } = setup();
+    browser.currentPosition = { start: 10000, end: 10100 };
+    mouse(geneContent(), 'mousedown', 500);
+    queueMove(494);
+    queueMove(493);
+    expect(uc().style.transform).toBe('');
+
+    paint();
+    expect(nm.updateDetailedRulers).toHaveBeenCalledTimes(1);
+    expect(parseFloat(uc().style.transform.slice('translateX('.length))).toBeCloseTo(-0.7);
+    expect(browser.currentPosition.start).toBe(10001);
+    expect(nm.dragState.previewPosition.start).toBeCloseTo(10000.7);
+
+    move(492);
+    expect(parseFloat(uc().style.transform.slice('translateX('.length))).toBeCloseTo(-0.8);
+    expect(browser.currentPosition.start).toBe(10001);
+    expect(browser.genomeNavigationBar.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the release coordinate when a move is still queued and aligns to a whole base', async () => {
+    const { nm, browser, renders, geneContent, uc, mouse, queueMove, paint, up } = setup();
+    browser.currentPosition = { start: 10000, end: 10100 };
+    mouse(geneContent(), 'mousedown', 500);
+    queueMove(492);
+    up(483);
+    paint();
+    await flush();
+
+    expect(renders).toHaveLength(1);
+    expect(renders[0].position).toEqual({ start: 10002, end: 10102 });
+    expect(uc().style.transform).toBe('translateX(-2%)');
+    expect(nm.updateDetailedRulers).toHaveBeenCalledTimes(1);
+    expect(nm.dragState.previewPosition).toBeNull();
+  });
+
+  it('keeps the preview moving in the drag direction across the circular origin', async () => {
+    const { nm, browser, renders, geneContent, uc, mouse, move, up } = setup();
+    nm.circularMode = true;
+    browser.currentPosition = { start: 0, end: 100 };
+    mouse(geneContent(), 'mousedown', 500);
+    move(508);
+
+    expect(uc().style.transform).toBe('translateX(0.8%)');
+    expect(nm.dragState.previewPosition.start).toBeCloseTo(99999.2);
+    up(508);
+    await flush();
+    expect(uc().style.transform).toBe('translateX(1%)');
+    expect(renders[0].position).toEqual({ start: 99999, end: 100099 });
+  });
+
   it('keeps the drag offset on screen until the release render replaces the DOM', async () => {
     const { nm, renders, geneContent, uc, reads, mouse, move, up } = setup();
     mouse(geneContent(), 'mousedown', 500);
@@ -209,21 +277,21 @@ describe('live-render new region while dragging', () => {
     expect(renders).toHaveLength(3);
   });
 
-  it('offsets every track by the distance from the region on screen', async () => {
-    const { nm, renders, geneContent, uc, reads, mouse, move } = liveSetup();
+  it('keeps the fractional track offset when a live render replaces the region on screen', async () => {
+    const { nm, browser, renders, geneContent, uc, reads, mouse, move } = liveSetup();
+    browser.currentPosition = { start: 10000, end: 10100 };
     mouse(geneContent(), 'mousedown', 500);
-    move(450); // view at 10500, DOM still drawn for 10000
+    move(450); // view at 10005, DOM still drawn for 10000
     expect(uc().style.transform).toBe('translateX(-5%)');
     expect(reads().style.transform).toBe('translateX(-5%)');
     await flush();
 
-    move(400); // view at 11000 while the 10500 render is in flight
+    move(444); // preview at 10005.6 while the 10005 render is in flight
     renders[0].land();
     await flush();
-    // New DOM is drawn for 10500 and the view is at 11000: -500 bp = -5%.
-    expect(nm.dragState.renderedStart).toBe(10500);
-    expect(uc().style.transform).toBe('translateX(-5%)');
-    expect(reads().style.transform).toBe('translateX(-5%)');
+    expect(nm.dragState.renderedStart).toBe(10005);
+    expect(parseFloat(uc().style.transform.slice('translateX('.length))).toBeCloseTo(-0.6);
+    expect(uc().style.transform).toBe(reads().style.transform);
   });
 
   it('leaves a late in-drag render alone once the drag has ended', async () => {
