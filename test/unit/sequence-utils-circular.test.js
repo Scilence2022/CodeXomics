@@ -526,6 +526,7 @@ describe('SequenceUtils circular bottom sequence track', () => {
           start: 1,
           end: 6,
           strand: '+',
+          fivePrimePhosphate: true,
           mismatches: [],
         },
         {
@@ -537,6 +538,7 @@ describe('SequenceUtils circular bottom sequence track', () => {
           start: 10,
           end: 15,
           strand: '-',
+          fivePrimePhosphate: true,
           mismatches: [{ primerIndex: 2 }],
         },
       ],
@@ -579,6 +581,14 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(forwardRow.querySelector('.sequence-primer-direction.forward')).toBeTruthy();
     expect(reverseRow.querySelector('.sequence-primer-direction.reverse')).toBeTruthy();
     expect(reverseRow.querySelectorAll('.sequence-primer-binding-base.mismatch')).toHaveLength(1);
+
+    // Both markers use the actual 5' boundary; CSS places the circle outside the bar.
+    const forwardPhosphate = forwardRow.querySelector('.sequence-primer-phosphate');
+    const reversePhosphate = reverseRow.querySelector('.sequence-primer-phosphate');
+    expect(forwardPhosphate.textContent).toBe('P');
+    expect(forwardPhosphate.style.left).toBe('0px');
+    expect(reversePhosphate.style.left).toBe('150px');
+    expect(forwardPhosphate.classList.contains('primer-select-target')).toBe(true);
 
     // Base cells must sit on a uniform per-column grid so primer letters align with
     // the genome bases above/below them.
