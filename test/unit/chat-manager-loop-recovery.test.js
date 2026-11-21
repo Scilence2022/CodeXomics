@@ -1044,6 +1044,18 @@ describe('ChatManager requirements read the action, not the goal', () => {
     expect(manager.getOutstandingRequestSteps(stateFor(manager, request, [...calls, 'save_primer']))).toEqual([]);
   });
 
+  it('requires a successful save when adding named primers and keeps other additions distinct', () => {
+    const manager = new (loadLoopSupportClass())();
+    const request = 'add yfbK primers to lib';
+    const state = stateFor(manager, request, ['design_primers', 'list_primers']);
+    state.records.push({ tool: 'save_primer', status: 'failed' });
+
+    expect(manager.getOutstandingRequestSteps(state)).toMatchObject([{ capability: 'save_primer' }]);
+    expect(
+      manager.getOutstandingRequestSteps(stateFor(manager, 'add an annotation for primers', ['save_primer']))
+    ).toMatchObject([{ capability: 'create_annotation' }]);
+  });
+
   // Verbatim instruction from the benchmark run that never finished.
   const PROTEIN_WORKFLOW =
     'Search the UniProt database for the E.coli protein DapA and verify whether the UniProt ID P0A6L2 is present. ' +
