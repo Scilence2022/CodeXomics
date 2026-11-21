@@ -564,11 +564,12 @@ class SequenceUtils {
     const end = parseInt(target.dataset.primerEnd, 10);
     const strand = target.dataset.primerStrand === '-' ? -1 : 1;
 
-    const candidates = this.getPrimerBindingFeatures(chromosome);
-    if (id) {
-      const byId = candidates.find(candidate => candidate.id != null && String(candidate.id) === id);
-      if (byId) return byId;
-    }
+    const layout = this.sequenceLayout;
+    const candidates =
+      layout && layout.chromosome === chromosome
+        ? layout.primerBindings
+        : this.getPrimerBindingFeatures(chromosome, start - 1, end);
+    if (id) return candidates.find(candidate => candidate.id != null && String(candidate.id) === id);
     return candidates.find(candidate => {
       const candidateReverse = candidate.strand === -1 || candidate.strand === '-';
       return candidate.start === start && candidate.end === end && candidateReverse === (strand === -1);
@@ -1328,6 +1329,7 @@ class SequenceUtils {
       viewEnd,
       basesPerLine,
       offsets,
+      primerBindings,
     };
 
     const renderLine = lineIndex => {

@@ -139,7 +139,8 @@ describe('PrimerDetailsPanel.render', () => {
     const writeText = vi.fn(() => Promise.reject(new Error('denied')));
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     new PrimerDetailsPanel(genomeBrowser, { designer: PrimerDesigner }).render(container, renderableSite());
-    container.querySelector('.primer-copy-btn').click();
+    expect(container.querySelector('.primer-actions button').classList.contains('primer-edit-btn')).toBe(true);
+    container.querySelector('.primer-sequence-heading .primer-copy-btn').click();
     await Promise.resolve();
     await Promise.resolve();
     expect(writeText).toHaveBeenCalledWith(`${TAIL}${ANNEAL}`);

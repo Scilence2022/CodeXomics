@@ -600,12 +600,13 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(parseFloat(cells[0].style.width)).toBeCloseTo(deltas[0], 3); // pitch === cell width
   });
 
-  it('opens the primer details sidebar when a rendered primer is clicked', () => {
+  it('selects the exact viewport primer when its bottom sequence row is clicked', () => {
     utils.genomeBrowser.currentSequence.chr1 = 'ATGAAATGGCCCAAA';
     utils.genomeBrowser.currentAnnotations.chr1 = [];
     const renderables = [
       {
         type: 'primer_binding',
+        id: 'primer_1:preview_1',
         name: 'F-primer',
         sequence: 'ATGAAA',
         primerSequence: 'ATGAAA',
@@ -627,7 +628,9 @@ describe('SequenceUtils circular bottom sequence track', () => {
         mismatches: [],
       },
     ];
-    utils.genomeBrowser.primerManager = { getRenderableBindingSites: () => renderables };
+    const getRenderableBindingSites = vi.fn(() => []);
+    utils.genomeBrowser.primerManager = { getRenderableBindingSites };
+    utils.sequenceLayout = { chromosome: 'chr1', primerBindings: renderables };
     utils.genomeBrowser.selectPrimer = vi.fn();
 
     // The click handler is delegated to the sequence container (so it survives the
@@ -656,9 +659,8 @@ describe('SequenceUtils circular bottom sequence track', () => {
     forwardBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(utils.genomeBrowser.selectPrimer).toHaveBeenCalledTimes(1);
-    expect(utils.genomeBrowser.selectPrimer).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'F-primer', start: 1, end: 6 })
-    );
+    expect(utils.genomeBrowser.selectPrimer).toHaveBeenCalledWith(renderables[0]);
+    expect(getRenderableBindingSites).not.toHaveBeenCalled();
 
     // Clicking the reverse primer resolves the other oligo.
     const reverseBox = lineElement.querySelector('.sequence-primer-row.reverse .sequence-primer-binding-box');

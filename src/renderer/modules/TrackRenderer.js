@@ -1279,6 +1279,8 @@ class TrackRenderer {
       });
     });
 
+    const selected = svg.querySelector('.primer-binding-element.selected');
+    if (selected) svg.appendChild(selected);
     trackContent.appendChild(svg);
     this.addPrimerTrackLegend(trackContent, placements, layout, { amplicons, packing });
   }
@@ -1744,6 +1746,7 @@ class TrackRenderer {
         .filter(Boolean)
         .join(' '),
       'data-primer-id': primer.primerId || primer.id || '',
+      'data-primer-site-key': this.getPrimerSiteSelectionKey(primer),
       'data-site-start': placement.start,
       'data-site-end': placement.end,
     });
@@ -1840,37 +1843,29 @@ class TrackRenderer {
     return group;
   }
 
-  /** Does this binding site belong to the primer the user last clicked? */
+  getPrimerSiteSelectionKey(primer) {
+    const { chromosome, id, start, end, strand, name } = primer;
+    if (id != null && id !== '') return JSON.stringify([chromosome || '', String(id)]);
+    const reverse = strand === '-' || strand === -1;
+    return JSON.stringify([chromosome || '', Math.min(start, end), Math.max(start, end), reverse, name || '']);
+  }
+
   isSelectedPrimerSite(placement) {
     const selected = this.genomeBrowser?.selectedPrimer;
-    if (!selected || !placement) return false;
-    if (selected.id && placement.primer.id) return selected.id === placement.primer.id;
-    return (
-      Math.min(selected.start, selected.end) === placement.start &&
-      Math.max(selected.start, selected.end) === placement.end &&
-      (selected.name || '') === (placement.primer.name || '')
+    return Boolean(
+      selected &&
+      placement &&
+      this.getPrimerSiteSelectionKey(selected) === this.getPrimerSiteSelectionKey(placement.primer)
     );
   }
 
-  /**
-   * Mark the clicked binding site in the track. Selection feedback used to live
-   * only in the sidebar, which left no way to tell which of several sites for
-   * the same oligo was being described.
-   */
   highlightSelectedPrimerElement(primer) {
     if (typeof document === 'undefined') return;
-    document
-      .querySelectorAll('.primer-binding-element.selected')
-      .forEach(element => element.classList.remove('selected'));
-    if (!primer) return;
-
-    const start = Math.min(primer.start, primer.end);
-    const end = Math.max(primer.start, primer.end);
+    const key = primer ? this.getPrimerSiteSelectionKey(primer) : null;
     document.querySelectorAll('.primer-binding-element').forEach(element => {
-      const matchesSite =
-        Number(element.getAttribute('data-site-start')) === start &&
-        Number(element.getAttribute('data-site-end')) === end;
-      if (matchesSite) element.classList.add('selected');
+      const matches = element.dataset.primerSiteKey === key;
+      element.classList.toggle('selected', matches);
+      if (matches) element.parentNode.appendChild(element);
     });
   }
 
