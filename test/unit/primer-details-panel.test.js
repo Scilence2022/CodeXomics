@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import { createRequire } from 'module';
 
@@ -113,6 +113,10 @@ describe('PrimerDetailsPanel.render', () => {
   let container;
   let genomeBrowser;
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     document.body.innerHTML = '<div id="primerDetailsContent"></div>';
     container = document.getElementById('primerDetailsContent');
@@ -159,6 +163,7 @@ describe('PrimerDetailsPanel.render', () => {
   });
 
   it('opens the stored primer for the rendered binding site', () => {
+    vi.useFakeTimers();
     const site = renderableSite({ primerId: 'primer_1', fivePrimePhosphate: true });
     const storedPrimer = {
       id: 'primer_1',
