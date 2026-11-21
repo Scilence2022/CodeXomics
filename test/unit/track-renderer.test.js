@@ -607,6 +607,31 @@ describe('Primer Track Rendering', () => {
     });
   }
 
+  it.each([
+    [{}, 'instant'],
+    [{ bottomSequenceScrollMode: 'smooth-nearby' }, 'smooth-nearby'],
+    [{ autoScrollBottomSequenceOnGeneSelect: false }, null],
+  ])('selects the clicked primer and applies sequence navigation settings %j', (settings, mode) => {
+    const renderer = createPrimerRenderer();
+    const { genomeBrowser } = renderer;
+    genomeBrowser.selectPrimer = vi.fn();
+    genomeBrowser.scrollBottomSequenceToGene = vi.fn();
+    renderer.trackSettings.genes = settings;
+
+    const primer = { type: 'primer_binding', name: 'Primer A', start: 120, end: 139, strand: -1 };
+    const trackContent = document.createElement('div');
+    trackContent.getBoundingClientRect = () => ({ width: 640 });
+    renderer.renderPrimerElements(trackContent, [primer], { start: 0, end: 400 });
+    trackContent.querySelector('.primer-binding-element').dispatchEvent(new MouseEvent('click'));
+
+    expect(genomeBrowser.selectPrimer).toHaveBeenCalledExactlyOnceWith(primer);
+    if (mode) {
+      expect(genomeBrowser.scrollBottomSequenceToGene).toHaveBeenCalledExactlyOnceWith(primer, mode);
+    } else {
+      expect(genomeBrowser.scrollBottomSequenceToGene).not.toHaveBeenCalled();
+    }
+  });
+
   it('uses the measured track width for primer geometry to avoid stretched labels', () => {
     const renderer = createPrimerRenderer();
     const trackContent = document.createElement('div');

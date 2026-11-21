@@ -1780,6 +1780,7 @@ class TrackRenderer {
     group.appendChild(this.createPrimerTooltip(placement));
     group.addEventListener('click', () => {
       this.genomeBrowser.selectPrimer(primer);
+      this.scrollBottomSequenceForSelection(primer);
     });
 
     return group;
@@ -7796,6 +7797,7 @@ class TrackRenderer {
     if (featureType === 'primer' || featureType === 'primer_bind') {
       // Route primers to dedicated Primer Details sidebar
       this.genomeBrowser.selectPrimer(gene);
+      this.scrollBottomSequenceForSelection(localDisplay || gene, options);
       return;
     }
 
@@ -7817,11 +7819,17 @@ class TrackRenderer {
       this.genomeBrowser.showGeneDetailsPanel();
     }
 
-    const genesSettings = this.getTrackSettings('genes');
-    if (options.scrollBottomSequence !== false && genesSettings.autoScrollBottomSequenceOnGeneSelect !== false) {
-      const mode = genesSettings.bottomSequenceScrollMode === 'smooth-nearby' ? 'smooth-nearby' : 'instant';
-      this.genomeBrowser.scrollBottomSequenceToGene?.(localDisplay || gene, mode);
-    }
+    this.scrollBottomSequenceForSelection(localDisplay || gene, options);
+  }
+
+  scrollBottomSequenceForSelection(feature, { scrollBottomSequence = true } = {}) {
+    if (scrollBottomSequence === false) return;
+
+    const settings = this.getTrackSettings('genes');
+    if (settings.autoScrollBottomSequenceOnGeneSelect === false) return;
+
+    const mode = settings.bottomSequenceScrollMode === 'smooth-nearby' ? 'smooth-nearby' : 'instant';
+    this.genomeBrowser.scrollBottomSequenceToGene?.(feature, mode);
   }
 
   showProteinDetails(protein, chromosome) {
@@ -11766,10 +11774,10 @@ This action cannot be undone.`;
                                 <label for="genesBottomSequenceNavigation">Bottom Sequence Track navigation</label>
                                 <select id="genesBottomSequenceNavigation" class="form-select">
                                     <option value="instant" ${autoNavigate && !smoothNearby ? 'selected' : ''}>Jump directly (Default)</option>
-                                    <option value="smooth-nearby" ${autoNavigate && smoothNearby ? 'selected' : ''}>Smooth scroll for nearby genes</option>
+                                    <option value="smooth-nearby" ${autoNavigate && smoothNearby ? 'selected' : ''}>Smooth scroll for nearby selections</option>
                                     <option value="off" ${!autoNavigate ? 'selected' : ''}>Off</option>
                                 </select>
-                                <div class="help-text">Smooth scrolling covers up to one screen of travel. Farther targets jump directly.</div>
+                                <div class="help-text">Applies when you click a gene or primer in its track. Smooth scrolling covers up to one screen of travel. Farther targets jump directly.</div>
                             </div>
                         </div>
                     </div>

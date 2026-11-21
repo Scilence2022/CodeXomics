@@ -450,6 +450,31 @@ describe('SequenceUtils circular bottom sequence track', () => {
     }
   });
 
+  it('keeps the scrolled genomic position when the same sequence view rewraps', () => {
+    const container = document.getElementById('sequenceContent');
+    Object.defineProperty(container, 'clientHeight', { value: 40 });
+    container.scrollTo = vi.fn(({ top }) => {
+      container.scrollTop = top;
+    });
+    const sequence = 'A'.repeat(1000);
+    utils.genomeBrowser.currentSequence.chr1 = sequence;
+    utils.genomeBrowser.currentAnnotations.chr1 = [];
+    const rowLayout = { charWidth: 10, baseHeight: 20, proteinHeight: 0, primerHeight: 0 };
+    vi.spyOn(utils, 'measureSequenceLayout')
+      .mockReturnValueOnce({ ...rowLayout, basesPerLine: 10 })
+      .mockReturnValue({ ...rowLayout, basesPerLine: 8 });
+
+    utils.performDetailedSequenceRender('chr1', sequence, 0, 800);
+    utils.scrollToPosition(540, 'instant');
+    expect(container.scrollTop).toBe(1080);
+
+    utils.performDetailedSequenceRender('chr1', sequence, 0, 800);
+    expect(container.scrollTop).toBe(1340);
+
+    utils.performDetailedSequenceRender('chr1', sequence, 100, 900);
+    expect(container.scrollTop).toBe(0);
+  });
+
   it('copies the reverse-complement gene sequence when Shift is pressed', async () => {
     utils.genomeBrowser.currentSequence.chr1 = 'AACCGGTT';
     utils.genomeBrowser.sequenceSelection = {
