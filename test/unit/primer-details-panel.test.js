@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import { createRequire } from 'module';
 
@@ -51,6 +51,15 @@ describe('PrimerDetailsPanel.buildModel', () => {
     expect(model.quality.fullTm).toBeGreaterThan(model.quality.tm);
   });
 
+  it('collapses the genomic binding window for an exact match and allows it to expand', () => {
+    document.body.innerHTML = panel.renderHtml(panel.buildModel(renderableSite()));
+    const bindingWindow = document.querySelector('.primer-genome-binding-window');
+    expect(bindingWindow.open).toBe(false);
+    bindingWindow.querySelector('summary').click();
+    expect(bindingWindow.open).toBe(true);
+    expect(bindingWindow.querySelector('.primer-mismatch-summary').textContent).toContain('matches the loaded genome');
+  });
+
   it('hides internal qualifiers from Additional Information', () => {
     const model = panel.buildModel(
       renderableSite({ qualifiers: { ...renderableSite().qualifiers, color: '#a21caf' } })
@@ -68,7 +77,9 @@ describe('PrimerDetailsPanel.buildModel', () => {
     expect(model.threePrimeMismatches).toBe(1);
     expect(model.siteBinding.tm).toBeLessThan(model.quality.tm);
     document.body.innerHTML = panel.renderHtml(model);
-    const summary = document.querySelector('.primer-mismatch-summary').textContent;
+    const bindingWindow = document.querySelector('.primer-genome-binding-window');
+    expect(bindingWindow.open).toBe(true);
+    const summary = bindingWindow.querySelector('.primer-mismatch-summary').textContent;
     expect(summary).toContain(`oligo position ${TAIL.length + ANNEAL.length - 1}`);
     expect(summary).toContain("within 5 nt of the 3' end");
   });
@@ -101,6 +112,10 @@ describe('PrimerDetailsPanel.buildModel', () => {
 describe('PrimerDetailsPanel.render', () => {
   let container;
   let genomeBrowser;
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   beforeEach(() => {
     document.body.innerHTML = '<div id="primerDetailsContent"></div>';
@@ -139,7 +154,8 @@ describe('PrimerDetailsPanel.render', () => {
     const writeText = vi.fn(() => Promise.reject(new Error('denied')));
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     new PrimerDetailsPanel(genomeBrowser, { designer: PrimerDesigner }).render(container, renderableSite());
-    container.querySelector('.primer-copy-btn').click();
+    expect(container.querySelector('.primer-actions button').classList.contains('primer-edit-btn')).toBe(true);
+    container.querySelector('.primer-sequence-heading .primer-copy-btn').click();
     await Promise.resolve();
     await Promise.resolve();
     expect(writeText).toHaveBeenCalledWith(`${TAIL}${ANNEAL}`);
@@ -147,6 +163,7 @@ describe('PrimerDetailsPanel.render', () => {
   });
 
   it('opens the stored primer for the rendered binding site', () => {
+    vi.useFakeTimers();
     const site = renderableSite({ primerId: 'primer_1', fivePrimePhosphate: true });
     const storedPrimer = {
       id: 'primer_1',

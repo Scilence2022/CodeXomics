@@ -352,8 +352,15 @@ svg {
   opacity: 1;
 }
 
+.primer-binding-element.selected {
+  opacity: 1;
+}
+
 .primer-binding-element.selected .primer-arrow {
-  filter: drop-shadow(0 0 3px rgba(37, 99, 235, 0.9));
+  opacity: 1;
+  stroke: #2563eb;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 2px rgba(37, 99, 235, 0.7));
 }
 
 .primer-label {

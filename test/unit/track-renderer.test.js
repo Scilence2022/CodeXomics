@@ -632,6 +632,38 @@ describe('Primer Track Rendering', () => {
     }
   });
 
+  it('highlights only the selected site when primers share genomic coordinates', () => {
+    const renderer = createPrimerRenderer();
+    const trackContent = document.createElement('div');
+    trackContent.getBoundingClientRect = () => ({ width: 640 });
+    document.body.appendChild(trackContent);
+
+    const first = { id: 'p1:s1', chromosome: 'chr1', name: 'Primer A', start: 120, end: 139, strand: 1 };
+    const second = { ...first, id: 'p2:s1', name: 'Primer B', strand: -1 };
+    const render = () => {
+      trackContent.replaceChildren();
+      renderer.renderPrimerElements(trackContent, [first, second], { start: 0, end: 400 });
+    };
+    const selectedNames = () =>
+      Array.from(trackContent.querySelectorAll('.primer-binding-element.selected title'), title => title.textContent);
+
+    try {
+      render();
+      renderer.genomeBrowser.selectedPrimer = first;
+      renderer.highlightSelectedPrimerElement(first);
+      expect(selectedNames()).toEqual([expect.stringContaining('Primer A')]);
+
+      render();
+      expect(selectedNames()).toEqual([expect.stringContaining('Primer A')]);
+
+      renderer.genomeBrowser.selectedPrimer = second;
+      renderer.highlightSelectedPrimerElement(second);
+      expect(selectedNames()).toEqual([expect.stringContaining('Primer B')]);
+    } finally {
+      trackContent.remove();
+    }
+  });
+
   it('uses the measured track width for primer geometry to avoid stretched labels', () => {
     const renderer = createPrimerRenderer();
     const trackContent = document.createElement('div');

@@ -335,7 +335,12 @@ class PrimerDetailsPanel {
 
     let html = `
       <div class="primer-sequence-section">
-        <div class="primer-section-title"><i class="fas fa-dna"></i> Primer Oligo Sequence (5' to 3')</div>
+        <div class="primer-sequence-heading">
+          <div class="primer-section-title"><i class="fas fa-dna"></i> Primer Oligo Sequence (5' to 3')</div>
+          <button type="button" class="primer-action-btn primer-copy-btn" title="Copy the full oligo (5' to 3')">
+            <i class="fas fa-copy" aria-hidden="true"></i> Copy Seq
+          </button>
+        </div>
         <div class="primer-sequence-display">${phosphate}${tailHtml}${annealHtml}</div>`;
     if (model.tailLength) {
       html += `<div class="primer-sequence-legend"><span class="primer-legend-swatch primer-base-tail">■</span>
@@ -347,10 +352,13 @@ class PrimerDetailsPanel {
       const pad = model.tailLength
         ? `<span class="primer-sequence-pad" aria-hidden="true">${'·'.repeat(model.tailLength)}</span>`
         : '';
+      const open = !model.comparable || model.mismatchPositions.length > 0;
       html += `
-        <div class="primer-section-title primer-genome-binding-title"><i class="fas fa-map-pin"></i> Genomic Binding Window (${strandNote})</div>
-        <div class="primer-sequence-display primer-genome-sequence">${pad}${this._baseSpans(model.genomeWindow, model.mismatchPositions)}</div>
-        <div class="primer-mismatch-summary">${this._mismatchSummary(model)}</div>`;
+        <details class="primer-genome-binding-window"${open ? ' open' : ''}>
+          <summary class="primer-section-title primer-genome-binding-title">Genomic Binding Window (${strandNote})</summary>
+          <div class="primer-sequence-display primer-genome-sequence">${pad}${this._baseSpans(model.genomeWindow, model.mismatchPositions)}</div>
+          <div class="primer-mismatch-summary">${this._mismatchSummary(model)}</div>
+        </details>`;
     }
     html += '</div>';
     return html;
@@ -407,16 +415,11 @@ class PrimerDetailsPanel {
         </div>
       </div>
       <div class="primer-actions">
-        <button class="primer-action-btn primer-zoom-btn" title="Zoom to primer region">
-          <i class="fas fa-search-plus"></i> Zoom to
-        </button>
-        <button class="primer-action-btn primer-copy-btn" title="Copy the full oligo (5' to 3')" ${
-          model.oligo ? '' : 'disabled'
-        }>
-          <i class="fas fa-copy"></i> Copy Seq
-        </button>
         <button type="button" class="primer-action-btn primer-edit-btn">
           <i class="fas fa-pen" aria-hidden="true"></i> Edit Primer
+        </button>
+        <button type="button" class="primer-action-btn primer-zoom-btn" title="Zoom to primer region">
+          <i class="fas fa-search-plus" aria-hidden="true"></i> Zoom to
         </button>
       </div>`;
 

@@ -132,9 +132,22 @@
   transform: translateY(-1px);
 }
 
-.primer-copy-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.primer-sequence-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.primer-sequence-heading .primer-section-title {
+  margin: 0;
+}
+
+.primer-sequence-heading .primer-copy-btn {
+  flex: none;
+  padding: 4px 8px;
 }
 
 /* Primer Properties Section */
@@ -228,7 +241,9 @@
 }
 
 .primer-genome-binding-title {
+  display: list-item;
   margin-top: 10px;
+  cursor: pointer;
 }
 
 .primer-genome-sequence {
