@@ -51,6 +51,15 @@ describe('PrimerDetailsPanel.buildModel', () => {
     expect(model.quality.fullTm).toBeGreaterThan(model.quality.tm);
   });
 
+  it('collapses the genomic binding window for an exact match and allows it to expand', () => {
+    document.body.innerHTML = panel.renderHtml(panel.buildModel(renderableSite()));
+    const bindingWindow = document.querySelector('.primer-genome-binding-window');
+    expect(bindingWindow.open).toBe(false);
+    bindingWindow.querySelector('summary').click();
+    expect(bindingWindow.open).toBe(true);
+    expect(bindingWindow.querySelector('.primer-mismatch-summary').textContent).toContain('matches the loaded genome');
+  });
+
   it('hides internal qualifiers from Additional Information', () => {
     const model = panel.buildModel(
       renderableSite({ qualifiers: { ...renderableSite().qualifiers, color: '#a21caf' } })
@@ -68,7 +77,9 @@ describe('PrimerDetailsPanel.buildModel', () => {
     expect(model.threePrimeMismatches).toBe(1);
     expect(model.siteBinding.tm).toBeLessThan(model.quality.tm);
     document.body.innerHTML = panel.renderHtml(model);
-    const summary = document.querySelector('.primer-mismatch-summary').textContent;
+    const bindingWindow = document.querySelector('.primer-genome-binding-window');
+    expect(bindingWindow.open).toBe(true);
+    const summary = bindingWindow.querySelector('.primer-mismatch-summary').textContent;
     expect(summary).toContain(`oligo position ${TAIL.length + ANNEAL.length - 1}`);
     expect(summary).toContain("within 5 nt of the 3' end");
   });

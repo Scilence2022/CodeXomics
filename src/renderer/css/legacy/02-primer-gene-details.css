@@ -241,7 +241,9 @@
 }
 
 .primer-genome-binding-title {
+  display: list-item;
   margin-top: 10px;
+  cursor: pointer;
 }
 
 .primer-genome-sequence {

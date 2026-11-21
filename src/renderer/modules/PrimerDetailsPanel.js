@@ -352,10 +352,13 @@ class PrimerDetailsPanel {
       const pad = model.tailLength
         ? `<span class="primer-sequence-pad" aria-hidden="true">${'·'.repeat(model.tailLength)}</span>`
         : '';
+      const open = !model.comparable || model.mismatchPositions.length > 0;
       html += `
-        <div class="primer-section-title primer-genome-binding-title"><i class="fas fa-map-pin"></i> Genomic Binding Window (${strandNote})</div>
-        <div class="primer-sequence-display primer-genome-sequence">${pad}${this._baseSpans(model.genomeWindow, model.mismatchPositions)}</div>
-        <div class="primer-mismatch-summary">${this._mismatchSummary(model)}</div>`;
+        <details class="primer-genome-binding-window"${open ? ' open' : ''}>
+          <summary class="primer-section-title primer-genome-binding-title">Genomic Binding Window (${strandNote})</summary>
+          <div class="primer-sequence-display primer-genome-sequence">${pad}${this._baseSpans(model.genomeWindow, model.mismatchPositions)}</div>
+          <div class="primer-mismatch-summary">${this._mismatchSummary(model)}</div>
+        </details>`;
     }
     html += '</div>';
     return html;
