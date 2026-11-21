@@ -64,8 +64,9 @@ class ChatModelSelector {
       this.llmConfig?.waitForInitialization?.(),
     ]);
     for (const result of results) {
-      if (result.status === 'rejected')
+      if (result.status === 'rejected') {
         console.warn('[ChatModelSelector] Settings initialization failed:', result.reason);
+      }
     }
     this.refresh();
 

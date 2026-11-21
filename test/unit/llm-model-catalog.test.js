@@ -145,7 +145,8 @@ describe('ChatModelSelector', () => {
 
   it.each(['providers', 'chatbox'])('waits for the saved selection when %s loads first', async first => {
     const llmConfigManager = createManager();
-    let finishProviders, finishChatbox;
+    let finishProviders;
+    let finishChatbox;
     llmConfigManager.waitForInitialization = () =>
       new Promise(resolve => {
         finishProviders = resolve;
