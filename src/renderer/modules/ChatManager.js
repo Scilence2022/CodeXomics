@@ -1405,6 +1405,8 @@ class ChatManager {
       include_details = false,
       format = 'summary',
       userQuery = null,
+      query = null,
+      tool_name: exactName = null,
       context = null,
     } = parameters;
 
@@ -1423,6 +1425,7 @@ class ChatManager {
         query_filtered: false,
       };
 
+      let registryLoaded = false;
       // Get tools from dynamic tools registry if available
       if (this.dynamicToolsEnabled && this.dynamicTools) {
         try {
@@ -1434,7 +1437,14 @@ class ChatManager {
           // this request — otherwise the inventory misleadingly shows every registered
           // tool no matter what the user asked for.
           let toolsToList = fullRegistry;
-          if (userQuery && typeof this.dynamicTools.selectRelevantTools === 'function') {
+          if (exactName) {
+            toolsToList = fullRegistry.filter(tool => tool.name === exactName);
+            result.filtered_tool = exactName;
+            result.query_filtered = true;
+          } else if (query) {
+            toolsToList = await this.dynamicTools.searchTools(query, this.getDynamicToolsSelectionLimit(), category);
+            result.query_filtered = true;
+          } else if (userQuery && typeof this.dynamicTools.selectRelevantTools === 'function') {
             toolsToList = this.dynamicTools.selectRelevantTools(
               userQuery,
               context || {},
@@ -1463,9 +1473,11 @@ class ChatManager {
               description: tool.description || 'No description available',
             };
 
-            if (include_details || format === 'detailed') {
+            if (exactName || include_details || format === 'detailed') {
               toolInfo.keywords = tool.keywords || [];
-              toolInfo.parameters = tool.parameters || {};
+              toolInfo.parameters = this.dynamicTools.sanitizeNativeSchema
+                ? this.dynamicTools.sanitizeNativeSchema(this.dynamicTools.normalizeToolSchema(tool), true)
+                : tool.parameters || {};
             }
 
             result.categories[cat].tools.push(toolInfo);
@@ -1474,6 +1486,7 @@ class ChatManager {
             result.total_tools++;
           }
 
+          registryLoaded = true;
           console.log(`✅ [ChatManager] Listed ${result.total_tools} tools from dynamic registry`);
         } catch (error) {
           console.warn('⚠️ [ChatManager] Error getting dynamic tools, using fallback:', error);
@@ -1481,7 +1494,8 @@ class ChatManager {
       }
 
       // Fallback or supplement with core tools from getCoreToolsByCategory
-      if (result.total_tools === 0) {
+      if (!registryLoaded) {
+        if (exactName || query) throw new Error('Tool registry unavailable for a filtered lookup');
         const coreTools = this.getCoreToolsInfo(category, include_details);
         result.categories = coreTools.categories;
         result.tools = coreTools.tools;
@@ -3350,18 +3364,19 @@ class ChatManager {
       : shown;
   }
 
-  getCurrentState() {
+  getCurrentState({ include_tracks = true, include_data_summary = true } = {}) {
     if (!this.app) {
       throw new Error('Genome browser not initialized');
     }
 
-    // Debug logging to understand the app state
-    // console.log('ChatManager getCurrentState - this.app:', this.app);
-    // console.log('ChatManager getCurrentState - this.app.currentChromosome:', this.app.currentChromosome);
-    // console.log('ChatManager getCurrentState - this.app.currentAnnotations:', this.app.currentAnnotations);
-    // console.log('ChatManager getCurrentState - this.app.currentPosition:', this.app.currentPosition);
-
     const chromosomeNames = this.getAvailableChromosomeNames();
+    const annotations = this.app.currentAnnotations || [];
+    const annotationsCount = Array.isArray(annotations)
+      ? annotations.length
+      : Object.values(annotations).reduce(
+          (count, features) => count + (Array.isArray(features) ? features.length : 0),
+          0
+        );
 
     const state = {
       // Multi-window support: include window identifier
@@ -3372,10 +3387,10 @@ class ChatManager {
       availableChromosomes: chromosomeNames.slice(0, 50),
       availableChromosomeCount: chromosomeNames.length,
       currentPosition: this.app.currentPosition,
-      visibleTracks: this.getVisibleTracks(),
-      loadedFiles: this.app.loadedFiles || [],
+      ...(include_tracks && { visibleTracks: this.getVisibleTracks() }),
+      ...(include_data_summary && { loadedFiles: this.app.loadedFiles || [] }),
       sequenceLength: this.app.sequenceLength || 0,
-      annotationsCount: (this.app.currentAnnotations || []).length,
+      annotationsCount,
       userDefinedFeaturesCount: Object.keys(this.app.userDefinedFeatures || {}).length,
 
       // Enhanced: Add working directory information
@@ -5523,6 +5538,7 @@ class ChatManager {
             providerOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMProvider', 'auto'),
             modelOverride: this.chatBoxSettingsManager?.getSetting('chatboxLLMModel', 'auto'),
             tools: this.currentNativeTools,
+            selectedToolNames: this.lastSystemPromptMetadata?.selectedTools?.map(tool => tool.name),
             nativeFunctionCalling,
             constrainedToolOutput: this.configManager.get('chatboxSettings.enableConstrainedToolOutput', true),
             toolChoice: 'auto',
@@ -5593,7 +5609,9 @@ class ChatManager {
           }
           if (responseText.trim()) conversationHistory.push({ role: 'assistant', content: responseText });
           conversationHistory.push(
-            this.createToolExecutionFeedbackMessage(this.buildToolAvailabilityMessage(toolExpansion.addedTools))
+            this.createToolExecutionFeedbackMessage(
+              this.buildToolAvailabilityMessage(toolExpansion.addedTools, nativeFunctionCalling)
+            )
           );
           continue;
         }
@@ -5612,7 +5630,10 @@ class ChatManager {
               content: this.buildToolProtocolRecoveryMessage(
                 recoveryDecision.reason,
                 recoveryDecision.outstandingSteps,
-                { nativeToolsAvailable: (this.currentNativeTools || []).length > 0 }
+                {
+                  nativeToolsAvailable: nativeFunctionCalling && (this.currentNativeTools || []).length > 0,
+                  invalidToolCalls: responseAnalysis.invalidToolCalls,
+                }
               ),
             });
             continue;
@@ -5763,7 +5784,10 @@ class ChatManager {
               content: this.buildToolProtocolRecoveryMessage(
                 recoveryDecision.reason,
                 recoveryDecision.outstandingSteps,
-                { nativeToolsAvailable: (this.currentNativeTools || []).length > 0 }
+                {
+                  nativeToolsAvailable: nativeFunctionCalling && (this.currentNativeTools || []).length > 0,
+                  invalidToolCalls: responseAnalysis.invalidToolCalls,
+                }
               ),
             });
             if (this.showThinkingProcess) {
@@ -6041,7 +6065,7 @@ class ChatManager {
               lastSuccessfulResults = successfulResults;
               lastSuccessfulTools = successfulResults.map(result => ({
                 tool_name: result.tool,
-                parameters: this.normalizeToolParams(result.tool, result.parameters),
+                parameters: result.parameters,
               }));
 
               // ENHANCED: Check for simple task completion after successful tool execution
@@ -6306,7 +6330,12 @@ class ChatManager {
       return result;
     }
 
-    // Create a shallow copy to avoid modifying the original
+    // Preserve list results as JSON arrays. For oversized lists, reuse the
+    // ordinary field and total-size limits and report the original count.
+    if (Array.isArray(result)) {
+      if (result.length <= 50 && JSON.stringify(result).length <= 50 * 1024) return result;
+      return this.sanitizeResultForLLM({ items: result, total: result.length }, null);
+    }
     const sanitized = { ...result };
 
     // ─── Tool-specific sanitization rules ───────────────────────────────
@@ -6328,14 +6357,15 @@ class ChatManager {
         if (!sanitized.categories || Object.keys(sanitized.categories).length === 0) break;
         delete sanitized.tools;
         delete sanitized.message;
-        if (JSON.stringify(sanitized.categories).length > 12 * 1024) {
+        if (!sanitized.filtered_tool && JSON.stringify(sanitized.categories).length > 12 * 1024) {
           sanitized.categories = Object.fromEntries(
             Object.entries(sanitized.categories).map(([category, info]) => [
               category,
               { ...info, tools: info.tools.map(tool => (typeof tool === 'string' ? tool : tool.name)) },
             ])
           );
-          sanitized.inventory_note = 'All listed tool names are included. Descriptions and parameters were omitted.';
+          sanitized.inventory_note =
+            'Use list_available_tools with tool_name to read the parameters for one listed tool.';
         }
         break;
       case 'fetch_alphafold_structure':
@@ -6859,6 +6889,7 @@ class ChatManager {
 
         const promptData = await this.dynamicTools.generateDynamicSystemPrompt(lastUserQuery, context, {
           selectionLimit: this.getDynamicToolsSelectionLimit(),
+          nativeFunctionCalling: this.configManager.get('chatboxSettings.enableNativeFunctionCalling', true),
         });
         this.currentNativeTools = Array.isArray(promptData.nativeTools) ? promptData.nativeTools : [];
         console.log('🔧 [buildSystemMessage] Generated prompt data:', promptData);
@@ -7121,6 +7152,8 @@ class ChatManager {
         '🔧 Directly Available Tools (Built-in)',
         'Built-in Tools',
         'MCP Server Tools',
+        'Extended Tools',
+        'Plugin Tools',
       ],
       toolExamples: ['Tool Usage Examples', '📚 Tool Usage Examples'],
       toolGuidelines: ['Tool Selection Guidelines', '🎯 Enhanced Tool Selection Guidelines', 'Tool Usage Guidelines'],
@@ -7159,16 +7192,6 @@ class ChatManager {
           toolParts.push(sections[header]);
         }
       }
-      // Also collect Extended Tools and Plugin sections
-      for (const [header, content] of Object.entries(sections)) {
-        if (
-          header.includes('Extended Tools') ||
-          header.includes('🌐 Extended Tools') ||
-          header.includes('MCP Server Tools')
-        ) {
-          toolParts.push(content);
-        }
-      }
       if (toolParts.length > 0) {
         return toolParts.join('\n\n');
       }
@@ -7198,6 +7221,7 @@ class ChatManager {
       normalizedHeader.includes('built-in') ||
       normalizedHeader.includes('directly available') ||
       normalizedHeader.includes('extended tools') ||
+      normalizedHeader.includes('plugin tools') ||
       normalizedHeader.includes('mcp server tools')
     ) {
       return 'dynamicTools';
@@ -7628,8 +7652,9 @@ class ChatManager {
           continue;
         }
         if (this.dynamicTools && typeof this.dynamicTools.validateToolCall === 'function') {
-          const normalizedParameters = this.normalizeToolParams(toolCall.tool_name, toolCall.parameters || {});
-          const validation = this.dynamicTools.validateToolCall(toolCall.tool_name, normalizedParameters);
+          // Execution keys deliberately discard presentation and other fields.
+          // Validate and execute the arguments the caller actually supplied.
+          const validation = this.dynamicTools.validateToolCall(toolCall.tool_name, toolCall.parameters);
           if (!validation.valid) {
             invalidToolCalls.push({
               ...toolCall,
@@ -7637,7 +7662,6 @@ class ChatManager {
             });
             continue;
           }
-          toolCall.parameters = normalizedParameters;
         }
         requestConsistentCalls.push(toolCall);
       }
@@ -7733,8 +7757,8 @@ class ChatManager {
 
     for (const name of rejectedNames) {
       if (advertisedNames.has(name)) continue;
-      const tool = this.dynamicTools.toolsByName?.get?.(name);
-      if (!tool) {
+      const tool = this.dynamicTools.getToolDefinition?.(name) || this.dynamicTools.toolsByName?.get?.(name);
+      if (!tool || (tool.category === 'coordination' && !this.agentSystemEnabled)) {
         // Genuinely not a capability this build has; the existing
         // unavailable-tool handling gives the model a better answer than
         // advertising something that does not exist.
@@ -7742,11 +7766,7 @@ class ChatManager {
         continue;
       }
       const nativeTool = this.dynamicTools.toNativeFunctionTool?.(tool);
-      if (!nativeTool) {
-        unknownTools.push(name);
-        continue;
-      }
-      addedNativeTools.push(nativeTool);
+      if (nativeTool) addedNativeTools.push(nativeTool);
       addedSelections.push({
         name: tool.name,
         category: tool.category || 'uncategorized',
@@ -7776,12 +7796,19 @@ class ChatManager {
   }
 
   /** Protocol message telling the model that a previously missing tool is now callable. */
-  buildToolAvailabilityMessage(addedTools) {
+  buildToolAvailabilityMessage(addedTools, nativeFunctionCalling = true) {
+    const nativeNames = new Set(nativeFunctionCalling ? this.currentNativeTools.map(tool => tool.function.name) : []);
+    const inlineSchemas = addedTools
+      .filter(name => !nativeNames.has(name))
+      .map(name => {
+        const tool = this.dynamicTools.getToolDefinition(name);
+        return `${name} parameters: ${this.dynamicTools.formatParameterList(tool)}`;
+      });
     return (
       `[Tool Availability]\n` +
       `${addedTools.join(', ')} ${addedTools.length === 1 ? 'is' : 'are'} now available for this request. ` +
-      `The previous call was rejected only because the tool had not been offered yet, not because it is wrong. ` +
-      `Issue the call again.`
+      `No calls from that batch executed. Resubmit the intended calls using the available tools.` +
+      (inlineSchemas.length ? `\nUse JSON tool calls for these schemas:\n${inlineSchemas.join('\n')}` : '')
     );
   }
 
@@ -7906,7 +7933,7 @@ class ChatManager {
       ).test(message) ||
       /\b(?:i\s+(?:want|need)|please\s+have)\s+.+?\b(?:selected|highlighted|activated)\b/.test(message) ||
       /\bmake\s+.+?\b(?:the\s+)?(?:active\s+gene|active\s+selection|selected|highlighted)\b/.test(message) ||
-      /^(?:(?:请|帮我|麻烦|能否|可以)\s*)?(?:选择|选中|高亮|打开|关闭|切换|导航|跳转|缩放|搜索|查找|定位|加载|导入|导出|保存|删除|创建|添加|移除|编辑|更新|计算|分析|翻译|运行|显示|隐藏|获取|设计|模拟|复制|粘贴|插入|截图|截取|绘制|展示)/.test(
+      /^(?:(?:请|帮我|麻烦|能否|可以)\s*)?(?:选择|选中|高亮|打开|关闭|切换|导航|跳转|缩放|放大|缩小|列出|查看|搜索|查找|定位|加载|导入|导出|保存|删除|创建|添加|移除|编辑|更新|计算|分析|翻译|运行|显示|隐藏|获取|设计|模拟|复制|粘贴|插入|截图|截取|绘制|展示)/.test(
         String(originalMessage || '').trim()
       );
     const knowledgeAction = /\b(?:calculate|compute|analy[sz]e|show)\b/.test(message);
@@ -8146,7 +8173,11 @@ class ChatManager {
       return requirement(
         'list_available_tools',
         (toolName, record) =>
-          toolName === 'list_available_tools' && !record?.parameters?.category && !record?.parameters?.userQuery
+          toolName === 'list_available_tools' &&
+          !record?.parameters?.category &&
+          !record?.parameters?.userQuery &&
+          !record?.parameters?.tool_name &&
+          !record?.parameters?.query
       );
     }
 
@@ -8967,16 +8998,26 @@ class ChatManager {
     // protocol actively fights the channel the model should use: a model that
     // follows the JSON instructions stops emitting the native calls it was
     // making and starts hand-writing JSON it often gets wrong.
+    const diagnostics = (options.invalidToolCalls || [])
+      .slice(0, 3)
+      .map(
+        call =>
+          `- ${String(call.tool_name || 'Tool call').slice(0, 100)}: ${String(call.reason || 'Invalid call').slice(0, 480)}`
+      );
+    const correction = diagnostics.length
+      ? `This batch did not execute. Correct the rejected calls and resubmit the intended batch:\n${diagnostics.join('\n')}\n`
+      : '';
     const protocolLine = options.nativeToolsAvailable
-      ? `If an available tool is needed, invoke it through native function calling: the tools for this request ` +
-        `are attached to the API call. Emit the function call itself; never write tool JSON in your reply text.\n` +
-        `For dependent steps, return only the next call and wait for its result.\n`
-      : `If an available tool is needed, respond with ONLY canonical JSON in this form:\n` +
+      ? `Invoke attached functions through native function calling: their schemas ` +
+        `are attached to the API call. For those functions, never write tool JSON in your reply text.\n` +
+        `Use the inline response format for tools described only in the prompt. For dependent steps, return only the next call.\n`
+      : `Follow any supplied response schema. Otherwise issue tool calls as canonical JSON in this form:\n` +
         `{"tool_name":"exact_tool_name","parameters":{"exact_parameter_name":"value"}}\n` +
         `For independent calls, use a JSON array. For dependent steps, return only the next call and wait for its result.\n`;
     return (
       `[Tool Protocol Repair]\n` +
       `The previous response did not complete the request: ${reason}.\n` +
+      correction +
       outstandingLine +
       protocolLine +
       `Do not announce or describe a tool call without emitting it. If no tool is needed, provide the final answer directly.`
@@ -9242,7 +9283,7 @@ class ChatManager {
       `New or updated records:\n${JSON.stringify(compactRecords, null, 2)}\n\n` +
       `Use successful tool results above as context for the next step. ` +
       `Do not call a tool with status "success" again using the same parameters unless the user explicitly requested a repeat. ` +
-      `If the original request still has unfinished steps, respond with ONLY the next JSON tool call(s). ` +
+      `If the original request still has unfinished steps, issue the next tool call(s) using the current response format. ` +
       `If all requested steps are complete, provide the final answer.`
     );
   }
@@ -11491,7 +11532,7 @@ ${coreTools}
       close_tab: () => this.closeTab(parameters),
       switch_to_tab: () => this.switchToTab(parameters),
       search_features: () => this.searchFeatures(parameters),
-      get_current_state: () => this.getCurrentState(),
+      get_current_state: () => this.getCurrentState(parameters),
       get_current_region: () => this.executeMicrobeFunction('getCurrentRegion', parameters),
       jump_to_gene: () => this.executeMicrobeFunction('jumpToGene', parameters),
       scroll_left: () => this.executeMicrobeFunction('scrollLeft', parameters),

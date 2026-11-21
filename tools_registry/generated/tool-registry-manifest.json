@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-11-21T06:22:28.908Z",
-  "registryHash": "c5400c959c29db101d574dc40509357f9130242779063a08a22e8d281e69bffa",
+  "generatedAt": "2026-11-21T17:19:46.138Z",
+  "registryHash": "2c61aba1436305519ff5ded42c872e4876276644e8a78df9a89b75f73fb3ea21",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -4163,14 +4163,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use assign_task_to_agent to analyze genomic data",
-          "tool_call": "assign_task_to_agent(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use assign_task_to_agent for assign a subtask to a specific agent",
-          "expected_result": "Result from assign_task_to_agent analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -4256,14 +4249,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use balance_load to analyze genomic data",
-          "tool_call": "balance_load(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use balance_load for balance workload across available agents",
-          "expected_result": "Result from balance_load analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -4349,14 +4335,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use cache_strategy to analyze genomic data",
-          "tool_call": "cache_strategy(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use cache_strategy for implement caching strategy for repeated operations",
-          "expected_result": "Result from cache_strategy analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -4620,14 +4599,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use create_workflow to analyze genomic data",
-          "tool_call": "create_workflow(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use create_workflow for create a workflow for complex analysis",
-          "expected_result": "Result from create_workflow analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -4713,14 +4685,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use decompose_task to analyze genomic data",
-          "tool_call": "decompose_task(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use decompose_task for decompose a complex task into subtasks",
-          "expected_result": "Result from decompose_task analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -4805,14 +4770,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use execute_workflow to analyze genomic data",
-          "tool_call": "execute_workflow(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use execute_workflow for execute a predefined workflow",
-          "expected_result": "Result from execute_workflow analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -4898,14 +4856,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use fallback_strategy to analyze genomic data",
-          "tool_call": "fallback_strategy(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use fallback_strategy for implement fallback strategy for failed tasks",
-          "expected_result": "Result from fallback_strategy analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -4990,14 +4941,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use get_agent_status to analyze genomic data",
-          "tool_call": "get_agent_status(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use get_agent_status for get status of a specific agent",
-          "expected_result": "Result from get_agent_status analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -5083,14 +5027,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use get_workflow_status to analyze genomic data",
-          "tool_call": "get_workflow_status(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use get_workflow_status for get current status of a workflow execution",
-          "expected_result": "Result from get_workflow_status analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -5176,14 +5113,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use handle_error to analyze genomic data",
-          "tool_call": "handle_error(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use handle_error for handle errors in task execution",
-          "expected_result": "Result from handle_error analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -5269,14 +5199,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use integrate_results to analyze genomic data",
-          "tool_call": "integrate_results(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use integrate_results for integrate results from multiple subtasks",
-          "expected_result": "Result from integrate_results analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -5362,14 +5285,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use optimize_execution to analyze genomic data",
-          "tool_call": "optimize_execution(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use optimize_execution for optimize execution strategy for better performance",
-          "expected_result": "Result from optimize_execution analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -5455,14 +5371,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use parallel_execution to analyze genomic data",
-          "tool_call": "parallel_execution(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use parallel_execution for execute multiple tasks in parallel",
-          "expected_result": "Result from parallel_execution analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -5548,14 +5457,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use retry_failed_task to analyze genomic data",
-          "tool_call": "retry_failed_task(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use retry_failed_task for retry a failed task with different parameters",
-          "expected_result": "Result from retry_failed_task analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -8737,14 +8639,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use alphafold_get_structure to analyze genomic data",
-          "tool_call": "alphafold_get_structure(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use alphafold_get_structure for get protein structure from alphafold",
-          "expected_result": "Result from alphafold_get_structure analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -8838,14 +8733,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use alphafold_search to analyze genomic data",
-          "tool_call": "alphafold_search(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use alphafold_search for search alphafold database for protein structures",
-          "expected_result": "Result from alphafold_search analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -8939,14 +8827,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use blast_protein to analyze genomic data",
-          "tool_call": "blast_protein(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use blast_protein for perform blast search on a protein sequence",
-          "expected_result": "Result from blast_protein analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -9676,14 +9557,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use blast_sequence to analyze genomic data",
-          "tool_call": "blast_sequence(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use blast_sequence for perform blast search on a dna sequence",
-          "expected_result": "Result from blast_sequence analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -10352,14 +10226,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use kegg_search to analyze genomic data",
-          "tool_call": "kegg_search(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use kegg_search for search kegg database for pathway information",
-          "expected_result": "Result from kegg_search analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -10452,14 +10319,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use uniprot_get_annotation to analyze genomic data",
-          "tool_call": "uniprot_get_annotation(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use uniprot_get_annotation for get protein annotations from uniprot",
-          "expected_result": "Result from uniprot_get_annotation analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -10552,14 +10412,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use uniprot_get_protein to analyze genomic data",
-          "tool_call": "uniprot_get_protein(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use uniprot_get_protein for get detailed protein information from uniprot",
-          "expected_result": "Result from uniprot_get_protein analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -10653,14 +10506,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use uniprot_search to analyze genomic data",
-          "tool_call": "uniprot_search(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use uniprot_search for search uniprot database for protein information",
-          "expected_result": "Result from uniprot_search analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -10713,7 +10559,9 @@
         "paths",
         "metadata",
         "current",
-        "status"
+        "status",
+        "已加载的文件",
+        "已加载文件"
       ],
       "execution_type": "built-in",
       "complexity": "simple",
@@ -12156,14 +12004,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use configure_export_settings to analyze genomic data",
-          "tool_call": "configure_export_settings(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use configure_export_settings for configure export settings and preferences for all export operations",
-          "expected_result": "Result from configure_export_settings analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -18391,16 +18232,25 @@
             "type": "string",
             "description": "Browser client ID for multi-window support",
             "default": "default"
+          },
+          "pathwayName": {
+            "type": "string",
+            "description": "Name of the metabolic pathway, such as glycolysis"
+          },
+          "includeRegulation": {
+            "type": "boolean",
+            "description": "Include regulatory genes in the search",
+            "default": false
           }
         },
-        "required": []
+        "required": [
+          "pathwayName"
+        ]
       },
       "sample_usages": [
         {
-          "user_query": "Use find_pathway_genes to analyze genomic data",
-          "tool_call": "find_pathway_genes(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use find_pathway_genes for find genes associated with a specific metabolic pathway",
-          "expected_result": "Result from find_pathway_genes analysis"
+          "user_query": "Find genes associated with glycolysis",
+          "tool_call": "find_pathway_genes(pathwayName='glycolysis')"
         }
       ],
       "relationships": {
@@ -18463,16 +18313,31 @@
             "type": "string",
             "description": "Browser client ID for multi-window support",
             "default": "default"
+          },
+          "pathwayName": {
+            "type": "string",
+            "description": "Name of the metabolic pathway, such as glycolysis"
+          },
+          "highlightGenes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Gene names to highlight in the visualization"
+          },
+          "organism": {
+            "type": "string",
+            "description": "Organism name for pathway context"
           }
         },
-        "required": []
+        "required": [
+          "pathwayName"
+        ]
       },
       "sample_usages": [
         {
-          "user_query": "Use show_metabolic_pathway to analyze genomic data",
-          "tool_call": "show_metabolic_pathway(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use show_metabolic_pathway for display metabolic pathway visualization",
-          "expected_result": "Result from show_metabolic_pathway analysis"
+          "user_query": "Show the glycolysis pathway",
+          "tool_call": "show_metabolic_pathway(pathwayName='glycolysis')"
         }
       ],
       "relationships": {
@@ -18540,27 +18405,22 @@
             "type": "string",
             "description": "Plugin identifier"
           },
-          "status": {
+          "functionName": {
             "type": "string",
-            "description": "Plugin status filter",
-            "enum": [
-              "all",
-              "installed",
-              "enabled",
-              "disabled"
-            ]
+            "description": "Function name exposed by the installed plugin"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Arguments accepted by the plugin function"
           }
         },
-        "required": []
+        "required": [
+          "pluginId",
+          "functionName"
+        ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use call_plugin_function to analyze genomic data",
-          "tool_call": "call_plugin_function(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use call_plugin_function for call a specific function within a plugin",
-          "expected_result": "Result from call_plugin_function analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -18644,14 +18504,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use create_plugin to analyze genomic data",
-          "tool_call": "create_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use create_plugin for create a new plugin from template or code",
-          "expected_result": "Result from create_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -18733,14 +18586,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use disable_plugin to analyze genomic data",
-          "tool_call": "disable_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use disable_plugin for disable an enabled plugin",
-          "expected_result": "Result from disable_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -18822,14 +18668,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use enable_plugin to analyze genomic data",
-          "tool_call": "enable_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use enable_plugin for enable a disabled plugin",
-          "expected_result": "Result from enable_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -18899,27 +18738,22 @@
             "type": "string",
             "description": "Plugin identifier"
           },
-          "status": {
+          "functionName": {
             "type": "string",
-            "description": "Plugin status filter",
-            "enum": [
-              "all",
-              "installed",
-              "enabled",
-              "disabled"
-            ]
+            "description": "Function name exposed by the installed plugin"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Arguments accepted by the plugin function"
           }
         },
-        "required": []
+        "required": [
+          "pluginId",
+          "functionName"
+        ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use execute_plugin to analyze genomic data",
-          "tool_call": "execute_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use execute_plugin for execute a plugin function with parameters",
-          "expected_result": "Result from execute_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -19003,14 +18837,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use get_plugin_functions to analyze genomic data",
-          "tool_call": "get_plugin_functions(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use get_plugin_functions for get list of available functions for a plugin",
-          "expected_result": "Result from get_plugin_functions analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -19093,14 +18920,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use get_plugin_info to analyze genomic data",
-          "tool_call": "get_plugin_info(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use get_plugin_info for get detailed information about a specific plugin",
-          "expected_result": "Result from get_plugin_info analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -19183,14 +19003,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use install_plugin to analyze genomic data",
-          "tool_call": "install_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use install_plugin for install a new plugin from marketplace or local source",
-          "expected_result": "Result from install_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -19439,14 +19252,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use search_plugins to analyze genomic data",
-          "tool_call": "search_plugins(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use search_plugins for search for plugins in the marketplace",
-          "expected_result": "Result from search_plugins analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -19528,14 +19334,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use uninstall_plugin to analyze genomic data",
-          "tool_call": "uninstall_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use uninstall_plugin for uninstall a plugin from the system",
-          "expected_result": "Result from uninstall_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -19618,14 +19417,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use validate_plugin to analyze genomic data",
-          "tool_call": "validate_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use validate_plugin for validate a plugin for compatibility and errors",
-          "expected_result": "Result from validate_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -22571,14 +22363,7 @@
           "sequence"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use predict_promoter to analyze genomic data",
-          "tool_call": "predict_promoter(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use predict_promoter for predict promoter regions in dna sequence",
-          "expected_result": "Result from predict_promoter analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -25028,10 +24813,22 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "category": {
+          "tool_name": {
             "type": "string",
-            "description": "Optional category filter to show tools from a specific category (e.g., 'navigation', 'sequence', 'database')",
-            "default": null
+            "minLength": 1,
+            "description": "Exact registered name. Returns its parameter schema and takes precedence over query."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search by capability and return the most relevant tools within the optional category."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional category filter to show tools from a specific category (e.g., 'navigation', 'sequence', 'database')"
           },
           "include_details": {
             "type": "boolean",
@@ -25080,6 +24877,10 @@
           "tool_call": "list_available_tools(category='database', include_details=true)",
           "thought": "User wants detailed information about database tools",
           "expected_result": "Database tools with full descriptions and parameter information"
+        },
+        {
+          "user_query": "What arguments can I pass to open_new_tab?",
+          "tool_call": "list_available_tools(tool_name='open_new_tab')"
         },
         {
           "user_query": "Help",
@@ -25483,8 +25284,23 @@
             "default": true
           }
         },
-        "required": [
-          "directory_path"
+        "anyOf": [
+          {
+            "required": [
+              "directory_path"
+            ]
+          },
+          {
+            "required": [
+              "use_home_directory"
+            ],
+            "properties": {
+              "use_home_directory": {
+                "const": true
+              }
+            },
+            "additionalProperties": true
+          }
         ]
       },
       "sample_usages": [
@@ -30902,14 +30718,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use assign_task_to_agent to analyze genomic data",
-          "tool_call": "assign_task_to_agent(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use assign_task_to_agent for assign a subtask to a specific agent",
-          "expected_result": "Result from assign_task_to_agent analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -30995,14 +30804,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use balance_load to analyze genomic data",
-          "tool_call": "balance_load(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use balance_load for balance workload across available agents",
-          "expected_result": "Result from balance_load analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -31088,14 +30890,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use cache_strategy to analyze genomic data",
-          "tool_call": "cache_strategy(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use cache_strategy for implement caching strategy for repeated operations",
-          "expected_result": "Result from cache_strategy analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -31359,14 +31154,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use create_workflow to analyze genomic data",
-          "tool_call": "create_workflow(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use create_workflow for create a workflow for complex analysis",
-          "expected_result": "Result from create_workflow analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -31452,14 +31240,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use decompose_task to analyze genomic data",
-          "tool_call": "decompose_task(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use decompose_task for decompose a complex task into subtasks",
-          "expected_result": "Result from decompose_task analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -31544,14 +31325,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use execute_workflow to analyze genomic data",
-          "tool_call": "execute_workflow(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use execute_workflow for execute a predefined workflow",
-          "expected_result": "Result from execute_workflow analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -31637,14 +31411,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use fallback_strategy to analyze genomic data",
-          "tool_call": "fallback_strategy(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use fallback_strategy for implement fallback strategy for failed tasks",
-          "expected_result": "Result from fallback_strategy analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -31729,14 +31496,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use get_agent_status to analyze genomic data",
-          "tool_call": "get_agent_status(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use get_agent_status for get status of a specific agent",
-          "expected_result": "Result from get_agent_status analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -31822,14 +31582,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use get_workflow_status to analyze genomic data",
-          "tool_call": "get_workflow_status(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use get_workflow_status for get current status of a workflow execution",
-          "expected_result": "Result from get_workflow_status analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -31915,14 +31668,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use handle_error to analyze genomic data",
-          "tool_call": "handle_error(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use handle_error for handle errors in task execution",
-          "expected_result": "Result from handle_error analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -32008,14 +31754,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use integrate_results to analyze genomic data",
-          "tool_call": "integrate_results(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use integrate_results for integrate results from multiple subtasks",
-          "expected_result": "Result from integrate_results analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -32101,14 +31840,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use optimize_execution to analyze genomic data",
-          "tool_call": "optimize_execution(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use optimize_execution for optimize execution strategy for better performance",
-          "expected_result": "Result from optimize_execution analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -32194,14 +31926,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use parallel_execution to analyze genomic data",
-          "tool_call": "parallel_execution(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use parallel_execution for execute multiple tasks in parallel",
-          "expected_result": "Result from parallel_execution analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -32287,14 +32012,7 @@
           "task"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use retry_failed_task to analyze genomic data",
-          "tool_call": "retry_failed_task(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use retry_failed_task for retry a failed task with different parameters",
-          "expected_result": "Result from retry_failed_task analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -35476,14 +35194,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use alphafold_get_structure to analyze genomic data",
-          "tool_call": "alphafold_get_structure(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use alphafold_get_structure for get protein structure from alphafold",
-          "expected_result": "Result from alphafold_get_structure analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -35577,14 +35288,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use alphafold_search to analyze genomic data",
-          "tool_call": "alphafold_search(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use alphafold_search for search alphafold database for protein structures",
-          "expected_result": "Result from alphafold_search analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -35678,14 +35382,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use blast_protein to analyze genomic data",
-          "tool_call": "blast_protein(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use blast_protein for perform blast search on a protein sequence",
-          "expected_result": "Result from blast_protein analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -36415,14 +36112,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use blast_sequence to analyze genomic data",
-          "tool_call": "blast_sequence(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use blast_sequence for perform blast search on a dna sequence",
-          "expected_result": "Result from blast_sequence analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -37091,14 +36781,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use kegg_search to analyze genomic data",
-          "tool_call": "kegg_search(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use kegg_search for search kegg database for pathway information",
-          "expected_result": "Result from kegg_search analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -37191,14 +36874,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use uniprot_get_annotation to analyze genomic data",
-          "tool_call": "uniprot_get_annotation(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use uniprot_get_annotation for get protein annotations from uniprot",
-          "expected_result": "Result from uniprot_get_annotation analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -37291,14 +36967,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use uniprot_get_protein to analyze genomic data",
-          "tool_call": "uniprot_get_protein(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use uniprot_get_protein for get detailed protein information from uniprot",
-          "expected_result": "Result from uniprot_get_protein analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -37392,14 +37061,7 @@
           "database"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use uniprot_search to analyze genomic data",
-          "tool_call": "uniprot_search(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use uniprot_search for search uniprot database for protein information",
-          "expected_result": "Result from uniprot_search analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -37452,7 +37114,9 @@
         "paths",
         "metadata",
         "current",
-        "status"
+        "status",
+        "已加载的文件",
+        "已加载文件"
       ],
       "execution_type": "built-in",
       "complexity": "simple",
@@ -38895,14 +38559,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use configure_export_settings to analyze genomic data",
-          "tool_call": "configure_export_settings(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use configure_export_settings for configure export settings and preferences for all export operations",
-          "expected_result": "Result from configure_export_settings analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -45130,16 +44787,25 @@
             "type": "string",
             "description": "Browser client ID for multi-window support",
             "default": "default"
+          },
+          "pathwayName": {
+            "type": "string",
+            "description": "Name of the metabolic pathway, such as glycolysis"
+          },
+          "includeRegulation": {
+            "type": "boolean",
+            "description": "Include regulatory genes in the search",
+            "default": false
           }
         },
-        "required": []
+        "required": [
+          "pathwayName"
+        ]
       },
       "sample_usages": [
         {
-          "user_query": "Use find_pathway_genes to analyze genomic data",
-          "tool_call": "find_pathway_genes(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use find_pathway_genes for find genes associated with a specific metabolic pathway",
-          "expected_result": "Result from find_pathway_genes analysis"
+          "user_query": "Find genes associated with glycolysis",
+          "tool_call": "find_pathway_genes(pathwayName='glycolysis')"
         }
       ],
       "relationships": {
@@ -45202,16 +44868,31 @@
             "type": "string",
             "description": "Browser client ID for multi-window support",
             "default": "default"
+          },
+          "pathwayName": {
+            "type": "string",
+            "description": "Name of the metabolic pathway, such as glycolysis"
+          },
+          "highlightGenes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Gene names to highlight in the visualization"
+          },
+          "organism": {
+            "type": "string",
+            "description": "Organism name for pathway context"
           }
         },
-        "required": []
+        "required": [
+          "pathwayName"
+        ]
       },
       "sample_usages": [
         {
-          "user_query": "Use show_metabolic_pathway to analyze genomic data",
-          "tool_call": "show_metabolic_pathway(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use show_metabolic_pathway for display metabolic pathway visualization",
-          "expected_result": "Result from show_metabolic_pathway analysis"
+          "user_query": "Show the glycolysis pathway",
+          "tool_call": "show_metabolic_pathway(pathwayName='glycolysis')"
         }
       ],
       "relationships": {
@@ -45279,27 +44960,22 @@
             "type": "string",
             "description": "Plugin identifier"
           },
-          "status": {
+          "functionName": {
             "type": "string",
-            "description": "Plugin status filter",
-            "enum": [
-              "all",
-              "installed",
-              "enabled",
-              "disabled"
-            ]
+            "description": "Function name exposed by the installed plugin"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Arguments accepted by the plugin function"
           }
         },
-        "required": []
+        "required": [
+          "pluginId",
+          "functionName"
+        ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use call_plugin_function to analyze genomic data",
-          "tool_call": "call_plugin_function(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use call_plugin_function for call a specific function within a plugin",
-          "expected_result": "Result from call_plugin_function analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -45383,14 +45059,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use create_plugin to analyze genomic data",
-          "tool_call": "create_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use create_plugin for create a new plugin from template or code",
-          "expected_result": "Result from create_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -45472,14 +45141,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use disable_plugin to analyze genomic data",
-          "tool_call": "disable_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use disable_plugin for disable an enabled plugin",
-          "expected_result": "Result from disable_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -45561,14 +45223,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use enable_plugin to analyze genomic data",
-          "tool_call": "enable_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use enable_plugin for enable a disabled plugin",
-          "expected_result": "Result from enable_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -45638,27 +45293,22 @@
             "type": "string",
             "description": "Plugin identifier"
           },
-          "status": {
+          "functionName": {
             "type": "string",
-            "description": "Plugin status filter",
-            "enum": [
-              "all",
-              "installed",
-              "enabled",
-              "disabled"
-            ]
+            "description": "Function name exposed by the installed plugin"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Arguments accepted by the plugin function"
           }
         },
-        "required": []
+        "required": [
+          "pluginId",
+          "functionName"
+        ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use execute_plugin to analyze genomic data",
-          "tool_call": "execute_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use execute_plugin for execute a plugin function with parameters",
-          "expected_result": "Result from execute_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -45742,14 +45392,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use get_plugin_functions to analyze genomic data",
-          "tool_call": "get_plugin_functions(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use get_plugin_functions for get list of available functions for a plugin",
-          "expected_result": "Result from get_plugin_functions analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -45832,14 +45475,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use get_plugin_info to analyze genomic data",
-          "tool_call": "get_plugin_info(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use get_plugin_info for get detailed information about a specific plugin",
-          "expected_result": "Result from get_plugin_info analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -45922,14 +45558,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use install_plugin to analyze genomic data",
-          "tool_call": "install_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use install_plugin for install a new plugin from marketplace or local source",
-          "expected_result": "Result from install_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -46178,14 +45807,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use search_plugins to analyze genomic data",
-          "tool_call": "search_plugins(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use search_plugins for search for plugins in the marketplace",
-          "expected_result": "Result from search_plugins analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -46267,14 +45889,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use uninstall_plugin to analyze genomic data",
-          "tool_call": "uninstall_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use uninstall_plugin for uninstall a plugin from the system",
-          "expected_result": "Result from uninstall_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -46357,14 +45972,7 @@
         },
         "required": []
       },
-      "sample_usages": [
-        {
-          "user_query": "Use validate_plugin to analyze genomic data",
-          "tool_call": "validate_plugin(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use validate_plugin for validate a plugin for compatibility and errors",
-          "expected_result": "Result from validate_plugin analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -49310,14 +48918,7 @@
           "sequence"
         ]
       },
-      "sample_usages": [
-        {
-          "user_query": "Use predict_promoter to analyze genomic data",
-          "tool_call": "predict_promoter(parameter1='value1', parameter2='value2')",
-          "thought": "User wants to use predict_promoter for predict promoter regions in dna sequence",
-          "expected_result": "Result from predict_promoter analysis"
-        }
-      ],
+      "sample_usages": [],
       "relationships": {
         "depends_on": [],
         "conflicts_with": [],
@@ -51767,10 +51368,22 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "category": {
+          "tool_name": {
             "type": "string",
-            "description": "Optional category filter to show tools from a specific category (e.g., 'navigation', 'sequence', 'database')",
-            "default": null
+            "minLength": 1,
+            "description": "Exact registered name. Returns its parameter schema and takes precedence over query."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search by capability and return the most relevant tools within the optional category."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional category filter to show tools from a specific category (e.g., 'navigation', 'sequence', 'database')"
           },
           "include_details": {
             "type": "boolean",
@@ -51819,6 +51432,10 @@
           "tool_call": "list_available_tools(category='database', include_details=true)",
           "thought": "User wants detailed information about database tools",
           "expected_result": "Database tools with full descriptions and parameter information"
+        },
+        {
+          "user_query": "What arguments can I pass to open_new_tab?",
+          "tool_call": "list_available_tools(tool_name='open_new_tab')"
         },
         {
           "user_query": "Help",
@@ -52222,8 +51839,23 @@
             "default": true
           }
         },
-        "required": [
-          "directory_path"
+        "anyOf": [
+          {
+            "required": [
+              "directory_path"
+            ]
+          },
+          {
+            "required": [
+              "use_home_directory"
+            ],
+            "properties": {
+              "use_home_directory": {
+                "const": true
+              }
+            },
+            "additionalProperties": true
+          }
         ]
       },
       "sample_usages": [

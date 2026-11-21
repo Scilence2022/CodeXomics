@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use parallel_execution to analyze genomic data
-    tool_call: parallel_execution(parameter1='value1', parameter2='value2')
-    thought: User wants to use parallel_execution for execute multiple tasks in parallel
-    expected_result: Result from parallel_execution analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

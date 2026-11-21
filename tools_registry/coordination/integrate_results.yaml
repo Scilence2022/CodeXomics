@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use integrate_results to analyze genomic data
-    tool_call: integrate_results(parameter1='value1', parameter2='value2')
-    thought: User wants to use integrate_results for integrate results from multiple subtasks
-    expected_result: Result from integrate_results analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

@@ -2735,7 +2735,9 @@ class LLMConfigManager {
   buildConstrainedToolResponseFormat(options = {}) {
     if (options.constrainedToolOutput !== true || options.nativeFunctionCalling !== false) return null;
     const tools = Array.isArray(options.tools) ? options.tools : [];
-    const names = tools.map(tool => tool?.function?.name).filter(Boolean);
+    const names = options.selectedToolNames?.length
+      ? options.selectedToolNames
+      : tools.map(tool => tool?.function?.name).filter(Boolean);
     if (names.length === 0) return null;
     return {
       type: 'json_schema',

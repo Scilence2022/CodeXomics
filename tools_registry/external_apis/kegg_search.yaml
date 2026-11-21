@@ -42,11 +42,7 @@ parameters:
     - sequence
     - blastType
     - database
-sample_usages:
-  - user_query: Use kegg_search to analyze genomic data
-    tool_call: kegg_search(parameter1='value1', parameter2='value2')
-    thought: User wants to use kegg_search for search kegg database for pathway information
-    expected_result: Result from kegg_search analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

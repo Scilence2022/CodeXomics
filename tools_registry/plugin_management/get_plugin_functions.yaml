@@ -34,11 +34,7 @@ parameters:
         - enabled
         - disabled
   required: []
-sample_usages:
-  - user_query: Use get_plugin_functions to analyze genomic data
-    tool_call: get_plugin_functions(parameter1='value1', parameter2='value2')
-    thought: User wants to use get_plugin_functions for get list of available functions for a plugin
-    expected_result: Result from get_plugin_functions analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

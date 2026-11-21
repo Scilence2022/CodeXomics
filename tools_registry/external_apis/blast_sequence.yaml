@@ -42,11 +42,7 @@ parameters:
     - sequence
     - blastType
     - database
-sample_usages:
-  - user_query: Use blast_sequence to analyze genomic data
-    tool_call: blast_sequence(parameter1='value1', parameter2='value2')
-    thought: User wants to use blast_sequence for perform blast search on a dna sequence
-    expected_result: Result from blast_sequence analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

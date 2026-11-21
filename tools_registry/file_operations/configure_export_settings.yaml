@@ -23,13 +23,7 @@ parameters:
       description: Browser client ID for multi-window support
       default: default
   required: []
-sample_usages:
-  - user_query: Use configure_export_settings to analyze genomic data
-    tool_call: configure_export_settings(parameter1='value1', parameter2='value2')
-    thought: >-
-      User wants to use configure_export_settings for configure export settings and preferences for all export
-      operations
-    expected_result: Result from configure_export_settings analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

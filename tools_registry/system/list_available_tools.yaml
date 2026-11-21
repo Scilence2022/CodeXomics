@@ -24,10 +24,17 @@ execution:
 parameters:
   type: object
   properties:
-    category:
+    tool_name:
       type: string
+      minLength: 1
+      description: 'Exact registered name. Returns its parameter schema and takes precedence over query.'
+    query:
+      type: string
+      minLength: 1
+      description: 'Search by capability and return the most relevant tools within the optional category.'
+    category:
+      type: ['string', 'null']
       description: "Optional category filter to show tools from a specific category (e.g., 'navigation', 'sequence', 'database')"
-      default: null
     include_details:
       type: boolean
       description: 'Whether to include detailed descriptions and parameters for each tool'
@@ -63,6 +70,9 @@ sample_usages:
     tool_call: "list_available_tools(category='database', include_details=true)"
     thought: 'User wants detailed information about database tools'
     expected_result: 'Database tools with full descriptions and parameter information'
+
+  - user_query: 'What arguments can I pass to open_new_tab?'
+    tool_call: "list_available_tools(tool_name='open_new_tab')"
 
   - user_query: 'Help'
     tool_call: "list_available_tools(format='summary')"

@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use balance_load to analyze genomic data
-    tool_call: balance_load(parameter1='value1', parameter2='value2')
-    thought: User wants to use balance_load for balance workload across available agents
-    expected_result: Result from balance_load analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

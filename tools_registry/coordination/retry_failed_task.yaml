@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use retry_failed_task to analyze genomic data
-    tool_call: retry_failed_task(parameter1='value1', parameter2='value2')
-    thought: User wants to use retry_failed_task for retry a failed task with different parameters
-    expected_result: Result from retry_failed_task analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

@@ -121,6 +121,8 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
+            include_tracks: { type: 'boolean', description: 'Include visible tracks', default: true },
+            include_data_summary: { type: 'boolean', description: 'Include the loaded file list', default: true },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
         },
@@ -252,6 +254,13 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
+            include_statistics: {
+              type: 'boolean',
+              description: 'Compute per-chromosome length and GC statistics',
+              default: true,
+            },
+            include_annotations: { type: 'boolean', description: 'Count features by annotation type', default: true },
+            include_chromosomes: { type: 'boolean', description: 'Include chromosome and contig names', default: true },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
         },

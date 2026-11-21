@@ -35,11 +35,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use get_agent_status to analyze genomic data
-    tool_call: get_agent_status(parameter1='value1', parameter2='value2')
-    thought: User wants to use get_agent_status for get status of a specific agent
-    expected_result: Result from get_agent_status analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

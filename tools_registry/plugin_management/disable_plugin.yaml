@@ -33,11 +33,7 @@ parameters:
         - enabled
         - disabled
   required: []
-sample_usages:
-  - user_query: Use disable_plugin to analyze genomic data
-    tool_call: disable_plugin(parameter1='value1', parameter2='value2')
-    thought: User wants to use disable_plugin for disable an enabled plugin
-    expected_result: Result from disable_plugin analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

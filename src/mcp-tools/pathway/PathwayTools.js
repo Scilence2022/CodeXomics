@@ -20,7 +20,11 @@ class PathwayTools {
               type: 'string',
               description: 'Pathway name (glycolysis, tca_cycle, pentose_phosphate, etc.)',
             },
-            highlightGenes: { type: 'array', description: 'List of genes to highlight in the pathway' },
+            highlightGenes: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'List of genes to highlight in the pathway',
+            },
             organism: { type: 'string', description: 'Organism name for pathway context' },
             clientId: { type: 'string', description: 'Browser client ID' },
           },

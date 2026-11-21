@@ -141,6 +141,12 @@ class FileTools {
               type: 'string',
               description: 'Absolute path to operon file',
             },
+            format: {
+              type: 'string',
+              enum: ['auto', 'json', 'csv', 'tsv', 'txt'],
+              default: 'auto',
+              description: 'Input format for the operon annotation file',
+            },
             showFileDialog: {
               type: 'boolean',
               description: 'Open file dialog instead of using filePath',
@@ -180,6 +186,9 @@ class FileTools {
               description:
                 'Optional output file path. Relative paths are resolved against the current working directory.',
             },
+            filename: { type: 'string', description: 'Alias for filePath' },
+            outputPath: { type: 'string', description: 'Alias for filePath' },
+            autoOpen: { type: 'boolean', description: 'Open the saved image after capture', default: false },
             auto_save: {
               type: 'boolean',
               description: 'Save to an auto-generated filename when no explicit file path is provided',

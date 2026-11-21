@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use cache_strategy to analyze genomic data
-    tool_call: cache_strategy(parameter1='value1', parameter2='value2')
-    thought: User wants to use cache_strategy for implement caching strategy for repeated operations
-    expected_result: Result from cache_strategy analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

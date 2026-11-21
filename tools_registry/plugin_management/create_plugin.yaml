@@ -34,11 +34,7 @@ parameters:
         - enabled
         - disabled
   required: []
-sample_usages:
-  - user_query: Use create_plugin to analyze genomic data
-    tool_call: create_plugin(parameter1='value1', parameter2='value2')
-    thought: User wants to use create_plugin for create a new plugin from template or code
-    expected_result: Result from create_plugin analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

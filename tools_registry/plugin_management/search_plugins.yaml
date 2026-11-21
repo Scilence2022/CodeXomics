@@ -33,11 +33,7 @@ parameters:
         - enabled
         - disabled
   required: []
-sample_usages:
-  - user_query: Use search_plugins to analyze genomic data
-    tool_call: search_plugins(parameter1='value1', parameter2='value2')
-    thought: User wants to use search_plugins for search for plugins in the marketplace
-    expected_result: Result from search_plugins analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []
