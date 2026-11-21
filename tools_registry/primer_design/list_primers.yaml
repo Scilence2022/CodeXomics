@@ -1,8 +1,8 @@
 name: list_primers
 aliases:
   - list_primer_annotations
-version: 1.1.0
-description: 'List primers in the library and their binding sites (pinned + predicted) for the current chromosome, optionally filtered by genomic interval.'
+version: 2.0.0
+description: 'List each saved primer once, including primers without binding sites. Sites are grouped under each primer for the selected chromosome. Interval bounds restrict the result to primers with overlapping sites.'
 category: primer_design
 subcategory: display
 keywords:
@@ -30,7 +30,7 @@ parameters:
   properties:
     chromosome:
       type: string
-      description: 'Optional chromosome/replicon ID to filter primers, named exactly as loaded (see the loaded names in the current context). Omit to use the current chromosome.'
+      description: 'Chromosome/replicon ID for the binding sites, named exactly as loaded. Omit to use the current chromosome.'
     start:
       type: number
       description: 'Optional interval start position'
@@ -42,7 +42,7 @@ sample_usages:
   - user_query: 'List primers on the current genome'
     tool_call: 'list_primers()'
     thought: 'User wants to inspect primers in the library and their binding sites'
-    expected_result: 'Primers are returned with pinned + predicted binding sites'
+    expected_result: 'All saved primers are returned once with their available pinned and predicted sites'
   - user_query: 'Show primers on U00096 between 1000 and 2000'
     tool_call: "list_primers(chromosome='U00096', start=1000, end=2000)"
     thought: 'User wants primers filtered to a region'
@@ -68,5 +68,6 @@ metadata:
   recommendation: 'Use to inspect currently displayed primer visualizations'
 returns:
   success: boolean
+  chromosome: string
   count: number
   primers: array

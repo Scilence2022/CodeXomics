@@ -1,8 +1,8 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-11-18T03:14:22.107Z",
-  "registryHash": "6807d889cdbf56813b4cc0f0cb01c69dab0e3d66616a529ffb39bfbb139a9c12",
+  "generatedAt": "2026-11-21T06:22:28.908Z",
+  "registryHash": "c5400c959c29db101d574dc40509357f9130242779063a08a22e8d281e69bffa",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
@@ -20160,8 +20160,8 @@
       "aliases": [
         "list_primer_annotations"
       ],
-      "version": "1.1.0",
-      "description": "List primers in the library and their binding sites (pinned + predicted) for the current chromosome, optionally filtered by genomic interval.",
+      "version": "2.0.0",
+      "description": "List each saved primer once, including primers without binding sites. Sites are grouped under each primer for the selected chromosome. Interval bounds restrict the result to primers with overlapping sites.",
       "category": "primer_design",
       "subcategory": "display",
       "keywords": [
@@ -20192,7 +20192,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Optional chromosome/replicon ID to filter primers, named exactly as loaded (see the loaded names in the current context). Omit to use the current chromosome."
+            "description": "Chromosome/replicon ID for the binding sites, named exactly as loaded. Omit to use the current chromosome."
           },
           "start": {
             "type": "number",
@@ -20210,7 +20210,7 @@
           "user_query": "List primers on the current genome",
           "tool_call": "list_primers()",
           "thought": "User wants to inspect primers in the library and their binding sites",
-          "expected_result": "Primers are returned with pinned + predicted binding sites"
+          "expected_result": "All saved primers are returned once with their available pinned and predicted sites"
         },
         {
           "user_query": "Show primers on U00096 between 1000 and 2000",
@@ -20249,6 +20249,7 @@
       },
       "returns": {
         "success": "boolean",
+        "chromosome": "string",
         "count": "number",
         "primers": "array"
       },
@@ -46898,8 +46899,8 @@
       "aliases": [
         "list_primer_annotations"
       ],
-      "version": "1.1.0",
-      "description": "List primers in the library and their binding sites (pinned + predicted) for the current chromosome, optionally filtered by genomic interval.",
+      "version": "2.0.0",
+      "description": "List each saved primer once, including primers without binding sites. Sites are grouped under each primer for the selected chromosome. Interval bounds restrict the result to primers with overlapping sites.",
       "category": "primer_design",
       "subcategory": "display",
       "keywords": [
@@ -46930,7 +46931,7 @@
         "properties": {
           "chromosome": {
             "type": "string",
-            "description": "Optional chromosome/replicon ID to filter primers, named exactly as loaded (see the loaded names in the current context). Omit to use the current chromosome."
+            "description": "Chromosome/replicon ID for the binding sites, named exactly as loaded. Omit to use the current chromosome."
           },
           "start": {
             "type": "number",
@@ -46948,7 +46949,7 @@
           "user_query": "List primers on the current genome",
           "tool_call": "list_primers()",
           "thought": "User wants to inspect primers in the library and their binding sites",
-          "expected_result": "Primers are returned with pinned + predicted binding sites"
+          "expected_result": "All saved primers are returned once with their available pinned and predicted sites"
         },
         {
           "user_query": "Show primers on U00096 between 1000 and 2000",
@@ -46987,6 +46988,7 @@
       },
       "returns": {
         "success": "boolean",
+        "chromosome": "string",
         "count": "number",
         "primers": "array"
       },
