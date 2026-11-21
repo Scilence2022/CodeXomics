@@ -35,7 +35,7 @@ class ChatModelSelector {
     this.bound = false;
 
     this.handleSettingsChanged = () => this.refresh();
-    this.initialize();
+    this.ready = this.initialize();
   }
 
   get settingsManager() {
@@ -56,9 +56,19 @@ class ChatModelSelector {
     );
   }
 
-  initialize() {
+  async initialize() {
     if (typeof document === 'undefined') return;
-    this.bind();
+    // The provider catalog and the saved ChatBox override load independently.
+    const results = await Promise.allSettled([
+      this.chatManager?.chatSettingsReady,
+      this.llmConfig?.waitForInitialization?.(),
+    ]);
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.warn('[ChatModelSelector] Settings initialization failed:', result.reason);
+      }
+    }
+    this.refresh();
 
     if (typeof window !== 'undefined') {
       // Keep the composer in sync when the model is changed from Agent Settings
@@ -66,8 +76,6 @@ class ChatModelSelector {
       window.addEventListener('chatbox-settingsChanged', this.handleSettingsChanged);
       window.addEventListener('llmConfigurationChanged', this.handleSettingsChanged);
     }
-
-    this.refreshWhenConfigReady();
   }
 
   bind() {
@@ -76,9 +84,7 @@ class ChatModelSelector {
     if (!this.select) return;
 
     this.select.addEventListener('change', () => this.applySelection());
-    // Rebuild on open. LLM configuration loads asynchronously and can change from
-    // Configure LLM Providers at any time, so the list is built when it is about to be read
-    // rather than relying on startup ordering.
+    // Include any provider models discovered since the last refresh.
     this.select.addEventListener('mousedown', () => this.refresh());
     this.select.addEventListener('focus', () => this.refresh());
 
@@ -87,23 +93,7 @@ class ChatModelSelector {
     this.reasoningSelect?.addEventListener('change', () => this.applyReasoningLevel());
 
     this.bound = true;
-    this.refresh();
-  }
-
-  /**
-   * Populate once LLM configuration has loaded, so the collapsed control shows the
-   * real model without needing the user to open it first.
-   */
-  async refreshWhenConfigReady() {
-    const llmConfig = this.llmConfig;
-    try {
-      if (llmConfig && typeof llmConfig.waitForInitialization === 'function') {
-        await llmConfig.waitForInitialization();
-      }
-    } catch (error) {
-      console.warn('[ChatModelSelector] LLM config initialization failed:', error);
-    }
-    this.refresh();
+    this.select.disabled = false;
   }
 
   /** The persisted ChatBox selection, as `{ provider, model }`. */

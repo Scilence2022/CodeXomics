@@ -255,7 +255,7 @@ describe('ChatBox thinking control', () => {
     `;
   });
 
-  function createSelector(settingsValues = {}) {
+  async function createSelector(settingsValues = {}) {
     const llmConfigManager = createManager();
     llmConfigManager.providers.anthropic.enabled = true;
     llmConfigManager.providers.anthropic.apiKey = 'test';
@@ -274,8 +274,10 @@ describe('ChatBox thinking control', () => {
         values[key] = value;
       }),
     };
+    const selector = new ChatModelSelector({ llmConfigManager, chatBoxSettingsManager });
+    await selector.ready;
     return {
-      selector: new ChatModelSelector({ llmConfigManager, chatBoxSettingsManager }),
+      selector,
       chatBoxSettingsManager,
       llmConfigManager,
     };
@@ -283,8 +285,8 @@ describe('ChatBox thinking control', () => {
 
   const options = select => Array.from(select.options).map(option => [option.value, option.disabled]);
 
-  it('appears for a model with a thinking control and offers its levels', () => {
-    const { selector } = createSelector();
+  it('appears for a model with a thinking control and offers its levels', async () => {
+    const { selector } = await createSelector();
 
     expect(document.getElementById('chatReasoningPicker').hidden).toBe(false);
     expect(options(selector.reasoningSelect)).toEqual([
@@ -296,8 +298,8 @@ describe('ChatBox thinking control', () => {
     ]);
   });
 
-  it('greys out a level the model refuses and says the saved one does not apply', () => {
-    const { selector } = createSelector({
+  it('greys out a level the model refuses and says the saved one does not apply', async () => {
+    const { selector } = await createSelector({
       chatboxLLMProvider: 'anthropic',
       chatboxLLMModel: 'claude-opus-5-5',
       chatboxReasoningEffort: 'off',
@@ -308,8 +310,8 @@ describe('ChatBox thinking control', () => {
     expect(selector.reasoningSelect.title).toContain('does not apply');
   });
 
-  it('shows as fixed, and says why, for a model without one', () => {
-    const { selector } = createSelector({ chatboxLLMProvider: 'local', chatboxLLMModel: 'qwen3:8b' });
+  it('shows as fixed, and says why, for a model without one', async () => {
+    const { selector } = await createSelector({ chatboxLLMProvider: 'local', chatboxLLMModel: 'qwen3:8b' });
 
     expect(document.getElementById('chatReasoningPicker').hidden).toBe(false);
     expect(selector.reasoningSelect.disabled).toBe(true);
@@ -317,8 +319,8 @@ describe('ChatBox thinking control', () => {
     expect(selector.reasoningSelect.title).toContain('qwen3:8b has no thinking level');
   });
 
-  it('is enabled again once a model with a thinking control is selected', () => {
-    const { selector, chatBoxSettingsManager } = createSelector({
+  it('is enabled again once a model with a thinking control is selected', async () => {
+    const { selector, chatBoxSettingsManager } = await createSelector({
       chatboxLLMProvider: 'local',
       chatboxLLMModel: 'qwen3:8b',
     });
@@ -331,8 +333,8 @@ describe('ChatBox thinking control', () => {
     expect(selector.reasoningSelect.options).toHaveLength(5);
   });
 
-  it('hides only when no model resolves at all', () => {
-    const { selector, llmConfigManager } = createSelector();
+  it('hides only when no model resolves at all', async () => {
+    const { selector, llmConfigManager } = await createSelector();
     Object.values(llmConfigManager.providers).forEach(provider => {
       provider.enabled = false;
     });
@@ -343,7 +345,7 @@ describe('ChatBox thinking control', () => {
   });
 
   it('persists the chosen level', async () => {
-    const { selector, chatBoxSettingsManager } = createSelector();
+    const { selector, chatBoxSettingsManager } = await createSelector();
     selector.reasoningSelect.value = 'medium';
 
     await selector.applyReasoningLevel();
