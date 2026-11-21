@@ -99,3 +99,80 @@ describe('ChatBox primer design and saving', () => {
     expect(persistence.set).not.toHaveBeenCalled();
   });
 });
+
+describe('ChatBox primer listing', () => {
+  it('lists the same saved primers as the library, grouping sites by primer ID', async () => {
+    const { app, chromosome, service } = setup();
+    const manager = app.primerManager;
+    const pinned = { chromosome, start: 10, end: 29, strand: '+' };
+    const placed = await manager.addPrimer({ name: 'Example', sequence: 'A'.repeat(20), pinnedSites: [pinned] });
+    const unplaced = await manager.addPrimer({ name: 'Example', sequence: 'C'.repeat(20) }, { mergeDuplicates: false });
+    const predictedOnly = await manager.addPrimer({ name: 'Predicted only', sequence: 'G'.repeat(20) });
+    const cachedSites = new Map([
+      [
+        placed.id,
+        [
+          { id: 'same-as-pinned', ...pinned },
+          { id: 'another-site', ...pinned, start: 50, end: 69 },
+        ],
+      ],
+      [predictedOnly.id, [{ id: 'prediction', ...pinned, start: 70, end: 89 }]],
+    ]);
+    const getCachedSites = id => cachedSites.get(id) || [];
+    manager.setBindingService({ getCachedSites, predictForViewport: primer => getCachedSites(primer.id) });
+
+    // The old unscoped listing called this with null and only saw the pinned site.
+    expect(manager.getRenderableBindingSites(null)).toHaveLength(1);
+    const result = await service.listPrimers();
+
+    expect(result).toMatchObject({ success: true, chromosome, count: 3 });
+    expect(result.primers.map(primer => primer.id)).toEqual(manager.listPrimers().map(primer => primer.id));
+    expect(result.primers[0]).toMatchObject({
+      id: placed.id,
+      bindingSiteCount: 2,
+      predictionsCached: true,
+      bindingSites: [
+        { chromosome, start: 10, end: 29, origin: 'pinned' },
+        { chromosome, start: 50, end: 69, origin: 'predicted' },
+      ],
+    });
+    expect(result.primers[1]).toMatchObject({
+      id: unplaced.id,
+      bindingSiteCount: 0,
+      bindingSites: [],
+      predictionsCached: true,
+    });
+    expect(result.primers[2]).toMatchObject({
+      id: predictedOnly.id,
+      bindingSiteCount: 1,
+      bindingSites: [{ start: 70, end: 89, origin: 'predicted' }],
+    });
+  });
+
+  it('scopes sites to the selected chromosome and filters primers by interval overlap', async () => {
+    const { app, chromosome, service } = setup();
+    const pinnedSites = [
+      { chromosome, start: 10, end: 29, strand: '+' },
+      { chromosome, start: 40, end: 59, strand: '+' },
+      { chromosome: 'other', start: 1, end: 20, strand: '-' },
+    ];
+    const placed = await app.primerManager.addPrimer({ name: 'Placed', sequence: 'A'.repeat(20), pinnedSites });
+    await app.primerManager.addPrimer({ name: 'Unplaced', sequence: 'C'.repeat(20) });
+    app.primerManager.setBindingService({ getCachedSites: () => null, predictForViewport: () => [] });
+
+    const scoped = await service.listPrimers({ chromosome: 'other' });
+    expect(scoped.count).toBe(2);
+    expect(scoped.primers[0]).toMatchObject({
+      bindingSiteCount: 1,
+      bindingSites: [{ chromosome: 'other' }],
+      predictionsCached: false,
+    });
+
+    const regional = await service.listPrimerAnnotations({ start: 29, end: 35 });
+    expect(regional).toMatchObject({
+      chromosome,
+      count: 1,
+      primers: [{ id: placed.id, bindingSiteCount: 1, bindingSites: [{ start: 10, end: 29 }] }],
+    });
+  });
+});

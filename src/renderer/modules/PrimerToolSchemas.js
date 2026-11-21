@@ -277,13 +277,14 @@ const PRIMER_TOOL_SCHEMAS = {
     name: 'list_primers',
     aliases: ['list_primer_annotations'],
     description:
-      'List primers in the library and their binding sites (pinned + predicted) for the current chromosome, optionally filtered by genomic interval.',
+      'List each saved primer once, including primers without binding sites. Sites are grouped under each primer for the selected chromosome. Interval bounds restrict the result to primers with overlapping sites.',
     parameters: {
       type: 'object',
       properties: {
         chromosome: {
           type: 'string',
-          description: 'Optional chromosome/replicon ID to filter primers',
+          description:
+            'Chromosome/replicon ID for the binding sites, named exactly as loaded. Omit to use the current chromosome.',
         },
         start: {
           type: 'number',

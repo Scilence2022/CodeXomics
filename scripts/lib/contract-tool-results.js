@@ -258,7 +258,20 @@ function buildContractToolResult(toolName, parameters = {}) {
     case 'save_primer':
       return { success: true, primer_id: parameters.name || 'primer_1', name: parameters.name || 'primer_1', chromosome: parameters.chromosome || 'U00096' };
     case 'list_primers':
-      return { success: true, primers: [{ primer_id: 'primer_1', name: 'primer_1', chromosome: 'U00096', start: 100000, end: 100019 }], count: 1 };
+      return {
+        success: true,
+        chromosome,
+        count: 1,
+        primers: [
+          {
+            id: 'primer_1',
+            name: 'primer_1',
+            sequence: dna.slice(0, 20),
+            bindingSiteCount: 1,
+            bindingSites: [{ chromosome, start: 100000, end: 100019, strand: '+', origin: 'pinned' }],
+          },
+        ],
+      };
     case 'delete_primers':
       return { success: true, deleted: 1 };
     case 'open_new_tab':

@@ -1893,7 +1893,7 @@ Primer Design & PCR:
   - design_primers: Design a full PCR primer pair; use upstreamBp/downstreamBp and primer length/Tm/GC options
   - find_primer_binding_sites: Find binding locations of a primer on the genome
   - save_primer: Save one primer to the library at a genomic binding site. To add a designed pair, save both primers using target.chromosome and each primer's genomicStart, genomicEnd, strand, and sequence from design_primers. bindStart and bindEnd are template offsets.
-  - list_primers: List primers in the library and their pinned + predicted binding sites
+  - list_primers: List each saved primer once, including primers with zero binding sites. Binding sites are grouped by primer. Use interval bounds only for a regional list.
   - delete_primers: Delete primers from the library with confirm=true
 
 Protein Structure:

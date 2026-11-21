@@ -6305,6 +6305,17 @@ class ChatManager {
     // ─── Tool-specific sanitization rules ───────────────────────────────
 
     switch (toolName) {
+      case 'list_primers':
+        if (Array.isArray(sanitized.primers) && JSON.stringify(sanitized.primers).length > 24 * 1024) {
+          sanitized.primers = sanitized.primers.map(({ id, name, bindingSiteCount, predictionsCached }) => ({
+            id,
+            name,
+            bindingSiteCount,
+            predictionsCached,
+          }));
+          sanitized.bindingSitesNote = 'Large result summarized by primer. Use an interval to request site details.';
+        }
+        break;
       case 'list_available_tools':
         // The categorized inventory already covers the flat list and its rendered Markdown.
         if (!sanitized.categories || Object.keys(sanitized.categories).length === 0) break;

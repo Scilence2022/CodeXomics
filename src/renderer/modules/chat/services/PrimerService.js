@@ -136,30 +136,51 @@ class PrimerService {
 
   async listPrimers(params = {}) {
     const manager = this._getPrimerManager();
+    const chromosome =
+      params.chromosome || document.getElementById('chromosomeSelect')?.value || this.app?.currentChromosome || null;
+    const start = this._getNumber(params.start);
+    const end = this._getNumber(params.end);
+    const sitesByPrimer = new Map();
+    for (const site of manager.getRenderableBindingSites(chromosome)) {
+      if ((start !== undefined && site.end < start) || (end !== undefined && site.start > end)) continue;
+
+      if (!sitesByPrimer.has(site.primerId)) sitesByPrimer.set(site.primerId, []);
+      sitesByPrimer.get(site.primerId).push({
+        id: site.id,
+        chromosome: site.chromosome,
+        start: site.start,
+        end: site.end,
+        strand: site.strand,
+        origin: site.origin,
+        bindingSequence: site.bindingSequence || '',
+        mismatches: site.mismatches || [],
+      });
+    }
+
     const primers = manager
-      .getRenderableBindingSites(params.chromosome || null)
-      .filter(primer => {
-        const start = this._getNumber(params.start);
-        const end = this._getNumber(params.end);
-        if (start !== undefined && primer.end < start) return false;
-        if (end !== undefined && primer.start > end) return false;
-        return true;
-      })
-      .map(primer => ({
-        id: primer.id,
-        name: primer.name || primer.qualifiers?.gene || primer.qualifiers?.label || 'Primer',
-        chromosome: primer.chromosome,
-        start: primer.start,
-        end: primer.end,
-        strand: primer.strand,
-        sequence: primer.sequence || '',
-        bindingSequence: primer.bindingSequence || '',
-        mismatches: primer.mismatches || [],
-        description: primer.description || '',
-      }));
+      .listPrimers()
+      .filter(primer => (start === undefined && end === undefined) || sitesByPrimer.has(primer.id))
+      .map(({ id, name, sequence, description, tags, fivePrimeTail, fivePrimePhosphate }) => {
+        const bindingSites = sitesByPrimer.get(id) || [];
+        return {
+          id,
+          name,
+          sequence,
+          description,
+          tags,
+          fivePrimeTail,
+          fivePrimePhosphate,
+          bindingSiteCount: bindingSites.length,
+          bindingSites,
+          ...(chromosome && manager.bindingService && sequence
+            ? { predictionsCached: Boolean(manager.bindingService.getCachedSites(id, chromosome)) }
+            : {}),
+        };
+      });
 
     return {
       success: true,
+      chromosome,
       count: primers.length,
       primers,
     };
