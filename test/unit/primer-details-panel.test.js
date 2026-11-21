@@ -169,6 +169,26 @@ describe('PrimerDetailsPanel.render', () => {
     expect(modal.querySelector('.primer-phosphate-badge').textContent).toBe('P');
   });
 
+  it('lists saved binding sites on the inspected chromosome and navigates to them', () => {
+    const site = renderableSite({ primerId: 'primer_1' });
+    genomeBrowser.primerManager = {
+      getPrimer: () => ({ id: 'primer_1' }),
+      getSitesForPrimer: vi.fn(() => [site]),
+    };
+    genomeBrowser.primerLibraryUI = new PrimerLibraryUI(genomeBrowser);
+    new PrimerDetailsPanel(genomeBrowser).render(container, site);
+
+    const host = container.querySelector('[data-role="saved-binding-sites"]');
+    expect(host.textContent).toContain('Binding sites on U00096');
+    expect(host.querySelector('.primer-binding-count').textContent).toBe('1');
+    host.querySelector('button').click();
+    expect(genomeBrowser.navigationManager.navigateToPosition).toHaveBeenCalledWith(
+      'U00096',
+      site.start - PrimerLibraryUI.LOCATE_MIN_FLANK_BP,
+      site.end + PrimerLibraryUI.LOCATE_MIN_FLANK_BP
+    );
+  });
+
   it('reports a missing primer without opening the add dialog', () => {
     genomeBrowser.primerManager = { getPrimer: vi.fn(() => null) };
     genomeBrowser.primerLibraryUI = new PrimerLibraryUI(genomeBrowser);

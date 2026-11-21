@@ -43,7 +43,9 @@ class PrimerLibraryUI {
     }
     this.ensureModal();
     this.refresh();
-    document.getElementById(this.modalId)?.classList.add('show');
+    const panel = document.getElementById(this.modalId);
+    panel.classList.add('show');
+    panel.querySelector('[data-role="search"]').focus();
   }
 
   close() {
@@ -65,7 +67,7 @@ class PrimerLibraryUI {
 
     const modal = document.createElement('div');
     modal.id = this.modalId;
-    modal.className = 'modal primer-library-modal';
+    modal.className = 'modal primer-floating-panel primer-library-modal';
     // The shared drag and resize managers handle these controls through document-level listeners.
     modal.innerHTML = `
       <div class="modal-content large draggable resizable">
@@ -100,17 +102,10 @@ class PrimerLibraryUI {
           </div>
           <div class="primer-lib-pairs" data-role="pairs"></div>
         </div>
-        <div class="resize-handle resize-handle-n" aria-hidden="true"></div>
-        <div class="resize-handle resize-handle-s" aria-hidden="true"></div>
-        <div class="resize-handle resize-handle-e" aria-hidden="true"></div>
-        <div class="resize-handle resize-handle-w" aria-hidden="true"></div>
-        <div class="resize-handle resize-handle-ne" aria-hidden="true"></div>
-        <div class="resize-handle resize-handle-nw" aria-hidden="true"></div>
-        <div class="resize-handle resize-handle-se" aria-hidden="true"></div>
-        <div class="resize-handle resize-handle-sw" aria-hidden="true"></div>
+        ${this._resizeHandles()}
       </div>`;
 
-    document.body.appendChild(modal);
+    this._mountPanel(modal);
 
     // Hidden file input for imports.
     const fileInput = document.createElement('input');
@@ -127,10 +122,22 @@ class PrimerLibraryUI {
       this.searchTerm = String(e.target.value || '').toLowerCase();
       this.refresh();
     });
-    // Click on the backdrop closes the modal.
-    modal.addEventListener('mousedown', e => {
-      if (e.target === modal) this.close();
-    });
+  }
+
+  _mountPanel(panel) {
+    document.body.appendChild(panel);
+    const raise = () => {
+      document.querySelector('.primer-floating-panel.front')?.classList.remove('front');
+      panel.classList.add('front');
+    };
+    panel.addEventListener('pointerdown', raise);
+    panel.addEventListener('focusin', raise);
+  }
+
+  _resizeHandles() {
+    return ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
+      .map(edge => `<div class="resize-handle resize-handle-${edge}" aria-hidden="true"></div>`)
+      .join('');
   }
 
   // --- Rendering -----------------------------------------------------------
@@ -138,6 +145,8 @@ class PrimerLibraryUI {
   refresh() {
     const modal = document.getElementById(this.modalId);
     if (!modal) return;
+    this.libraryGenome = this.gb.currentSequence;
+    this.libraryFilePath = this.manager.getCurrentFilePath?.();
     this._renderStringency(modal.querySelector('[data-role="stringency"]'));
     this._renderRows(modal.querySelector('[data-role="primer-rows"]'));
     this._renderPairs(modal.querySelector('[data-role="pairs"]'));
@@ -243,6 +252,13 @@ class PrimerLibraryUI {
     const actionEl = e.target.closest('[data-action]');
     if (!actionEl) return;
     const action = actionEl.getAttribute('data-action');
+    if (
+      action !== 'close' &&
+      (this.libraryGenome !== this.gb.currentSequence || this.libraryFilePath !== this.manager.getCurrentFilePath?.())
+    ) {
+      this.refresh();
+      return;
+    }
     const row = e.target.closest('[data-primer-id]');
     const primerId = row?.getAttribute('data-primer-id');
 
@@ -427,9 +443,12 @@ class PrimerLibraryUI {
   }
 
   openEdit(primerId) {
+    if (this.savingEdit) return true;
     const primer = primerId ? this.manager?.getPrimer(primerId) : null;
     if (!this.manager || (primerId && !primer)) return false;
 
+    this.editGenome = this.gb.currentSequence;
+    this.editFilePath = this.manager.getCurrentFilePath?.();
     this._ensureEditModal();
     const modal = document.getElementById(this.editId);
 
@@ -462,10 +481,10 @@ class PrimerLibraryUI {
     if (document.getElementById(this.editId)) return;
     const modal = document.createElement('div');
     modal.id = this.editId;
-    modal.className = 'modal primer-edit-modal';
+    modal.className = 'modal primer-floating-panel primer-edit-modal';
     modal.innerHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
+      <div class="modal-content draggable resizable">
+        <div class="modal-header draggable-handle" data-modal-content="#${this.editId}">
           <h3 data-role="edit-title">Add primer</h3>
           <div class="modal-controls"><button class="modal-close" data-action="edit-cancel">&times;</button></div>
         </div>
@@ -527,27 +546,27 @@ class PrimerLibraryUI {
           <button class="btn btn-secondary" data-action="edit-cancel">Cancel</button>
           <button class="btn btn-primary" data-action="edit-save">Save</button>
         </div>
+        ${this._resizeHandles()}
       </div>`;
-    document.body.appendChild(modal);
+    this._mountPanel(modal);
+    this._bindSiteNavigation(modal.querySelector('[data-role="binding-preview"]'));
 
     modal.addEventListener('click', e => {
       const action = e.target.closest('[data-action]')?.getAttribute('data-action');
-      if (action === 'edit-cancel' || e.target === modal) {
+      if (action === 'edit-cancel') {
         modal.classList.remove('show');
       } else if (action === 'edit-save') {
-        this._saveEdit();
+        if (this.savingEdit) return;
+        this.savingEdit = true;
+        this._saveEdit()
+          .catch(error => this.gb.showNotification?.(error.message, 'error'))
+          .finally(() => {
+            this.savingEdit = false;
+          });
       } else if (action === 'edit-revcomp') {
         this._reverseComplementField();
       } else if (action === 'edit-use-selection') {
         this._fillFromSelection();
-      } else if (action === 'goto-site') {
-        const el = e.target.closest('[data-site-start]');
-        if (el) {
-          const chr = el.getAttribute('data-site-chr');
-          const start = parseInt(el.getAttribute('data-site-start'), 10);
-          const end = parseInt(el.getAttribute('data-site-end'), 10);
-          this._navigateToSite(chr, start, end);
-        }
       }
     });
 
@@ -624,6 +643,43 @@ class PrimerLibraryUI {
       return;
     }
 
+    this._renderSiteList(host, chr, result);
+  }
+
+  async renderSavedBindingSites(host, site) {
+    const chr = site.chromosome || this.currentChromosome;
+    const primer = this.manager?.getPrimer(site.primerId || site.sourcePrimer?.id || site.id);
+    if (!host || !chr || !primer) return;
+
+    const service = this.manager.bindingService;
+    const genome = this.gb.currentSequence;
+    if (service && primer.sequence && !service.getCachedSites(primer.id, chr)) {
+      host.textContent = 'Loading binding sites…';
+      await service.ensureSites(primer, chr);
+    }
+    if (!host.isConnected || this.gb.currentSequence !== genome) return;
+
+    const sites = this.manager
+      .getSitesForPrimer(primer, chr)
+      .filter(binding => binding.chromosome === chr)
+      .map(binding => ({
+        ...binding,
+        mismatches: binding.mismatches?.length || 0,
+        annealed: binding.end - binding.start + 1 - (binding.mismatches?.length || 0),
+      }));
+    this._renderSiteList(host, chr, { sites, total: sites.length });
+    this._bindSiteNavigation(host);
+  }
+
+  _bindSiteNavigation(host) {
+    host.addEventListener('click', event => {
+      const site = event.target.closest('[data-site-chr]');
+      if (site)
+        this._navigateToSite(site.dataset.siteChr, Number(site.dataset.siteStart), Number(site.dataset.siteEnd));
+    });
+  }
+
+  _renderSiteList(host, chr, result) {
     const sites = result.sites;
     if (!sites.length) {
       host.innerHTML = `<div class="primer-binding-preview-head">Binding sites on ${this._esc(chr)}</div>
@@ -637,11 +693,11 @@ class PrimerLibraryUI {
         const arrow = s.strand === '-' ? '◀' : '▶';
         const mm = s.mismatches === 0 ? 'perfect' : `${s.mismatches} mm`;
         const tm = Number.isFinite(s.tm) ? `${s.tm}°C` : '—';
-        return `<li class="primer-binding-site" data-action="goto-site" data-site-chr="${this._esc(chr)}" data-site-start="${s.start}" data-site-end="${s.end}" title="Go to ${this._esc(chr)}:${s.start}-${s.end}">
+        return `<li><button type="button" class="primer-binding-site" data-site-chr="${this._esc(chr)}" data-site-start="${s.start}" data-site-end="${s.end}" title="Go to ${this._esc(chr)}:${s.start}-${s.end}">
           <span class="primer-binding-arrow">${arrow}</span>
           <span class="primer-binding-pos">${s.start.toLocaleString()}–${s.end.toLocaleString()}</span>
           <span class="primer-binding-meta">${s.annealed} annealed · ${mm} · Tm ${tm}</span>
-        </li>`;
+        </button></li>`;
       })
       .join('');
     const more =
@@ -721,6 +777,9 @@ class PrimerLibraryUI {
 
   async _saveEdit() {
     const modal = document.getElementById(this.editId);
+    if (this.editGenome !== this.gb.currentSequence || this.editFilePath !== this.manager.getCurrentFilePath?.()) {
+      throw new Error('The active genome changed. Reopen the primer editor to continue.');
+    }
     const id = modal.querySelector('[data-role="f-id"]').value;
     const name = modal.querySelector('[data-role="f-name"]').value.trim();
     const sequence = modal.querySelector('[data-role="f-seq"]').value.trim();
