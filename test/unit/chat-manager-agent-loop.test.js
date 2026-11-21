@@ -72,11 +72,15 @@ describe('agent loop', () => {
   });
 
   describe('basic round-tripping', () => {
-    it('finishes adding primers named for a gene after both saves succeed', async () => {
-      const design = { geneName: 'yfbK' };
-      const forward = { name: 'yfbK_Fwd' };
-      const reverse = { name: 'yfbK_Rev' };
-      const answer = 'Added yfbK_Fwd and yfbK_Rev to the primer library.';
+    it.each([
+      ['add yfbK primers to lib', 'yfbK'],
+      ['design primers to amplify cutC gene then add them to primer library', 'cutC'],
+      ['design primers to amplify cutC gene then add them to the library', 'cutC'],
+    ])('finishes "%s" after both saves succeed', async (request, geneName) => {
+      const design = { geneName };
+      const forward = { name: geneName + '_Fwd' };
+      const reverse = { name: geneName + '_Rev' };
+      const answer = 'Added both primers to the primer library.';
       const harness = createAgentLoopHarness({
         responses: [
           openAiToolCall('design_primers', design, { id: 'design' }),
@@ -92,7 +96,7 @@ describe('agent loop', () => {
         },
       });
 
-      expect(await harness.send('add yfbK primers to lib')).toBe(answer);
+      expect(await harness.send(request)).toBe(answer);
       expect(harness.rounds).toBe(3);
       expect(harness.toolCalls).toEqual([
         { tool_name: 'design_primers', parameters: design },
