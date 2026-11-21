@@ -265,8 +265,10 @@ class GeneralSettingsManager {
 
     // Layout settings
     document.getElementById('genomeToolbarIconsOnly')?.addEventListener('change', e => {
-      this.updateSetting('genomeToolbarIconsOnly', e.target.checked);
-      this.applyGenomeToolbarIconsOnly(e.target.checked);
+      this.setGenomeToolbarIconsOnly(e.target.checked);
+    });
+    document.getElementById('toggleGenomeToolbarDisplay')?.addEventListener('click', () => {
+      this.setGenomeToolbarIconsOnly(this.settings.genomeToolbarIconsOnly !== true);
     });
 
     const compactModeCheckbox = document.getElementById('compactMode');
@@ -686,11 +688,7 @@ class GeneralSettingsManager {
     if (sequenceFontSelect) sequenceFontSelect.value = this.settings.sequenceFont;
 
     // Layout settings
-    const genomeToolbarIconsOnlyCheckbox = document.getElementById('genomeToolbarIconsOnly');
-    if (genomeToolbarIconsOnlyCheckbox) {
-      genomeToolbarIconsOnlyCheckbox.checked = this.settings.genomeToolbarIconsOnly === true;
-    }
-
+    this.applyGenomeToolbarIconsOnly(this.settings.genomeToolbarIconsOnly);
     const compactModeCheckbox = document.getElementById('compactMode');
     if (compactModeCheckbox) compactModeCheckbox.checked = this.settings.compactMode;
 
@@ -1026,11 +1024,23 @@ class GeneralSettingsManager {
     document.documentElement.style.setProperty('--default-track-height', heightValue);
   }
 
-  /**
-   * Apply the genome toolbar display preference.
-   */
+  setGenomeToolbarIconsOnly(iconsOnly) {
+    this.updateSetting('genomeToolbarIconsOnly', iconsOnly);
+    this.applyGenomeToolbarIconsOnly(iconsOnly);
+  }
+
   applyGenomeToolbarIconsOnly(iconsOnly) {
-    document.body.classList.toggle('genome-toolbar-icons-only', iconsOnly === true);
+    const enabled = iconsOnly === true;
+    document.body.classList.toggle('genome-toolbar-icons-only', enabled);
+
+    const checkbox = document.getElementById('genomeToolbarIconsOnly');
+    if (checkbox) checkbox.checked = enabled;
+
+    const toggle = document.getElementById('toggleGenomeToolbarDisplay');
+    if (toggle) {
+      toggle.setAttribute('aria-pressed', String(enabled));
+      toggle.title = enabled ? 'Show icons and labels in the genome toolbar' : 'Show only icons in the genome toolbar';
+    }
   }
 
   /**
