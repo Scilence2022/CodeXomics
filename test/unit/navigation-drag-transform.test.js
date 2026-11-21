@@ -203,14 +203,7 @@ describe('NavigationManager drag transform caching', () => {
       document.body.appendChild(ruler);
 
       nm.genomeBrowser = { highlightManager: { renderHighlights } };
-      nm.dragState.isDragging = true;
-      nm.rulerUpdateThrottle = {
-        lastUpdateTime: 0,
-        updateInterval: 16,
-        pendingUpdate: false,
-      };
-
-      nm.updateDetailedRulers(true);
+      nm.updateDetailedRulers();
 
       expect(setupCanvas).toHaveBeenCalledOnce();
       expect(renderHighlights).toHaveBeenCalledOnce();

@@ -98,9 +98,11 @@
 .visual-dragging .ruler,
 .visual-dragging svg {
   transition: none !important;
-  /* Disable transitions during drag */
+}
+
+.unified-gene-container.visual-dragging,
+.track-content.visual-dragging {
   will-change: transform;
-  /* Optimize for transform changes */
 }
 
 /* .track-content deliberately has no transform transition. A 0.1s ease-out

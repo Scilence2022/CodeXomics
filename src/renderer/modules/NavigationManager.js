@@ -16,15 +16,13 @@ class NavigationManager {
       chromosome: null,
       startX: 0,
       startPosition: 0,
-      lastUpdateX: 0,
-      cumulativeVisualDeltaX: 0,
-      lastCalculatedStart: 0, // Store the last calculated position
+      pointerX: 0,
+      previewPosition: null,
       // Effective track width (px-per-base reference) captured once at drag
       // start. Reused for every move and for the final commit so the live
       // visual offset and the rendered position share one conversion factor.
       elementWidth: 0,
       dynamicUpdate: false, // Whether tracks re-render live during this drag (per global/per-track setting)
-      canvasTransformsApplied: false, // Track if Canvas transforms were applied during this drag
       // Start of the region the on-screen tracks were drawn for. The live
       // preview offsets the DOM by (renderedStart - current start); a live
       // re-render mid-drag moves it forward.
@@ -50,12 +48,8 @@ class NavigationManager {
       intervalMs: 80, // ~12fps cap for the heavy in-drag re-renders
     };
 
-    // Ruler update throttling
-    this.rulerUpdateThrottle = {
-      lastUpdateTime: 0,
-      updateInterval: 16, // 60fps (1000ms/60 ≈ 16ms)
-      pendingUpdate: false,
-    };
+    this.dragFrameHandle = null;
+    this.dragFeedbackTimer = null;
 
     // The three drag settings (General Settings > Dragging the View) are
     // independent parts of one drag:
@@ -1565,107 +1559,83 @@ class NavigationManager {
   }
 
   handleDocumentMouseMove(e) {
-    if (!this.dragState.isDragging) return;
+    if (!this.dragState.isDragging || document.body.hasAttribute('data-splitter-resizing')) return;
 
-    // Don't update if a splitter is being resized
-    if (document.body.hasAttribute('data-splitter-resizing')) return;
+    const { startX, hasDragged } = this.dragState;
+    if (!hasDragged && Math.abs(e.clientX - startX) <= 5) return;
 
-    const { element, startX, chromosome, startPosition } = this.dragState;
-    const deltaX = e.clientX - startX;
+    this.dragState.hasDragged = true;
+    this.dragState.pointerX = e.clientX;
+    if (this.dragFrameHandle !== null) return;
 
-    // Check if we've moved enough to consider this a drag
-    if (!this.dragState.hasDragged && Math.abs(deltaX) > 5) {
-      this.dragState.hasDragged = true;
-      console.log('🔧 [DRAG-MOVE] Drag started, threshold exceeded');
-    }
+    this.dragFrameHandle = requestAnimationFrame(() => {
+      this.dragFrameHandle = null;
+      if (this.dragState.isDragging) this.updateDragFrame(this.dragState.pointerX);
+    });
+  }
 
-    if (!this.dragState.hasDragged) return;
-
-    this.dragState.lastUpdateX = e.clientX;
-
-    const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-    // Use the width captured at drag start so the px->base conversion and the
-    // visual offset stay consistent even if a live re-render replaces the
-    // dragged element mid-drag (which would make a re-measure return 0).
-    const elementWidth = this.dragState.elementWidth || this.getEffectiveWidth(element);
+  updateDragFrame(clientX, releasing = false) {
+    const { element, startX, chromosome, startPosition, elementWidth, dynamicUpdate } = this.dragState;
     const sequence = this.genomeBrowser.currentSequence[chromosome];
+    const { start, end } = this.genomeBrowser.currentPosition;
+    const range = end - start;
+    if (!sequence?.length || range <= 0 || elementWidth <= 0) return;
 
-    const positionChange = Math.round((deltaX * currentRange) / elementWidth);
+    const positionChange = ((clientX - startX) * range) / elementWidth;
+    const limitStart = value =>
+      this.circularMode
+        ? ((value % sequence.length) + sequence.length) % sequence.length
+        : Math.max(0, Math.min(sequence.length - range, value));
 
-    let newStart;
-    let newEnd;
-
-    if (this.circularMode) {
-      // Circular mode: wrap positions around using modulo arithmetic
-      const rawNewStart = startPosition - positionChange;
-      const seqLen = sequence.length;
-
-      // Use modulo to wrap position into [0, seqLen) range
-      // JavaScript modulo can return negative, so we use ((n % m) + m) % m pattern
-      // This ensures newStart is always non-negative, preventing issues with
-      // sequence.substring() calls in GC and sequence rendering
-      newStart = ((rawNewStart % seqLen) + seqLen) % seqLen;
-      newEnd = newStart + currentRange;
-    } else {
-      // Linear mode: clamp to sequence boundaries
-      newStart = Math.max(0, Math.min(sequence.length - currentRange, startPosition - positionChange));
-      newEnd = newStart + currentRange;
+    // Keep the data viewport on whole bases. Use the fractional displacement
+    // for painting so a single base can span several pixels without stepping.
+    const snappedStart = startPosition - Math.round(positionChange);
+    const newStart = limitStart(snappedStart);
+    const rawPreviewStart = releasing ? snappedStart : startPosition - positionChange;
+    const previewStart = limitStart(rawPreviewStart);
+    const positionChanged = newStart !== start;
+    const firstFrame = this.dragState.previewPosition === null;
+    if (
+      !releasing &&
+      !this.circularMode &&
+      !positionChanged &&
+      this.dragState.previewPosition?.start === previewStart
+    ) {
+      return;
     }
 
-    // Store the calculated position
-    this.dragState.lastCalculatedStart = newStart;
+    this.dragState.previewPosition = { start: previewStart, end: previewStart + range };
+    if (positionChanged) this.genomeBrowser.currentPosition = { start: newStart, end: newStart + range };
 
-    // Update the position model that every track/ruler reads from
-    this.genomeBrowser.currentPosition = { start: newStart, end: newEnd };
-
-    // Drive the live visual offset as a PERCENTAGE of each track's own width,
-    // snapped to the committed integer-base position. This is what makes the
-    // drag preview match the final render exactly. A CSS `translateX(p%)` is
-    // resolved against the element's OWN width - the very same width the
-    // renderer maps the genomic range across - so the preview and the committed
-    // view stay aligned even when our px-based width measurement is slightly off
-    // (vertical scrollbar, border, inset, etc.). A px transform built from a
-    // mismatched width is what made the view overshoot during the drag and
-    // visibly snap back on release (drag left -> lands right, drag right ->
-    // lands left). Using (startPosition - newStart)/range as the fraction makes
-    // the preview reflect whole-base navigation, identical to the re-render.
-    const shiftPercent = this.circularMode
-      ? (deltaX / elementWidth) * 100
-      : ((startPosition - newStart) / currentRange) * 100;
-
-    if (this.dragState.dynamicUpdate) {
-      // Re-render the tracks for the newly exposed region while dragging, so
-      // genes, reads, GC and the other tracks fill in instead of leaving blank
-      // space. Every track keeps following the mouse through a transform taken
-      // against the region it was last drawn for, and a throttled re-render
-      // replaces the DOM as often as rendering allows.
+    if (dynamicUpdate) {
+      // Live renders replace the tracks mid-drag, so move the new DOM relative
+      // to the region it was drawn for.
       this.applyLiveDragShift();
-      this.requestDragViewRender(chromosome, sequence);
-    } else if (this.globalDraggingEnabled) {
-      // Update all tracks during drag when global dragging is enabled
-      this.performGlobalDragUpdate(shiftPercent, chromosome);
     } else {
-      // Only update the current track (default behavior)
-      this.performVisualDragUpdate(shiftPercent, element);
+      // Percentage shifts use each drawing surface's own width. Use the
+      // unwrapped displacement for circular panning in transform-only mode.
+      const shiftPercent = ((startPosition - (this.circularMode ? rawPreviewStart : previewStart)) / range) * 100;
+      if (this.globalDraggingEnabled) {
+        this.performGlobalDragUpdate(shiftPercent);
+      } else {
+        this.performVisualDragUpdate(shiftPercent, element);
+      }
     }
 
-    // Optionally refresh the bottom sequence panel live. When a full track
-    // re-render is already happening (dynamic update) the bottom panel is
-    // refreshed through displayGenomeView, so this only needs to fire for the
-    // lighter transform path.
-    if (!this.dragState.dynamicUpdate && this.dragRealtimeSequenceUpdate) {
-      this.requestDragSequenceRender(chromosome, sequence);
-    }
+    if (releasing) return;
 
-    if (this.genomeBrowser.genomeNavigationBar) {
-      this.genomeBrowser.genomeNavigationBar.update();
+    if (positionChanged) {
+      if (dynamicUpdate) {
+        this.requestDragViewRender(chromosome, sequence);
+      } else if (this.dragRealtimeSequenceUpdate) {
+        this.requestDragSequenceRender(chromosome, sequence);
+      }
+      this.genomeBrowser.genomeNavigationBar?.update();
     }
-
-    // Update detailed rulers during drag for real-time position display
+    if (positionChanged || firstFrame) {
+      this.showDragPositionFeedback(newStart, newStart + range, chromosome);
+    }
     this.updateDetailedRulers();
-
-    // Show real-time position feedback during drag
-    this.showDragPositionFeedback(newStart, newEnd, chromosome);
   }
 
   /**
@@ -1734,7 +1704,7 @@ class NavigationManager {
    * where a re-render mid-drag resets the reference point.
    */
   applyLiveDragShift() {
-    const { start, end } = this.genomeBrowser.currentPosition;
+    const { start, end } = this.dragState.previewPosition || this.genomeBrowser.currentPosition;
     const range = end - start;
     if (!(range > 0)) return;
 
@@ -1746,7 +1716,7 @@ class NavigationManager {
         delta = ((((delta + seqLen / 2) % seqLen) + seqLen) % seqLen) - seqLen / 2;
       }
     }
-    this.performGlobalDragUpdate((delta / range) * 100, this.dragState.chromosome);
+    this.performGlobalDragUpdate((delta / range) * 100);
   }
 
   cancelLiveDragRender() {
@@ -1772,46 +1742,28 @@ class NavigationManager {
   handleDocumentMouseUp(e) {
     if (!this.dragState.isDragging) return;
 
-    const { element, hasDragged, chromosome, startPosition, startX } = this.dragState;
+    const { element, hasDragged, chromosome, dynamicUpdate } = this.dragState;
+    this.cancelDragFrame();
+    this.cancelLiveDragRender();
 
-    console.log('🔧 [DRAG-END] === DRAG ENDING ===');
-    console.log('🔧 [DRAG-END] hasDragged:', hasDragged);
-    console.log('🔧 [DRAG-END] Total mouse movement:', e.clientX - startX, 'px');
+    // The last move may still be waiting for a frame. Consume the release
+    // coordinate and align the preview to the whole-base viewport first.
+    if (hasDragged) this.updateDragFrame(e.clientX, true);
 
-    // Immediately reset dragging state
     this.dragState.isDragging = false;
-
+    this.dragState.hasDragged = false;
+    this.dragState.previewPosition = null;
     element.style.cursor = 'grab';
     element.classList.remove('dragging');
     document.body.style.userSelect = '';
 
-    this.cancelLiveDragRender();
+    // Keep the offset until the new DOM replaces the old tracks. Clearing it
+    // while the release render awaits I/O would make the viewport jump back.
+    const resetVisuals =
+      this.globalDraggingEnabled || dynamicUpdate
+        ? () => this.resetGlobalVisualDragUpdates()
+        : () => this.resetVisualDragUpdates(element);
 
-    // Undo the live drag offset. Not done here when the drag moved the view:
-    // the release render is async (the reads track awaits I/O), so clearing
-    // the transform now would put the old region back on screen - offset by
-    // the whole drag distance - until the new DOM arrives, and the view would
-    // visibly land twice (first beside the target, then on it). The offset
-    // is kept until the render replaces those elements; see
-    // commitDragRender().
-    const dynamicUpdate = this.dragState.dynamicUpdate;
-    const resetVisuals = () => {
-      if (this.globalDraggingEnabled || dynamicUpdate) {
-        // Every track was offset (global dragging, or a live drag)
-        this.resetGlobalVisualDragUpdates();
-      } else {
-        // Only the dragged track was offset (default behavior)
-        this.resetVisualDragUpdates(element);
-      }
-    };
-
-    // Clean up global drag update timeout if it exists
-    if (this.globalDragUpdateTimeout) {
-      clearTimeout(this.globalDragUpdateTimeout);
-      this.globalDragUpdateTimeout = null;
-    }
-
-    // Dispatch custom drag end event immediately after resetting state
     document.dispatchEvent(
       new CustomEvent('genomeViewDragEnd', {
         detail: {
@@ -1822,62 +1774,16 @@ class NavigationManager {
         },
       })
     );
-    console.log('🔧 [DRAG-END] genomeViewDragEnd event dispatched with details:', {
-      chromosome,
-      hasDragged,
-      finalPosition: this.genomeBrowser.currentPosition,
-    });
 
     if (!hasDragged) {
-      this.dragState.hasDragged = false;
       resetVisuals();
-      console.log('🔧 [DRAG-END] No significant drag detected, no position change');
+      this.hideDragPositionFeedback();
       return;
     }
-    this.dragState.hasDragged = false;
 
-    // Use the last calculated position as the final position
-    const finalNewStart = this.dragState.lastCalculatedStart;
+    const { start: finalNewStart, end: finalNewEnd } = this.genomeBrowser.currentPosition;
     const sequence = this.genomeBrowser.currentSequence[chromosome];
-    const currentRange = this.genomeBrowser.currentPosition.end - this.genomeBrowser.currentPosition.start;
-    const finalNewEnd = finalNewStart + currentRange;
-
-    // Debug output for final position
-    console.log('🔧 [DRAG-END] Final position calculation:');
-    console.log('  - Original start position:', startPosition, 'bp');
-    console.log('  - Last calculated start (from move):', finalNewStart, 'bp');
-    console.log('  - Final calculated end:', finalNewEnd, 'bp');
-    console.log('  - Total genome movement:', finalNewStart - startPosition, 'bp');
-    console.log('  - Current range:', currentRange, 'bp');
-    console.log('  - Sequence length:', sequence.length, 'bp');
-
-    // Verify consistency with drag movement (use the width captured at drag
-    // start; the element may have been replaced by a live re-render)
-    const totalMouseDelta = e.clientX - startX;
-    const elementWidth = this.dragState.elementWidth || this.getEffectiveWidth(element);
-    const expectedPositionChange = Math.round((totalMouseDelta * currentRange) / elementWidth);
-    const expectedNewStart = Math.max(
-      0,
-      Math.min(sequence.length - currentRange, startPosition - expectedPositionChange)
-    );
-
-    console.log('🔧 [DRAG-END] Consistency check:');
-    console.log('  - Expected position change (recalculated):', expectedPositionChange, 'bp');
-    console.log('  - Expected new start (recalculated):', expectedNewStart, 'bp');
-    console.log('  - Actual new start (from last move):', finalNewStart, 'bp');
-    console.log('  - Difference:', Math.abs(expectedNewStart - finalNewStart), 'bp');
-    console.log('  - Match:', expectedNewStart === finalNewStart ? '✅ CONSISTENT' : '❌ MISMATCH');
-
-    // Set the position before re-render
-    const positionBeforeRender = { ...this.genomeBrowser.currentPosition };
-    this.genomeBrowser.currentPosition = { start: finalNewStart, end: finalNewEnd };
-
-    console.log('🔧 [DRAG-END] Position update:');
-    console.log('  - Position before render:', positionBeforeRender);
-    console.log('  - Position after update:', this.genomeBrowser.currentPosition);
-
     // Trigger a full re-render with the definitive new position
-    console.log('🔧 [DRAG-END] Starting re-render...');
     this.genomeBrowser.updateStatistics(chromosome, sequence);
     this.commitDragRender(chromosome, sequence, resetVisuals);
     this.genomeBrowser.genomeNavigationBar.update();
@@ -1889,14 +1795,15 @@ class NavigationManager {
       });
     }
 
-    // Update all detailed rulers after re-render (force update for final position)
-    this.updateDetailedRulers(true);
+    this.updateDetailedRulers();
+    this.showDragPositionFeedback(finalNewStart, finalNewEnd, chromosome);
+    this.dragFeedbackTimer = setTimeout(() => this.hideDragPositionFeedback(), 1000);
+  }
 
-    // Hide drag position feedback with delay
-    setTimeout(() => this.hideDragPositionFeedback(), 1000);
-
-    console.log('🔧 [DRAG-END] Re-render completed');
-    console.log('🔧 [DRAG-END] Final position after render:', this.genomeBrowser.currentPosition);
+  cancelDragFrame() {
+    if (this.dragFrameHandle === null) return;
+    cancelAnimationFrame(this.dragFrameHandle);
+    this.dragFrameHandle = null;
   }
 
   /**
@@ -1980,66 +1887,21 @@ class NavigationManager {
             <div>Range: ${range.toLocaleString()} bp</div>
         `;
     tooltip.querySelector('strong').textContent = chromosome;
-
-    // Auto-hide after drag ends
-    if (!this.dragState.isDragging) {
-      setTimeout(() => {
-        if (tooltip && tooltip.parentNode) {
-          tooltip.parentNode.removeChild(tooltip);
-        }
-      }, 1000);
-    }
   }
 
-  // Hide drag position feedback
   hideDragPositionFeedback() {
-    const tooltip = document.getElementById('drag-position-tooltip');
-    if (tooltip && tooltip.parentNode) {
-      tooltip.parentNode.removeChild(tooltip);
-    }
+    document.getElementById('drag-position-tooltip')?.remove();
   }
 
-  // Update viewport overlays to reflect the new position (with throttling)
-  updateDetailedRulers(forceUpdate = false) {
-    const now = performance.now();
-
-    // Use throttling during drag operations to maintain performance
-    if (!forceUpdate && this.dragState.isDragging) {
-      if (now - this.rulerUpdateThrottle.lastUpdateTime < this.rulerUpdateThrottle.updateInterval) {
-        // Schedule update if not already pending
-        if (!this.rulerUpdateThrottle.pendingUpdate) {
-          this.rulerUpdateThrottle.pendingUpdate = true;
-          requestAnimationFrame(() => {
-            this.updateDetailedRulers(true);
-            this.rulerUpdateThrottle.pendingUpdate = false;
-          });
-        }
-        return;
+  // Repaint detached overlays in the same frame as the track transforms.
+  updateDetailedRulers() {
+    for (const ruler of document.querySelectorAll('.detailed-ruler-container')) {
+      try {
+        ruler._setupCanvas?.();
+      } catch (error) {
+        console.warn('Failed to update the coordinate ruler:', error);
       }
     }
-
-    this.rulerUpdateThrottle.lastUpdateTime = now;
-
-    const detailedRulers = document.querySelectorAll('.detailed-ruler-container');
-    console.log('🔧 [RULER-UPDATE] Found', detailedRulers.length, 'detailed rulers to update');
-
-    detailedRulers.forEach((rulerContainer, index) => {
-      if (rulerContainer._setupCanvas && typeof rulerContainer._setupCanvas === 'function') {
-        console.log('🔧 [RULER-UPDATE] Updating detailed ruler', index + 1);
-        try {
-          rulerContainer._setupCanvas();
-        } catch (error) {
-          console.warn('🔧 [RULER-UPDATE] Error updating detailed ruler', index + 1, ':', error);
-        }
-      } else {
-        console.warn('🔧 [RULER-UPDATE] No _setupCanvas function found for detailed ruler', index + 1);
-      }
-    });
-
-    // Positional highlights are a separate overlay rather than children of the
-    // track containers that receive the live drag transform. Repaint them from
-    // the current viewport in the same throttled frame as the rulers so their
-    // genomic positions follow the drag without requiring a full track redraw.
     this.genomeBrowser.highlightManager?.renderHighlights();
   }
 
@@ -2057,6 +1919,8 @@ class NavigationManager {
       // is still running it will replace the DOM, so leave the offset alone.
       if (!this.genomeBrowser.genomeViewRenderController) this.pendingDragVisualReset?.();
       this.cancelLiveDragRender();
+      this.cancelDragFrame();
+      clearTimeout(this.dragFeedbackTimer);
 
       // Initialize centralized drag state
       Object.assign(this.dragState, {
@@ -2066,15 +1930,14 @@ class NavigationManager {
         chromosome: chromosome,
         startX: e.clientX,
         startPosition: this.genomeBrowser.currentPosition.start,
-        lastCalculatedStart: this.genomeBrowser.currentPosition.start,
+        pointerX: e.clientX,
+        previewPosition: null,
         renderedStart: this.genomeBrowser.currentPosition.start,
         dragId: this.dragState.dragId + 1,
         // Capture the px-per-base reference once; reused for the whole drag
         elementWidth: this.getEffectiveWidth(element),
-        // Decide once whether tracks should re-render live during this drag
-        // (global setting OR a per-track "update while dragging" toggle).
+        // Decide once whether tracks should re-render live during this drag.
         dynamicUpdate: this.isDynamicDragUpdateEnabled(),
-        // No Canvas-specific tracking needed with unified container approach
       });
 
       // Reset in-drag render throttles so the first eligible frame renders
@@ -2250,7 +2113,7 @@ class NavigationManager {
     const target = this.getVisualDragTarget(element);
     if (target) {
       // Percentage transforms keep the preview aligned with the eventual render
-      // regardless of the exact track width (see handleDocumentMouseMove).
+      // regardless of the exact track width (see updateDragFrame).
       this.cacheTrackTransform(target);
       const baseTransform = target.dataset.baseTransform || '';
       target.style.transform = baseTransform
@@ -2258,13 +2121,10 @@ class NavigationManager {
         : `translateX(${shiftPercent}%)`;
       target.classList.add('visual-dragging');
     }
-
-    // Add visual feedback class
-    element.classList.add('visual-dragging');
   }
 
   // Perform global drag update - applies visual transforms to all tracks (no redraw during drag)
-  performGlobalDragUpdate(shiftPercent, chromosome) {
+  performGlobalDragUpdate(shiftPercent) {
     // Apply a width-relative shift to every track. HTML containers use a CSS
     // percentage (resolved against their own width = the render width, so the
     // preview matches the committed view). SVG elements don't honor percentage
@@ -3125,6 +2985,9 @@ class NavigationManager {
    */
   destroy() {
     this.cancelAlignedReadsRedraw();
+    this.cancelDragFrame();
+    this.cancelLiveDragRender();
+    clearTimeout(this.dragFeedbackTimer);
 
     // Remove event listeners
     document.removeEventListener('mousemove', this.handleDocumentMouseMove);

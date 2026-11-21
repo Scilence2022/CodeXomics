@@ -145,7 +145,8 @@ class HighlightManager {
     if (!highlights.length) return;
 
     const chromosome = this.gb.currentChromosome;
-    const pos = this.gb.currentPosition || { start: 0, end: 0 };
+    const pos = this.gb.navigationManager?.dragState?.previewPosition ||
+      this.gb.currentPosition || { start: 0, end: 0 };
     const viewStart = Number(pos.start) || 0; // 0-based index of leftmost base
     const viewEnd = Number(pos.end) || 0; // 0-based, exclusive end
     const range = viewEnd - viewStart;

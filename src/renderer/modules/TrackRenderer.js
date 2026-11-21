@@ -8545,37 +8545,35 @@ class TrackRenderer {
       end: this.genomeBrowser.currentPosition.end,
     };
 
-    // Setup canvas for high-DPI displays
-    const setupCanvas = () => {
-      const rect = rulerContainer.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-
-      canvas.width = rect.width * dpr;
-      canvas.height = 35 * dpr;
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = '35px';
-
-      const ctx = canvas.getContext('2d');
-      ctx.scale(dpr, dpr);
-
-      // Always use current browser position for real-time updates during drag
-      const currentPosition = {
-        start: this.genomeBrowser.currentPosition.start,
-        end: this.genomeBrowser.currentPosition.end,
-      };
-
-      // Update the stored position to match current position
-      rulerContainer._position = currentPosition;
-
-      // Draw with current position for dynamic updates
-      this.drawDetailedRulerWithPosition(ctx, rect.width, chromosome, currentPosition);
+    let width;
+    const resizeCanvas = () => {
+      width = rulerContainer.getBoundingClientRect().width;
+      setupCanvas();
     };
 
-    // Initial setup
-    setTimeout(setupCanvas, 100);
+    // Keep the existing backing buffer during panning. Only resize it when
+    // the ruler's geometry or the display pixel ratio changes.
+    const setupCanvas = () => {
+      width ??= rulerContainer.getBoundingClientRect().width;
+      if (width <= 0) return;
 
-    // Redraw on window resize
-    const resizeObserver = new ResizeObserver(setupCanvas);
+      const dpr = window.devicePixelRatio || 1;
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(35 * dpr);
+
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const position =
+        this.genomeBrowser.navigationManager?.dragState?.previewPosition || this.genomeBrowser.currentPosition;
+      rulerContainer._position = position;
+      this.drawDetailedRulerWithPosition(ctx, width, chromosome, position);
+    };
+
+    // The first observation draws the ruler once it has been laid out.
+    const resizeObserver = new ResizeObserver(resizeCanvas);
     resizeObserver.observe(rulerContainer);
 
     // Store reference for updates
@@ -8632,11 +8630,12 @@ class TrackRenderer {
     // a base wide in pixels: sub-pixel and invisible when zoomed out, and a clean
     // half-base nudge to the right once individual bases are visible.
     const halfBase = width / range / 2;
+    const firstVisibleBase = isCircular ? start - 0.5 : Math.max(0, start - 0.5);
 
     // Major ticks. All tick marks go into one path and are stroked once; labels
     // are spaced by drawn X position (not sequence position) so circular mode,
     // where positions wrap at the origin, still spaces them correctly.
-    const firstMajorTick = Math.ceil(start / majorInterval) * majorInterval;
+    const firstMajorTick = Math.ceil(firstVisibleBase / majorInterval) * majorInterval;
     let lastLabelX = -Infinity; // ticks run left to right, so only the last label can collide
 
     ctx.beginPath();
@@ -8670,7 +8669,7 @@ class TrackRenderer {
       // Only show if ticks are spaced enough
       ctx.strokeStyle = '#adb5bd';
       ctx.beginPath();
-      const firstMinorTick = Math.ceil(start / minorInterval) * minorInterval;
+      const firstMinorTick = Math.ceil(firstVisibleBase / minorInterval) * minorInterval;
       for (let pos = firstMinorTick; pos <= end; pos += minorInterval) {
         // Normalize position for major interval check in circular mode
         let checkPos = pos;
