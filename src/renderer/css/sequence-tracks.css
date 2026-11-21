@@ -829,16 +829,33 @@
   font-size: 10px;
 }
 
-.sequence-primer-row .sequence-aligned-marker {
-  font-size: 9px;
+.sequence-primer-binding-row {
+  min-height: 34px;
 }
 
-.sequence-primer-binding-row {
-  min-height: 22px;
+.sequence-primer-binding-row .sequence-position {
+  visibility: hidden;
+}
+
+/* The narrow DNA layout stacks its coordinate above the bases. */
+@media (max-width: 768px) {
+  .sequence-primer-binding-row .sequence-position {
+    display: none;
+  }
 }
 
 .sequence-primer-binding-bases {
-  height: 22px;
+  height: 20px;
+  align-self: flex-end;
+}
+
+.sequence-primer-row.reverse .sequence-primer-binding-bases {
+  align-self: flex-start;
+}
+
+.sequence-primer-row .primer-select-target {
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 /* The primer body: a filled, bordered directional bar. Fill, border colour and the
@@ -859,11 +876,6 @@
 .sequence-primer-binding-box:hover {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
   filter: brightness(1.04);
-}
-
-.sequence-primer-row.phosphorylated .sequence-primer-label {
-  border-left: 3px solid #0891b2;
-  padding-left: 5px !important;
 }
 
 /* Leave room for the 16px badge and its 4px connector at the end of a line. */
@@ -947,11 +959,23 @@
   border-right-style: solid;
 }
 
-/* Strand-tinted label chip so the primer name reads as part of its arrow. */
+/* Keep each caption on the side of the arrow facing away from the DNA. */
 .sequence-primer-label {
-  font-weight: 700 !important;
-  border-right: 3px solid transparent;
-  padding-right: 6px !important;
+  position: absolute;
+  bottom: 100%;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font:
+    700 10px/14px 'Courier New',
+    monospace;
+  letter-spacing: normal;
+}
+
+.sequence-primer-row.reverse .sequence-primer-label {
+  top: 100%;
+  bottom: auto;
 }
 
 /* Ensure position labels maintain consistent width */

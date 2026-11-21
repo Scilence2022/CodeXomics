@@ -361,7 +361,7 @@ describe('SequenceUtils circular bottom sequence track', () => {
     container.scrollTo = vi.fn();
     const features = [
       { cds: [{}, {}], primers: [] },
-      { cds: [], primers: [{}] },
+      { cds: [], primerLanes: { forward: [[{}]], reverse: [] } },
       { cds: [], primers: [] },
     ];
     const offsets = utils.getSequenceLineOffsets(features, { baseHeight: 32, proteinHeight: 20, primerHeight: 25 });
@@ -598,6 +598,54 @@ describe('SequenceUtils circular bottom sequence track', () => {
     expect(new Set(deltas).size).toBe(1); // constant column pitch
     expect(cells[0].style.width).toBe(cells[1].style.width); // one column wide each
     expect(parseFloat(cells[0].style.width)).toBeCloseTo(deltas[0], 3); // pitch === cell width
+  });
+
+  it('packs same-strand arrows and local captions into the rows reserved for scrolling', () => {
+    const primer = (id, name, start, end, strand = '+') => ({ id, name, start, end, strand, type: 'primer_bind' });
+    const primers = [
+      primer('c', 'right', 41, 49),
+      primer('b', 'overlapping', 5, 10),
+      primer('a', 'left', 2, 8),
+      primer('d', 'reverse', 15, 24, '-'),
+      primer('e', 'second reverse', 35, 41, '-'),
+    ];
+    const settings = { showPrimers: true };
+    const features = utils.buildLineFeatureIndex([], 0, 50, 50, 'chr1', settings, primers, 10);
+    const render = () =>
+      utils.renderSequenceLine('A'.repeat(50), 0, 'chr1', [], [], 10, settings, new Map(), features[0]);
+    const line = render();
+    expect(line.querySelectorAll('.sequence-primer-row')).toHaveLength(3);
+    const row = line.querySelector('.sequence-primer-row.forward');
+    expect(Array.from(row.querySelectorAll('.sequence-primer-label'), el => el.textContent)).toEqual(['left', 'right']);
+    expect(line.querySelectorAll('.sequence-primer-row.reverse .sequence-primer-label')).toHaveLength(2);
+    expect(Array.from(row.querySelectorAll('.sequence-primer-binding-box'), el => el.style.left)).toEqual([
+      '10px',
+      '400px',
+    ]);
+    expect([
+      ...utils.getSequenceLineOffsets(features, { baseHeight: 32, proteinHeight: 20, primerHeight: 37 }),
+    ]).toEqual([0, 143]);
+
+    const container = document.getElementById('sequenceContent');
+    utils.attachSequenceClickHandlers(container);
+    utils.genomeBrowser.selectPrimer = vi.fn();
+    utils.sequenceLayout = { chromosome: 'chr1', primerBindings: primers };
+    container.appendChild(render()); // exercise delegated selection on a cached clone
+    const right = container.querySelector('.sequence-primer-label[data-primer-id="c"]');
+    expect(parseFloat(right.style.left)).toBeGreaterThanOrEqual(400);
+    right.click();
+    expect(utils.genomeBrowser.selectPrimer).toHaveBeenCalledWith(primers[0]);
+  });
+
+  it('accounts for long captions, terminal markers and wrapped segments when packing lanes', () => {
+    const a = { start: 1, end: 3, name: 'a', strand: '+' };
+    const b = { start: 6, end: 9, name: 'b', strand: '+' };
+    const pack = (first, second) => utils.layoutPrimerLanes([first, second], 0, 60, 10).forward;
+    expect(pack(a, b)).toHaveLength(1);
+    expect(pack({ ...a, name: 'long label extending past its short arrow' }, b)).toHaveLength(2);
+    expect(pack(a, { ...b, fivePrimePhosphate: true })).toHaveLength(2);
+    const [segment] = utils.layoutPrimerLanes([{ ...a, end: 13 }], 10, 3, 10, 60).forward[0];
+    expect(segment).toMatchObject({ startIndex: 0, visibleLength: 3, is5PrimeEnd: false, is3PrimeEnd: true });
   });
 
   it('selects the exact viewport primer when its bottom sequence row is clicked', () => {
