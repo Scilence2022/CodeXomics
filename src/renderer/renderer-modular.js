@@ -6159,8 +6159,10 @@ class GenomeBrowser {
     // selectedGene is also set so the shared highlight machinery keeps working.
     this.selectedPrimer = primer;
     this.selectedGene = { gene: primer, operonInfo: null };
-    this.highlightSelectedGene(primer);
     this.trackRenderer?.highlightSelectedPrimerElement?.(primer);
+    if (this.trackRenderer?.getTrackSettings('genes')?.autoHighlightSequence !== false) {
+      this.highlightGeneSequence(primer);
+    }
     this.showPrimerSelectionFeedback(primer);
     this.populatePrimerDetails(primer);
     this.showPrimerDetailsPanel();

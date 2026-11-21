@@ -1245,6 +1245,24 @@ class SequenceUtils {
     this.performanceStats.cacheMisses = 0;
 
     const container = document.getElementById('sequenceContent');
+    const previousLayout = this.sequenceLayout;
+    let navigation;
+    if (
+      previousLayout?.sequenceView.parentElement === container &&
+      previousLayout.chromosome === chromosome &&
+      previousLayout.fullSequence === fullSequence &&
+      previousLayout.viewStart === viewStart &&
+      previousLayout.viewEnd === viewEnd
+    ) {
+      navigation = previousLayout.pendingNavigation;
+      // A sidebar resize or primer track refresh can rewrap the same region.
+      // Keep the visible genomic position when the line offsets change.
+      if (!navigation && container.scrollTop > 0) {
+        const top = container.scrollTop - this.getSequenceViewContentTop(previousLayout.sequenceView);
+        const line = this.findSequenceLineAtOffset(previousLayout.offsets, top);
+        navigation = { position: viewStart + line * previousLayout.basesPerLine, mode: 'instant' };
+      }
+    }
 
     if (this.sequenceScrollHandler) {
       container.removeEventListener('scroll', this.sequenceScrollHandler);
@@ -1295,7 +1313,16 @@ class SequenceUtils {
     );
     const offsets = this.getSequenceLineOffsets(lineFeatureIndex, layout);
     sequenceView.dataset.basesPerLine = String(basesPerLine);
-    this.sequenceLayout = { container, sequenceView, viewStart, basesPerLine, offsets };
+    this.sequenceLayout = {
+      container,
+      sequenceView,
+      chromosome,
+      fullSequence,
+      viewStart,
+      viewEnd,
+      basesPerLine,
+      offsets,
+    };
 
     const renderLine = lineIndex => {
       const offset = lineIndex * basesPerLine;
@@ -1319,6 +1346,7 @@ class SequenceUtils {
     } else {
       this.renderSequenceLinesBatch(sequenceView, totalLines, renderLine);
     }
+    if (navigation) this.scrollToPosition(navigation.position, navigation.mode);
 
     this.attachSequenceClickHandlers(container);
     if (this.getCursorPosition() >= 0) this.renderCursor();
