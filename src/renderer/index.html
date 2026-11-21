@@ -583,8 +583,9 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="actionsMenuBtn" class="btn btn-sm toggle-btn" title="Sequence Editing">
-                    <i class="fas fa-cut"></i>
+                <button id="actionsMenuBtn" class="btn genome-toolbar-button" title="Sequence Editing"
+                    aria-label="Sequence Editing">
+                    <i class="fas fa-cut" aria-hidden="true"></i>
                     <span>Sequence Editing</span>
                 </button>
                 <div class="actions-dropdown" id="actionsDropdown" style="display: none;">
@@ -660,9 +661,8 @@
             </div>
 
             <div class="toolbar-section">
-                <!-- <label>Tracks:</label> -->
-                <button id="toggleTracks" class="btn btn-sm toggle-btn">
-                    <i class="fas fa-eye"></i>
+                <button id="toggleTracks" class="btn genome-toolbar-button" title="Tracks" aria-label="Tracks">
+                    <i class="fas fa-layer-group" aria-hidden="true"></i>
                     <span>Tracks</span>
                 </button>
                 <div class="track-checkboxes" id="trackCheckboxes" style="display: none;">
@@ -704,9 +704,10 @@
 
 
             <div class="toolbar-section">
-                <button id="toggleFeatureFilters" class="btn btn-sm toggle-btn">
-                    <i class="fas fa-filter"></i>
-                    <span>Features</span>
+                <button id="toggleFeatureFilters" class="btn genome-toolbar-button" title="Filter Features"
+                    aria-label="Filter Features">
+                    <i class="fas fa-filter" aria-hidden="true"></i>
+                    <span>Filter Features</span>
                 </button>
 
                 <div class="feature-filter-checkboxes" id="featureFilterCheckboxes" style="display: none;">
@@ -753,9 +754,10 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="addFeaturesBtn" class="btn btn-sm toggle-btn" title="Add Features">
-                    <i class="fas fa-plus"></i>
-                    <span>Features</span>
+                <button id="addFeaturesBtn" class="btn genome-toolbar-button" title="Add Features"
+                    aria-label="Add Features">
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                    <span>Add Features</span>
                 </button>
                 <div class="add-features-dropdown" id="addFeaturesDropdown" style="display: none;">
                     <div class="dropdown-section">
@@ -839,8 +841,8 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="primerTrackBtn" class="btn btn-sm toggle-btn" title="Primer Options"
-                    popovertarget="primersDropdown">
+                <button id="primerTrackBtn" class="btn genome-toolbar-button" title="Primers"
+                    aria-label="Primers" popovertarget="primersDropdown">
                     <i class="fas fa-vial" aria-hidden="true"></i>
                     <span>Primers</span>
                 </button>
@@ -866,14 +868,16 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="bookmarksBtn" class="btn btn-sm toggle-btn" title="Bookmarks">
-                    <i class="fas fa-bookmark"></i>
+                <button id="bookmarksBtn" class="btn genome-toolbar-button" title="Bookmarks"
+                    aria-label="Bookmarks">
+                    <i class="fas fa-bookmark" aria-hidden="true"></i>
                     <span>Bookmarks</span>
                 </button>
             </div>
             <div class="toolbar-section">
-                <button id="highlightsBtn" class="btn btn-sm toggle-btn" title="Highlighted Regions">
-                    <i class="fas fa-highlighter"></i>
+                <button id="highlightsBtn" class="btn genome-toolbar-button" title="Highlights"
+                    aria-label="Highlights">
+                    <i class="fas fa-highlighter" aria-hidden="true"></i>
                     <span>Highlights</span>
                 </button>
             </div>
@@ -3733,6 +3737,12 @@ Supported formats:
 
                         <div class="settings-section">
                             <h4><i class="fas fa-desktop"></i> Interface</h4>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="genomeToolbarIconsOnly">
+                                    Show Only Icons in the Genome Toolbar
+                                </label>
+                            </div>
                             <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="compactMode">

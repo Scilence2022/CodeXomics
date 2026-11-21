@@ -348,6 +348,7 @@ class ConfigManager {
         fontFamily: 'system',
         sequenceFont: 'monaco',
         compactMode: false,
+        genomeToolbarIconsOnly: false,
         showWelcomeScreen: true,
         minLineSpacing: 12,
         maxGenesDisplay: 1000,

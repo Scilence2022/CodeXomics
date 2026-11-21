@@ -273,9 +273,7 @@
 [data-ui-style='amy'] .toolbar-section #toggleChatBtn,
 [data-ui-style='amy'] .welcome-buttons .btn-primary,
 [data-ui-style='amy'] .metric-item,
-[data-ui-style='amy'] .chat-notification.info,
-[data-ui-style='amy'] #addFeaturesBtn,
-[data-ui-style='amy'] #primerTrackBtn {
+[data-ui-style='amy'] .chat-notification.info {
   background: var(--btn-gradient) !important;
   border-color: var(--primary-color) !important;
 }
@@ -283,9 +281,7 @@
 [data-ui-style='amy'] #blastBtn:hover,
 [data-ui-style='amy'] #newChatBtn:hover,
 [data-ui-style='amy'] .toolbar-section #toggleChatBtn:hover,
-[data-ui-style='amy'] .welcome-buttons .btn-primary:hover,
-[data-ui-style='amy'] #addFeaturesBtn:hover,
-[data-ui-style='amy'] #primerTrackBtn:hover {
+[data-ui-style='amy'] .welcome-buttons .btn-primary:hover {
   background: var(--btn-gradient-hover) !important;
   box-shadow: 0 4px 12px rgba(223, 95, 161, 0.22) !important;
 }
@@ -299,14 +295,6 @@
 
 [data-ui-style='amy'] .toolbar-section #toggleChatBtn.ai-processing {
   border-color: rgba(223, 95, 161, 0.45) !important;
-}
-
-[data-ui-style='amy'] #addFeaturesBtn.active,
-[data-ui-style='amy'] #primerTrackBtn.active {
-  background: var(--btn-gradient-hover) !important;
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.1),
-    0 2px 6px rgba(223, 95, 161, 0.16) !important;
 }
 
 /* ===== DROPDOWN OVERRIDES ===== */

@@ -41,6 +41,7 @@ class GeneralSettingsManager {
       fontFamily: 'system',
       sequenceFont: 'monaco',
       compactMode: false,
+      genomeToolbarIconsOnly: false,
       showWelcomeScreen: true,
       minLineSpacing: 12, // Minimum line spacing for sequence display
 
@@ -263,6 +264,11 @@ class GeneralSettingsManager {
     }
 
     // Layout settings
+    document.getElementById('genomeToolbarIconsOnly')?.addEventListener('change', e => {
+      this.updateSetting('genomeToolbarIconsOnly', e.target.checked);
+      this.applyGenomeToolbarIconsOnly(e.target.checked);
+    });
+
     const compactModeCheckbox = document.getElementById('compactMode');
     if (compactModeCheckbox) {
       compactModeCheckbox.addEventListener('change', e => {
@@ -680,6 +686,11 @@ class GeneralSettingsManager {
     if (sequenceFontSelect) sequenceFontSelect.value = this.settings.sequenceFont;
 
     // Layout settings
+    const genomeToolbarIconsOnlyCheckbox = document.getElementById('genomeToolbarIconsOnly');
+    if (genomeToolbarIconsOnlyCheckbox) {
+      genomeToolbarIconsOnlyCheckbox.checked = this.settings.genomeToolbarIconsOnly === true;
+    }
+
     const compactModeCheckbox = document.getElementById('compactMode');
     if (compactModeCheckbox) compactModeCheckbox.checked = this.settings.compactMode;
 
@@ -832,6 +843,7 @@ class GeneralSettingsManager {
     this.applyFontFamily(this.settings.fontFamily);
     this.applySequenceFont(this.settings.sequenceFont);
     this.applyCompactMode(this.settings.compactMode);
+    this.applyGenomeToolbarIconsOnly(this.settings.genomeToolbarIconsOnly);
     this.applyTrackHeight(this.settings.trackHeight);
     this.applyAnimations(this.settings.enableAnimations);
     this.applyMinLineSpacing(this.settings.minLineSpacing);
@@ -1012,6 +1024,13 @@ class GeneralSettingsManager {
         heightValue = '80px';
     }
     document.documentElement.style.setProperty('--default-track-height', heightValue);
+  }
+
+  /**
+   * Apply the genome toolbar display preference.
+   */
+  applyGenomeToolbarIconsOnly(iconsOnly) {
+    document.body.classList.toggle('genome-toolbar-icons-only', iconsOnly === true);
   }
 
   /**

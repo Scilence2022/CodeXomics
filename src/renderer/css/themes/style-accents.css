@@ -31,7 +31,7 @@
   outline-color: var(--primary-color);
 }
 
-[data-ui-style] .btn:focus,
+[data-ui-style] .btn:not(.genome-toolbar-button):focus,
 [data-ui-style] .search-input:focus,
 [data-ui-style] .position-input:focus,
 [data-ui-style] .dropdown-toggle:focus,
@@ -53,9 +53,7 @@
 [data-ui-style] #blastBtn,
 [data-ui-style] #newChatBtn,
 [data-ui-style] .toolbar-section #toggleChatBtn,
-[data-ui-style] .welcome-buttons .btn-primary,
-[data-ui-style] #addFeaturesBtn,
-[data-ui-style] #primerTrackBtn {
+[data-ui-style] .welcome-buttons .btn-primary {
   background: var(--btn-gradient) !important;
   border-color: var(--primary-color) !important;
 }
@@ -64,9 +62,7 @@
 [data-ui-style] #blastBtn:hover,
 [data-ui-style] #newChatBtn:hover,
 [data-ui-style] .toolbar-section #toggleChatBtn:hover,
-[data-ui-style] .welcome-buttons .btn-primary:hover,
-[data-ui-style] #addFeaturesBtn:hover,
-[data-ui-style] #primerTrackBtn:hover {
+[data-ui-style] .welcome-buttons .btn-primary:hover {
   background: var(--btn-gradient-hover) !important;
   box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.28) !important;
 }
