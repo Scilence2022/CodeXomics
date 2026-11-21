@@ -71,6 +71,55 @@
   border-right: 1px solid var(--border-color);
 }
 
+.btn.genome-toolbar-button {
+  min-width: 32px;
+  min-height: 32px;
+  gap: 5px;
+  padding: 0 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.genome-toolbar-button > i {
+  width: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.btn.genome-toolbar-button:hover {
+  background: var(--bg-tertiary);
+}
+
+.btn.genome-toolbar-button.active {
+  background: rgba(var(--primary-rgb), 0.12);
+  border-color: rgba(var(--primary-rgb), 0.3);
+}
+
+.genome-toolbar-button.active > i {
+  color: var(--primary-hover);
+}
+
+.btn.genome-toolbar-button:focus {
+  box-shadow: none;
+}
+
+.btn.genome-toolbar-button:focus-visible {
+  outline: 2px solid var(--primary-hover);
+  outline-offset: 2px;
+}
+
+.genome-toolbar-icons-only .genome-toolbar-button {
+  width: 32px;
+  padding-inline: 0;
+}
+
+.genome-toolbar-icons-only .genome-toolbar-button > span {
+  display: none;
+}
+
 .toolbar-section label {
   font-weight: 600;
   color: #495057;
