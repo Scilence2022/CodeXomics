@@ -51,7 +51,7 @@ class ChatManager {
     // Initialize ChatBox Settings Manager
     this.chatBoxSettingsManager = null;
     this.welcomeExamplesManager = null;
-    this.initializeChatBoxSettings();
+    this.chatSettingsReady = this.initializeChatBoxSettings();
 
     // Thinking process and tool-call display - now read from the settings manager
     this.showThinkingProcess = true;
@@ -179,13 +179,8 @@ class ChatManager {
     this.checkAndSetupMCPConnection();
     this.initializeUI();
 
-    // Load chat history AFTER UI is initialized
-    setTimeout(() => {
-      this.loadChatHistory();
-
-      // Update agent system button state after UI is ready
-      this.updateMultiAgentToggleButton();
-    }, 100);
+    this.chatHistoryReady = this.loadChatHistory();
+    this.updateMultiAgentToggleButton();
   }
 
   /**
@@ -807,7 +802,8 @@ class ChatManager {
       // Mark the prompt with MCP source so user knows where it came from
       const markedPrompt = `🔗 **[MCP Agent]** ${prompt}`;
 
-      // Check if ChatBox is busy — if so, wait briefly
+      await this.chatHistoryReady;
+      // Check if ChatBox is busy
       if (this.conversationState.isProcessing) {
         if (onProgress) {
           onProgress({ type: 'error', message: 'ChatBox is busy with another request' });
@@ -4701,8 +4697,12 @@ class ChatManager {
     });
 
     // Context mode toggle
-    document.getElementById('contextModeToggle')?.addEventListener('change', e => {
-      this.contextModeEnabled = e.target.checked;
+    document.getElementById('contextModeToggle')?.addEventListener('change', async e => {
+      const checked = e.target.checked;
+      await this.chatHistoryReady;
+      this.contextModeEnabled = checked;
+      e.target.checked = checked;
+      await this.configManager.setAndSaveImmediate('ui.chatCurrentMessageOnly', checked);
       console.log('Context mode changed:', this.contextModeEnabled ? 'Current message only' : 'Full conversation');
     });
 
@@ -5183,6 +5183,7 @@ class ChatManager {
   }
 
   async sendMessage() {
+    await this.chatHistoryReady;
     const chatInput = document.getElementById('chatInput');
     const message = chatInput.value.trim();
 
@@ -5235,6 +5236,7 @@ class ChatManager {
    * Programmatically send a message to the chat (for API calls from other modules)
    */
   async sendMessageProgrammatically(message) {
+    await this.chatHistoryReady;
     if (!message || !message.trim()) {
       console.warn('No message provided to sendMessageProgrammatically');
       return;
@@ -5832,6 +5834,9 @@ class ChatManager {
 
           // Show the tool-call info
           this.showToolCalls && (await this.addToolCallMessage(toolsToExecute));
+          // A long-running call may still be pending when the window closes.
+          // Its visible activity can be saved before it has a result to replay.
+          if (this.showThinkingProcess) this.saveChatTurn();
 
           try {
             console.log('Executing tool(s)...');
@@ -6011,6 +6016,7 @@ class ChatManager {
             // real assistant turn and binds each result to its tool_call_id;
             // otherwise it falls back to the portable prose envelope.
             const replayProtocol = this.appendToolRoundToHistory(conversationHistory, {
+              savedTurn: this.getActiveHistoryMessage(),
               assistantText: responseText,
               toolsToExecute,
               toolResults,
@@ -6019,6 +6025,7 @@ class ChatManager {
               // provider needs back on the next round of this turn.
               reasoningReplay: this.llmConfigManager?.extractReasoningReplayState?.(response) || null,
             });
+            this.saveChatTurn();
             console.log(`Tool round replayed into history using the ${replayProtocol} protocol`);
 
             if (successfulResults.length > 0) {
@@ -6694,40 +6701,7 @@ class ChatManager {
       return history;
     }
 
-    // Get conversation memory setting
-    const conversationMemory = this.configManager.get('llm.conversationMemory', 10);
-
-    // Get chat history and find the current conversation (after last separator)
-    const chatHistory = this.configManager.getChatHistory();
-    let currentConversationMessages = [];
-
-    // Find messages after the last conversation separator
-    for (let i = chatHistory.length - 1; i >= 0; i--) {
-      const msg = chatHistory[i];
-      if (msg.sender === 'system' && msg.message === '--- CONVERSATION_SEPARATOR ---') {
-        break; // Stop at the last separator
-      }
-      currentConversationMessages.unshift(msg); // Add to beginning to maintain order
-    }
-
-    // If no separator found, use the full recent history
-    if (currentConversationMessages.length === 0) {
-      currentConversationMessages = chatHistory.slice(-conversationMemory * 2);
-    }
-
-    // Add conversation messages to history (exclude system messages and separators)
-    for (const msg of currentConversationMessages.slice(-conversationMemory * 2)) {
-      if (msg.sender === 'user') {
-        history.push({ role: 'user', content: msg.message });
-      } else if (msg.sender === 'assistant') {
-        // App-generated failure notices are displayed in the chat but are not
-        // model speech. Replayed as assistant turns they read as the model
-        // describing its own failure, and the next request imitates it.
-        if (this.isAppGeneratedNotice(msg.message)) continue;
-        history.push({ role: 'assistant', content: msg.message });
-      }
-      // Skip system messages and separators
-    }
+    this.getTranscriptService().appendSavedHistory(history, this.conversationState?.historyMessageId);
 
     // Add the new user message
     history.push(this.getTranscriptService().createTurnStartMessage(newMessage));
@@ -7464,7 +7438,11 @@ class ChatManager {
       console.error('[ChatManager] context not initialized');
       return;
     }
-    return this.services.context.shouldAllowToolExecution(tool, conversationHistory, currentRound, toolResults);
+    // The model needs earlier tool results for follow-ups. Duplicate checks
+    // and execution limits belong to the request that is currently running.
+    const start = conversationHistory?.findLastIndex(msg => msg.__codexomicsTurnStart);
+    const currentTurn = start > 0 ? conversationHistory.slice(start) : conversationHistory;
+    return this.services.context.shouldAllowToolExecution(tool, currentTurn, currentRound, toolResults);
   }
 
   cloneToolParameters(parameters = {}) {
@@ -13161,6 +13139,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // Add to configuration manager for persistence (existing ChatBox feature)
     const messageId = this.configManager.addChatMessage(message, sender, timestamp);
 
+    if (sender === 'user' && this.conversationState?.currentRequestId) {
+      this.conversationState.historyMessageId = messageId;
+    }
+
     // Add to Evolution data structure for detailed analysis
     this.addToEvolutionData({
       type: 'message',
@@ -13850,8 +13832,12 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
   /**
    * Load chat history from configuration
    */
-  loadChatHistory() {
+  async loadChatHistory() {
     try {
+      await Promise.all([this.configManager.waitForInit(), this.chatSettingsReady]);
+      this.contextModeEnabled = this.configManager.get('ui.chatCurrentMessageOnly', true);
+      const toggle = document.getElementById('contextModeToggle');
+      if (toggle) toggle.checked = this.contextModeEnabled;
       console.log('Loading chat history...');
       const history = this.configManager.getChatHistory();
       console.log(`Found ${history.length} chat messages in history`);
@@ -13865,6 +13851,65 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     } catch (error) {
       console.error('Error loading chat history:', error);
       this.showNotification('⚠️ Could not load chat history', 'warning');
+    }
+  }
+
+  getActiveHistoryMessage() {
+    const id = this.conversationState?.historyMessageId;
+    return id ? this.configManager.getChatHistory().find(msg => msg.id === id && msg.sender === 'user') : null;
+  }
+
+  // Checkpoint the visible trace between provider calls and again on completion.
+  // Only passive activity markup belongs in the archive. Streaming bubbles,
+  // typing indicators and executable controls have no meaning after restart.
+  saveChatTurn() {
+    const turn = this.getActiveHistoryMessage();
+    if (!turn) return;
+
+    try {
+      const preserve = this.chatBoxSettingsManager?.getSetting('preserveThinkingHistory', true) ?? true;
+      if (preserve) {
+        const bubble = document.getElementById(turn.id)?.closest('.user-message');
+        const activity = [];
+        for (
+          let node = bubble?.nextElementSibling;
+          node && !node.matches('.user-message');
+          node = node.nextElementSibling
+        ) {
+          if (node.matches('.thinking-process, .multi-agent-activation, .agent-decision, .agent-result')) {
+            activity.push(node.outerHTML);
+          }
+        }
+        if (activity.length) turn.activityHtml = window.SanitizeService.sanitizeChatActivity(activity.join(''));
+      } else {
+        delete turn.activityHtml;
+      }
+    } catch (error) {
+      console.warn('Could not capture ChatBox activity:', error);
+    }
+    this.configManager.saveChatCheckpoint();
+  }
+
+  restoreChatActivity(container, msg) {
+    if (msg.sender !== 'user' || !msg.activityHtml) return;
+    const template = document.createElement('template');
+    template.innerHTML = window.SanitizeService.sanitizeChatActivity(msg.activityHtml);
+    for (const node of Array.from(template.content.children)) {
+      if (node.matches('.thinking-process')) {
+        if (!this.showThinkingProcess || this.hideThinkingAfterConversation) continue;
+        if (!node.classList.contains('thinking-completed')) {
+          // A checkpoint can be the last write if the app closed mid-request.
+          node.classList.add('thinking-completed');
+          const summary = node.querySelector('.activity-summary');
+          if (summary) summary.textContent = '· Interrupted';
+          const status = node.querySelector('.activity-status');
+          status?.classList.remove('fa-spin', 'fa-cog');
+          status?.classList.add('fa-pause-circle');
+        }
+        this.bindActivityHeaderToggle(node);
+        this.setActivityPanelCollapsed(node, this.activityAutoCollapse && !node.classList.contains('activity-failed'));
+      }
+      container.appendChild(node);
     }
   }
 
@@ -13891,6 +13936,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     history.forEach((msg, index) => {
       console.log(`Displaying message ${index + 1}:`, msg.message.substring(0, 50) + '...');
       this.displayChatMessage(msg.message, msg.sender, msg.timestamp, msg.id);
+      this.restoreChatActivity(messagesContainer, msg);
     });
 
     // Scroll to bottom to show most recent messages
@@ -16269,6 +16315,9 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
             </div>
         `;
 
+    modal.querySelectorAll('.conversation-message').forEach((element, index) => {
+      this.restoreChatActivity(element, conversation.messages[index]);
+    });
     document.body.appendChild(modal);
   }
 
@@ -18111,6 +18160,7 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     // endConversation(expectedRequestId) relies on it to tell them apart.
     this.conversationRequestSeq = (this.conversationRequestSeq || 0) + 1;
     this.conversationState.currentRequestId = `${Date.now()}_${this.conversationRequestSeq}`;
+    this.conversationState.historyMessageId = null;
     this.conversationState.startTime = Date.now();
     this.conversationState.processSteps = [];
     this.conversationState.currentStep = 0;
@@ -18141,6 +18191,8 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
 
     // Convert the current thinking process into a history record
     this.finalizeCurrentThinkingProcess(currentRequestId);
+    this.saveChatTurn();
+    this.conversationState.historyMessageId = null;
 
     this.conversationState.isProcessing = false;
     this.conversationState.currentRequestId = null;

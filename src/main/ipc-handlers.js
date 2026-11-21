@@ -19,7 +19,6 @@ const { inspectPluginPackage } = require('./plugin-package-inspector');
 const pluginPackageStore = require('./plugin-package-store');
 const { registerPluginVersionIpc } = require('./plugin-version-ipc');
 const { extractPluginArchive } = require('./plugin-archive');
-const VERSION_INFO = require('../version');
 const { prepareConfigForStorage, decryptSecretsInPlace } = require('./secret-store');
 const workspaceHostManager = require('./workspace-host-manager');
 const {
@@ -2875,10 +2874,14 @@ function registerIpcHandlers(deps) {
         credentialsPersisted = credentialsPersisted && result.credentialsPersisted;
       }
 
-      writeJsonFile(paths.main, {
-        version: config.version || VERSION_INFO.fullVersion,
-        lastModified: new Date().toISOString(),
-      });
+      // A chat-only checkpoint must leave a legacy monolithic config intact
+      // until the next full save has migrated its other sections.
+      if (config.version) {
+        writeJsonFile(paths.main, {
+          version: config.version,
+          lastModified: new Date().toISOString(),
+        });
+      }
 
       return {
         success: true,
