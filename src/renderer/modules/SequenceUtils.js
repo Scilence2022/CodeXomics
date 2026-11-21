@@ -1295,6 +1295,12 @@ class SequenceUtils {
 
     const sequenceView = document.createElement('div');
     sequenceView.className = 'detailed-sequence-view';
+    sequenceView.classList.toggle(
+      'has-reverse-phosphate',
+      primerBindings.some(
+        primer => primer.fivePrimePhosphate === true && (primer.strand === '-' || primer.strand === -1)
+      )
+    );
     container.appendChild(sequenceView);
 
     const renderContext = this.createRenderContext(chromosome);
@@ -2070,8 +2076,8 @@ class SequenceUtils {
       phosphate.className = 'primer-phosphate-badge sequence-primer-phosphate';
       phosphate.textContent = 'P';
       phosphate.title = "5' phosphorylated";
-      const phosphateLeft = isReverse ? (startIndex + visibleLength) * charWidth - 14 : startIndex * charWidth - 2;
-      phosphate.style.left = `${Math.max(0, phosphateLeft)}px`;
+      const terminus = startIndex + (isReverse ? visibleLength : 0);
+      phosphate.style.left = `${terminus * charWidth}px`;
       if (selectDataset) {
         phosphate.style.pointerEvents = 'auto';
         markSelectable(phosphate);
