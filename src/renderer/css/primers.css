@@ -20,18 +20,7 @@
 
 /* Primer library panel and primer track styling */
 
-.modal.primer-floating-panel {
-  background: transparent;
-  pointer-events: none;
-  z-index: 9998;
-}
-
-.primer-floating-panel.front {
-  z-index: 9999;
-}
-
 .primer-floating-panel .modal-content {
-  pointer-events: auto;
   display: flex;
   flex-direction: column;
   max-width: calc(100vw - 32px);

@@ -33,6 +33,33 @@
     box-shadow 0.2s ease;
 }
 
+/* Floating tools leave the genome interactive. Give their window frame enough
+   contrast to stay visible without dimming the tracks. */
+.modal.floating-tool-window {
+  --floating-window-border: color-mix(in srgb, var(--text-primary) 32%, var(--border-color));
+  background: transparent;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.modal.floating-tool-window.is-front {
+  --floating-window-border: color-mix(in srgb, var(--primary-color) 65%, var(--border-color));
+  z-index: 9999;
+}
+
+.floating-tool-window > .modal-content {
+  pointer-events: auto;
+  border: 1px solid var(--floating-window-border);
+  box-shadow:
+    0 16px 36px rgba(15, 23, 42, 0.26),
+    0 3px 10px rgba(15, 23, 42, 0.16);
+}
+
+.floating-tool-window > .modal-content > .modal-header {
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-primary));
+  border-bottom-color: var(--floating-window-border);
+}
+
 /* Draggable Modal Styles */
 .modal-content.draggable {
   cursor: move;

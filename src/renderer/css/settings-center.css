@@ -8,9 +8,8 @@
  * a page of the window.
  */
 
-/* Above the floating chat panel and ordinary modals (10000-10001). While the
-   window is open, any other dialog that opens (add a server, confirm, a file
-   picker modal, ...) is lifted above it. */
+/* Above the floating tools, ChatBox and ordinary modals. Dialogs opened from
+   Settings (add a server, confirm, pick a file) are lifted above it. */
 #settingsCenterModal {
   --settings-inset: 24px;
   --settings-font-size: 14px;
@@ -36,7 +35,7 @@
   --settings-font-size: 18px;
 }
 
-body.settings-center-open .modal.show:not(#settingsCenterModal):not(.settings-center-embedded),
+body.settings-center-open .modal.show:not(#settingsCenterModal, .settings-center-embedded, .floating-tool-window),
 body.settings-center-open .literature-settings-modal-overlay {
   z-index: 10020 !important;
 }

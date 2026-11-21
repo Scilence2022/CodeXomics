@@ -129,6 +129,7 @@ class GelRenderer {
 
     this._wireExportButton();
     modal.classList.add('show');
+    window.modalDragManager?.raiseFloatingWindow(modal);
   }
 
   _wireExportButton() {
