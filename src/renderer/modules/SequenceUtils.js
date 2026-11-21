@@ -2067,12 +2067,11 @@ class SequenceUtils {
 
     if (isFivePrimePhosphate && is5PrimeEnd) {
       const phosphate = document.createElement('span');
-      phosphate.className = `sequence-primer-phosphate ${isReverse ? 'reverse' : 'forward'}`;
-      phosphate.textContent = '5P';
+      phosphate.className = 'primer-phosphate-badge sequence-primer-phosphate';
+      phosphate.textContent = 'P';
       phosphate.title = "5' phosphorylated";
-      const phosphateLeft = isReverse ? (startIndex + visibleLength) * charWidth - 18 : startIndex * charWidth - 2;
+      const phosphateLeft = isReverse ? (startIndex + visibleLength) * charWidth - 14 : startIndex * charWidth - 2;
       phosphate.style.left = `${Math.max(0, phosphateLeft)}px`;
-      phosphate.style.borderColor = accentColor;
       if (selectDataset) {
         phosphate.style.pointerEvents = 'auto';
         markSelectable(phosphate);

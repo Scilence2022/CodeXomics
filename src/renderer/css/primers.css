@@ -158,18 +158,22 @@
   color: #6d28d9;
 }
 
+:root {
+  --primer-phosphate-color: #0e7490;
+}
+
 .primer-phosphate-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
+  flex: none;
+  box-sizing: border-box;
+  width: 16px;
   height: 16px;
   margin-right: 6px;
-  padding: 0 5px;
-  border: 1px solid rgba(8, 145, 178, 0.34);
-  border-radius: 4px;
-  background: rgba(8, 145, 178, 0.12);
-  color: #0e7490;
+  border-radius: 50%;
+  background: var(--primer-phosphate-color);
+  color: #fff;
   font-family: Arial, sans-serif;
   font-size: 10px;
   font-weight: 800;

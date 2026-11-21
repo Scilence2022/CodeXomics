@@ -330,7 +330,7 @@ class PrimerDetailsPanel {
     const tailHtml = model.tailLength ? this._baseSpans(model.tail, [], 'primer-base-tail') : '';
     const annealHtml = this._baseSpans(model.annealing, model.mismatchPositions);
     const phosphate = model.fivePrimePhosphate
-      ? '<span class="primer-phosphate-badge primer-phosphate-badge-seq" title="5\' phosphate">5P</span>'
+      ? '<span class="primer-phosphate-badge primer-phosphate-badge-seq" title="5&#39; phosphorylated">P</span>'
       : '';
 
     let html = `
@@ -415,6 +415,9 @@ class PrimerDetailsPanel {
         }>
           <i class="fas fa-copy"></i> Copy Seq
         </button>
+        <button type="button" class="primer-action-btn primer-edit-btn">
+          <i class="fas fa-pen" aria-hidden="true"></i> Edit Primer
+        </button>
       </div>`;
 
     html += this._qualityHtml(model);
@@ -442,7 +445,7 @@ class PrimerDetailsPanel {
     if (!container || !primer) return null;
     const model = this.buildModel(primer, context);
     container.innerHTML = this.renderHtml(model);
-    this._bindActions(container, model);
+    this._bindActions(container, model, primer);
     return model;
   }
 
@@ -450,7 +453,7 @@ class PrimerDetailsPanel {
     this.genomeBrowser?.showNotification?.(message, type);
   }
 
-  _bindActions(container, model) {
+  _bindActions(container, model, primer) {
     container.querySelector('.primer-zoom-btn')?.addEventListener('click', () => {
       const padding = Math.max(200, model.siteLength * 3);
       const start = Math.max(1, model.start - padding);
@@ -472,6 +475,12 @@ class PrimerDetailsPanel {
         () => this._notify('Primer sequence copied', 'success'),
         error => this._notify(`Could not copy sequence: ${error?.message || error}`, 'error')
       );
+    });
+
+    container.querySelector('.primer-edit-btn')?.addEventListener('click', () => {
+      if (!this.genomeBrowser?.primerLibraryUI?.openEditForSite(primer)) {
+        this._notify('This primer is unavailable in the library', 'error');
+      }
     });
   }
 }

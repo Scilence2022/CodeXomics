@@ -186,7 +186,7 @@ class PrimerLibraryUI {
       ? `${this._esc(primer.sequence.slice(0, 28))}${primer.sequence.length > 28 ? '…' : ''}`
       : '<em>no sequence</em>';
     const phosphateBadge = primer.fivePrimePhosphate
-      ? '<span class="primer-phosphate-badge" title="5&#39; phosphorylated">5P</span>'
+      ? '<span class="primer-phosphate-badge" title="5&#39; phosphorylated">P</span>'
       : '';
     return `
       <tr data-primer-id="${this._esc(primer.id)}">
@@ -421,8 +421,15 @@ class PrimerLibraryUI {
 
   // --- Add / edit dialog ---------------------------------------------------
 
+  openEditForSite(site) {
+    const primerId = site?.primerId || site?.sourcePrimer?.id || site?.id;
+    return Boolean(primerId && this.openEdit(primerId));
+  }
+
   openEdit(primerId) {
-    const primer = primerId ? this.manager.getPrimer(primerId) : null;
+    const primer = primerId ? this.manager?.getPrimer(primerId) : null;
+    if (!this.manager || (primerId && !primer)) return false;
+
     this._ensureEditModal();
     const modal = document.getElementById(this.editId);
 
@@ -448,6 +455,7 @@ class PrimerLibraryUI {
     // Focus the name when a sequence is already present, otherwise the sequence.
     const focusEl = seq ? modal.querySelector('[data-role="f-name"]') : modal.querySelector('[data-role="f-seq"]');
     setTimeout(() => focusEl?.focus(), 0);
+    return true;
   }
 
   _ensureEditModal() {
@@ -577,7 +585,9 @@ class PrimerLibraryUI {
     const tailPart = sequence.slice(0, tailLen);
     const bodyPart = sequence.slice(tailLen);
     host.innerHTML =
-      (fivePrimePhosphate ? '<span class="primer-phosphate-badge primer-phosphate-badge-seq">5P</span>' : '') +
+      (fivePrimePhosphate
+        ? '<span class="primer-phosphate-badge primer-phosphate-badge-seq" title="5&#39; phosphorylated">P</span>'
+        : '') +
       (tailPart ? `<span class="primer-seq-tail">${this._esc(tailPart)}</span>` : '') +
       `<span class="primer-seq-body">${this._esc(bodyPart)}</span>`;
   }
@@ -729,7 +739,16 @@ class PrimerLibraryUI {
       return;
     }
     if (id) {
-      await this.manager.updatePrimer(id, { name, sequence, fivePrimeTail, color, fivePrimePhosphate, tags, notes });
+      const primer = await this.manager.updatePrimer(id, {
+        name,
+        sequence,
+        fivePrimeTail,
+        color,
+        fivePrimePhosphate,
+        tags,
+        notes,
+      });
+      this.gb.refreshSelectedPrimer?.(primer);
     } else {
       await this.manager.addPrimer({
         name: name || undefined,

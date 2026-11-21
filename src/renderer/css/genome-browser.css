@@ -83,7 +83,7 @@
     border-color 0.15s ease;
 }
 
-.genome-toolbar-button > i {
+.genome-toolbar-button > :is(i, .primer-toolbar-icon) {
   width: 16px;
   text-align: center;
   color: var(--text-secondary);
@@ -98,7 +98,7 @@
   border-color: rgba(var(--primary-rgb), 0.3);
 }
 
-.genome-toolbar-button:is(.active, [aria-pressed='true']) > i {
+.genome-toolbar-button:is(.active, [aria-pressed='true']) > :is(i, .primer-toolbar-icon) {
   color: var(--primary-hover);
 }
 

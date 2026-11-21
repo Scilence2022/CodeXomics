@@ -5,6 +5,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const PrimerDetailsPanel = require(path.join(process.cwd(), 'src/renderer/modules/PrimerDetailsPanel.js'));
 const PrimerDesigner = require(path.join(process.cwd(), 'src/renderer/modules/PrimerDesigner.js'));
+const PrimerLibraryUI = require(path.join(process.cwd(), 'src/renderer/modules/PrimerLibraryUI.js'));
 const TabManager = require(path.join(process.cwd(), 'src/renderer/modules/TabManager.js'));
 
 const TAIL = 'CCCGATCGCCAGGACC';
@@ -143,6 +144,40 @@ describe('PrimerDetailsPanel.render', () => {
     await Promise.resolve();
     expect(writeText).toHaveBeenCalledWith(`${TAIL}${ANNEAL}`);
     expect(genomeBrowser.showNotification).toHaveBeenCalledWith('Could not copy sequence: denied', 'error');
+  });
+
+  it('opens the stored primer for the rendered binding site', () => {
+    const site = renderableSite({ primerId: 'primer_1', fivePrimePhosphate: true });
+    const storedPrimer = {
+      id: 'primer_1',
+      name: 'Saved primer',
+      sequence: site.sequence,
+      fivePrimePhosphate: true,
+    };
+    genomeBrowser.primerManager = { getPrimer: vi.fn(() => storedPrimer), normalizeSequence: value => value };
+    genomeBrowser.primerLibraryUI = new PrimerLibraryUI(genomeBrowser);
+    new PrimerDetailsPanel(genomeBrowser).render(container, site);
+
+    container.querySelector('.primer-edit-btn').click();
+
+    expect(genomeBrowser.primerManager.getPrimer).toHaveBeenCalledWith('primer_1');
+    const modal = document.getElementById('primerEditModal');
+    expect(modal.classList.contains('show')).toBe(true);
+    expect(modal.querySelector('[data-role="f-id"]').value).toBe('primer_1');
+    expect(modal.querySelector('[data-role="f-name"]').value).toBe('Saved primer');
+    expect(container.querySelector('.primer-phosphate-badge').textContent).toBe('P');
+    expect(modal.querySelector('.primer-phosphate-badge').textContent).toBe('P');
+  });
+
+  it('reports a missing primer without opening the add dialog', () => {
+    genomeBrowser.primerManager = { getPrimer: vi.fn(() => null) };
+    genomeBrowser.primerLibraryUI = new PrimerLibraryUI(genomeBrowser);
+    new PrimerDetailsPanel(genomeBrowser).render(container, renderableSite({ primerId: 'missing' }));
+
+    container.querySelector('.primer-edit-btn').click();
+
+    expect(document.getElementById('primerEditModal')).toBeNull();
+    expect(genomeBrowser.showNotification).toHaveBeenCalledWith('This primer is unavailable in the library', 'error');
   });
 });
 
