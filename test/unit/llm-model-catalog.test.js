@@ -33,7 +33,7 @@ function renderMarkup() {
       <option value="openai">OpenAI</option>
     </select>
     <select id="mainModel"><option value="auto">Auto</option></select>
-    <select id="chatModelSelect"><option value="auto::auto">Auto</option></select>
+    <select id="chatModelSelect" disabled><option value="">Loading models…</option></select>
   `;
 }
 
@@ -135,31 +135,70 @@ describe('LLMConfigManager model catalog', () => {
 describe('ChatModelSelector', () => {
   beforeEach(renderMarkup);
 
-  function createSelector(settingsValues) {
+  async function createSelector(settingsValues) {
     const llmConfigManager = createManager();
     const chatBoxSettingsManager = createSettings(settingsValues);
     const selector = new ChatModelSelector({ llmConfigManager, chatBoxSettingsManager });
+    await selector.ready;
     return { selector, llmConfigManager, chatBoxSettingsManager };
   }
 
-  it('names the model Auto resolves to', () => {
-    const { selector } = createSelector();
+  it.each(['providers', 'chatbox'])('waits for the saved selection when %s loads first', async first => {
+    const llmConfigManager = createManager();
+    let finishProviders, finishChatbox;
+    llmConfigManager.waitForInitialization = () =>
+      new Promise(resolve => {
+        finishProviders = resolve;
+      });
+    const chatManager = {
+      llmConfigManager,
+      chatSettingsReady: new Promise(resolve => {
+        finishChatbox = resolve;
+      }),
+    };
+    const saved = createSettings({ chatboxLLMProvider: 'openai', chatboxLLMModel: 'gpt-5.5' });
+    const loadChatbox = () => {
+      chatManager.chatBoxSettingsManager = saved;
+      finishChatbox();
+    };
+
+    const selector = new ChatModelSelector(chatManager);
+    const select = document.getElementById('chatModelSelect');
+    const [loadFirst, loadLast] =
+      first === 'providers' ? [finishProviders, loadChatbox] : [loadChatbox, finishProviders];
+    loadFirst();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(select.disabled).toBe(true);
+    expect(select.value).toBe('');
+
+    loadLast();
+    await selector.ready;
+    expect(select.disabled).toBe(false);
+    expect(select.value).toBe('openai::gpt-5.5');
+    select.focus();
+    select.dispatchEvent(new MouseEvent('mousedown'));
+    expect(select.value).toBe('openai::gpt-5.5');
+    expect(saved.setSetting).not.toHaveBeenCalled();
+  });
+
+  it('names the model Auto resolves to', async () => {
+    const { selector } = await createSelector();
     const auto = selector.select.querySelector('option[value="auto::auto"]');
 
     expect(auto.textContent).toBe('Auto · Claude Sonnet 4.6');
     expect(auto.title).toContain('Anthropic / Claude Sonnet 4.6 (Balanced - $3/$15 per M)');
   });
 
-  it('shows short labels, with the full label and id in the tooltip', () => {
-    const { selector } = createSelector();
+  it('shows short labels, with the full label and id in the tooltip', async () => {
+    const { selector } = await createSelector();
     const option = selector.select.querySelector('option[value="anthropic::claude-haiku-4.5"]');
 
     expect(option.textContent).toBe('Claude Haiku 4.5');
     expect(option.title).toBe('Claude Haiku 4.5 (Fast - $0.25/$1.25 per M) — claude-haiku-4.5');
   });
 
-  it('offers custom models and keeps a stored model a refresh dropped', () => {
-    const { selector } = createSelector({ chatboxLLMProvider: 'anthropic', chatboxLLMModel: 'claude-retired' });
+  it('offers custom models and keeps a stored model a refresh dropped', async () => {
+    const { selector } = await createSelector({ chatboxLLMProvider: 'anthropic', chatboxLLMModel: 'claude-retired' });
 
     expect(selector.select.querySelector('option[value="openai::my-finetuned-gpt"]').textContent).toBe(
       'my-finetuned-gpt (custom)'
@@ -167,13 +206,13 @@ describe('ChatModelSelector', () => {
     expect(selector.select.value).toBe('anthropic::claude-retired');
   });
 
-  it('falls back to Auto when the stored provider is disabled', () => {
-    const { selector } = createSelector({ chatboxLLMProvider: 'google', chatboxLLMModel: 'gemini-3.5-flash' });
+  it('falls back to Auto when the stored provider is disabled', async () => {
+    const { selector } = await createSelector({ chatboxLLMProvider: 'google', chatboxLLMModel: 'gemini-3.5-flash' });
     expect(selector.select.value).toBe('auto::auto');
   });
 
   it('persists a selection as provider and model settings', async () => {
-    const { selector, chatBoxSettingsManager } = createSelector();
+    const { selector, chatBoxSettingsManager } = await createSelector();
     selector.select.value = 'openai::gpt-5.5';
 
     await selector.applySelection();
@@ -181,8 +220,8 @@ describe('ChatModelSelector', () => {
     expect(chatBoxSettingsManager.values).toMatchObject({ chatboxLLMProvider: 'openai', chatboxLLMModel: 'gpt-5.5' });
   });
 
-  it('rebuilds when the LLM configuration is saved', () => {
-    const { selector, llmConfigManager } = createSelector();
+  it('rebuilds when the LLM configuration is saved', async () => {
+    const { selector, llmConfigManager } = await createSelector();
     llmConfigManager.providers.google.enabled = true;
 
     window.dispatchEvent(new CustomEvent('llmConfigurationChanged'));

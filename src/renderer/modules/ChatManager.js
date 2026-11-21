@@ -4328,8 +4328,8 @@ class ChatManager {
                     <div class="chat-input-options">
                         <div class="chat-model-picker" title="Model used for this conversation">
                             <i class="fas fa-microchip"></i>
-                            <select id="chatModelSelect" class="chat-model-select">
-                                <option value="auto::auto">Auto</option>
+                            <select id="chatModelSelect" class="chat-model-select" disabled>
+                                <option value="">Loading models…</option>
                             </select>
                         </div>
                         <div class="chat-model-picker chat-reasoning-picker" id="chatReasoningPicker" hidden>
