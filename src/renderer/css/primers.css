@@ -20,9 +20,25 @@
 
 /* Primer library panel and primer track styling */
 
-.primer-library-modal .modal-content.large {
+.modal.primer-floating-panel {
+  background: transparent;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.primer-floating-panel.front {
+  z-index: 9999;
+}
+
+.primer-floating-panel .modal-content {
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
+  max-width: calc(100vw - 32px);
+  cursor: auto;
+}
+
+.primer-library-modal .modal-content.large {
   width: 1100px;
   min-width: min(400px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
@@ -31,11 +47,11 @@
   cursor: auto;
 }
 
-.primer-library-modal .modal-content.dragging {
+.primer-floating-panel .modal-content.dragging {
   transform: none;
 }
 
-.primer-library-modal .modal-header {
+.primer-floating-panel .modal-header {
   position: relative;
   flex-shrink: 0;
   padding-left: 32px;
@@ -51,32 +67,32 @@
 }
 
 /* Use the same edge and corner handles at every desktop zoom level. */
-.primer-library-modal .modal-content.resizable::before,
-.primer-library-modal .modal-content.resizable::after {
+.primer-floating-panel .modal-content.resizable::before,
+.primer-floating-panel .modal-content.resizable::after {
   content: none;
 }
 
-.primer-library-modal .resize-handle {
+.primer-floating-panel .resize-handle {
   display: block;
 }
 
-.primer-library-modal :is(.resize-handle-n, .resize-handle-ne, .resize-handle-nw) {
+.primer-floating-panel :is(.resize-handle-n, .resize-handle-ne, .resize-handle-nw) {
   top: 0;
 }
 
-.primer-library-modal :is(.resize-handle-s, .resize-handle-se, .resize-handle-sw) {
+.primer-floating-panel :is(.resize-handle-s, .resize-handle-se, .resize-handle-sw) {
   bottom: 0;
 }
 
-.primer-library-modal :is(.resize-handle-e, .resize-handle-ne, .resize-handle-se) {
+.primer-floating-panel :is(.resize-handle-e, .resize-handle-ne, .resize-handle-se) {
   right: 0;
 }
 
-.primer-library-modal :is(.resize-handle-w, .resize-handle-nw, .resize-handle-sw) {
+.primer-floating-panel :is(.resize-handle-w, .resize-handle-nw, .resize-handle-sw) {
   left: 0;
 }
 
-.primer-library-modal .resize-handle-se::before {
+.primer-floating-panel .resize-handle-se::before {
   content: '';
   position: absolute;
   right: 3px;
@@ -265,7 +281,18 @@
 /* --- Add / edit primer dialog ------------------------------------------- */
 
 .primer-edit-modal .modal-content {
-  width: min(620px, 94vw);
+  width: min(620px, calc(100vw - 32px));
+  min-width: min(400px, calc(100vw - 32px));
+  min-height: min(260px, 85vh);
+}
+
+.primer-edit-modal .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.primer-floating-panel .modal-footer {
+  flex-shrink: 0;
 }
 
 .primer-edit-top {
@@ -410,6 +437,11 @@
 
 .primer-binding-site {
   display: flex;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 4px 10px;
@@ -418,7 +450,7 @@
   border-bottom: 1px solid var(--border-color, #f1f5f9);
 }
 
-.primer-binding-site:last-child {
+.primer-binding-list li:last-child .primer-binding-site {
   border-bottom: none;
 }
 

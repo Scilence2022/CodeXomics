@@ -422,6 +422,7 @@ class PrimerDetailsPanel {
 
     html += this._qualityHtml(model);
     html += this._sequenceHtml(model);
+    html += '<div class="primer-binding-preview" data-role="saved-binding-sites"></div>';
 
     if (model.infoItems.length) {
       html += `<div class="primer-info-section">
@@ -446,6 +447,10 @@ class PrimerDetailsPanel {
     const model = this.buildModel(primer, context);
     container.innerHTML = this.renderHtml(model);
     this._bindActions(container, model, primer);
+    const host = container.querySelector('[data-role="saved-binding-sites"]');
+    this.genomeBrowser?.primerLibraryUI?.renderSavedBindingSites?.(host, primer).catch(() => {
+      host.textContent = 'Binding sites could not be loaded.';
+    });
     return model;
   }
 
