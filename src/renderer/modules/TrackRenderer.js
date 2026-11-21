@@ -1614,6 +1614,13 @@ class TrackRenderer {
     return layout.topPadding + rowIndex * (layout.primerHeight + layout.rowSpacing) + layout.primerHeight / 2;
   }
 
+  getPrimerShaftHeight(width, height) {
+    const style = TrackRenderer.PRIMER_TRACK_STYLE;
+    const narrowWidth = Math.max(style.minGlyphWidth, height);
+    const thinning = Math.max(0, Math.min(1, width / narrowWidth - 1));
+    return height * (1 - thinning * style.shaftHeightReduction);
+  }
+
   /**
    * Outline of one binding site, drawn as a half-arrow (the SnapGene / Benchling
    * primer convention). The edge facing the template strand stays flat all the
@@ -1627,7 +1634,15 @@ class TrackRenderer {
    * The head length is capped in pixels so a sub-pixel primer cannot degenerate
    * into a giant triangle.
    */
-  buildPrimerArrowPath(x, y, width, height, headLength, isReverse) {
+  buildPrimerArrowPath(
+    x,
+    y,
+    width,
+    height,
+    headLength,
+    isReverse,
+    shaftHeight = this.getPrimerShaftHeight(width, height)
+  ) {
     const round = value => Math.round(value * 100) / 100;
     const head = Math.min(headLength, width);
     // Tie the barb's overhang to the width as well as the height, so a glyph at
@@ -1643,11 +1658,12 @@ class TrackRenderer {
     if (isReverse) {
       // Points left; flat top edge runs into the tip, barb hangs below.
       const neck = round(x + head);
+      const shaftBottom = round(y + shaftHeight);
       return [
         `M ${left} ${top}`,
         `L ${right} ${top}`,
-        `L ${right} ${bottom}`,
-        `L ${neck} ${bottom}`,
+        `L ${right} ${shaftBottom}`,
+        `L ${neck} ${shaftBottom}`,
         `L ${neck} ${round(y + height + flare)}`,
         'Z',
       ].join(' ');
@@ -1655,9 +1671,10 @@ class TrackRenderer {
 
     // Points right; flat bottom edge runs into the tip, barb rises above.
     const neck = round(x + width - head);
+    const shaftTop = round(y + height - shaftHeight);
     return [
-      `M ${left} ${top}`,
-      `L ${neck} ${top}`,
+      `M ${left} ${shaftTop}`,
+      `L ${neck} ${shaftTop}`,
       `L ${neck} ${round(y - flare)}`,
       `L ${right} ${bottom}`,
       `L ${left} ${bottom}`,
@@ -1699,7 +1716,11 @@ class TrackRenderer {
     const height = layout.primerHeight;
     const y = layout.topPadding + rowIndex * (height + layout.rowSpacing);
     const centerY = y + height / 2;
+    const shaftHeight = this.getPrimerShaftHeight(glyphWidth, height);
+    const shaftY = isReverse ? y : y + height - shaftHeight;
+    const shaftCenterY = shaftY + shaftHeight / 2;
     const hasMismatch = placement.mismatches.count > 0;
+    const strokeWidth = hasMismatch ? 1.1 : 1;
 
     const group = this.createPrimerSVGNode('g', {
       class: [
@@ -1718,12 +1739,25 @@ class TrackRenderer {
       'data-site-end': placement.end,
     });
 
+    if (shaftHeight < height) {
+      group.appendChild(
+        this.createPrimerSVGNode('path', {
+          class: 'primer-arrow-hit-area',
+          d: this.buildPrimerArrowPath(glyphLeft, y, glyphWidth, height, headLength, isReverse, height),
+          fill: 'transparent',
+          stroke: 'transparent',
+          'stroke-width': strokeWidth,
+          'stroke-linejoin': 'round',
+        })
+      );
+    }
+
     const arrow = this.createPrimerSVGNode('path', {
       class: 'primer-arrow',
-      d: this.buildPrimerArrowPath(glyphLeft, y, glyphWidth, height, headLength, isReverse),
+      d: this.buildPrimerArrowPath(glyphLeft, y, glyphWidth, height, headLength, isReverse, shaftHeight),
       fill: defs ? `url(#${this.ensurePrimerGradient(defs, placement.color, isPredicted)})` : placement.color,
       stroke: hasMismatch ? style.mismatchColor : isPredicted ? placement.color : this.darkenColor(placement.color, 18),
-      'stroke-width': hasMismatch ? 1.1 : 1,
+      'stroke-width': strokeWidth,
       'stroke-linejoin': 'round',
     });
     group.appendChild(arrow);
@@ -1741,9 +1775,9 @@ class TrackRenderer {
           this.createPrimerSVGNode('rect', {
             class: 'primer-mismatch-tick',
             x: Math.max(bodyLeft, Math.min(tickX, bodyRight - 1.6)),
-            y: y + 1,
+            y: shaftY + 1,
             width: 1.6,
-            height: Math.max(2, height - 2),
+            height: Math.max(2, shaftHeight - 2),
           })
         );
       });
@@ -1756,7 +1790,7 @@ class TrackRenderer {
         this.createPrimerSVGNode('circle', {
           class: 'primer-phosphate-dot',
           cx: isReverse ? glyphRight + style.phosphateOffset : glyphLeft - style.phosphateOffset,
-          cy: centerY,
+          cy: shaftCenterY,
           r: style.phosphateRadius,
         })
       );
@@ -1764,12 +1798,13 @@ class TrackRenderer {
 
     if (placement.showLabel) {
       const inside = placement.labelSide === 'inside';
+      const fontSize = inside ? Math.min(placement.fontSize, Math.max(9, shaftHeight + 1)) : placement.fontSize;
       const label = this.createPrimerSVGNode('text', {
         class: `primer-label${inside ? ' inside' : ''}`,
         x: placement.labelX,
-        y: centerY + placement.fontSize * 0.34,
+        y: (inside ? shaftCenterY : centerY) + fontSize * 0.34,
         'text-anchor': inside ? 'middle' : placement.labelSide === 'right' ? 'start' : 'end',
-        'font-size': placement.fontSize,
+        'font-size': fontSize,
         'font-family': settings.fontFamily || 'Arial, sans-serif',
         fill: inside ? '#ffffff' : settings.geneNameColor || style.labelColor,
       });
@@ -16019,8 +16054,9 @@ TrackRenderer.SEQUENCE_LETTER_MIN_PX_PER_BP = 8;
 // it. Both matter: the head used to be an SVG marker scaled by stroke-width,
 // which turned every zoomed-out primer into a triangle the height of the track.
 TrackRenderer.PRIMER_TRACK_STYLE = {
-  glyphHeight: 11, // arrow body height when the track settings do not override it
+  glyphHeight: 11, // full arrow height before shaft thinning and barb overhang
   minGlyphWidth: 8, // smallest legible arrow; sub-pixel sites are inflated to this
+  shaftHeightReduction: 0.2, // maximum height reduction for wide arrows
   minHeadLength: 4,
   maxHeadLength: 9,
   headFraction: 0.45, // head length as a share of the glyph, before the cap
