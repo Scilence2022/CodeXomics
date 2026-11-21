@@ -88,14 +88,15 @@
 }
 
 /* Primer Action Buttons */
-.primer-actions {
+.primer-details-content .primer-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
 }
 
 .primer-action-btn {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -120,13 +121,13 @@
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-.primer-copy-btn {
+.primer-action-btn:is(.primer-copy-btn, .primer-edit-btn) {
   background: var(--bg-secondary, #f3f4f6);
   color: var(--text-primary, #374151);
   border-color: var(--border-color, #e5e7eb);
 }
 
-.primer-copy-btn:hover:not(:disabled) {
+.primer-action-btn:is(.primer-copy-btn, .primer-edit-btn):hover:not(:disabled) {
   background: var(--bg-tertiary, #e5e7eb);
   transform: translateY(-1px);
 }

@@ -6168,6 +6168,27 @@ class GenomeBrowser {
     this.showPrimerDetailsPanel();
   }
 
+  refreshSelectedPrimer(primer) {
+    const selected = this.selectedPrimer;
+    if (selected?.primerId !== primer.id) return;
+
+    const { chromosome, start, end, strand } = selected;
+    const sites = this.primerManager.getSitesForPrimer(primer, chromosome, { start, end });
+    const site = sites.find(
+      item => item.chromosome === chromosome && item.start === start && item.end === end && item.strand === strand
+    );
+    if (!site) {
+      this.clearGeneSelection();
+      return;
+    }
+
+    const updated = this.primerManager.toRenderableBindingSite(primer, site);
+    this.selectedPrimer = updated;
+    this.selectedGene = { gene: updated, operonInfo: null };
+    this.populatePrimerDetails(updated);
+    this.trackRenderer?.highlightSelectedPrimerElement?.(updated);
+  }
+
   showPrimerSelectionFeedback(primer) {
     const primerName = primer.name || primer.qualifiers?.label || primer.qualifiers?.gene || 'Unnamed Primer';
     const message = `Selected primer: ${primerName}`;
@@ -9744,6 +9765,13 @@ class GenomeBrowser {
         this.primerLibraryUI.openEdit(null);
       } else {
         this.showAddFeatureModal('primer');
+      }
+    });
+
+    document.getElementById('manualEditPrimerBtn')?.addEventListener('click', () => {
+      this.hidePrimersDropdown();
+      if (!this.primerLibraryUI?.openEditForSite(this.selectedPrimer)) {
+        this.primerLibraryUI?.open();
       }
     });
 

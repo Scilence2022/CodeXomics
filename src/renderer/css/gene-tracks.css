@@ -375,9 +375,15 @@ svg {
 }
 
 .primer-phosphate-dot {
-  fill: #06b6d4;
+  fill: var(--primer-phosphate-color);
   stroke: #ffffff;
   stroke-width: 1.2;
+}
+
+.primer-phosphate-letter {
+  fill: #fff;
+  font: 700 8px Arial, sans-serif;
+  pointer-events: none;
 }
 
 /* Amplicon a forward/reverse pair would produce */
@@ -433,6 +439,13 @@ svg {
   background: rgba(124, 58, 237, 0.08);
   color: #6d28d9;
   font-weight: 600;
+}
+
+.primer-legend-chip .primer-phosphate-badge {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  font-size: 8px;
 }
 
 .primer-legend-dot {

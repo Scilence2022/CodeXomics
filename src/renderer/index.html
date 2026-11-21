@@ -854,13 +854,21 @@
             <div class="toolbar-section">
                 <button id="primerTrackBtn" class="btn genome-toolbar-button" title="Primers"
                     aria-label="Primers" popovertarget="primersDropdown">
-                    <i class="fas fa-vial" aria-hidden="true"></i>
+                    <svg class="primer-toolbar-icon" width="16" height="16" viewBox="0 0 20 20"
+                        aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 6h13m-3-3 3 3-3 3M2 15h16M5 11v4m4-4v4m4-4v4m4-4v4" />
+                    </svg>
                     <span>Primers</span>
                 </button>
                 <div class="actions-dropdown" id="primersDropdown" popover>
                     <button id="manualAddPrimerBtn" class="dropdown-feature-btn">
                         <i class="fas fa-plus" aria-hidden="true"></i>
                         Add Primer…
+                    </button>
+                    <button id="manualEditPrimerBtn" class="dropdown-feature-btn">
+                        <i class="fas fa-pen" aria-hidden="true"></i>
+                        Edit Primer…
                     </button>
                     <button id="manualDeletePrimerBtn" class="dropdown-feature-btn">
                         <i class="fas fa-trash-alt" aria-hidden="true"></i>

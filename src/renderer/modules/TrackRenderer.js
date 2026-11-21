@@ -1393,9 +1393,18 @@ class TrackRenderer {
     const clippedLeft = siteStart - 1 < viewport.start;
     const clippedRight = siteEnd > viewport.end;
     const showPhosphate = primer.fivePrimePhosphate === true && !(isReverse ? clippedRight : clippedLeft);
-    const beadPad = showPhosphate ? style.phosphateOffset + style.phosphateRadius + 1 : 0;
-    const tailLeft = glyphLeft - (isReverse ? 0 : beadPad);
-    const tailRight = glyphRight + (isReverse ? beadPad : 0);
+    const phosphateExtent = style.phosphateRadius + 1;
+    const phosphateX = showPhosphate
+      ? Math.max(
+          phosphateExtent,
+          Math.min(
+            isReverse ? glyphRight + style.phosphateOffset : glyphLeft - style.phosphateOffset,
+            containerWidth - phosphateExtent
+          )
+        )
+      : null;
+    const tailLeft = phosphateX === null ? glyphLeft : Math.min(glyphLeft, phosphateX - phosphateExtent);
+    const tailRight = phosphateX === null ? glyphRight : Math.max(glyphRight, phosphateX + phosphateExtent);
 
     let labelSide = glyphWidth - headLength - style.labelInsetPadding * 2 >= labelWidth ? 'inside' : null;
     if (!labelSide) {
@@ -1429,7 +1438,7 @@ class TrackRenderer {
       isReverse,
       isPredicted: primer.origin === 'predicted',
       isPhosphorylated: primer.fivePrimePhosphate === true,
-      showPhosphate,
+      phosphateX,
       oligoSequence,
       mismatches: this.getPrimerSiteMismatches(primer, oligoSequence),
       color: this.resolvePrimerColor(primer),
@@ -1785,15 +1794,25 @@ class TrackRenderer {
 
     // A 5'-phosphate is a property of the oligo's tail, so it hangs off the tail
     // of the arrow rather than sitting on top of the body.
-    if (placement.showPhosphate) {
+    if (placement.phosphateX != null) {
       group.appendChild(
         this.createPrimerSVGNode('circle', {
           class: 'primer-phosphate-dot',
-          cx: isReverse ? glyphRight + style.phosphateOffset : glyphLeft - style.phosphateOffset,
+          cx: placement.phosphateX,
           cy: shaftCenterY,
           r: style.phosphateRadius,
         })
       );
+      const letter = this.createPrimerSVGNode('text', {
+        class: 'primer-phosphate-letter',
+        x: placement.phosphateX,
+        y: shaftCenterY,
+        'text-anchor': 'middle',
+        'dominant-baseline': 'central',
+        'aria-hidden': 'true',
+      });
+      letter.textContent = 'P';
+      group.appendChild(letter);
     }
 
     if (placement.showLabel) {
@@ -1944,7 +1963,7 @@ class TrackRenderer {
         swatch: TrackRenderer.PRIMER_TRACK_STYLE.mismatchColor,
       });
     }
-    if (phosphorylated > 0) chips.push({ text: `${phosphorylated} × 5′-phosphate`, swatch: '#0891b2' });
+    if (phosphorylated > 0) chips.push({ text: `${phosphorylated} × 5′-phosphate`, phosphorylated: true });
     if (context.packing?.overlapping > 0) chips.push({ text: `${context.packing.overlapping} stacked` });
     if (context.packing?.labelsAutoHidden && placements.length > 0) {
       chips.push({ text: 'names hidden — zoom in' });
@@ -1958,6 +1977,13 @@ class TrackRenderer {
         dot.className = 'primer-legend-dot';
         dot.style.background = chip.swatch;
         item.appendChild(dot);
+      }
+      if (chip.phosphorylated) {
+        const badge = document.createElement('span');
+        badge.className = 'primer-phosphate-badge';
+        badge.setAttribute('aria-hidden', 'true');
+        badge.textContent = 'P';
+        item.appendChild(badge);
       }
       item.appendChild(document.createTextNode(chip.text));
       legend.appendChild(item);
@@ -16073,8 +16099,8 @@ TrackRenderer.PRIMER_TRACK_STYLE = {
   maxLabelChars: 22,
   labelGap: 6, // gap between an arrow and a label placed beside it
   labelInsetPadding: 5, // padding required before a label may sit inside an arrow
-  phosphateRadius: 3, // 5'-phosphate bead on the oligo's tail
-  phosphateOffset: 1.5,
+  phosphateRadius: 5.5, // 5'-phosphate marker at the oligo's tail
+  phosphateOffset: 4,
   mismatchTickMinWidth: 24, // below this the red outline replaces per-base ticks
   ampliconMinSpan: 36,
   ampliconMaxBp: 50000, // guards against joining unrelated off-target sites
