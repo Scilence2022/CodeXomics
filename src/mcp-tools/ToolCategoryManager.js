@@ -48,6 +48,7 @@ class ToolCategoryManager {
       'get_current_state',
       'get_genome_info',
       'get_visible_region',
+      'codon_usage_analysis', // Gene and chromosome lookups require the selected genome window.
       'genome_codon_usage_analysis',
 
       // Track management

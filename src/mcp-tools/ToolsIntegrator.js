@@ -322,7 +322,7 @@ class ToolsIntegrator {
       // Data tools
       if (this.toolDefinitionsByModule.get(this.dataTools)[toolName]) {
         if (toolName === 'codon_usage_analysis') {
-          return await this.dataTools.analyzeCodonUsage(parameters);
+          return await this.dataTools.analyzeCodonUsage(parameters, clientId, executionContext);
         } else {
           return await this.dataTools.executeClientTool(toolName, parameters, clientId);
         }

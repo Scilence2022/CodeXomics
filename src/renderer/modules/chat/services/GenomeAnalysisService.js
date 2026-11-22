@@ -154,9 +154,9 @@ class GenomeAnalysisService {
   }
 
   _geneticCodes() {
-    const codes = typeof window !== 'undefined' ? window.GeneticCodes : undefined;
-    if (!codes) throw new Error('Genetic code tables are not loaded');
-    return codes;
+    if (typeof window !== 'undefined' && window.GeneticCodes) return window.GeneticCodes;
+    if (typeof module !== 'undefined' && module.exports) return require('../../GeneticCodes');
+    throw new Error('Genetic code tables are not loaded');
   }
 
   /**
@@ -251,7 +251,23 @@ class GenomeAnalysisService {
    * Codon usage of one coding sequence, given directly or by gene name or locus tag.
    */
   async codonUsageAnalysis(params = {}) {
-    const { sequence, chromosome } = params;
+    const { sequence } = params;
+    // Older registry snapshots supplied "current" as the chromosome default.
+    const chromosome =
+      params.chromosome === 'current' && !this.app?.currentSequence?.current && !this.app?.currentAnnotations?.current
+        ? this.app?.currentChromosome
+        : params.chromosome;
+    if (params.chromosome === 'current' && !chromosome) throw new Error('No chromosome is currently selected');
+    const includeStatistics = params.include_statistics ?? params.includeStatistics ?? true;
+    if (
+      (params.window_size !== undefined && params.window_size !== 0) ||
+      (params.step_size !== undefined && params.step_size !== 1)
+    ) {
+      throw new Error('Sliding windows are unsupported. Supply a single sequence or genomic feature.');
+    }
+    if (params.normalize_sequence === false) {
+      throw new Error('Sequence normalization is automatic. Omit normalize_sequence.');
+    }
     const geneName = params.geneName ?? params.gene_name ?? params.gene;
     const locusTag = params.locusTag ?? params.locus_tag;
 
@@ -259,17 +275,25 @@ class GenomeAnalysisService {
     let geneInfo = null;
     let contextFeatures = [];
 
-    if (sequence && typeof sequence === 'string') {
+    if (sequence !== undefined) {
+      if (typeof sequence !== 'string') throw new Error('Sequence must be a nucleotide string');
       analysisSequence = sequence.replace(/\s/g, '').toUpperCase().replace(/U/g, 'T');
       if (!/^[ACGTRYSWKMBDHVN]+$/.test(analysisSequence)) {
         throw new Error('Sequence must contain only nucleotide codes (A, C, G, T/U and IUPAC ambiguity codes)');
       }
-      if (this.app?.currentAnnotations && this.app.currentChromosome) {
-        contextFeatures = this.app.currentAnnotations[this.app.currentChromosome] || [];
+      if (chromosome) {
+        const annotations = this.app?.currentAnnotations?.[chromosome];
+        if (!annotations && !this.app?.currentSequence?.[chromosome]) {
+          throw new Error(`Chromosome "${chromosome}" is not loaded`);
+        }
+        contextFeatures = annotations || [];
       }
     } else if (geneName || locusTag) {
       if (!this.app || !this.app.currentAnnotations) throw new Error('No annotations loaded');
       const searchTerm = geneName || locusTag;
+      if (typeof searchTerm !== 'string' || !searchTerm.trim()) {
+        throw new Error('Gene name or locus tag must be a non-empty string');
+      }
       const match = this._findCodingFeature(searchTerm, chromosome);
       if (!match) throw new Error(`Gene "${searchTerm}" not found`);
 
@@ -300,9 +324,11 @@ class GenomeAnalysisService {
     const codonCounts = {};
     const aminoAcidCounts = {};
 
+    let gc3Count = 0;
     // Codons holding an ambiguity code are skipped; a trailing partial codon is ignored.
     for (let i = 0; i < analysisSequence.length - 2; i += 3) {
       const codon = analysisSequence.substring(i, i + 3);
+      if (codon[2] === 'G' || codon[2] === 'C') gc3Count++;
       const aminoAcid = geneticCode[codon];
       if (aminoAcid) {
         codonCounts[codon] = (codonCounts[codon] || 0) + 1;
@@ -313,12 +339,31 @@ class GenomeAnalysisService {
     const totalCodons = Object.values(codonCounts).reduce((sum, count) => sum + count, 0);
     if (totalCodons === 0) throw new Error('Sequence is empty or too short to contain a codon');
 
+    const summary = {
+      geneName: geneName || geneInfo?.name || null,
+      locusTag: locusTag || (geneInfo && geneInfo.locusTag !== 'N/A' ? geneInfo.locusTag : null),
+      gene: geneInfo,
+      geneticCode: { id: table.id, name: table.name },
+      totalCodons,
+      uniqueCodons: Object.keys(codonCounts).length,
+      sequenceLength: analysisSequence.length,
+      gcContent: (((analysisSequence.match(/[GC]/g) || []).length * 100) / analysisSequence.length).toFixed(2),
+      gc3Content: ((gc3Count * 100) / Math.floor(analysisSequence.length / 3)).toFixed(2),
+      analysisType: sequence ? 'sequence' : geneName ? 'geneName' : 'locusTag',
+    };
+    if (params.organism !== undefined) summary.organism = params.organism;
+    if (!includeStatistics) return summary;
+
     // Relative Synonymous Codon Usage
     const rscu = {};
     const codonPreferences = {};
     for (const [aa, codons] of Object.entries(synonymousCodons)) {
       const aaCount = aminoAcidCounts[aa] || 0;
-      if (aaCount === 0 || codons.length < 2) continue;
+      if (aaCount === 0) continue;
+      if (codons.length === 1) {
+        rscu[codons[0]] = 1;
+        continue;
+      }
       const expectedFreq = aaCount / codons.length;
 
       codonPreferences[aa] = { aminoAcid: aa, totalCount: aaCount, synonymousCodons: codons.length, codons: [] };
@@ -345,23 +390,23 @@ class GenomeAnalysisService {
         aminoAcid: geneticCode[codon],
         count,
         frequency: parseFloat(((count / totalCodons) * 100).toFixed(2)),
-        rscu: rscu[codon] !== undefined ? parseFloat(rscu[codon].toFixed(3)) : null,
+        rscu: codonPreferences[geneticCode[codon]] ? parseFloat(rscu[codon].toFixed(3)) : null,
       }))
       .sort((a, b) => b.frequency - a.frequency);
 
     return {
-      geneName: geneName || (geneInfo ? geneInfo.name : null),
-      locusTag: locusTag || (geneInfo && geneInfo.locusTag !== 'N/A' ? geneInfo.locusTag : null),
-      gene: geneInfo,
-      geneticCode: { id: table.id, name: table.name },
-      totalCodons,
-      uniqueCodons: Object.keys(codonCounts).length,
+      ...summary,
+      // These maps retain the standalone MCP result keys and its per-thousand frequency unit.
+      codonCounts,
+      aminoAcidCounts,
+      codonFrequencies: Object.fromEntries(
+        codonUsage.map(({ codon, count }) => [codon, ((count * 1000) / totalCodons).toFixed(2)])
+      ),
+      rscu,
       codonUsage,
       aminoAcidComposition: aminoAcidCounts,
       codonPreferences,
       mostFrequentCodons: codonUsage.slice(0, 10),
-      sequenceLength: analysisSequence.length,
-      analysisType: sequence ? 'sequence' : geneName ? 'geneName' : 'locusTag',
     };
   }
 
@@ -821,4 +866,5 @@ class GenomeAnalysisService {
   }
 }
 
-window.GenomeAnalysisService = GenomeAnalysisService;
+if (typeof module !== 'undefined' && module.exports) module.exports = GenomeAnalysisService;
+if (typeof window !== 'undefined') window.GenomeAnalysisService = GenomeAnalysisService;

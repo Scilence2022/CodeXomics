@@ -1,22 +1,16 @@
 /**
  * calc_region_gc tool contract tests
  */
-/* eslint-disable no-new-func */
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
+import { createRequire } from 'node:module';
 
-function loadGenomeAnalysisServiceClass() {
-  const servicePath = path.join(process.cwd(), 'src/renderer/modules/chat/services/GenomeAnalysisService.js');
-  const content = fs
-    .readFileSync(servicePath, 'utf-8')
-    .replace('window.GenomeAnalysisService = GenomeAnalysisService;', '');
-  return new Function(`${content}; return GenomeAnalysisService;`)();
-}
+const require = createRequire(import.meta.url);
+const GenomeAnalysisService = require('../../src/renderer/modules/chat/services/GenomeAnalysisService');
 
 function createService() {
-  const GenomeAnalysisService = loadGenomeAnalysisServiceClass();
   const app = {
     currentChromosome: 'chr1',
     currentPosition: { start: 0, end: 5 },

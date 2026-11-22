@@ -90,3 +90,19 @@ npm run tool-registry:generate
 npm run tool-registry:validate
 npm test -- --silent
 ```
+
+
+## 第三轮：最后一个同名接口
+
+在第二轮提交 `04682715` 上复核并对齐了 `codon_usage_analysis`。123 个同名工具的顶层业务字段差异由 1 降到 0，顶层必填字段差异也由 1 降到 0。此工具还有一项单独的回归检查，逐项比较 ChatBox 发布清单和 MCP 的完整参数定义，包括默认值、字段约束与输入替代条件。窗口定位字段沿用前两轮的统计口径。
+
+| 输入 | 两端共同的行为 |
+| --- | --- |
+| `sequence` | 直接统计输入序列。MCP 可离线运行。未指定染色体或遗传密码表时使用标准表，两端的结果不受当前打开的其他基因组影响。歧义碱基所在的完整密码子整组跳过，末尾不足三个碱基的部分忽略。 |
+| `geneName` 或 `locusTag` | 在已加载的基因组中查找特征并使用其注释。MCP 将调用交给对应窗口，缺少连接会返回错误。与 `sequence` 同传时，序列优先。 |
+| `chromosome`、`genetic_code` | 染色体可限定特征查找，也可为直接传入的序列提供注释上下文。显式的 `genetic_code` 优先。MCP 的 `windowId` 和 `expected_genome` 仍通过既有的窗口路由和身份检查。 |
+| `include_statistics`、`includeStatistics` | 默认返回详细统计。传 `false` 只返回标识、长度、遗传密码表和计数等摘要。两种拼写同时出现时，以 `include_statistics` 为准。 |
+
+**旧调用迁移。** 详细结果保留 MCP 的 `codonCounts`、`aminoAcidCounts`、`rscu` 和 `codonFrequencies`。最后一个字段仍按每千个密码子计数，`codonUsage[].frequency` 则是百分比。两端保留 `gcContent` 和 `gc3Content` 的两位小数字符串。可选的 `organism` 用作调用方标签，省略时没有默认物种。公开接口撤下原来没有执行效果的滑窗、步长和归一化开关。旧 MCP 实现特有的 `bias`、`rareCodons`、`optimizationSuggestions` 已移出返回契约。
+
+**验证。** 复用第二轮的全目录检查，移除最后一个差异豁免。新增用例在无浏览器全局变量的 Node 环境中执行真实 MCP 分派，并与 ChatBox 方法逐值比较。窗口场景使用测试连接检查目标、上下文和报错传递。全量 Vitest 在 Node.js 22.23.5 下通过，共 233 个测试文件、3,102 项测试。注册一致性检查通过。

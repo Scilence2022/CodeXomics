@@ -38,9 +38,8 @@ describe('published ChatBox and MCP input contracts', () => {
       if (JSON.stringify(fields(a)) !== JSON.stringify(fields(b))) fieldDrift.push(tool.name);
       if (a.required.sort().join() !== b.required.sort().join()) requiredDrift.push(tool.name);
     }
-    expect(fieldDrift).toEqual(['codon_usage_analysis']);
-    expect(requiredDrift).toEqual(['codon_usage_analysis']);
-    expect(tools.getToolByName('codon_usage_analysis').parameters.required).toContain('sequence');
+    expect(fieldDrift).toEqual([]);
+    expect(requiredDrift).toEqual([]);
   });
 
   it.each([

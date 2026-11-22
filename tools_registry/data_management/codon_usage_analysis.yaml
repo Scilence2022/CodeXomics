@@ -1,6 +1,6 @@
 name: codon_usage_analysis
 version: 1.1.0
-description: Analyze codon usage patterns in DNA coding sequence with comprehensive statistics and visualization. Supports analysis by direct sequence input, gene name, or locus tag.
+description: Count codons in a supplied sequence (works offline) or look up a geneName or locusTag in a loaded genome window. Return summary counts or detailed observed frequencies.
 category: data_management
 keywords:
   - codon
@@ -29,67 +29,50 @@ parameters:
   properties:
     sequence:
       type: string
-      description: Coding DNA sequence to analyze, in frame from its first codon. Codons holding an ambiguity code are skipped. Alternative to geneName/locusTag.
       minLength: 3
-      pattern: '^[ACGTUNRYSWKMBDHVacgtunryswkmbdhv]+$'
-      examples:
-        - 'ATGGCTAGCTAGCTAGCTAG'
-        - 'ATGAAACCCGGGTTT'
+      pattern: ^[ACGTUNRYSWKMBDHVacgtunryswkmbdhv\s]+$
+      description: Coding nucleotide sequence. Whitespace is ignored. Takes precedence over geneName and locusTag.
     geneName:
       type: string
-      description: Gene name to analyze (e.g., 'lacZ', 'araA'). Alternative to sequence/locusTag.
-      examples:
-        - 'lacZ'
-        - 'araA'
-        - 'trpA'
+      minLength: 1
+      description: Gene name to find in the loaded genome, or a label when sequence is supplied.
     locusTag:
       type: string
-      description: Locus tag to analyze (e.g., 'b0001', 'b0002'). Alternative to sequence/geneName.
-      examples:
-        - 'b0001'
-        - 'b0002'
-        - 'b0003'
+      minLength: 1
+      description: Locus tag to look up in the loaded genome.
     chromosome:
       type: string
-      description: Chromosome/contig name (optional, uses current chromosome if not specified)
-      default: 'current'
-    clientId:
-      type: string
-      description: Browser client ID for multi-window support
-      default: default
-    include_statistics:
-      type: boolean
-      description: Whether to include detailed codon frequency statistics
-      default: true
-    normalize_sequence:
-      type: boolean
-      description: Whether to normalize sequence (remove N's, convert to uppercase)
-      default: true
+      minLength: 1
+      description: Chromosome for gene lookup, or the source of the annotated genetic code for a supplied sequence.
+        Requires a genome window.
     genetic_code:
       type: string
-      description: >-
-        Genetic code: an NCBI translation table id ("11", "4") or a name (standard, bacterial,
-        vertebrate_mitochondrial, yeast_mitochondrial, mold_mitochondrial, mycoplasma). Omit it to use the
-        code the gene or loaded genome is annotated with (/transl_table), which is almost always correct.
-        An unknown code is rejected.
-    window_size:
-      type: integer
-      description: Window size for sliding window analysis (0 = analyze entire sequence)
-      minimum: 0
-      default: 0
-    step_size:
-      type: integer
-      description: Step size for sliding window analysis
-      minimum: 1
-      default: 1
+      description: NCBI translation table ID as a string, or table name. Overrides the annotation. A supplied sequence
+        without a chromosome uses the standard table.
+    include_statistics:
+      type: boolean
+      default: true
+      description: Return per-codon statistics. Set false for the summary only.
+    includeStatistics:
+      type: boolean
+      description: Compatibility alias for include_statistics. The snake_case value takes precedence.
+    organism:
+      type: string
+      description: Optional descriptive label copied to the result. Does not select the genetic code.
+    clientId:
+      type: string
+      description: Browser client ID for window routing.
   required: []
   anyOf:
-    - required: ['sequence']
-    - required: ['geneName']
-    - required: ['locusTag']
+    - required:
+        - sequence
+    - required:
+        - geneName
+    - required:
+        - locusTag
 sample_usages:
   - user_query: Analyze codon usage in this DNA sequence
-    tool_call: codon_usage_analysis(sequence="ATGGCTAGCTAGCTAGCTAG", include_statistics=true, normalize_sequence=true)
+    tool_call: codon_usage_analysis(sequence="ATGGCTAGCTAGCTAGCTAG", include_statistics=true)
     thought: User wants to analyze codon usage patterns in the provided DNA sequence
     expected_result: Detailed codon usage statistics and frequency analysis
   - user_query: codon usage analysis of lacZ gene
@@ -121,47 +104,12 @@ metadata:
     - important
   complexity: moderate
   usage_pattern: common
-error_handling:
-  invalid_sequence:
-    error: 'Sequence must contain only A, T, G, C nucleotides'
-    solution: 'Use normalize_sequence=true to clean the sequence, or provide a valid DNA sequence'
-    retry: true
-  empty_sequence:
-    error: 'Sequence is empty or too short'
-    solution: 'Provide a sequence with at least 3 nucleotides'
-    retry: false
-  invalid_genetic_code:
-    error: 'Invalid genetic code specified'
-    solution: 'Use one of: standard, vertebrate_mitochondrial, yeast_mitochondrial, mold_mitochondrial'
-    retry: true
-  analysis_failed:
-    error: 'Codon usage analysis failed'
-    solution: 'Check sequence validity and try again'
-    retry: true
 returns:
-  success: 'boolean - Whether operation was successful'
-  result: 'object - Analysis results including:
-    - geneName: string - Gene name (if analyzed by gene name)
-    - locusTag: string - Locus tag (if analyzed by locus tag)
-    - gene: object - Gene information (if analyzed by gene name/locus tag)
-    - totalCodons: number - Total number of codons analyzed
-    - uniqueCodons: number - Number of unique codons found
-    - codonUsage: array - Array of codon usage data with frequency percentages and RSCU values
-    - aminoAcidComposition: object - Amino acid composition counts
-    - codonPreferences: object - Codon preferences by amino acid showing:
-    - aminoAcid: string - Single letter amino acid code
-    - totalCount: number - Total count for this amino acid
-    - synonymousCodons: number - Number of synonymous codons
-    - codons: array - Detailed codon usage within amino acid including:
-    - codon: string - Three-letter codon sequence
-    - count: number - Number of occurrences
-    - percentage: number - Percentage within amino acid group
-    - rscu: number - Relative Synonymous Codon Usage value
-    - preference: string - Classification (preferred/neutral/rare)
-    - mostPreferred: string - Most frequently used codon for this amino acid
-    - leastPreferred: string - Least frequently used codon for this amino acid
-    - mostFrequentCodons: array - Top 10 most frequent codons
-    - sequenceLength: number - Length of analyzed sequence
-    - analysisType: string - Type of analysis performed (sequence/geneName/locusTag)'
-  error: 'string - Error message if success is false'
-  error_type: 'string - Type of error for proper handling'
+  analysisType: 'Input source: sequence, geneName, or locusTag.'
+  geneticCode: 'Translation table id and name.'
+  totalCodons: 'Count of complete, unambiguous codons.'
+  uniqueCodons: 'Number of distinct observed codons.'
+  sequenceLength: 'Length after whitespace removal.'
+  gene: 'Resolved feature metadata for a genome lookup.'
+  codonUsage: 'Detailed rows with codon, aminoAcid, count, frequency (percent), and rscu. Omitted in summary mode.'
+  aminoAcidComposition: 'Observed amino acid counts. Omitted in summary mode.'
