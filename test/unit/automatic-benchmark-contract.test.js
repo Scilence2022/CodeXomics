@@ -303,20 +303,39 @@ describe('benchmark contracts against the current tool registry', () => {
     ).toBe(false);
   });
 
-  it('accepts both UniProt query shapes and scores the effective filters', () => {
+  it('accepts the standard genetic-code ID from the recorded translation call', () => {
+    const test = suites.simple.getTests().find(candidate => candidate.id === 'seq_auto_03');
+    const { dna } = test.expectedResult.parameters;
+    const score = args => evaluateRecordedCall(test, 'translate_dna', { dna, ...args });
+    expect(score({ genetic_code: '1', include_stop_codons: true }).success).toBe(true);
+    expect(score({ genetic_code: 'standard' }).success).toBe(true);
+    expect(score({}).success).toBe(true);
+    expect(score({ genetic_code: '2' }).success).toBe(false);
+    expect(score({ genetic_code: 1 }).success).toBe(false);
+  });
+
+  it('checks the requested UniProt filters and lets the caller choose an unspecified limit', () => {
     const test = suites.simple.getTests().find(candidate => candidate.id === 'db_auto_01');
     const flat = { proteinName: 'beta-galactosidase', organism: 'Escherichia coli', reviewedOnly: true };
     const nested = {
       query_fields: { protein_name: flat.proteinName, organism: flat.organism },
       filters: { reviewed_only: true },
     };
+    const score = (testCase, args) => evaluateRecordedCall(testCase, 'advanced_uniprot_search', args);
 
-    for (const args of [flat, nested]) {
+    for (const args of [flat, nested, { ...flat, max_results: 25 }]) {
+      expect(score(test, args).success).toBe(true);
       expect(evaluateRecordedCall(test, 'advanced_uniprot_search', args, true, 'contract').success).toBe(true);
     }
-    expect(
-      evaluateRecordedCall(test, 'advanced_uniprot_search', { ...flat, reviewedOnly: false }, true, 'contract').success
-    ).toBe(false);
+    expect(score(test, { ...flat, reviewedOnly: false }).success).toBe(false);
+
+    const limited = {
+      ...test,
+      expectedResult: { ...test.expectedResult, parameters: { ...test.expectedResult.parameters, limit: 25 } },
+    };
+    expect(score(limited, { ...flat, max_results: 25 }).success).toBe(true);
+    expect(score(limited, { ...flat, max_results: 10 }).success).toBe(false);
+    expect(score(limited, flat).success).toBe(false);
   });
 
   it('compares the effective arguments without rewriting the submitted schema', () => {

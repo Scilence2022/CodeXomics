@@ -437,6 +437,16 @@ class StrictAutomaticEvaluator {
     if (this.isPlaceholder(expectedValue)) return this.isConcreteContextValue(actual, expectedValue);
     if (Object.is(actual, expectedValue)) return true;
 
+    if (
+      context.parameterKey === 'geneticCode' &&
+      ['translate_dna', 'translate_sequence'].includes(context.toolName) &&
+      (typeof actual === 'string' || typeof actual === 'number')
+    ) {
+      const codes = typeof module !== 'undefined' && module.exports ? require('../GeneticCodes') : window.GeneticCodes;
+      const expectedTable = codes?.resolve(expectedValue);
+      return Boolean(expectedTable && codes.resolve(actual)?.id === expectedTable.id);
+    }
+
     // Schema-documented multi-value parameters (e.g. load_wig_tracks.filePaths)
     // accept a single string or a one-element array; treat the two spellings
     // as equivalent in completion mode so either valid form satisfies the
@@ -618,9 +628,11 @@ class StrictAutomaticEvaluator {
     return serialized.length > 160 ? serialized.slice(0, 157) + '...' : serialized;
   }
 
-  normalizeEffectiveParameters(toolName, parameters) {
+  normalizeEffectiveParameters(toolName, parameters, { observed = true } = {}) {
     const actual = this.normalizeParameters(parameters);
-    if (toolName === 'advanced_uniprot_search') {
+    // The expectation is a partial assertion. Runtime defaults belong only to
+    // the observed call, so a request without a limit allows any valid limit.
+    if (observed && toolName === 'advanced_uniprot_search') {
       const database =
         typeof module !== 'undefined' && module.exports
           ? require('../../../shared/protein-database')
@@ -667,7 +679,7 @@ class StrictAutomaticEvaluator {
   compareParameters(actualParameters, expectedParameters, rawToolName = '') {
     const toolName = this.normalizeToolName(rawToolName);
     const actual = this.normalizeEffectiveParameters(toolName, this.normalizeArguments(actualParameters));
-    const expected = this.normalizeEffectiveParameters(toolName, expectedParameters || {});
+    const expected = this.normalizeEffectiveParameters(toolName, expectedParameters || {}, { observed: false });
     const alternatives = expected.benchmarkAnyOf;
     let mismatches = [];
     const aliasMatches = [];
