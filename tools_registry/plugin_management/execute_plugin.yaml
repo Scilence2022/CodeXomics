@@ -25,20 +25,15 @@ parameters:
     pluginId:
       type: string
       description: Plugin identifier
-    status:
+    functionName:
       type: string
-      description: Plugin status filter
-      enum:
-        - all
-        - installed
-        - enabled
-        - disabled
-  required: []
-sample_usages:
-  - user_query: Use execute_plugin to analyze genomic data
-    tool_call: execute_plugin(parameter1='value1', parameter2='value2')
-    thought: User wants to use execute_plugin for execute a plugin function with parameters
-    expected_result: Result from execute_plugin analysis
+      description: Function name exposed by the installed plugin
+    parameters:
+      type: object
+      additionalProperties: true
+      description: Arguments accepted by the plugin function
+  required: [pluginId, functionName]
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

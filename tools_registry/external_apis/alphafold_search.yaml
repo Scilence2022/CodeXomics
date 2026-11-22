@@ -42,11 +42,7 @@ parameters:
     - sequence
     - blastType
     - database
-sample_usages:
-  - user_query: Use alphafold_search to analyze genomic data
-    tool_call: alphafold_search(parameter1='value1', parameter2='value2')
-    thought: User wants to use alphafold_search for search alphafold database for protein structures
-    expected_result: Result from alphafold_search analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

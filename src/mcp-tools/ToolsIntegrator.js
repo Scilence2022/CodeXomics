@@ -265,7 +265,7 @@ class ToolsIntegrator {
             genetic_code: options.geneticCode ?? 'standard',
           };
         } else if (toolName === 'reverse_complement') {
-          return { reverseComplement: this.sequenceTools.reverseComplement(parameters.dna) };
+          return { reverseComplement: this.sequenceTools.reverseComplement(parameters) };
         } else if (toolName === 'calculate_molecular_weight') {
           const seq =
             parameters.sequence ||
@@ -322,7 +322,7 @@ class ToolsIntegrator {
       // Data tools
       if (this.toolDefinitionsByModule.get(this.dataTools)[toolName]) {
         if (toolName === 'codon_usage_analysis') {
-          return await this.dataTools.analyzeCodonUsage(parameters);
+          return await this.dataTools.analyzeCodonUsage(parameters, clientId, executionContext);
         } else {
           return await this.dataTools.executeClientTool(toolName, parameters, clientId);
         }
@@ -704,6 +704,15 @@ class ToolsIntegrator {
     const required = schema.required || [];
     const properties = schema.properties || {};
 
+    // Some tools accept any of several identifiers, including legacy spellings.
+    if (
+      schema.anyOf?.every(branch => Object.keys(branch).length === 1 && Array.isArray(branch.required)) &&
+      !schema.anyOf.some(branch => branch.required.every(key => Object.hasOwn(parameters, key)))
+    ) {
+      const choices = schema.anyOf.map(branch => branch.required.join(' + ')).join(' or ');
+      throw new Error(`Tool '${toolName}' requires ${choices}`);
+    }
+
     // Check required parameters
     for (const param of required) {
       if (!(param in parameters)) {
@@ -711,24 +720,27 @@ class ToolsIntegrator {
       }
     }
 
-    // Basic type validation
+    const matchesType = (value, type) => {
+      if (type === 'array') return Array.isArray(value);
+      if (type === 'integer') return Number.isInteger(value);
+      if (type === 'number') return Number.isFinite(value);
+      if (type === 'null') return value === null;
+      if (type === 'object') return value !== null && typeof value === 'object' && !Array.isArray(value);
+      return typeof value === type;
+    };
     for (const [param, value] of Object.entries(parameters)) {
-      if (properties[param]) {
-        const expectedType = properties[param].type;
-        const actualType = typeof value;
-
-        if (expectedType === 'number' && actualType !== 'number') {
-          throw new Error(`Parameter '${param}' should be a number, got ${actualType}`);
-        }
-        if (expectedType === 'string' && actualType !== 'string') {
-          throw new Error(`Parameter '${param}' should be a string, got ${actualType}`);
-        }
-        if (expectedType === 'boolean' && actualType !== 'boolean') {
-          throw new Error(`Parameter '${param}' should be a boolean, got ${actualType}`);
-        }
-        if (expectedType === 'array' && !Array.isArray(value)) {
-          throw new Error(`Parameter '${param}' should be an array, got ${actualType}`);
-        }
+      const property = properties[param];
+      if (!property?.type) continue;
+      const types = Array.isArray(property.type) ? property.type : [property.type];
+      if (!types.some(type => matchesType(value, type))) {
+        throw new Error(`Parameter '${param}' for '${toolName}' must be ${types.join(' or ')}`);
+      }
+      if (
+        Array.isArray(value) &&
+        typeof property.items?.type === 'string' &&
+        !value.every(item => matchesType(item, property.items.type))
+      ) {
+        throw new Error(`Items of '${param}' for '${toolName}' must be ${property.items.type}`);
       }
     }
 
@@ -996,7 +1008,10 @@ class ToolsIntegrator {
     if (!innerTool) {
       return { success: false, error: 'Parameter "tool" is required (the read-only tool to run in each window).' };
     }
-    if (!this.isFanoutSafeTool(innerTool)) {
+    if (
+      !this.isFanoutSafeTool(innerTool) ||
+      (innerTool === 'find_gene_by_name' && parameters.parameters?.navigate_to_gene === true)
+    ) {
       return {
         success: false,
         error:

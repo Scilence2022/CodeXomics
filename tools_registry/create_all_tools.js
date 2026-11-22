@@ -613,7 +613,7 @@ class ToolDefinitionCreator {
         required: this.getRequiredParameters(toolName, toolInfo.category),
       },
 
-      sample_usages: this.generateSampleUsages(toolName, toolInfo),
+      sample_usages: [],
 
       relationships: {
         depends_on: [],
@@ -821,20 +821,6 @@ class ToolDefinitionCreator {
     };
 
     return required[category] || [];
-  }
-
-  /**
-   * Generate sample usages
-   */
-  generateSampleUsages(toolName, toolInfo) {
-    return [
-      {
-        user_query: `Use ${toolName} to analyze genomic data`,
-        tool_call: `${toolName}(parameter1='value1', parameter2='value2')`,
-        thought: `User wants to use ${toolName} for ${toolInfo.description.toLowerCase()}`,
-        expected_result: `Result from ${toolName} analysis`,
-      },
-    ];
   }
 
   /**

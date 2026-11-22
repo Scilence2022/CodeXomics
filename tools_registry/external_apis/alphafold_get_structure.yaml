@@ -42,11 +42,7 @@ parameters:
     - sequence
     - blastType
     - database
-sample_usages:
-  - user_query: Use alphafold_get_structure to analyze genomic data
-    tool_call: alphafold_get_structure(parameter1='value1', parameter2='value2')
-    thought: User wants to use alphafold_get_structure for get protein structure from alphafold
-    expected_result: Result from alphafold_get_structure analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

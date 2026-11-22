@@ -5,6 +5,8 @@
 
 require('https');
 
+const { normalizeAdvancedUniprotParameters, formatInterproDetails } = require('../../shared/protein-database');
+
 class DatabaseTools {
   constructor(server) {
     this.server = server;
@@ -31,21 +33,46 @@ class DatabaseTools {
             },
             organism: { type: 'string', description: 'Organism filter (taxon ID or scientific name)' },
             reviewedOnly: { type: 'boolean', description: 'Only return reviewed (SwissProt) entries' },
-            minLength: { type: 'number', description: 'Minimum protein sequence length' },
-            maxLength: { type: 'number', description: 'Maximum protein sequence length' },
-            limit: { type: 'number', description: 'Maximum number of results to return', default: 50 },
-            includeSequence: { type: 'boolean', description: 'Include protein sequences in results', default: true },
-            includeFeatures: { type: 'boolean', description: 'Include protein features in results', default: true },
+            limit: { type: 'number', description: 'Maximum number of results to return', default: 20 },
+            includeSequence: { type: 'boolean', description: 'Include protein sequences in results', default: false },
+            search_query: { type: 'string', description: 'Main search term (protein name, gene name, keyword, etc.)' },
+            search_type: {
+              type: 'string',
+              enum: ['protein_name', 'gene_name', 'organism', 'keyword', 'uniprot_id', 'sequence', 'all_fields'],
+              description: 'Type of search to perform in UniProt',
+              default: 'keyword',
+            },
+            reviewed_only: {
+              type: 'boolean',
+              description: 'Search only reviewed entries (Swiss-Prot)',
+              default: false,
+            },
+            max_results: {
+              type: 'number',
+              description: 'Maximum number of results to return',
+              minimum: 1,
+              maximum: 1000,
+              default: 20,
+            },
+            output_fields: {
+              type: 'array',
+              items: {
+                type: 'string',
+                enum: ['accession', 'protein_name', 'gene_name', 'organism', 'length', 'function', 'sequence'],
+              },
+              description:
+                'Standard summary fields are always returned when available. Include sequence to request the additional sequence field.',
+            },
           },
-          required: ['query', 'searchType'],
+          required: [],
+          anyOf: [{ required: ['search_query'] }, { required: ['query'] }, { required: ['organism'] }],
         },
       },
 
       advanced_uniprot_search: {
         name: 'advanced_uniprot_search',
         description:
-          'Advanced UniProt search. Pass each criterion as a flat top-level argument ' +
-          '(proteinName, geneName, organism, ...); do not nest them under query_fields or filters.',
+          'Search UniProt with flat criteria or nested query_fields and filters. Criteria are combined with AND.',
         parameters: {
           type: 'object',
           properties: {
@@ -56,9 +83,48 @@ class DatabaseTools {
             subcellularLocation: { type: 'string', description: 'Subcellular location filter' },
             function: { type: 'string', description: 'Protein function filter' },
             reviewedOnly: { type: 'boolean', description: 'Only reviewed entries' },
-            limit: { type: 'number', description: 'Maximum results', default: 25 },
+            limit: { type: 'number', description: 'Maximum results', default: 20 },
+            query_fields: {
+              type: 'object',
+              description: 'Multiple search fields with their values',
+              properties: {
+                protein_name: { type: 'string', description: 'Protein name to search for' },
+                gene_name: { type: 'string', description: 'Gene name to search for' },
+                organism: { type: 'string', description: 'Organism name or taxonomy ID' },
+                keyword: { type: 'string', description: 'Functional keywords' },
+              },
+            },
+            filters: {
+              type: 'object',
+              description: 'Additional filters for search results',
+              properties: {
+                reviewed_only: {
+                  type: 'boolean',
+                  description: 'Include only reviewed (Swiss-Prot) entries',
+                  default: false,
+                },
+              },
+            },
+            max_results: {
+              type: 'number',
+              description: 'Maximum number of results to return',
+              minimum: 1,
+              maximum: 1000,
+              default: 20,
+            },
           },
           required: [],
+          anyOf: [
+            { required: ['query_fields'] },
+            { required: ['proteinName'] },
+            { required: ['geneName'] },
+            { required: ['organism'] },
+            { required: ['keywords'] },
+            { required: ['subcellularLocation'] },
+            { required: ['function'] },
+            { required: ['reviewedOnly'] },
+            { required: ['filters'] },
+          ],
         },
       },
 
@@ -68,6 +134,7 @@ class DatabaseTools {
         parameters: {
           type: 'object',
           properties: {
+            gene_name: { type: 'string', description: 'Alternative spelling of geneName.' },
             uniprotId: { type: 'string', description: 'UniProt accession ID' },
             geneName: {
               type: 'string',
@@ -82,8 +149,30 @@ class DatabaseTools {
               default: true,
             },
             includeCrossRefs: { type: 'boolean', description: 'Include cross-references', default: false },
+            uniprot_id: {
+              type: 'string',
+              description: "UniProt accession ID (e.g., 'P04637', 'Q9UHD8')",
+              pattern: '^[A-Z0-9]{6,10}$',
+            },
+            include_sequence: { type: 'boolean', description: 'Include protein sequence in results', default: true },
+            include_features: {
+              type: 'boolean',
+              description: 'Include sequence features and annotations',
+              default: true,
+            },
+            include_function: {
+              type: 'boolean',
+              description: 'Include functional annotations and GO terms',
+              default: true,
+            },
           },
           required: [],
+          anyOf: [
+            { required: ['gene_name'] },
+            { required: ['uniprot_id'] },
+            { required: ['uniprotId'] },
+            { required: ['geneName'] },
+          ],
         },
       },
 
@@ -217,12 +306,21 @@ class DatabaseTools {
         parameters: {
           type: 'object',
           properties: {
+            output_format: {
+              type: 'string',
+              description: 'Amount of detail to return.',
+              enum: ['minimal', 'summary', 'detailed'],
+              default: 'detailed',
+            },
             interproId: { type: 'string', description: 'InterPro entry ID (e.g., IPR000001)' },
-            includeProteins: { type: 'boolean', description: 'Include associated proteins', default: true },
-            includeStructures: { type: 'boolean', description: 'Include structure information', default: true },
-            includeTaxonomy: { type: 'boolean', description: 'Include taxonomic distribution', default: false },
+            interpro_id: {
+              type: 'string',
+              description: "InterPro accession ID (e.g., 'IPR000001', 'IPR012345')",
+              pattern: '^[Ii][Pp][Rr][0-9]{6}$',
+            },
           },
-          required: ['interproId'],
+          required: [],
+          anyOf: [{ required: ['interpro_id'] }, { required: ['interproId'] }],
         },
       },
     };
@@ -231,12 +329,12 @@ class DatabaseTools {
   async searchUniProtDatabase(parameters) {
     // Server-side implementation - directly query UniProt API
     const {
-      query,
-      searchType = 'keyword',
+      query = parameters.search_query,
+      searchType = parameters.search_type ?? 'keyword',
       organism,
-      reviewedOnly = false,
-      limit = 20,
-      includeSequence = false,
+      reviewedOnly = parameters.reviewed_only ?? false,
+      limit = parameters.max_results ?? 20,
+      includeSequence = parameters.output_fields?.includes('sequence') ?? false,
     } = parameters;
 
     try {
@@ -334,8 +432,8 @@ class DatabaseTools {
       subcellularLocation,
       function: fnFilter,
       reviewedOnly = false,
-      limit = 25,
-    } = parameters;
+      limit,
+    } = normalizeAdvancedUniprotParameters(parameters);
 
     try {
       const queryParts = [];
@@ -400,9 +498,9 @@ class DatabaseTools {
     // Server-side implementation - directly query UniProt API
     const { uniprotId, uniprot_id, geneName, gene_name, organism } = parameters;
 
-    const includeSequence = parameters.includeSequence ?? parameters.include_sequence ?? true;
-    const includeFeatures = parameters.includeFeatures ?? parameters.include_features ?? true;
-    const includeFunction = parameters.includeFunction ?? parameters.include_function ?? true;
+    const includeSequence = parameters.include_sequence ?? parameters.includeSequence ?? true;
+    const includeFeatures = parameters.include_features ?? parameters.includeFeatures ?? true;
+    const includeFunction = parameters.include_function ?? parameters.includeFunction ?? true;
     const includeCrossRefs = parameters.includeCrossRefs ?? parameters.include_cross_refs ?? false;
 
     let accession = uniprotId || uniprot_id;
@@ -823,7 +921,7 @@ class DatabaseTools {
 
   async getInterProEntryDetails(parameters = {}) {
     // Server-side implementation - directly query InterPro REST API (EBI)
-    const interproId = parameters.interproId || parameters.interpro_id;
+    const interproId = parameters.interpro_id || parameters.interproId;
 
     try {
       if (!interproId) throw new Error('interproId is required');
@@ -860,7 +958,7 @@ class DatabaseTools {
       return {
         success: true,
         tool: 'get_interpro_entry_details',
-        details: details,
+        details: formatInterproDetails(details, parameters.output_format),
       };
     } catch (error) {
       console.error('getInterProEntryDetails error:', error);

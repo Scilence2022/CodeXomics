@@ -23,7 +23,7 @@ parameters:
   properties:
     format:
       type: string
-      description: Output format for the export
+      description: Output format. Defaults to genbank.
       enum:
         - fasta
         - genbank

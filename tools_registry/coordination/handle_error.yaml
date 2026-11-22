@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use handle_error to analyze genomic data
-    tool_call: handle_error(parameter1='value1', parameter2='value2')
-    thought: User wants to use handle_error for handle errors in task execution
-    expected_result: Result from handle_error analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

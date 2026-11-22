@@ -22,12 +22,20 @@ parameters:
       type: string
       description: Browser client ID for multi-window support
       default: default
-  required: []
+    pathwayName:
+      type: string
+      description: Name of the metabolic pathway, such as glycolysis
+    highlightGenes:
+      type: array
+      items: { type: string }
+      description: Gene names to highlight in the visualization
+    organism:
+      type: string
+      description: Organism name for pathway context
+  required: [pathwayName]
 sample_usages:
-  - user_query: Use show_metabolic_pathway to analyze genomic data
-    tool_call: show_metabolic_pathway(parameter1='value1', parameter2='value2')
-    thought: User wants to use show_metabolic_pathway for display metabolic pathway visualization
-    expected_result: Result from show_metabolic_pathway analysis
+  - user_query: "Show the glycolysis pathway"
+    tool_call: "show_metabolic_pathway(pathwayName='glycolysis')"
 relationships:
   depends_on: []
   conflicts_with: []

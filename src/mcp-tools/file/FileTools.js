@@ -56,8 +56,7 @@ class FileTools {
               type: 'string',
               enum: ['merge', 'new_track'],
               description:
-                'Loading mode: "merge" (add to existing Genes & Features track) or "new_track" (create a separate track). Defaults to "new_track" if not specified.',
-              default: 'new_track',
+                'Loading mode: "merge" (add to existing Genes & Features track) or "new_track" (create a separate track). Omit to use the file loader preference or prompt.',
             },
             mergeWithExisting: {
               type: 'boolean',
@@ -118,15 +117,16 @@ class FileTools {
               description: 'Absolute path to track file (.wig, .bw, .bigwig)',
             },
             filePaths: {
-              type: 'array',
+              type: ['string', 'array'],
               items: { type: 'string' },
-              description: 'Array of paths to load multiple WIG files at once',
+              description: 'Direct file path(s) to WIG track files - can be single string or array of strings',
             },
             showFileDialog: {
               type: 'boolean',
               description: 'Open file dialog instead of using filePath',
               default: false,
             },
+            multiple: { type: 'boolean', description: 'Allow multiple file selection in dialog', default: true },
           },
         },
       },
@@ -140,6 +140,12 @@ class FileTools {
             filePath: {
               type: 'string',
               description: 'Absolute path to operon file',
+            },
+            format: {
+              type: 'string',
+              enum: ['auto', 'json', 'csv', 'tsv', 'txt'],
+              default: 'auto',
+              description: 'Input format for the operon annotation file',
             },
             showFileDialog: {
               type: 'boolean',
@@ -180,6 +186,9 @@ class FileTools {
               description:
                 'Optional output file path. Relative paths are resolved against the current working directory.',
             },
+            filename: { type: 'string', description: 'Alias for filePath' },
+            outputPath: { type: 'string', description: 'Alias for filePath' },
+            autoOpen: { type: 'boolean', description: 'Open the saved image after capture', default: false },
             auto_save: {
               type: 'boolean',
               description: 'Save to an auto-generated filename when no explicit file path is provided',

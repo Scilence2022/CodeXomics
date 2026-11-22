@@ -139,6 +139,17 @@ class IntentParserService {
       return parsed;
     }
 
+    // This legacy spelling was accepted before execution-key normalization
+    // was separated from invocation. Keep the alias local to its tool.
+    if (
+      parsed.tool_name === 'calculate_primer_properties' &&
+      parsed.parameters.primerSequence &&
+      (!parsed.parameters.sequence || parsed.parameters.sequence === parsed.parameters.primerSequence)
+    ) {
+      const { primerSequence, ...rest } = parsed.parameters;
+      parsed.parameters = { ...rest, sequence: primerSequence };
+    }
+
     if (parsed.tool_name === 'set_working_directory') {
       const paramKeys = Object.keys(parsed.parameters);
       if (

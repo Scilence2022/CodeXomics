@@ -574,6 +574,13 @@ class ProteinService {
    * Returns metadata + _dataRef instead of raw PDB data to prevent LLM context overflow.
    */
   async fetchProteinStructure(parameters) {
+    if (parameters.include_ligands === false) {
+      return {
+        success: false,
+        tool: 'fetch_protein_structure',
+        error: 'Only complete deposited structures are available. Omit include_ligands or use true.',
+      };
+    }
     const pdbId = parameters.pdbId || parameters.pdb_id;
     const uniprotId = parameters.uniprotId || parameters.uniprot_id;
     const geneName = parameters.geneName || parameters.gene_name;
@@ -2019,37 +2026,7 @@ class ProteinService {
   // schema. Flatten and alias those so a well-formed intent is not rejected as
   // "At least one search parameter must be provided".
   normalizeAdvancedUniprotParameters(parameters) {
-    const source = parameters && typeof parameters === 'object' ? parameters : {};
-    const flat = { ...source };
-    for (const nestedKey of ['query_fields', 'queryFields', 'filters', 'query', 'fields']) {
-      const nested = source[nestedKey];
-      if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
-        Object.assign(flat, nested);
-        delete flat[nestedKey];
-      }
-    }
-
-    const pick = (...keys) => {
-      for (const key of keys) {
-        const value = flat[key];
-        if (value !== undefined && value !== null && value !== '') return value;
-      }
-      return undefined;
-    };
-    const asText = value => (Array.isArray(value) ? value.filter(Boolean).join(' ') : value);
-
-    const limit = Number(pick('limit', 'max_results', 'maxResults', 'size'));
-
-    return {
-      proteinName: asText(pick('proteinName', 'protein_name')),
-      geneName: asText(pick('geneName', 'gene_name', 'gene')),
-      organism: asText(pick('organism', 'organism_name', 'organismName', 'species')),
-      keywords: asText(pick('keywords', 'keyword')),
-      subcellularLocation: asText(pick('subcellularLocation', 'subcellular_location')),
-      function: asText(pick('function', 'cc_function', 'proteinFunction')),
-      reviewedOnly: Boolean(pick('reviewedOnly', 'reviewed_only', 'reviewed')),
-      limit: Number.isFinite(limit) && limit > 0 ? limit : 20,
-    };
+    return window.proteinDatabase.normalizeAdvancedUniprotParameters(parameters);
   }
 
   async advancedUniprotSearch(parameters) {
@@ -2068,14 +2045,12 @@ class ProteinService {
       if (proteinName) queryParts.push(`(protein_name:"${proteinName}")`);
       if (geneName) queryParts.push(`(gene:"${geneName}")`);
       if (organism) queryParts.push(`(organism_name:"${organism}")`);
-      if (keywords) queryParts.push(`(keyword:"${keywords}")`);
+      for (const keyword of [keywords].flat().filter(Boolean)) queryParts.push(`(keyword:"${keyword}")`);
       if (subcellularLocation) queryParts.push(`(cc_scl_term:"${subcellularLocation}")`);
       if (fnLocation) queryParts.push(`(cc_function:"${fnLocation}")`);
 
-      if (queryParts.length === 0) {
-        throw new Error('At least one search parameter must be provided');
-      }
       if (reviewedOnly) queryParts.push(`(reviewed:true)`);
+      if (queryParts.length === 0) throw new Error('At least one search parameter must be provided');
 
       const queryString = queryParts.join(' AND ');
       const fields = 'accession,protein_name,gene_names,organism_name,length,reviewed';
@@ -2194,7 +2169,7 @@ class ProteinService {
       return {
         success: true,
         tool: 'get_interpro_entry_details',
-        details: details,
+        details: window.proteinDatabase.formatInterproDetails(details, parameters.output_format),
       };
     } catch (error) {
       console.error('getInterproEntryDetails error:', error);

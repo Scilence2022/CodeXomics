@@ -1,20 +1,10 @@
-/* eslint-disable no-new-func */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'fs';
-import path from 'path';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
+const GenomeAnalysisService = require('../../src/renderer/modules/chat/services/GenomeAnalysisService');
 const GeneticCodes = require('../../src/renderer/modules/GeneticCodes');
 const Processing = require('../../src/renderer/modules/UnifiedSequenceProcessing');
-
-function loadGenomeAnalysisServiceClass() {
-  const servicePath = path.join(process.cwd(), 'src/renderer/modules/chat/services/GenomeAnalysisService.js');
-  const content = fs
-    .readFileSync(servicePath, 'utf-8')
-    .replace('window.GenomeAnalysisService = GenomeAnalysisService;', '');
-  return new Function(`${content}; return GenomeAnalysisService;`)();
-}
 
 // Forward gene geneA at 1-12 (ATG TGA AAA TAA) and reverse gene geneB at 16-27,
 // whose coding strand reads ATG GCC GCC TAA.
@@ -52,7 +42,6 @@ function makeApp(table) {
 }
 
 describe('codon usage analysis', () => {
-  const GenomeAnalysisService = loadGenomeAnalysisServiceClass();
   const previous = {};
 
   beforeAll(() => {

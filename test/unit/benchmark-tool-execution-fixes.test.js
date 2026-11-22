@@ -163,6 +163,7 @@ describe('AnnotationService structural permission gate', () => {
 
 describe('ProteinService interpro parameter aliases', () => {
   const mockWindow = loadViaWindow('src/renderer/modules/chat/services/ProteinService.js');
+  mockWindow.proteinDatabase = require('../../src/shared/protein-database');
   const ProteinService = mockWindow.ProteinService;
 
   it('accepts the registry spelling interpro_id', async () => {

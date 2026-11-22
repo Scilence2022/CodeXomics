@@ -1,6 +1,6 @@
 name: get_interpro_entry_details
 version: 1.1.0
-description: 'Retrieve detailed information for a specific InterPro entry including description, member databases, protein matches, and structural data.'
+description: "Retrieve metadata for an InterPro accession. Use search_interpro_entry to look up an accession by name."
 category: database
 keywords: ['get', 'interpro', 'entry', 'details', 'description', 'member databases', 'structure']
 priority: 2
@@ -17,63 +17,30 @@ parameters:
     interpro_id:
       type: string
       description: "InterPro accession ID (e.g., 'IPR000001', 'IPR012345')"
-      pattern: '^IPR[0-9]{6}$'
+      pattern: '^[Ii][Pp][Rr][0-9]{6}$'
       examples: ['IPR000001', 'IPR000719', 'IPR001440', 'IPR003961']
-    entry_name:
-      type: string
-      description: 'InterPro entry name as alternative to ID'
-      examples: ['Kringle', 'Protein kinase domain', 'Immunoglobulin-like', 'DNA-binding HTH']
-    include_proteins:
-      type: boolean
-      description: 'Include list of proteins containing this domain/family'
-      default: true
-    include_structures:
-      type: boolean
-      description: 'Include available 3D structure information'
-      default: true
-    include_pathways:
-      type: boolean
-      description: 'Include associated biological pathways'
-      default: false
-    include_literature:
-      type: boolean
-      description: 'Include related literature references'
-      default: false
-    protein_limit:
-      type: number
-      description: 'Maximum number of proteins to include in results'
-      minimum: 1
-      maximum: 500
-      default: 50
-    organism_filter:
-      type: string
-      description: 'Filter proteins by organism (optional)'
-      examples: ['Homo sapiens', 'Escherichia coli', 'Mus musculus']
-    output_format:
-      type: string
-      enum: ['summary', 'detailed', 'minimal']
-      description: 'Level of detail in the output'
-      default: 'detailed'
     clientId:
       type: string
       description: 'Browser client ID for multi-window support'
       default: 'default'
+    interproId:
+      type: string
+      description: InterPro entry ID (e.g., IPR000001)
+    output_format:
+      type: string
+      description: Amount of detail to return.
+      enum:
+      - minimal
+      - summary
+      - detailed
+      default: detailed
   required: []
+  anyOf:
+    - required: [interpro_id]
+    - required: [interproId]
 sample_usages:
-  - user_query: 'Get details for InterPro entry IPR000719'
-    tool_call: "get_interpro_entry_details(interpro_id='IPR000719', include_proteins=true, include_structures=true)"
-    thought: 'User wants comprehensive information about a specific InterPro entry'
-    expected_result: 'Detailed entry information including protein matches and structure data'
-
-  - user_query: 'Find information about Kringle domain'
-    tool_call: "get_interpro_entry_details(entry_name='Kringle', include_pathways=true, organism_filter='Homo sapiens')"
-    thought: 'User wants Kringle domain information focused on human proteins with pathway data'
-    expected_result: 'Kringle domain details with human protein matches and associated pathways'
-
-  - user_query: 'Get minimal info about protein kinase domain'
-    tool_call: "get_interpro_entry_details(entry_name='Protein kinase domain', output_format='minimal', protein_limit=10)"
-    thought: 'User wants basic information about protein kinase domain with limited protein list'
-    expected_result: 'Minimal domain information with top 10 protein matches'
+  - user_query: "Read the InterPro entry IPR000719."
+    tool_call: '{"tool_name": "get_interpro_entry_details", "parameters": {"interpro_id": "IPR000719"}}'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -95,12 +62,4 @@ error_handling:
   network_error: Returns error if database is unavailable
   query_error: Returns error if query is invalid
 returns:
-  success: 'boolean - Whether entry details retrieval was successful'
-  entry_info: 'object - Basic InterPro entry information (ID, name, type, description)'
-  member_databases: 'array - List of member databases contributing to this entry'
-  protein_matches: 'array - Proteins containing this domain/family (if requested)'
-  structure_data: 'array - Available 3D structures for this entry (if requested)'
-  pathways: 'array - Associated biological pathways (if requested)'
-  literature: 'array - Related publications and references (if requested)'
-  statistics: 'object - Entry statistics (protein count, organism distribution)'
-  cross_references: 'object - Links to related databases and resources'
+  details: "Entry metadata. Minimal output contains interproId, name and type."

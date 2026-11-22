@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use fallback_strategy to analyze genomic data
-    tool_call: fallback_strategy(parameter1='value1', parameter2='value2')
-    thought: User wants to use fallback_strategy for implement fallback strategy for failed tasks
-    expected_result: Result from fallback_strategy analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

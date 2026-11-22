@@ -42,11 +42,7 @@ parameters:
     - sequence
     - blastType
     - database
-sample_usages:
-  - user_query: Use uniprot_get_protein to analyze genomic data
-    tool_call: uniprot_get_protein(parameter1='value1', parameter2='value2')
-    thought: User wants to use uniprot_get_protein for get detailed protein information from uniprot
-    expected_result: Result from uniprot_get_protein analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use assign_task_to_agent to analyze genomic data
-    tool_call: assign_task_to_agent(parameter1='value1', parameter2='value2')
-    thought: User wants to use assign_task_to_agent for assign a subtask to a specific agent
-    expected_result: Result from assign_task_to_agent analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

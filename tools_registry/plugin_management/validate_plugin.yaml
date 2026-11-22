@@ -34,11 +34,7 @@ parameters:
         - enabled
         - disabled
   required: []
-sample_usages:
-  - user_query: Use validate_plugin to analyze genomic data
-    tool_call: validate_plugin(parameter1='value1', parameter2='value2')
-    thought: User wants to use validate_plugin for validate a plugin for compatibility and errors
-    expected_result: Result from validate_plugin analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

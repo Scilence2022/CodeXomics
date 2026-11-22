@@ -99,13 +99,13 @@ class MicrobeGenomicsFunctions {
    * @param {string} dna - DNA sequence
    * @returns {string} Reverse complement sequence
    */
-  static reverseComplement(dna) {
+  static reverseComplement(dna, options) {
     if (!dna || typeof dna !== 'string') return '';
     const processing =
       typeof module !== 'undefined' && module.exports
         ? require('./UnifiedSequenceProcessing')
         : window.UnifiedSequenceProcessing;
-    return processing.legacyReverseComplement(dna);
+    return options ? processing.reverseComplementForTool({ ...options, dna }) : processing.legacyReverseComplement(dna);
   }
 
   /**

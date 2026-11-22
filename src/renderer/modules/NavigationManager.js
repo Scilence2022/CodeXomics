@@ -1155,7 +1155,7 @@ class NavigationManager {
     }
   }
 
-  performSearch(query = null) {
+  performSearch(query = null, options = {}) {
     const searchQuery = query || document.getElementById('searchInput').value.trim();
     if (!searchQuery) return;
 
@@ -1166,7 +1166,7 @@ class NavigationManager {
     }
 
     // Get search settings
-    const searchSettings = this.getCurrentSearchSettings();
+    const searchSettings = { ...this.getCurrentSearchSettings(), ...options };
 
     // Clear previous search results before starting new search
     this.clearSearchResults();
@@ -1193,7 +1193,7 @@ class NavigationManager {
     console.log('  - caseSensitive:', caseSensitive);
 
     if (
-      searchSettings.searchGeneNames &&
+      (searchSettings.searchGeneNames || options.featureType || options.exactMatch) &&
       this.genomeBrowser.currentAnnotations &&
       this.genomeBrowser.currentAnnotations[currentChr]
     ) {
@@ -1206,6 +1206,7 @@ class NavigationManager {
 
       let checkedCount = 0;
       annotations.forEach(annotation => {
+        if (options.featureType && String(annotation.type).toLowerCase() !== options.featureType.toLowerCase()) return;
         if (annotation.qualifiers) {
           checkedCount++;
           // Search in gene names
@@ -1214,7 +1215,17 @@ class NavigationManager {
           const product = this.genomeBrowser.getQualifierValue(annotation.qualifiers, 'product') || '';
           const note = this.genomeBrowser.getQualifierValue(annotation.qualifiers, 'note') || '';
 
-          const searchFields = [geneName, locusTag, product, note].join(' ');
+          if (
+            options.exactMatch &&
+            ![geneName, locusTag, product, note, annotation.type].some(
+              value => value && (caseSensitive ? value : value.toUpperCase()) === searchTerm
+            )
+          ) {
+            return;
+          }
+          const fields = [geneName, locusTag, product, note];
+          if (options.featureType || options.exactMatch) fields.push(annotation.type);
+          const searchFields = fields.join(' ');
           const fieldToSearch = caseSensitive ? searchFields : searchFields.toUpperCase();
 
           // Check if any of the search terms match
@@ -1259,7 +1270,7 @@ class NavigationManager {
     }
 
     // 2. Search for exact sequence matches
-    if (searchSettings.searchSequence && searchTerm.match(/^[ATGCN]+$/i)) {
+    if (!options.featureType && searchSettings.searchSequence && searchTerm.match(/^[ATGCN]+$/i)) {
       // Only search if it looks like a DNA sequence
       // Check minimum length requirement
       if (searchTerm.length >= searchSettings.minLength) {
@@ -1304,6 +1315,8 @@ class NavigationManager {
 
     // Sort results by position
     results.sort((a, b) => a.position - b.position);
+
+    if (Number.isInteger(options.maxResults) && options.maxResults > 0) results.splice(options.maxResults);
 
     // Store results for navigation
     this.searchResults = results;

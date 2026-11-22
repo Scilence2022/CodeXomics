@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use decompose_task to analyze genomic data
-    tool_call: decompose_task(parameter1='value1', parameter2='value2')
-    thought: User wants to use decompose_task for decompose a complex task into subtasks
-    expected_result: Result from decompose_task analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

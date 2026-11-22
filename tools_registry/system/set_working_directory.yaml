@@ -38,7 +38,12 @@ parameters:
       type: 'boolean'
       description: 'Validate read/write permissions for the directory (default: true)'
       default: true
-  required: ['directory_path']
+  anyOf:
+    - required: ['directory_path']
+    - required: ['use_home_directory']
+      properties:
+        use_home_directory: { const: true }
+      additionalProperties: true
 
 # High-quality examples for few-shot learning
 sample_usages:

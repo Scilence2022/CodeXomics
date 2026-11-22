@@ -34,11 +34,7 @@ parameters:
         - enabled
         - disabled
   required: []
-sample_usages:
-  - user_query: Use install_plugin to analyze genomic data
-    tool_call: install_plugin(parameter1='value1', parameter2='value2')
-    thought: User wants to use install_plugin for install a new plugin from marketplace or local source
-    expected_result: Result from install_plugin analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

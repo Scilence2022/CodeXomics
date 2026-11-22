@@ -1302,7 +1302,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
             },
             {
               geneName: 'dapA',
-              organism: 'Escherichia coli',
+              organism: this.schemaDefault('Escherichia coli'),
             },
           ],
         },

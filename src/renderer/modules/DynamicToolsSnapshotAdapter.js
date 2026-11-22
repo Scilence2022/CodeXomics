@@ -59,6 +59,11 @@ const CJK_RUN_PATTERN = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]+
 const CJK_RETRIEVAL_LEXICON = {
   // actions
   打开: ['open', 'load'],
+  关闭: ['close'],
+  查看: ['get', 'view'],
+  截取: ['screenshot', 'capture'],
+  已加载: ['loaded'],
+  可用: ['available'],
   加载: ['load', 'open', 'import'],
   载入: ['load', 'open'],
   导入: ['import', 'load'],
@@ -82,8 +87,8 @@ const CJK_RETRIEVAL_LEXICON = {
   删除: ['delete', 'remove', 'clear'],
   移除: ['remove', 'delete'],
   清除: ['clear', 'remove'],
-  保存: ['save', 'export', 'write'],
-  导出: ['export', 'save', 'download'],
+  保存: ['save', 'write'],
+  导出: ['export', 'download'],
   下载: ['download', 'save'],
   创建: ['create', 'add'],
   新建: ['create', 'new'],
@@ -112,8 +117,13 @@ const CJK_RETRIEVAL_LEXICON = {
   特征: ['feature'],
   轨道: ['track'],
   标签: ['tab', 'label'],
+  标签页: ['tab'],
+  状态: ['state'],
+  工具: ['tools', 'tool'],
+  视图: ['view'],
+  当前: ['current'],
   窗口: ['window'],
-  文件: ['file'],
+  文件: ['file', 'files'],
   引物: ['primer'],
   蛋白: ['protein'],
   结构: ['structure'],
@@ -417,10 +427,14 @@ class DynamicToolsSnapshotAdapter {
   expandSearchTerms(tokens) {
     const expanded = new Set(tokens);
     for (const token of tokens) {
-      for (const alias of RETRIEVAL_ACTION_ALIASES[token] || []) expanded.add(alias);
+      if (Object.hasOwn(RETRIEVAL_ACTION_ALIASES, token)) {
+        for (const alias of RETRIEVAL_ACTION_ALIASES[token]) expanded.add(alias);
+      }
       // The tool registry is written in English. Without this bridge a Chinese
       // query can be tokenized correctly and still match nothing.
-      for (const alias of CJK_RETRIEVAL_LEXICON[token] || []) expanded.add(alias);
+      if (Object.hasOwn(CJK_RETRIEVAL_LEXICON, token)) {
+        for (const alias of CJK_RETRIEVAL_LEXICON[token]) expanded.add(alias);
+      }
       if (token.endsWith('s') && token.length > 3) expanded.add(token.slice(0, -1));
       if (token.endsWith('ing') && token.length > 5) expanded.add(token.slice(0, -3));
     }
@@ -471,7 +485,7 @@ class DynamicToolsSnapshotAdapter {
     const text = String(query || '').trim();
     if (!text) return [];
     const clauses = text
-      .split(/(?:\b(?:and\s+then|then|after\s+that|next|finally)\b|[;\n])/i)
+      .split(/(?:\b(?:and\s+then|then|after\s+that|next|finally)\b|然后|接着|最后|[;；\n])/i)
       .map(clause => clause.trim())
       .filter(Boolean);
     return clauses.length > 1 ? clauses : [text];
@@ -613,7 +627,7 @@ class DynamicToolsSnapshotAdapter {
 
   prepareScoringQuery(query) {
     const text = String(query || '').toLowerCase();
-    const tokens = this.tokenizeSearchText(text);
+    const tokens = this.tokenizeSearchText(query);
     const terms = this.expandSearchTerms(tokens);
     return { text, terms, normalizedQuery: tokens.join(' ') };
   }
@@ -705,7 +719,11 @@ class DynamicToolsSnapshotAdapter {
 
   rankRelevantTools(query, context = {}) {
     const allowCoordination = this.isAgentSystemEnabled(context);
-    const validTools = this.mergeToolsByName([...this.snapshot.tools, ...this.collectMcpTools()]).filter(tool => {
+    const validTools = this.mergeToolsByName([
+      ...this.snapshot.tools,
+      ...this.collectMcpTools(),
+      ...this.collectPluginTools(),
+    ]).filter(tool => {
       if (!tool || !tool.name) return false;
       if (tool.category === 'coordination' && !allowCoordination) return false;
       return true;
@@ -747,12 +765,16 @@ class DynamicToolsSnapshotAdapter {
         return {
           tool,
           score: globalScore + bestClauseScore * 0.35 + matchedClauses * 0.15,
+          exactName: tool.name.toLowerCase() === queryText.trim(),
           globalScore,
           clauseScores,
         };
       })
       .filter(entry => entry.score > 0.6 && hasEvidence(entry.tool))
-      .sort((a, b) => b.score - a.score || a.tool.name.localeCompare(b.tool.name));
+      .sort(
+        (a, b) =>
+          Number(b.exactName) - Number(a.exactName) || b.score - a.score || a.tool.name.localeCompare(b.tool.name)
+      );
 
     return { ranked, clauses };
   }
@@ -814,14 +836,18 @@ class DynamicToolsSnapshotAdapter {
     // the global ranking fills the remaining budget. This avoids a dominant
     // first action crowding later workflow steps out of a small-model prompt.
     if (retrieval.clauses.length > 1 && Number.isFinite(limit)) {
-      for (let clauseIndex = 0; clauseIndex < retrieval.clauses.length; clauseIndex++) {
-        const clauseCandidates = scoredTools
-          .filter(entry => (entry.clauseScores[clauseIndex] || 0) > 0.6)
-          .sort((a, b) => (b.clauseScores[clauseIndex] || 0) - (a.clauseScores[clauseIndex] || 0));
-        for (const entry of clauseCandidates.slice(0, 2)) {
-          if (selectedNames.has(entry.tool.name) || selected.length >= limit) continue;
-          selected.push(entry.tool);
-          selectedNames.add(entry.tool.name);
+      const candidatesByClause = retrieval.clauses.map((_, index) =>
+        scoredTools
+          .filter(entry => entry.clauseScores[index] > 0.6)
+          .sort((a, b) => b.clauseScores[index] - a.clauseScores[index])
+          .slice(0, 2)
+      );
+      for (const rank of [0, 1]) {
+        for (const candidates of candidatesByClause) {
+          const tool = candidates[rank]?.tool;
+          if (!tool || selectedNames.has(tool.name) || selected.length >= limit) continue;
+          selected.push(tool);
+          selectedNames.add(tool.name);
         }
       }
     }
@@ -836,7 +862,7 @@ class DynamicToolsSnapshotAdapter {
     // pad a strong, unambiguous result set with competing capabilities.
     if (selected.length === 0) {
       for (const name of this.getFallbackToolNames()) {
-        if (selected.length >= 10) break;
+        if (selected.length >= Math.min(10, limit)) break;
         const fallbackTool = this.toolsByName.get(name);
         if (fallbackTool && !selected.some(tool => tool.name === name)) {
           selected.push(fallbackTool);
@@ -844,16 +870,7 @@ class DynamicToolsSnapshotAdapter {
       }
     }
 
-    const pluginTools = this.getRelevantPluginTools(query, 10, context);
-    const deduped = [];
-    const seen = new Set();
-    for (const tool of [...selected, ...pluginTools]) {
-      if (seen.has(tool.name)) continue;
-      seen.add(tool.name);
-      deduped.push(tool);
-      if (deduped.length >= limit) break;
-    }
-    return deduped;
+    return selected;
   }
 
   sanitizeNativeSchema(schema, isRoot = false) {
@@ -941,26 +958,17 @@ class DynamicToolsSnapshotAdapter {
   validateSchemaValue(value, schema, path = '$') {
     if (!schema || typeof schema !== 'object') return [];
     const errors = [];
-    const compositionKeyword = Array.isArray(schema.oneOf) ? 'oneOf' : Array.isArray(schema.anyOf) ? 'anyOf' : null;
-    const schemas = compositionKeyword ? schema[compositionKeyword] : null;
-    if (schemas) {
-      // JSON Schema composition keywords are evaluated together with their sibling
-      // constraints. The old validator returned here after checking only the branch,
-      // which silently skipped parent properties, enums, required fields and
-      // additionalProperties. That allowed schema-invalid benchmark and training calls
-      // to be labelled valid whenever an anyOf/oneOf branch happened to match.
-      const baseSchema = { ...schema };
-      delete baseSchema.oneOf;
-      delete baseSchema.anyOf;
-      errors.push(...this.validateSchemaValue(value, baseSchema, path));
-      const alternatives = schemas.map(candidate => this.validateSchemaValue(value, candidate, path));
-      const matchingAlternatives = alternatives.filter(candidateErrors => candidateErrors.length === 0).length;
-      if (compositionKeyword === 'oneOf' && matchingAlternatives !== 1) {
-        errors.push(`${path} must match exactly one allowed schema (matched ${matchingAlternatives})`);
-      } else if (compositionKeyword === 'anyOf' && matchingAlternatives === 0) {
-        errors.push(`${path} does not match any allowed schema`);
+    for (const keyword of ['oneOf', 'anyOf']) {
+      if (!Array.isArray(schema[keyword])) continue;
+      const branches = schema[keyword];
+      const matches = branches.filter(branch => this.validateSchemaValue(value, branch, path).length === 0).length;
+      if (matches === 0 || (keyword === 'oneOf' && matches !== 1)) {
+        const choices = branches.every(branch => Array.isArray(branch.required))
+          ? `: ${branches.map(branch => branch.required.join(' + ')).join(' | ')}`
+          : '';
+        const count = keyword === 'oneOf' ? 'exactly one' : 'at least one';
+        errors.push(`${path} must match ${count} alternative (matched ${matches})${choices}`);
       }
-      return errors;
     }
 
     if (Array.isArray(schema.allOf)) {
@@ -985,8 +993,18 @@ class DynamicToolsSnapshotAdapter {
       errors.push(`${path} must equal ${JSON.stringify(schema.const)}`);
     }
     if (typeof value === 'number') {
-      if (Number.isFinite(schema.minimum) && value < schema.minimum) errors.push(`${path} is below minimum`);
-      if (Number.isFinite(schema.maximum) && value > schema.maximum) errors.push(`${path} is above maximum`);
+      if (Number.isFinite(schema.minimum) && value < schema.minimum) {
+        errors.push(`${path} must be >= ${schema.minimum}`);
+      }
+      if (Number.isFinite(schema.exclusiveMinimum) && value <= schema.exclusiveMinimum) {
+        errors.push(`${path} must be > ${schema.exclusiveMinimum}`);
+      }
+      if (Number.isFinite(schema.exclusiveMaximum) && value >= schema.exclusiveMaximum) {
+        errors.push(`${path} must be < ${schema.exclusiveMaximum}`);
+      }
+      if (Number.isFinite(schema.maximum) && value > schema.maximum) {
+        errors.push(`${path} must be <= ${schema.maximum}`);
+      }
     }
     if (typeof value === 'string') {
       if (Number.isFinite(schema.minLength) && value.length < schema.minLength) errors.push(`${path} is too short`);
@@ -1010,10 +1028,12 @@ class DynamicToolsSnapshotAdapter {
         if (!Object.prototype.hasOwnProperty.call(value, required)) errors.push(`${path}.${required} is required`);
       }
       for (const [key, propertyValue] of Object.entries(value)) {
-        if (properties[key]) {
+        if (Object.hasOwn(properties, key)) {
           errors.push(...this.validateSchemaValue(propertyValue, properties[key], `${path}.${key}`));
         } else if (schema.additionalProperties === false) {
-          errors.push(`${path}.${key} is not allowed`);
+          errors.push(
+            `${path}.${key} is not allowed. Accepted fields: ${Object.keys(properties).join(', ') || '(none)'}`
+          );
         } else if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
           errors.push(...this.validateSchemaValue(propertyValue, schema.additionalProperties, `${path}.${key}`));
         }
@@ -1022,9 +1042,16 @@ class DynamicToolsSnapshotAdapter {
     return errors;
   }
 
+  getToolDefinition(name) {
+    return (
+      this.toolsByName.get(name) ||
+      this.collectMcpTools().find(tool => tool.name === name) ||
+      this.collectPluginTools().find(tool => tool.name === name)
+    );
+  }
+
   validateToolCall(toolName, parameters) {
-    const tool =
-      this.toolsByName.get(toolName) || this.collectMcpTools().find(candidate => candidate.name === toolName);
+    const tool = this.getToolDefinition(toolName);
     if (!tool) return { valid: false, errors: [`Unknown tool: ${toolName}`] };
     if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
       return { valid: false, errors: ['Tool parameters must be a JSON object'] };
@@ -1066,16 +1093,7 @@ class DynamicToolsSnapshotAdapter {
   }
 
   formatParameterList(tool) {
-    const properties = tool?.parameters?.properties || {};
-    const entries = Object.entries(properties).slice(0, 8);
-    if (entries.length === 0) return 'No parameters';
-    return entries
-      .map(([name, param]) => {
-        const type = param?.type || 'any';
-        const description = param?.description ? ` - ${param.description}` : '';
-        return `${name}: ${type}${description}`;
-      })
-      .join(', ');
+    return JSON.stringify(this.sanitizeNativeSchema(this.normalizeToolSchema(tool), true));
   }
 
   splitSampleArguments(source) {
@@ -1128,7 +1146,7 @@ class DynamicToolsSnapshotAdapter {
     }
     if (/^(?:true|false)$/i.test(value)) return value.toLowerCase() === 'true';
     if (/^(?:null|none)$/i.test(value)) return null;
-    if (/^-?\d+(?:\.\d+)?$/.test(value)) return Number(value);
+    if (/^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(value)) return Number(value);
 
     if ((value.startsWith('{') && value.endsWith('}')) || (value.startsWith('[') && value.endsWith(']'))) {
       try {
@@ -1186,23 +1204,22 @@ class DynamicToolsSnapshotAdapter {
       parameters[name] = value;
     }
 
-    return { tool_name: tool.name || match[1], parameters };
+    return { tool_name: match[1], parameters };
   }
 
   formatSampleUsages(tools) {
     const usages = [];
     for (const tool of tools) {
-      const sample = Array.isArray(tool.sample_usages) ? tool.sample_usages[0] : null;
-      if (!sample) continue;
-      // YAML samples historically used JSON, Python-like calls, and provider-native
-      // shapes. Render one canonical protocol so the response contract is unambiguous.
-      const parsedCall = this.buildCanonicalSampleCall(tool, sample);
-      if (!parsedCall) continue;
-      const canonicalCall = JSON.stringify(parsedCall);
-      usages.push(`- ${tool.name}: "${sample.user_query}" -> ${canonicalCall}`);
+      const schema = this.sanitizeNativeSchema(this.normalizeToolSchema(tool), true);
+      for (const sample of tool.sample_usages || []) {
+        const call = this.buildCanonicalSampleCall(tool, sample);
+        if (call?.tool_name !== tool.name || this.validateSchemaValue(call.parameters, schema).length) continue;
+        usages.push(`- ${tool.name}: "${sample.user_query}" -> ${JSON.stringify(call)}`);
+        break;
+      }
       if (usages.length >= 8) break;
     }
-    return usages.length > 0 ? usages.join('\n') : '- Use JSON tool calls with the exact tool name and parameters.';
+    return usages.join('\n');
   }
 
   /**
@@ -1223,7 +1240,7 @@ class DynamicToolsSnapshotAdapter {
     return names.length > limit ? `${shown} (+${names.length - limit} more)` : shown;
   }
 
-  buildPrompt(tools, context = {}) {
+  buildPrompt(tools, context = {}, nativeTools = []) {
     const builtInTools = tools.filter(tool => tool.isBuiltIn || this.builtInTools.builtInToolsMap.has(tool.name));
     const pluginTools = tools.filter(tool => tool.source === 'plugin');
     const mcpTools = tools.filter(tool => tool.source === 'mcp');
@@ -1234,44 +1251,35 @@ class DynamicToolsSnapshotAdapter {
     const visibleTracks = Array.isArray(genomeContext.visibleTracks) ? genomeContext.visibleTracks.join(', ') : 'None';
     const loadedFiles = Array.isArray(genomeContext.loadedFiles) ? genomeContext.loadedFiles.length : 0;
 
-    const builtInDescriptions =
-      builtInTools
-        .map(
-          tool =>
-            `- **${tool.name}**: ${
-              tool.description || 'Built-in CodeXomics tool'
-            }\n  Parameters: ${this.formatParameterList(tool)}`
+    const nativeNames = new Set(nativeTools.map(tool => tool.function.name));
+    const textTools = tools.filter(tool => !nativeNames.has(tool.name));
+    const describe = group =>
+      group
+        .map(tool =>
+          nativeNames.has(tool.name)
+            ? tool.name
+            : `- **${tool.name}**: ${tool.description || ''}\n  Parameters: ${this.formatParameterList(tool)}`
         )
-        .join('\n') || 'No built-in tools selected for this query.';
-
-    const extendedDescriptions =
-      extendedTools
-        .map(
-          tool =>
-            `- **${tool.name}**: ${
-              tool.description || 'Registry tool'
-            }\n  Parameters: ${this.formatParameterList(tool)}`
-        )
-        .join('\n') || 'No extended tools selected for this query.';
-
-    const pluginDescriptions =
-      pluginTools.length > 0
-        ? `\n## Plugin Tools\n\n${pluginTools
-            .map(tool => `- **${tool.name}**: ${tool.description || 'Plugin tool'}`)
-            .join('\n')}`
-        : '';
-
-    const mcpDescriptions =
-      mcpTools.length > 0
-        ? `\n## MCP Server Tools\n\n${mcpTools
-            .map(
-              tool =>
-                `- **${tool.name}** (${tool.serverName || 'MCP Server'}): ${
-                  tool.description || 'MCP server tool'
-                }\n  Parameters: ${this.formatParameterList(tool)}`
-            )
-            .join('\n')}`
-        : '';
+        .join('\n');
+    const catalog = [
+      ['Directly Available Tools', builtInTools],
+      ['Extended Tools', extendedTools],
+      ['Plugin Tools', pluginTools],
+      ['MCP Server Tools', mcpTools],
+    ]
+      .filter(([, group]) => group.length)
+      .map(([heading, group]) => `## ${heading}\n\n${describe(group)}`)
+      .join('\n\n');
+    const examples = this.formatSampleUsages(textTools);
+    const responseFormat = [];
+    if (nativeNames.size) responseFormat.push('Invoke attached functions through native function calling.');
+    if (textTools.length) {
+      responseFormat.push(
+        'For tools with inline parameter schemas, follow the response schema when one is supplied. ' +
+          'Otherwise emit {"tool_name":"exact_tool_name","parameters":{...}} as JSON. ' +
+          'Group independent text calls in a JSON array.'
+      );
+    }
 
     const currentPosition = genomeContext.currentPosition
       ? `${genomeContext.currentPosition.start}-${genomeContext.currentPosition.end}`
@@ -1313,24 +1321,8 @@ omit the parameter or reuse the current chromosome above.
 Coordinates are 1-based base pairs. Expand the user's shorthand before calling a tool: "2M"/"2Mb" is
 2000000, "500k"/"500kb" is 500000, "1,000,000" is 1000000. Never pass through the leading digits alone.
 
-## Directly Available Tools
-
-These tools execute inside CodeXomics and should be preferred for local browser operations.
-
-${builtInDescriptions}
-
-## Extended Tools
-
-These tools provide additional registry capabilities and may require network access or external services.
-
-${extendedDescriptions}
-${pluginDescriptions}
-${mcpDescriptions}
-
-## Tool Usage Examples
-
-${this.formatSampleUsages(tools)}
-
+${catalog}
+${examples ? `\n## Tool Usage Examples\n\n${examples}\n` : ''}
 ## Tool Selection Guidelines
 
 1. Prefer directly available built-in tools when they satisfy the request.
@@ -1345,12 +1337,7 @@ ${this.formatSampleUsages(tools)}
 
 ## Response Format
 
-For a single tool call, respond with only a JSON object:
-\`\`\`json
-{"tool_name": "tool_name", "parameters": {"param1": "value1"}}
-\`\`\`
-
-For multiple independent tool calls, respond with one JSON array of canonical tool-call objects. Never include explanatory prose around tool-call JSON.
+${responseFormat.join(' ')} Once the requested work is complete, answer the user using the results.
 
 ## Tool Categories & Relationships
 
@@ -1429,13 +1416,9 @@ For multiple independent tool calls, respond with one JSON array of canonical to
     return tools.filter(tool => tool.category === categoryName && tool.name);
   }
 
-  async searchTools(keywords, limit = 10) {
-    const tools = await this.getAllTools();
-    const prepared = this.prepareScoringQuery(keywords);
-    return tools
-      .map(tool => ({ tool, score: this.scorePreparedTool(tool, prepared) }))
-      .filter(entry => entry.score > 0.6)
-      .sort((a, b) => b.score - a.score)
+  async searchTools(keywords, limit = 10, category = null) {
+    return this.rankRelevantTools(keywords)
+      .ranked.filter(entry => !category || entry.tool.category === category)
       .slice(0, limit)
       .map(entry => entry.tool);
   }
@@ -1497,7 +1480,7 @@ For multiple independent tool calls, respond with one JSON array of canonical to
     const selectedTools = this.selectRelevantTools(userQuery, context, options.selectionLimit);
     const nativeTools = selectedTools.map(tool => this.toNativeFunctionTool(tool)).filter(Boolean);
     return {
-      systemPrompt: this.buildPrompt(selectedTools, context),
+      systemPrompt: this.buildPrompt(selectedTools, context, options.nativeFunctionCalling ? nativeTools : []),
       toolsUsed: selectedTools.map(tool => tool.name),
       toolDefinitions: selectedTools,
       nativeTools,

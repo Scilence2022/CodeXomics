@@ -110,6 +110,19 @@ class NavigationTools {
               description: 'Type of feature to filter by (e.g., CDS, tRNA, rRNA, gene, promoter)',
             },
             clientId: { type: 'string', description: 'Browser client ID' },
+            feature_type: { type: 'string', description: 'Filter by specific feature type (optional)' },
+            case_sensitive: { type: 'boolean', description: 'Whether search should be case sensitive', default: false },
+            exact_match: {
+              type: 'boolean',
+              description: 'Whether to require exact match or allow partial matching',
+              default: false,
+            },
+            max_results: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 1000,
+              description: 'Optional maximum number of matching records to return.',
+            },
           },
           required: ['query'],
         },
@@ -121,6 +134,8 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
+            include_tracks: { type: 'boolean', description: 'Include visible tracks', default: true },
+            include_data_summary: { type: 'boolean', description: 'Include the loaded file list', default: true },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
         },
@@ -252,6 +267,13 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
+            include_statistics: {
+              type: 'boolean',
+              description: 'Compute per-chromosome length and GC statistics',
+              default: true,
+            },
+            include_annotations: { type: 'boolean', description: 'Count features by annotation type', default: true },
+            include_chromosomes: { type: 'boolean', description: 'Include chromosome and contig names', default: true },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
         },
@@ -264,6 +286,14 @@ class NavigationTools {
         parameters: {
           type: 'object',
           properties: {
+            exact_match: { type: 'boolean', description: 'Require an exact gene name or locus tag.' },
+            case_sensitive: { type: 'boolean', description: 'Match letter case.' },
+            navigate_to_gene: { type: 'boolean', description: 'Move the viewport to the best match when true.' },
+            include_annotations: {
+              type: 'boolean',
+              description: 'Include the feature qualifiers in the best match.',
+              default: true,
+            },
             name: {
               type: 'string',
               description:
@@ -448,6 +478,7 @@ class NavigationTools {
             start: { type: 'number', description: 'Start position (defaults to current)' },
             end: { type: 'number', description: 'End position (defaults to current)' },
             clientId: { type: 'string', description: 'Browser client ID' },
+            notes: { type: 'string', description: 'Optional notes for the bookmark', default: '' },
           },
           required: ['name'],
         },

@@ -45,7 +45,22 @@ parameters:
       type: string
       description: 'Browser client ID for multi-window support'
       default: 'default'
+    uniprotId:
+      type: string
+      description: UniProt accession (e.g., P04637)
+    gene_name:
+      type: string
+      description: Alternative spelling of geneName.
+    gene:
+      type: string
+      description: Alternative spelling of geneName.
   required: []
+  anyOf:
+    - required: [gene]
+    - required: [gene_name]
+    - required: [uniprot_id]
+    - required: [uniprotId]
+    - required: [geneName]
 sample_usages:
   - user_query: 'Download p53 structure from AlphaFold'
     tool_call: "fetch_alphafold_structure(uniprot_id='P04637', format='pdb')"

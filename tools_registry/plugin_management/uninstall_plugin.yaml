@@ -33,11 +33,7 @@ parameters:
         - enabled
         - disabled
   required: []
-sample_usages:
-  - user_query: Use uninstall_plugin to analyze genomic data
-    tool_call: uninstall_plugin(parameter1='value1', parameter2='value2')
-    thought: User wants to use uninstall_plugin for uninstall a plugin from the system
-    expected_result: Result from uninstall_plugin analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

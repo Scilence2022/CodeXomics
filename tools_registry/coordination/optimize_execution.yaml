@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use optimize_execution to analyze genomic data
-    tool_call: optimize_execution(parameter1='value1', parameter2='value2')
-    thought: User wants to use optimize_execution for optimize execution strategy for better performance
-    expected_result: Result from optimize_execution analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

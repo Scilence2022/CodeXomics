@@ -343,15 +343,17 @@ class NavigationAgent extends AgentBase {
           return await this.executeNavigateToPosition(parameters, app);
 
         case 'get_current_state':
-          return await this.executeGetCurrentState(app);
+          return await this.executeGetCurrentState(app, parameters);
 
         case 'get_current_region':
           return await this.executeGetCurrentRegion(app);
 
         case 'jump_to_gene':
-        case 'find_gene_by_name':
-        case 'find_gene': // legacy alias
           return await this.executeJumpToGene(parameters, app);
+
+        case 'find_gene_by_name':
+        case 'find_gene':
+          return await this.multiAgentSystem.chatManager.findGeneByName(parameters);
 
         case 'scroll_left':
           return await this.executeScrollLeft(parameters, app);
@@ -480,9 +482,9 @@ class NavigationAgent extends AgentBase {
   /**
    * Execute get current state
    */
-  async executeGetCurrentState(app) {
-    // Check cache first
-    const cached = this.stateCache.get('current_state');
+  async executeGetCurrentState(app, { include_tracks = true, include_data_summary = true } = {}) {
+    const cacheKey = `current_state:${include_tracks}:${include_data_summary}`;
+    const cached = this.stateCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < 5000) {
       // 5 second cache
       return cached.result;
@@ -490,14 +492,14 @@ class NavigationAgent extends AgentBase {
 
     let result;
     try {
-      result = await app.genomeBrowser.getCurrentState();
+      result = await app.genomeBrowser.getCurrentState({ include_tracks, include_data_summary });
     } catch (error) {
       console.warn(`NavigationAgent: genomeBrowser.getCurrentState failed`, error);
       result = { chromosome: 'unknown', start: 0, end: 0 };
     }
 
     // Cache result
-    this.stateCache.set('current_state', {
+    this.stateCache.set(cacheKey, {
       result,
       timestamp: Date.now(),
     });
@@ -858,6 +860,8 @@ class NavigationAgent extends AgentBase {
    * Execute search features
    */
   async executeSearchFeatures(parameters, app) {
+    const chatManager = this.multiAgentSystem?.chatManager;
+    if (chatManager?.searchFeatures) return chatManager.searchFeatures(parameters);
     const { query } = parameters;
     try {
       if (app.genomeBrowser && typeof app.genomeBrowser.searchFeatures === 'function') {

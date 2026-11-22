@@ -20,12 +20,12 @@ parameters:
   properties:
     filePaths:
       type: ['string', 'array']
+      items: { type: string }
       description: 'Direct file path(s) to WIG track files - can be single string or array of strings'
       required: false
       examples:
         - '/path/to/track.wig'
         - ['/path/to/track1.wig', '/path/to/track2.wig']
-        - 'track1.wig,track2.wig'
     showFileDialog:
       type: 'boolean'
       description: 'Whether to show file dialog regardless of filePaths parameter'
@@ -36,6 +36,9 @@ parameters:
       description: 'Allow multiple file selection in dialog'
       required: false
       default: true
+    filePath:
+      type: string
+      description: Absolute path to track file (.wig, .bw, .bigwig)
   required: []
 
 # Return value specification

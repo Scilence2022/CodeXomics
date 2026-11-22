@@ -1,6 +1,6 @@
 name: get_coding_sequence
 version: 1.0.0
-description: 'Extract the coding DNA sequence (CDS) for a specific gene by name or locus tag. Returns the actual coding nucleotide sequence without introns.'
+description: "Read the annotated coding sequence for a gene name or locus tag."
 category: sequence
 keywords:
   - coding sequence
@@ -28,42 +28,24 @@ parameters:
         - 'dnaA'
         - 'b0062'
         - 'lysC'
-    include_upstream:
-      type: number
-      description: 'Number of nucleotides to include upstream of start codon'
-      default: 0
-      minimum: 0
-    include_downstream:
-      type: number
-      description: 'Number of nucleotides to include downstream of stop codon'
-      default: 0
-      minimum: 0
-    format:
-      type: string
-      description: 'Output format for the sequence'
-      enum: ['raw', 'fasta', 'genbank']
-      default: 'raw'
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
-  required:
-    - gene_name
+    identifier:
+      type: string
+      description: Gene name or locus tag (e.g., b0062, araA)
+    geneName:
+      type: string
+      description: Alternative spelling of gene_name.
+  required: []
+  anyOf:
+    - required: [geneName]
+    - required: [gene_name]
+    - required: [identifier]
 sample_usages:
-  - user_query: 'Get the coding sequence for lacZ gene'
-    tool_call: "get_coding_sequence(gene_name='lacZ')"
-    thought: 'User wants the DNA coding sequence for the lacZ gene'
-    expected_result: 'DNA sequence of lacZ coding region from start to stop codon'
-
-  - user_query: 'Extract dnaA sequence with promoter region'
-    tool_call: "get_coding_sequence(gene_name='dnaA', include_upstream=100)"
-    thought: 'User wants dnaA coding sequence plus 100bp upstream region'
-    expected_result: 'dnaA coding sequence with 100bp upstream included'
-
-  - user_query: 'Get lysC sequence in FASTA format'
-    tool_call: "get_coding_sequence(gene_name='lysC', format='fasta')"
-    thought: 'User wants lysC coding sequence formatted as FASTA'
-    expected_result: 'lysC coding sequence in proper FASTA format with header'
+  - user_query: "Read the coding sequence for lacZ."
+    tool_call: '{"tool_name": "get_coding_sequence", "parameters": {"gene_name": "lacZ"}}'
 relationships:
   depends_on: ['jump_to_gene', 'find_gene_by_name']
   conflicts_with: []
@@ -89,9 +71,7 @@ error_handling:
   no_coding_sequence: 'Returns error if gene has no coding sequence'
   invalid_gene_name: 'Returns error if gene name is empty or invalid'
 returns:
-  success: boolean - Whether extraction was successful
-  gene_name: string - Name of the gene
-  sequence: string - Coding DNA sequence
-  length: number - Length of the coding sequence
-  position: object - Genomic position of the coding sequence
-  format: string - Format of the returned sequence
+  codingSequence: "Coding nucleotide sequence."
+  geneName: "Matched gene name."
+  locusTag: "Matched locus tag."
+  length: "Nucleotide length."

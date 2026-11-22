@@ -4,7 +4,7 @@ description: 'Get list of all currently loaded files in the genome browser with 
 category: 'file_loading'
 subcategory: 'file_management'
 priority: 1
-keywords: ['files', 'list', 'loaded', 'paths', 'metadata', 'current', 'status']
+keywords: ['files', 'list', 'loaded', 'paths', 'metadata', 'current', 'status', '已加载的文件', '已加载文件']
 execution_type: 'built-in'
 complexity: 'simple'
 

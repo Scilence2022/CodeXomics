@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use create_workflow to analyze genomic data
-    tool_call: create_workflow(parameter1='value1', parameter2='value2')
-    thought: User wants to use create_workflow for create a workflow for complex analysis
-    expected_result: Result from create_workflow analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

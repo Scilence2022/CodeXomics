@@ -530,6 +530,10 @@ class ToolExecutionService {
       }
     }
 
+    if (toolName === 'reverse_complement' && parameters) {
+      return [parameters.dna ?? parameters.sequence ?? parameters.dna_sequence, parameters];
+    }
+
     const argMappings = {
       search_sequence_motif: [], // Pass full params object - searchSequenceMotif handles object deconstruction internally
       find_gene: ['name'], // legacy alias
@@ -538,7 +542,6 @@ class ToolExecutionService {
       search_by_position: ['chromosome', 'position'],
       search_intergenic_regions: ['chromosome', 'minLength', 'min_length'],
       compute_gc: ['dna', 'sequence', 'dna_sequence'],
-      reverse_complement: ['dna', 'sequence', 'dna_sequence'],
       translate_dna: ['dna', 'sequence', 'dna_sequence', 'reading_frame', 'frame'],
       find_orfs: ['dna', 'sequence', 'dna_sequence'],
       calculate_entropy: ['sequence', 'dna', 'dna_sequence'],

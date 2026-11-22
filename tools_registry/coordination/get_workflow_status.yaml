@@ -36,11 +36,7 @@ parameters:
       default: normal
   required:
     - task
-sample_usages:
-  - user_query: Use get_workflow_status to analyze genomic data
-    tool_call: get_workflow_status(parameter1='value1', parameter2='value2')
-    thought: User wants to use get_workflow_status for get current status of a workflow execution
-    expected_result: Result from get_workflow_status analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

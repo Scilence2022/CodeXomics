@@ -33,6 +33,13 @@ parameters:
       type: number
       description: End position (1-based coordinate)
       minimum: 1
+    strand:
+      type: string
+      enum:
+      - +
+      - '-'
+      description: Strand direction (+ for forward, - for reverse)
+      default: +
   required:
     - chromosome
     - start

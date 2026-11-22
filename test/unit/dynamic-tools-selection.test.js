@@ -260,6 +260,7 @@ describe('DynamicToolsSnapshotAdapter relevance selection', () => {
     const rendered = adapter.formatSampleUsages([
       {
         ...createTool('set_track_settings', 'Set track settings', ['track settings']),
+        parameters: { type: 'object', properties: { track_type: { type: 'string' }, settings: { type: 'object' } } },
         sample_usages: [
           {
             user_query: 'make the genes track taller',

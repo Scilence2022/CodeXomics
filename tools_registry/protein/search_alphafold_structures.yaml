@@ -26,7 +26,7 @@ parameters:
     organism:
       type: 'string'
       description: "Organism name for more specific search (e.g., 'Homo sapiens', 'Escherichia coli')"
-      default: 'Homo sapiens'
+      default: 'Escherichia coli'
       examples: ['Homo sapiens', 'Escherichia coli', 'Saccharomyces cerevisiae', 'Mus musculus']
     maxResults:
       type: 'number'
@@ -34,25 +34,6 @@ parameters:
       default: 10
       minimum: 1
       maximum: 50
-    minConfidence:
-      type: 'number'
-      description: 'Minimum confidence score threshold (0-100)'
-      default: 70
-      minimum: 0
-      maximum: 100
-    includeSequence:
-      type: 'boolean'
-      description: 'Whether to include protein sequence in results'
-      default: true
-    includeMetadata:
-      type: 'boolean'
-      description: 'Whether to include detailed metadata (function, domains, etc.)'
-      default: true
-    format:
-      type: 'string'
-      enum: ['summary', 'detailed', 'minimal']
-      description: 'Output format detail level'
-      default: 'detailed'
     clientId:
       type: 'string'
       description: 'Browser client ID for multi-window support'
@@ -61,27 +42,8 @@ parameters:
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: 'Search AlphaFold for p53 protein structure'
-    tool_call: "search_alphafold_structures(geneName='p53', organism='Homo sapiens', minConfidence=80)"
-    thought: 'User wants to find the p53 protein structure with high confidence'
-    expected_result: 'List of p53 structures with confidence scores and metadata'
-
-  - user_query: 'Find lacZ protein structure in E. coli'
-    tool_call: "search_alphafold_structures(geneName='lacZ', organism='Escherichia coli', includeSequence=true)"
-    thought: 'User wants lacZ structure from E. coli with sequence information'
-    expected_result: 'lacZ structure with sequence and confidence data'
-
-  - user_query: 'Get all high-confidence protein structures for dnaA'
-    tool_call: "search_alphafold_structures(geneName='dnaA', minConfidence=90, maxResults=5)"
-    thought: 'User wants only high-confidence dnaA structures, limited to 5 results'
-    expected_result: 'Top 5 high-confidence dnaA structures'
-
-  - user_query: 'Search for protein structures with minimal output'
-    tool_call: "search_alphafold_structures(geneName='recA', format='minimal', maxResults=3)"
-    thought: 'User wants a quick search with minimal information'
-    expected_result: 'Basic recA structure information only'
-
-# Tool relationships and dependencies
+  - user_query: "Find up to five AlphaFold structures for lacZ."
+    tool_call: '{"tool_name": "search_alphafold_structures", "parameters": {"geneName": "lacZ", "maxResults": 5}}'
 relationships:
   depends_on: []
   conflicts_with: []
@@ -109,10 +71,5 @@ error_handling:
 
 # Return value specification
 returns:
-  success: 'boolean - Whether search was successful'
-  results_count: 'number - Number of structures found'
-  structures: 'array - List of protein structures with details'
-  structure_details: 'object - For each structure: uniprot_id, confidence, sequence, metadata'
-  search_metadata: 'object - Search parameters and execution time'
-  confidence_scores: 'array - Confidence scores for each structure'
-  organism_matches: 'array - Organism information for each match'
+  count: "Number of returned structures."
+  results: "Matching AlphaFold structures."

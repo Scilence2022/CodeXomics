@@ -149,7 +149,7 @@ class ConversationTranscriptService {
         type: 'function',
         function: {
           name: tool.tool_name,
-          arguments: JSON.stringify(this.chatManager.normalizeToolParams(tool.tool_name, tool.parameters || {})),
+          arguments: JSON.stringify(tool.parameters || {}),
         },
       })),
     };
@@ -157,15 +157,24 @@ class ConversationTranscriptService {
   }
 
   buildToolResultMessage(result, trailingGuidance = '') {
-    const body = result.success
-      ? JSON.stringify(this.chatManager.sanitizeResultForLLM(result.result, result.tool)) || 'null'
-      : JSON.stringify({ success: false, error: result.error || 'Unknown error' });
+    const payload = result.success
+      ? this.chatManager.sanitizeResultForLLM(result.result, result.tool)
+      : { success: false, error: result.error || 'Unknown error' };
+    let content = payload;
+    if (trailingGuidance) {
+      const fields =
+        payload && typeof payload === 'object' && !Array.isArray(payload) && !Object.hasOwn(payload, '_toolGuidance')
+          ? payload
+          : { result: payload };
+      content = { ...fields, _toolGuidance: trailingGuidance };
+    }
+    const body = JSON.stringify(content) || 'null';
     this.warnOnOversizedToolResult(result.tool, body);
     const message = {
       role: 'tool',
       tool_call_id: result.tool_call_id,
       name: result.tool,
-      content: trailingGuidance ? `${body}\n${trailingGuidance}` : body,
+      content: body,
     };
     return this.attachToolExecutionRecords(message, [
       { tool: result.tool, parameters: result.parameters, success: result.success },
@@ -286,31 +295,16 @@ class ConversationTranscriptService {
       conversationHistory.push(this.buildAssistantToolCallMessage(assistantText, toolsToExecute, reasoningReplay));
       const guidance = this.buildToolRoundGuidance(queuedResearchTask);
       const resultsByCallId = new Map(toolResults.map(result => [result.tool_call_id, result]));
-      toolsToExecute.forEach((tool, index) => {
+      const lastSuccess = toolsToExecute.findLast(tool => resultsByCallId.get(tool.tool_call_id).success);
+      for (const tool of toolsToExecute) {
         const result = resultsByCallId.get(tool.tool_call_id);
-        const isLast = index === toolsToExecute.length - 1;
-        conversationHistory.push(this.buildToolResultMessage(result, isLast ? guidance : ''));
-      });
+        conversationHistory.push(this.buildToolResultMessage(result, tool === lastSuccess ? guidance : ''));
+      }
       return 'native';
     }
 
-    conversationHistory.push({
-      role: 'assistant',
-      content: JSON.stringify(
-        toolsToExecute.length === 1
-          ? {
-              tool_name: toolsToExecute[0].tool_name,
-              parameters: this.chatManager.normalizeToolParams(
-                toolsToExecute[0].tool_name,
-                toolsToExecute[0].parameters
-              ),
-            }
-          : toolsToExecute.map(tool => ({
-              tool_name: tool.tool_name,
-              parameters: this.chatManager.normalizeToolParams(tool.tool_name, tool.parameters),
-            }))
-      ),
-    });
+    const calls = toolsToExecute.map(tool => ({ tool_name: tool.tool_name, parameters: tool.parameters || {} }));
+    conversationHistory.push({ role: 'assistant', content: JSON.stringify(calls.length === 1 ? calls[0] : calls) });
 
     const successfulResults = toolResults.filter(result => result.success);
     const failedResults = toolResults.filter(result => !result.success);
@@ -320,7 +314,7 @@ class ConversationTranscriptService {
         const sanitizedStr =
           JSON.stringify(this.chatManager.sanitizeResultForLLM(result.result, result.tool)) || 'null';
         this.warnOnOversizedToolResult(result.tool, sanitizedStr);
-        return `${result.tool} executed successfully with parameters: ${JSON.stringify(this.chatManager.normalizeToolParams(result.tool, result.parameters))}: ${sanitizedStr}`;
+        return `${result.tool} executed successfully with parameters: ${JSON.stringify(result.parameters || {})}: ${sanitizedStr}`;
       });
       conversationHistory.push(
         this.attachToolExecutionRecords(

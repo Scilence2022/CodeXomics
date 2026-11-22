@@ -143,6 +143,14 @@ class AnalysisAgent extends AgentBase {
    */
   async getSequence(parameters, strategy) {
     try {
+      if (this.multiAgentSystem?.chatManager?.services?.analysis) {
+        const result = await this.multiAgentSystem.chatManager.getSequence(parameters);
+        return {
+          success: true,
+          ...result,
+          region: { chromosome: result.chromosome, start: result.start, end: result.end },
+        };
+      }
       const { chromosome, start, end } = parameters;
 
       if (!chromosome || start === undefined || end === undefined) {
@@ -232,17 +240,13 @@ class AnalysisAgent extends AgentBase {
    */
   async reverseComplement(parameters, strategy) {
     try {
-      const { dna } = parameters;
+      const dna = parameters.dna ?? parameters.sequence;
 
       if (!dna) {
         throw new Error('DNA sequence is required');
       }
 
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
-      }
-
-      const reverseComp = this.sequenceUtils.reverseComplement(dna);
+      const reverseComp = window.UnifiedSequenceProcessing.reverseComplementForTool(parameters);
 
       return {
         success: true,
@@ -292,8 +296,15 @@ class AnalysisAgent extends AgentBase {
   /**
    * Calculate GC content (alias)
    */
-  async computeGC(parameters, strategy) {
-    return await this.calculateGCContent(parameters, strategy);
+  async computeGC(parameters) {
+    const { sequence } = parameters;
+    if (typeof sequence !== 'string' || !sequence) return { success: false, error: 'Sequence is required' };
+    return {
+      success: true,
+      gcContent: window.UnifiedSequenceProcessing.legacyComputeGC(sequence),
+      sequence,
+      length: sequence.length,
+    };
   }
 
   /**
@@ -950,12 +961,15 @@ class AnalysisAgent extends AgentBase {
   async getCodingSequence(parameters, strategy) {
     try {
       const { geneName, chromosome, start, end } = parameters;
-      if (!this.sequenceUtils) {
-        throw new Error('SequenceUtils not available');
+      const identifier = parameters.identifier ?? parameters.gene_name ?? geneName;
+      if (!this.sequenceUtils?.getCodingSequence) {
+        if (this.multiAgentSystem?.chatManager?.getCodingSequence && identifier) {
+          const result = await this.multiAgentSystem.chatManager.getCodingSequence(parameters);
+          return { ...result, cds: result.codingSequence };
+        }
+        throw new Error('Coding sequence lookup unavailable');
       }
-      const cds = this.sequenceUtils.getCodingSequence
-        ? await this.sequenceUtils.getCodingSequence(geneName || { chromosome, start, end })
-        : null;
+      const cds = await this.sequenceUtils.getCodingSequence(identifier ?? { chromosome, start, end });
       return { success: true, cds };
     } catch (error) {
       return { success: false, error: error.message };

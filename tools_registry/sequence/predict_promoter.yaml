@@ -30,11 +30,7 @@ parameters:
         - ATGAAATAG
   required:
     - sequence
-sample_usages:
-  - user_query: Use predict_promoter to analyze genomic data
-    tool_call: predict_promoter(parameter1='value1', parameter2='value2')
-    thought: User wants to use predict_promoter for predict promoter regions in dna sequence
-    expected_result: Result from predict_promoter analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []

@@ -42,11 +42,7 @@ parameters:
     - sequence
     - blastType
     - database
-sample_usages:
-  - user_query: Use uniprot_get_annotation to analyze genomic data
-    tool_call: uniprot_get_annotation(parameter1='value1', parameter2='value2')
-    thought: User wants to use uniprot_get_annotation for get protein annotations from uniprot
-    expected_result: Result from uniprot_get_annotation analysis
+sample_usages: []
 relationships:
   depends_on: []
   conflicts_with: []
