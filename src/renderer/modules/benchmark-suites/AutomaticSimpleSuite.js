@@ -254,7 +254,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'load_wig_tracks',
           parameters: {
-            filePaths: this.buildFilePath('variable_sample.wig'),
+            filePaths: [this.buildFilePath('variable_sample.wig')],
           },
         },
         maxScore: 5,
@@ -786,6 +786,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'export_fasta_sequence',
           parameters: {
             filename: this.buildFilePath('exported_files/exported_sequences.fasta'),
+            sequence_type: this.schemaDefault('all'),
           },
         },
         maxScore: 5,
@@ -1340,7 +1341,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         complexity: 'simple',
         evaluation: 'automatic',
         instruction:
-          'Update the description of annotation "fakG" to "Updated fakG gene annotation" using update_annotation to prepare a ChangeSet for human review only.',
+          'Set the description (GenBank note) of annotation "fakG" to "Updated fakG gene annotation". Prepare a ChangeSet for human review using update_annotation.',
         verifyExecution: result => result?.applied === false && result.changeSet?.status === 'awaiting_approval',
         verificationError: 'Expected an unapplied annotation ChangeSet awaiting curator approval.',
         expectedResult: {
@@ -1348,7 +1349,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           parameters: {
             identifier: 'fakG',
             updates: {
-              description: 'Updated fakG gene annotation',
+              note: 'Updated fakG gene annotation',
             },
           },
         },

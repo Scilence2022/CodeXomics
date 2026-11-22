@@ -281,6 +281,9 @@ class FileOperationService {
   }
 
   async exportFastaSequence(parameters = {}) {
+    if ((parameters.sequence_type ?? parameters.sequenceType) === 'current_view') {
+      return this.exportCurrentViewFasta(parameters);
+    }
     if (!this.app?.exportManager) throw new Error('Export manager not available');
     if (!this.app.currentSequence || Object.keys(this.app.currentSequence).length === 0) {
       throw new Error('No genome data loaded to export');
@@ -415,7 +418,16 @@ class FileOperationService {
 
       const viewSequence = sequence.substring(viewStart - 1, viewEnd);
       let fastaContent = `>${currentChr}:${viewStart}-${viewEnd}\n`;
-      for (let i = 0; i < viewSequence.length; i += 80) fastaContent += viewSequence.substring(i, i + 80) + '\n';
+      const requestedWidth = parameters.wrap_length ?? parameters.wrapLength;
+      const width =
+        parameters.format === 'single_line' || requestedWidth === 0
+          ? viewSequence.length
+          : Number.isInteger(requestedWidth) && requestedWidth > 0
+            ? requestedWidth
+            : 80;
+      for (let i = 0; i < viewSequence.length; i += width) {
+        fastaContent += viewSequence.substring(i, i + width) + '\n';
+      }
 
       const defaultFilename = `${currentChr}_${viewStart}-${viewEnd}.fasta`;
       const outputFilename = this.getExportFilename(parameters, defaultFilename);

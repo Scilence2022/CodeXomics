@@ -259,6 +259,50 @@ describe('benchmark contracts against the current tool registry', () => {
     });
   }
 
+  it('accepts one WIG path through either published argument and checks the effective file list', () => {
+    const test = suites.simple.getTests().find(test => test.id === 'load_auto_05');
+    const [filePath] = test.expectedResult.parameters.filePaths;
+    for (const args of [{ filePath }, { filePaths: filePath }, { filePaths: [filePath] }]) {
+      expect(evaluateRecordedCall(test, 'load_wig_tracks', args).success).toBe(true);
+    }
+    for (const args of [{ filePath, filePaths: ['other.wig'] }, { filePaths: [filePath, 'other.wig'] }]) {
+      expect(evaluateRecordedCall(test, 'load_wig_tracks', args).success).toBe(false);
+    }
+  });
+
+  it('accepts the note or description field for an annotation update draft', () => {
+    const test = suites.simple.getTests().find(test => test.id === 'annot_auto_05');
+    const { identifier, updates } = test.expectedResult.parameters;
+    for (const args of [
+      { identifier, updates },
+      { identifier, updates: { description: updates.note } },
+    ]) {
+      expect(evaluateRecordedCall(test, 'update_annotation', args).success).toBe(true);
+      expect(evaluateRecordedCall(test, 'update_annotation', args, false).success).toBe(false);
+    }
+    expect(
+      evaluateRecordedCall(test, 'update_annotation', { identifier, updates: { product: updates.note } }).success
+    ).toBe(false);
+    expect(test.verifyExecution({ applied: true, changeSet: { status: 'awaiting_approval' } })).toBe(false);
+    expect(test.verifyExecution({ applied: false, changeSet: { status: 'awaiting_approval' } })).toBe(true);
+  });
+
+  it('distinguishes the visible FASTA export from the whole-genome export', () => {
+    const test = suites.simple.getTests().find(test => test.id === 'export_auto_07');
+    const { filename } = test.expectedResult.parameters;
+    const args = { filename, sequence_type: 'current_view' };
+    expect(evaluateRecordedCall(test, 'export_fasta_sequence', args).success).toBe(true);
+    expect(evaluateRecordedCall(test, 'export_fasta_sequence', args, false).success).toBe(false);
+    expect(evaluateRecordedCall(test, 'export_fasta_sequence', { filename }).success).toBe(false);
+    expect(evaluateRecordedCall(test, 'export_current_view_fasta', { filename }).success).toBe(true);
+    const wholeGenome = suites.simple.getTests().find(test => test.id === 'export_auto_01');
+    const genomeFilename = wholeGenome.expectedResult.parameters.filename;
+    expect(evaluateRecordedCall(wholeGenome, 'export_fasta_sequence', { filename: genomeFilename }).success).toBe(true);
+    expect(
+      evaluateRecordedCall(wholeGenome, 'export_fasta_sequence', { ...args, filename: genomeFilename }).success
+    ).toBe(false);
+  });
+
   it('accepts both UniProt query shapes and scores the effective filters', () => {
     const test = suites.simple.getTests().find(candidate => candidate.id === 'db_auto_01');
     const flat = { proteinName: 'beta-galactosidase', organism: 'Escherichia coli', reviewedOnly: true };

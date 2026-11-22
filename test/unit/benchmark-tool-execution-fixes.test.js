@@ -18,6 +18,32 @@ function loadViaWindow(relativePath) {
   return mockWindow;
 }
 
+describe('FASTA export scope', () => {
+  it('writes the requested current view through the general FASTA tool', async () => {
+    const { FileOperationService } = loadViaWindow('src/renderer/modules/chat/services/FileOperationService.js');
+    const app = { exportManager: {}, currentSequence: { chr: 'GGAACCTTGG', other: 'TTT' } };
+    const manager = { getCurrentState: () => ({ currentChromosome: 'chr', currentPosition: { start: 3, end: 8 } }) };
+    const service = new FileOperationService(app, manager);
+    service.saveExportContent = vi.fn();
+    const parameters = { sequence_type: 'current_view', filename: '/tmp/view.fasta', wrap_length: 4 };
+
+    expect(await service.exportFastaSequence(parameters)).toMatchObject({
+      region_start: 3,
+      region_end: 8,
+      region_length: 6,
+    });
+    expect(service.saveExportContent).toHaveBeenCalledWith(
+      '>chr:3-8\nAACC\nTT\n',
+      parameters.filename,
+      'Current view FASTA',
+      parameters,
+      'export_current_view_fasta'
+    );
+    await service.exportFastaSequence({ filename: '/tmp/genome.fasta' });
+    expect(service.saveExportContent.mock.lastCall[0]).toBe('>chr\nGGAACCTTGG\n>other\nTTT\n');
+  });
+});
+
 describe('ChatManager benchmark tool execution fixes', () => {
   const ChatManager = require('../../src/renderer/modules/ChatManager.js');
 

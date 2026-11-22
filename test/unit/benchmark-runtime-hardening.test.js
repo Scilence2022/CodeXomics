@@ -10,6 +10,54 @@ function readSource(relativePath) {
 }
 
 describe('benchmark runtime hardening', () => {
+  it('reports a failed provider request before evaluating missing tool calls', async () => {
+    const { sandbox } = loadScript('src/renderer/modules/LLMBenchmarkFramework.js');
+    const framework = Object.create(sandbox.window.LLMBenchmarkFramework.prototype);
+    framework.displayEvaluationStart = vi.fn();
+    framework.displayEvaluationResult = vi.fn();
+    framework.strictAutomaticEvaluator = { evaluate: vi.fn() };
+    const test = { evaluation: 'automatic', maxScore: 5 };
+    const interaction = {
+      request: {
+        providerRequests: [
+          {
+            provider: 'zhongkeyu',
+            model: 'deepseek-v4.1-flash',
+            streaming: true,
+            outcome: 'failed',
+            failure: { kind: 'network' },
+          },
+          {
+            provider: 'zhongkeyu',
+            model: 'deepseek-v4.1-flash',
+            streaming: false,
+            outcome: 'failed',
+            failure: { kind: 'network' },
+          },
+        ],
+      },
+      response: { functionCalls: [], toolExecutions: [] },
+    };
+    const evaluation = await framework.evaluateTestResult(test, { llmInteractionData: interaction });
+
+    expect(evaluation).toMatchObject({
+      status: 'error',
+      success: false,
+      score: 0,
+      errors: [expect.stringContaining('network connection error')],
+    });
+    expect(framework.strictAutomaticEvaluator.evaluate).not.toHaveBeenCalled();
+    expect(
+      framework.getProviderFailure({ ...interaction, response: { functionCalls: [{ tool_name: 'get_track_status' }] } })
+    ).toBeNull();
+    expect(
+      framework.getProviderFailure({
+        ...interaction,
+        request: { providerRequests: [...interaction.request.providerRequests, { outcome: 'completed' }] },
+      })
+    ).toBeNull();
+  });
+
   it('sets ChatBox working directory through path-info IPC in hardened renderer', () => {
     const source = readSource('src/renderer/modules/ChatManager.js');
     const methodStart = source.indexOf('async setWorkingDirectory');

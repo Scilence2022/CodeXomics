@@ -3286,13 +3286,23 @@ class LLMConfigManager {
     }
     const startedAt = performance.now();
     let outcome = 'completed';
+    let failure;
     try {
       const result = await this.fetchWithGuards(url, { method: 'POST', headers, body }, options, consumeResponse);
       if (streaming && result === null) outcome = 'stream-unavailable';
       if (result?.retryWithFallback) outcome = 'model-unavailable';
       return result;
     } catch (error) {
-      outcome = error?.isTimeout ? 'timeout' : options.signal?.aborted ? 'cancelled' : 'failed';
+      outcome = error?.isTimeout
+        ? 'timeout'
+        : options.signal?.aborted || error?.name === 'AbortError'
+          ? 'cancelled'
+          : 'failed';
+      failure = this.isProviderTransportError(error)
+        ? { kind: 'network' }
+        : Number.isInteger(error?.status)
+          ? { kind: 'http', status: error.status }
+          : { kind: outcome === 'failed' ? 'request' : outcome };
       throw error;
     } finally {
       if (collectEvidence) {
@@ -3313,6 +3323,7 @@ class LLMConfigManager {
             toolNames: tools.filter(Boolean),
             durationMs: Math.round(performance.now() - startedAt),
             outcome,
+            ...(failure && { failure }),
           });
         } catch (error) {
           console.warn('Could not record provider request metadata:', error.message);
@@ -3914,6 +3925,14 @@ class LLMConfigManager {
     }
   }
 
+  isProviderTransportError(error) {
+    if (error?.name === 'NetworkError') return true;
+    if (error?.name !== 'TypeError') return false;
+    return /^(?:failed to fetch|fetch failed|load failed|networkerror when attempting to fetch resource|network request failed|terminated)\.?$/i.test(
+      error.message
+    );
+  }
+
   isRetryableError(status) {
     const retryableStatuses = [
       429, // Too Many Requests
@@ -3971,10 +3990,11 @@ class LLMConfigManager {
   }
 
   /**
-   * Make HTTP request with automatic retry logic for service unavailable errors
+   * Retry transient HTTP failures and allow one retry for a dropped connection.
    */
   async makeRequestWithRetry(requestFunction, providerName, responseProcessor, maxAttempts = 3, options = {}) {
     let lastError;
+    let transportRetried = false;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -3989,12 +4009,13 @@ class LLMConfigManager {
           throw error;
         }
 
-        // Only retry if it's a retryable error and we have attempts left
-        if (error.isRetryable && attempt < maxAttempts) {
+        const isTransportFailure = this.isProviderTransportError(error);
+        if ((error.isRetryable || (isTransportFailure && !transportRetried)) && attempt < maxAttempts) {
+          if (isTransportFailure) transportRetried = true;
           const delay = this.calculateRetryDelay(attempt);
 
           console.warn(
-            `🔄 [${providerName}] HTTP ${error.status} error on attempt ${attempt}. Retrying in ${delay}ms...`
+            `🔄 [${providerName}] ${isTransportFailure ? 'Network error' : `HTTP ${error.status} error`} on attempt ${attempt}. Retrying in ${delay}ms...`
           );
           this.showRetryNotification(providerName, attempt + 1, maxAttempts, delay);
 

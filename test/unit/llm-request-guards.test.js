@@ -131,6 +131,49 @@ describe('makeRequestWithRetry', () => {
     expect(result).toBe('response');
   });
 
+  it('recovers a dropped streaming connection and one failed JSON attempt on the same provider', async () => {
+    const manager = createManager();
+    manager.calculateRetryDelay = () => 0;
+    manager.shouldAttemptStream = () => true;
+    const reply = {
+      choices: [
+        {
+          message: {
+            tool_calls: [{ id: 'test', type: 'function', function: { name: 'get_track_status', arguments: '{}' } }],
+          },
+          finish_reason: 'tool_calls',
+        },
+      ],
+    };
+    const fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ ok: true, json: async () => reply });
+    vi.stubGlobal('fetch', fetch);
+    const onProviderRequest = vi.fn();
+    const options = { onProviderRequest };
+    const provider = { baseUrl: 'https://example.invalid/v1', model: 'test-model' };
+
+    const result = await manager.sendZhongkeyuMessageWithHistory(provider, [], null, null, options);
+
+    expect(result.tool_calls[0].function.name).toBe('get_track_status');
+    expect(fetch.mock.calls.map(([, init]) => Boolean(JSON.parse(init.body).stream))).toEqual([true, false, false]);
+    expect(onProviderRequest.mock.calls.map(([request]) => request.failure?.kind)).toEqual([
+      'network',
+      'network',
+      undefined,
+    ]);
+  });
+
+  it('stops retrying when the JSON transport remains unavailable', async () => {
+    const manager = createManager();
+    manager.calculateRetryDelay = () => 0;
+    const send = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    await expect(manager.makeRequestWithRetry(send, 'Test', value => value)).rejects.toThrow('Failed to fetch');
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
   it('cancels retry backoff and releases its timer', async () => {
     vi.useFakeTimers();
     const manager = createManager();

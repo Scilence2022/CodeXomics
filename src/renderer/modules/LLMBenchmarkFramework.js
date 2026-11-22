@@ -1090,7 +1090,7 @@ class LLMBenchmarkFramework {
       const evaluation = await this.evaluateTestResult(test, testResult);
       result.success = evaluation.success;
       result.score = evaluation.score;
-      result.status = evaluation.success ? 'passed' : 'failed';
+      result.status = evaluation.status || (evaluation.success ? 'passed' : 'failed');
 
       if (evaluation.errors) {
         result.errors.push(...evaluation.errors);
@@ -2203,14 +2203,14 @@ class LLMBenchmarkFramework {
       // Analyze response quality (response is now in scope)
       interactionData.analysis = this.analyzeResponseQuality(instruction, response || 'No response received');
 
-      // CRITICAL FIX: Check if response indicates LLM failure
-      if (response && this.isLLMErrorResponse(response)) {
+      const providerFailure = this.getProviderFailure(interactionData);
+      if (providerFailure || (response && this.isLLMErrorResponse(response))) {
         console.log('❌ LLM error response detected');
-        const errorMessage = `LLM Error Response: ${response}`;
+        const errorMessage = providerFailure || `LLM Error Response: ${response}`;
 
         // Update interaction data with error info
         interactionData.analysis.isError = true;
-        interactionData.analysis.errorType = 'llm_error_response';
+        interactionData.analysis.errorType = providerFailure ? 'provider_request_failed' : 'llm_error_response';
         interactionData.analysis.errorMessage = errorMessage;
 
         this.displayTestError(new Error(errorMessage), options);
@@ -3960,6 +3960,22 @@ class LLMBenchmarkFramework {
     return null;
   }
 
+  getProviderFailure(interactionData) {
+    const request = interactionData?.request?.providerRequests?.at(-1);
+    const response = interactionData?.response;
+    if (!request || !['failed', 'timeout'].includes(request.outcome)) return null;
+    if (response?.functionCalls?.length || response?.toolExecutions?.length) return null;
+    const kind =
+      request.failure?.kind === 'network'
+        ? 'network connection error'
+        : request.failure?.status
+          ? `HTTP ${request.failure.status}`
+          : request.outcome === 'timeout'
+            ? 'request timeout'
+            : 'request failure';
+    return `Provider ${request.provider} (${request.model}) failed before any tool call (${kind}).`;
+  }
+
   /**
    * Check if response indicates LLM error or failure
    */
@@ -3997,6 +4013,7 @@ class LLMBenchmarkFramework {
       'http 503',
       'communication error',
       'network error',
+      '**network connection error**',
       'service unavailable',
     ];
 
@@ -4907,6 +4924,14 @@ class LLMBenchmarkFramework {
 
     // Display evaluation start
     this.displayEvaluationStart(test, testResult);
+
+    const providerFailure = test.evaluation === 'automatic' && this.getProviderFailure(testResult.llmInteractionData);
+    if (providerFailure) {
+      evaluation.status = 'error';
+      evaluation.errors.push(providerFailure);
+      this.displayEvaluationResult(test, evaluation, testResult);
+      return evaluation;
+    }
 
     // CRITICAL: Log detected tools for scoring verification (Song's request)
     if (testResult.actualResult && testResult.actualResult.tool_name) {
