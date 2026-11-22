@@ -83,7 +83,10 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
           "Search for all genes involved in 'amino acid biosynthesis' and create a chromosomal distribution map showing their locations and functional clustering.",
         expectedResult: {
           tool_sequence: ['search_features', 'navigate_to_position'],
-          parameters: [{ query: 'amino acid biosynthesis', caseSensitive: false }, 'multiple_navigation_calls'],
+          parameters: [
+            { query: 'amino acid biosynthesis', case_sensitive: this.schemaDefault(false) },
+            { start: '<hit_start>', end: '<hit_end>' },
+          ],
         },
         maxScore: 10,
         bonusScore: 2,
@@ -100,17 +103,17 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          "Find all genes with names containing 'ara' and perform integrated analysis of their chromosomal clustering.",
+          "Use feature search to find CDS records matching 'ara' and describe how the returned hits are distributed along the chromosome.",
         expectedResult: {
-          tool_sequence: ['find_gene_by_name', 'get_sequence'],
-          parameters: [{ name: 'ara', exact_match: false }, 'sequence_parameters'],
+          tool_sequence: ['search_features'],
+          parameters: [{ query: 'ara', feature_type: 'CDS' }],
         },
         maxScore: 10,
         bonusScore: 2,
         timeout: 60000,
         evaluator: this.evaluateWorkflowCall.bind(this),
         manualVerification:
-          'Please verify: 1) All ara genes are identified, 2) Chromosomal clustering is assessed, 3) Results are integrated coherently, 4) Comparative analysis is meaningful.',
+          'Please verify: 1) The answer summarizes the genomic distribution using coordinates from the returned CDS hits.',
       },
 
       // ANALYSIS TASKS - Manual + Complex
@@ -121,13 +124,12 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         category: 'analysis',
         complexity: 'complex',
         evaluation: 'manual',
-        instruction: 'Perform comprehensive codon usage analysis for araA gene.',
+        instruction: 'Report detailed codon counts and frequencies for araA using its annotated genetic code.',
         expectedResult: {
           tool_name: 'codon_usage_analysis',
           parameters: {
             geneName: 'araA',
-            include_statistics: true,
-            genetic_code: 'standard',
+            include_statistics: this.schemaDefault(true),
           },
         },
         maxScore: 10,
@@ -135,7 +137,7 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         timeout: 60000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
         manualVerification:
-          'Please verify: 1) Detailed codon analysis is performed for araA, 2) Bias patterns are clearly identified, 3) Statistical comparisons are provided, 4) Results include significance testing, 5) Visualization effectively shows patterns.',
+          'Please verify: 1) The result identifies araA and the code table used, and includes the observed codon counts and frequencies.',
       },
       {
         id: 'anal_manual_03',
@@ -146,15 +148,24 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         evaluation: 'manual',
         instruction: 'Analyze the sequence composition in the 500bp region upstream of the thrC gene.',
         expectedResult: {
-          tool_sequence: ['get_sequence', 'compute_gc'],
-          parameters: [{ geneName: 'thrC', upstream: 500 }, { sequence: '<retrieved_sequence>' }],
+          tool_sequence: ['find_gene_by_name', 'get_sequence', 'compute_gc'],
+          parameters: [
+            { name: 'thrC', exact_match: true },
+            {
+              chromosome: '<gene_chromosome>',
+              start: '<upstream_start>',
+              end: '<upstream_end>',
+              strand: '<gene_strand>',
+            },
+            { sequence: '<retrieved_sequence>' },
+          ],
         },
         maxScore: 10,
         bonusScore: 2,
         timeout: 60000,
         evaluator: this.evaluateWorkflowCall.bind(this),
         manualVerification:
-          'Please verify: 1) 500bp upstream sequence is correctly retrieved, 2) GC content analysis is performed, 3) Results show detailed composition analysis, 4) Analysis provides meaningful insights about sequence characteristics.',
+          'Please verify: 1) The 500-base interval is calculated from the gene coordinates and strand, 2) GC content analysis is performed, 3) Results show detailed composition analysis, 4) Analysis provides meaningful insights about sequence characteristics.',
       },
 
       // EXTERNAL DATABASE TASKS - Manual + Complex
@@ -166,10 +177,13 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          'Perform comprehensive protein analysis for araA gene: retrieve UniProt annotation and AlphaFold structure prediction, then integrate results for functional characterization.',
+          'Perform comprehensive protein analysis for the E. coli araA gene: retrieve UniProt annotation and AlphaFold structure prediction, then integrate results for functional characterization.',
         expectedResult: {
-          tool_sequence: ['uniprot_search', 'alphafold_search'],
-          parameters: [{ geneName: 'araA' }, { geneName: 'araA' }],
+          tool_sequence: ['get_uniprot_entry', 'search_alphafold_structures'],
+          parameters: [
+            { geneName: 'araA', organism: 'Escherichia coli' },
+            { geneName: 'araA', organism: this.schemaDefault('Escherichia coli') },
+          ],
         },
         maxScore: 10,
         bonusScore: 2,
@@ -177,7 +191,7 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         earlyReturn: true,
         evaluator: this.evaluateWorkflowCall.bind(this),
         manualVerification:
-          'Please verify: 1) uniprot_search and alphafold_search tool calls are issued, 2) Both tasks are submitted successfully (do not wait for completion as online search time is variable).',
+          'Please verify: 1) get_uniprot_entry and search_alphafold_structures tool calls are issued, 2) Both tasks are submitted successfully (do not wait for completion as online search time is variable).',
       },
 
       // ANNOTATION WORKFLOW TASKS - Manual + Complex
@@ -189,10 +203,19 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          'Create a gene annotation named "test_workflow_gene" at position 700000 to 703000, then search for all annotations of type "gene" to verify it was created.',
+          'Create a gene annotation named "test_workflow_gene" at position 700000 to 703000, then search for that name to verify it was created.',
         expectedResult: {
           tool_sequence: ['create_annotation', 'search_annotations'],
-          parameters: [{ start: 700000, end: 703000, name: 'test_workflow_gene', type: 'gene' }, { type: 'gene' }],
+          parameters: [
+            {
+              chromosome: '<current_chromosome>',
+              start: 700000,
+              end: 703000,
+              name: 'test_workflow_gene',
+              type: 'gene',
+            },
+            { query: 'test_workflow_gene', type: 'gene' },
+          ],
         },
         maxScore: 10,
         bonusScore: 2,
@@ -211,10 +234,14 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          'Get current track settings, set the annotation track height to 80 pixels, then reset all track settings to defaults.',
+          'Get the genes track settings, set its height to 80 pixels, then reset that track to its defaults.',
         expectedResult: {
           tool_sequence: ['get_track_settings', 'set_track_settings', 'reset_track_settings'],
-          parameters: [{}, { trackName: 'annotation', settings: { height: 80 } }, {}],
+          parameters: [
+            { track_type: 'genes' },
+            { track_type: 'genes', settings: { height: 80 } },
+            { track_type: 'genes' },
+          ],
         },
         maxScore: 10,
         bonusScore: 2,
@@ -239,7 +266,13 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
           parameters: [
             { geneName: 'lacZ' },
             { sequence: '<forward_primer_sequence>' },
-            { sequence: '<forward_primer_sequence>', position: '<forward_primer_start>' },
+            {
+              sequence: '<forward_primer_sequence>',
+              name: '<primer_name>',
+              chromosome: '<primer_chromosome>',
+              start: '<forward_primer_start>',
+              end: '<forward_primer_end>',
+            },
           ],
         },
         maxScore: 10,
@@ -260,10 +293,10 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          'Create a BLAST database from the current genome, then perform a local BLAST search with sequence ATGAAAGCGCTGAAAGCGCTG against it.',
+          'Create a BLAST database from the current genome, then perform a local blastn search with sequence ATGAAAGCGCTGAAAGCGCTG against it.',
         expectedResult: {
           tool_sequence: ['blast_create_quick_db_for_current_genome', 'blast_search_local'],
-          parameters: [{}, { sequence: 'ATGAAAGCGCTGAAAGCGCTG' }],
+          parameters: [{}, { sequence: 'ATGAAAGCGCTGAAAGCGCTG', blastType: 'blastn', database: '<created_database>' }],
         },
         maxScore: 10,
         bonusScore: 2,
@@ -283,10 +316,10 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          'Find restriction enzyme sites in the current region, then perform a virtual digest with EcoRI and BamHI enzymes.',
+          'Find EcoRI sites in the current region, then perform a virtual digest with EcoRI and BamHI enzymes.',
         expectedResult: {
           tool_sequence: ['find_restriction_sites', 'virtual_digest'],
-          parameters: [{}, { enzymes: ['EcoRI', 'BamHI'] }],
+          parameters: [{ enzyme: 'EcoRI' }, { enzymes: ['EcoRI', 'BamHI'] }],
         },
         maxScore: 10,
         bonusScore: 2,
@@ -331,17 +364,22 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          'Perform complete comparative genomics analysis: load two bacterial genomes, identify orthologs of lacZ gene, compare their codon usage patterns and assess evolutionary conservation.',
+          'Load the two bacterial genome files supplied by the operator. For each genome, report detailed codon usage for lacZ using its annotated genetic code, then compare the observed counts and frequencies.',
         expectedResult: {
-          tool_sequence: ['load_genome_file', 'find_gene_by_name', 'codon_usage_analysis'],
-          parameters: [{ filePath: '<genome_path>' }, { name: 'lacZ' }, { geneName: 'lacZ', include_statistics: true }],
+          tool_sequence: ['load_genome_file', 'codon_usage_analysis', 'load_genome_file', 'codon_usage_analysis'],
+          parameters: [
+            { filePath: '<first_genome_path>' },
+            { geneName: 'lacZ', include_statistics: this.schemaDefault(true) },
+            { filePath: '<second_genome_path>' },
+            { geneName: 'lacZ', include_statistics: this.schemaDefault(true) },
+          ],
         },
         maxScore: 15,
         bonusScore: 3,
         timeout: 90000,
         evaluator: this.evaluateWorkflowCall.bind(this),
         manualVerification:
-          'Please verify: 1) Both genomes load successfully, 2) lacZ orthologs are identified accurately, 3) Codon usage comparison is statistically robust, 4) Evolutionary analysis is comprehensive, 5) Results integration is scientifically meaningful.',
+          'Please verify: Each analysis uses the genome just loaded. Verify that the comparison cites the observed counts or frequencies from both results.',
       },
       {
         id: 'workflow_manual_02',
@@ -351,14 +389,14 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         complexity: 'complex',
         evaluation: 'manual',
         instruction:
-          'Design and validate genome analysis workflow: load genome and annotation files, analyze sequence composition, and generate comprehensive reports.',
+          'Load the genome and annotation files, read positions 1 through 10,000 on the current chromosome, and report GC content.',
         expectedResult: {
           tool_sequence: ['load_genome_file', 'load_annotation_file', 'get_sequence', 'compute_gc'],
           parameters: [
             { showFileDialog: true },
             {},
             { chromosome: '<current_chromosome>', start: 1, end: 10000 },
-            { sequence: '<retrieved_sequence>', include_statistics: true },
+            { sequence: '<retrieved_sequence>' },
           ],
         },
         maxScore: 15,
@@ -366,7 +404,7 @@ class ManualComplexSuite extends BenchmarkEvaluatorBase {
         timeout: 90000,
         evaluator: this.evaluateWorkflowCall.bind(this),
         manualVerification:
-          'Please verify: 1) Genome and annotations load successfully, 2) Sequence analysis is comprehensive, 3) Reports are generated with meaningful insights, 4) Workflow is efficient and logical, 5) Results meet analysis objectives.',
+          'Please verify: 1) Genome and annotations load successfully, 2) Sequence analysis is comprehensive, 3) The reported GC content is based on the retrieved sequence, 4) Workflow is efficient and logical, 5) Results meet analysis objectives.',
       },
     ];
   }

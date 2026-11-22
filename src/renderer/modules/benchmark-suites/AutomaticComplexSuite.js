@@ -601,7 +601,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
               reading_frame: this.schemaDefault(1),
             },
             {
-              sequence: '{get_coding_sequence.proteinSequence}',
+              sequence: '{translate_dna.protein}',
               type: 'protein',
             },
           ],
@@ -996,7 +996,7 @@ class AutomaticComplexSuite extends BenchmarkEvaluatorBase {
                 // The viewer schema documents file_path (local PDB file), and
                 // the instruction says to open the returned structure, so
                 // opening the downloaded file path is equally correct.
-                { file_path: '{fetch_alphafold_structure.filePath}' }
+                { file_path: '{fetch_alphafold_structure.structureFile}' }
               ),
             },
           ],

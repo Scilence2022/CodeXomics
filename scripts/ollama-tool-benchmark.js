@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const DynamicToolsSnapshotAdapter = require('../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
 const StrictAutomaticEvaluator = require('../src/renderer/modules/benchmark-suites/StrictAutomaticEvaluator.js');
-const { buildContractToolResult } = require('./lib/contract-tool-results.js');
+const { buildBenchmarkToolResult } = require('./lib/benchmark-tool-results.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'tools_registry', 'generated', 'tool-registry-manifest.json');
@@ -253,11 +253,14 @@ async function evaluateTest(test, model, adapter, evaluator, runOptions = {}) {
         const parameters = normalizeArguments(toolCall.function?.arguments);
         const validation = adapter.validateToolCall(toolName, parameters);
         calls.push({ tool_name: toolName, parameters, schema_valid: validation.valid });
+        const result = validation.valid
+          ? await buildBenchmarkToolResult(toolName, parameters)
+          : { success: false, error: validation.errors.join(', ') };
         messages.push({
           role: 'tool',
           tool_name: toolName,
           content:
-            JSON.stringify(buildContractToolResult(toolName, parameters)) +
+            JSON.stringify(result) +
             '\n' +
             (productionParity
               ? PRODUCTION_TOOL_GUIDANCE

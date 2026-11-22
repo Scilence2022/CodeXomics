@@ -1833,6 +1833,7 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
           tool_name: 'translate_dna',
           parameters: {
             dna: 'ATGAAAGCGCTGAAAGCGCTGAAAGCGCTGAAAGCGCTG',
+            genetic_code: this.schemaDefault('standard'),
           },
         },
         maxScore: 5,
@@ -2777,13 +2778,9 @@ class AutomaticSimpleSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'advanced_uniprot_search',
           parameters: {
-            query_fields: {
-              protein_name: 'beta-galactosidase',
-              organism: 'Escherichia coli',
-            },
-            filters: {
-              reviewed_only: true,
-            },
+            proteinName: 'beta-galactosidase',
+            organism: 'Escherichia coli',
+            reviewedOnly: true,
           },
         },
         maxScore: 5,
