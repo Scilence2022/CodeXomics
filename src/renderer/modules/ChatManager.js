@@ -2977,34 +2977,15 @@ class ChatManager {
   }
 
   async searchFeatures(params) {
-    const { query, caseSensitive } = params;
-
-    // Log tool detection as requested by Song
-    console.log('🔍 [Tool Detection] search_features tool called with params:', params);
-    console.log(
-      '🔍 [Tool Detection] Detected tool: search_features, parameters: query="' +
-        query +
-        '", caseSensitive=' +
-        (caseSensitive || false)
-    );
-
-    console.log('searchFeatures called with params:', params);
-
-    // Use existing search functionality from NavigationManager
+    const { query, caseSensitive = params.case_sensitive ?? false } = params;
     if (this.app && this.app.navigationManager) {
-      console.log('Using navigationManager.performSearch');
-
-      // Store original settings
-      const originalCaseSensitive = document.getElementById('caseSensitive')?.checked;
-
-      // Set case sensitivity for this search
-      const caseSensitiveCheckbox = document.getElementById('caseSensitive');
-      if (caseSensitiveCheckbox) {
-        caseSensitiveCheckbox.checked = caseSensitive || false;
-      }
-
-      // Perform the search
-      this.app.navigationManager.performSearch(query);
+      const options = {
+        caseSensitive,
+        exactMatch: params.exact_match,
+        featureType: params.featureType ?? params.feature_type,
+      };
+      if (params.max_results !== undefined) options.maxResults = params.max_results;
+      this.app.navigationManager.performSearch(query, options);
 
       // Get the results from NavigationManager
       const searchResults = this.app.navigationManager.searchResults || [];
@@ -3016,11 +2997,6 @@ class ChatManager {
           this.app.scrollSidebarToSection(searchResultsSection);
           console.log('🔄 Auto-scrolled sidebar to search results panel');
         }
-      }
-
-      // Restore original setting
-      if (caseSensitiveCheckbox && originalCaseSensitive !== undefined) {
-        caseSensitiveCheckbox.checked = originalCaseSensitive;
       }
 
       console.log('Search completed, results:', searchResults);
@@ -3064,6 +3040,40 @@ class ChatManager {
     }
 
     throw new Error('Navigation manager not available');
+  }
+
+  async findGeneByName(params) {
+    const result = window.UnifiedSequenceProcessing.searchGeneByName(params.name, {
+      partialMatch: !params.exact_match,
+      caseSensitive: params.case_sensitive ?? false,
+      searchFields: ['gene', 'locus_tag'],
+      maxResults: 1,
+    });
+    if (!result.success) return result;
+    const hit = result.results[0];
+    if (!hit) return { success: true, found: false, name: params.name, genes_found: 0, genes: [] };
+    const { feature, chromosome } = hit;
+    if (params.navigate_to_gene === true) {
+      const navigation = await this.navigateToPosition({ chromosome, start: feature.start, end: feature.end });
+      if (navigation?.success === false) return navigation;
+    }
+    const { qualifiers, ...coordinates } = feature;
+    const gene = {
+      chromosome,
+      start: feature.start,
+      end: feature.end,
+      strand: feature.strand === -1 || feature.strand === '-' ? '-' : '+',
+      name: [qualifiers?.gene].flat()[0],
+      locus_tag: [qualifiers?.locus_tag].flat()[0],
+    };
+    return {
+      success: true,
+      found: true,
+      ...hit,
+      feature: params.include_annotations === false ? coordinates : feature,
+      genes_found: 1,
+      genes: [gene],
+    };
   }
 
   async searchGeneByName(params) {
@@ -10176,9 +10186,9 @@ class ChatManager {
       uniprot_id,
       geneName,
       organism = null, // No default organism - will be 'Homo sapiens' only for gene searches
-      include_sequence = true,
-      include_features = true,
-      include_function = true,
+      include_sequence = parameters.includeSequence ?? true,
+      include_features = parameters.includeFeatures ?? true,
+      include_function = parameters.includeFunction ?? true,
     } = parameters;
 
     console.log('📖 [ChatManager] Getting UniProt entry:', {
@@ -11537,7 +11547,7 @@ ${coreTools}
       jump_to_gene: () => this.executeMicrobeFunction('jumpToGene', parameters),
       scroll_left: () => this.executeMicrobeFunction('scrollLeft', parameters),
       scroll_right: () => this.executeMicrobeFunction('scrollRight', parameters),
-      find_gene_by_name: () => this.executeMicrobeFunction('searchGeneByName', parameters),
+      find_gene_by_name: () => this.findGeneByName(parameters),
       find_gene: () => this.executeMicrobeFunction('searchGeneByName', parameters), // legacy alias
       save_view_state: () => this.saveViewState(parameters),
       restore_view_state: () => this.restoreViewState(parameters),
@@ -11546,6 +11556,7 @@ ${coreTools}
 
       // Sequence tools
       get_sequence: () => this.getSequence(parameters),
+      get_coding_sequence: () => this.getCodingSequence(parameters),
       calc_region_gc: () => this.calcRegionGc(parameters),
       translate_sequence: () => this.executeMicrobeFunction('translateDNA', parameters),
       calculate_gc_content: () => this.calculateGCContent(parameters),
@@ -14191,15 +14202,16 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
     return this.services.analysis.findOpenReadingFrames(params);
   }
 
-  reverseComplement(sequence) {
-    // Use local SequenceTools implementation
-    const SequenceTools = require('../mcp-tools/sequence/SequenceTools');
-    const seqTools = new SequenceTools();
-    return seqTools.reverseComplement(sequence);
+  reverseComplement(input) {
+    return window.UnifiedSequenceProcessing.reverseComplementForTool(
+      typeof input === 'string' ? { dna: input } : input
+    );
   }
 
   async getCodingSequence(params) {
-    return this.services.analysis.getCodingSequence(params);
+    return this.executeMicrobeFunction('getCodingSequence', {
+      name: params.identifier ?? params.gene_name ?? params.geneName,
+    });
   }
 
   /**
@@ -17087,6 +17099,13 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
    * Fetch protein structure data (from PDB or AlphaFold)
    */
   async fetchProteinStructure(parameters) {
+    if (parameters.include_ligands === false) {
+      return {
+        success: false,
+        tool: 'fetch_protein_structure',
+        error: 'Only complete deposited structures are available. Omit include_ligands or use true.',
+      };
+    }
     // Delegate to ProteinService which caches PDB data to prevent LLM context overflow.
     // The ProteinService version returns metadata + _dataRef instead of raw pdbData.
     if (this.services && this.services.protein) {

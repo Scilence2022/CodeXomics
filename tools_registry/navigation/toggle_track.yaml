@@ -45,11 +45,15 @@ parameters:
       type: string
       description: Browser client ID for multi-window support
       default: default
-  required:
-    - track_name
+    trackName:
+      type: string
+      description: Track name (genes, gc, variants, reads, proteins, primers, sequence, actions)
+  required: []
   anyOf:
     - required: [track_name, visible]
     - required: [track_name, action]
+    - required: [trackName, visible]
+    - required: [trackName, action]
 sample_usages:
   - user_query: 'Hide the gene track'
     tool_call: "toggle_track(track_name='genes', visible=false)"

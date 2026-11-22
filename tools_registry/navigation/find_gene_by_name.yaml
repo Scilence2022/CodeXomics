@@ -2,7 +2,7 @@
 name: 'find_gene_by_name'
 aliases: ['find_gene']
 version: '1.1.0'
-description: 'Search for a SPECIFIC GENE by its name or locus tag (e.g., lacZ, b0062, dnaA). Use this when you know the gene identifier. For searching by functional annotation or feature type (e.g., "all kinase genes", "all tRNA"), use search_features instead. For direct navigation to a known gene, try jump_to_gene first.'
+description: "Find the best matching gene name or locus tag across loaded chromosomes. Returns coordinates and strand. Set navigate_to_gene to move the viewport."
 category: 'navigation'
 keywords: ['find', 'gene', 'name', 'locus', 'tag', 'search', 'locate', 'gene search', 'fallback', 'partial match']
 priority: 2 # Lower priority than jump_to_gene
@@ -24,46 +24,29 @@ parameters:
       type: 'string'
       description: "Specific gene name or locus tag to search for (e.g., 'lacZ', 'b0062', 'araA'). NOT for functional keywords like 'kinase' or 'transport' — use search_features for those."
       examples: ['lacZ', 'b0062', 'araA', 'dnaA', 'rpoB']
-    exact_match:
-      type: 'boolean'
-      description: 'Whether to require exact name match (default: false for partial matching)'
-      default: false
-    case_sensitive:
-      type: 'boolean'
-      description: 'Whether search is case sensitive (default: false)'
-      default: false
-    navigate_to_gene:
-      type: 'boolean'
-      description: 'Whether to automatically navigate to the gene location (default: true)'
-      default: true
-    include_annotations:
-      type: 'boolean'
-      description: 'Whether to include detailed gene annotations (default: true)'
-      default: true
     clientId:
       type: 'string'
       description: 'Browser client ID for multi-window support'
       default: 'default'
+    exact_match:
+      type: boolean
+      description: Require an exact gene name or locus tag.
+    case_sensitive:
+      type: boolean
+      description: Match letter case.
+    navigate_to_gene:
+      type: boolean
+      description: Move the viewport to the best match when true.
+    include_annotations:
+      type: boolean
+      description: Include the feature qualifiers in the best match.
+      default: true
   required: ['name']
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: "Find all genes containing 'ara'"
-    tool_call: "find_gene_by_name(name='ara', exact_match=false, navigate_to_gene=false)"
-    thought: "User wants to search for genes with 'ara' in the name using partial matching, not direct navigation"
-    expected_result: "List of all genes containing 'ara' in their name or description"
-
-  - user_query: 'Search for gene lysC if jump_to_gene fails'
-    tool_call: "find_gene_by_name(name='lysC', exact_match=false, navigate_to_gene=true)"
-    thought: 'Fallback search for lysC gene with partial matching and navigation'
-    expected_result: 'Gene lysC found using fuzzy search and browser navigates to location'
-
-  - user_query: "Look for genes similar to 'lacz'"
-    tool_call: "find_gene_by_name(name='lacz', exact_match=false, case_sensitive=false)"
-    thought: 'User might have typo in gene name, use fuzzy search'
-    expected_result: 'Finds lacZ and other similar genes despite case/spelling differences'
-
-# Tool relationships and dependencies
+  - user_query: "Find the gene named lacZ."
+    tool_call: '{"tool_name": "find_gene_by_name", "parameters": {"name": "lacZ"}}'
 relationships:
   depends_on: ['get_genome_info']
   conflicts_with: []
@@ -93,8 +76,7 @@ error_handling:
 
 # Return value specification
 returns:
-  success: 'boolean - Whether search was successful'
-  genes_found: 'number - Number of genes matching the search'
-  genes: 'array - List of matching gene objects with details'
-  gene_details: 'object - Detailed information for each gene including position, function, annotations'
-  navigation_result: 'object - Result of navigation to gene (if navigate_to_gene=true)'
+  found: "Whether a matching feature was found."
+  chromosome: "Chromosome of the best match."
+  feature: "Best matching feature. Qualifiers are included by default."
+  genes: "List with coordinates and strand of the best match, or an empty list."

@@ -58,6 +58,8 @@ class PathwayTools {
             evalue: { type: 'string', description: 'E-value threshold', default: '0.01' },
             maxTargets: { type: 'number', description: 'Maximum number of targets', default: 50 },
             clientId: { type: 'string', description: 'Browser client ID' },
+            wordSize: { type: 'number', description: 'Word size for initial matches', minimum: 2, maximum: 128 },
+            matrix: { type: 'string', description: 'Scoring matrix for protein searches', default: 'BLOSUM62' },
           },
           required: ['sequence', 'blastType', 'database'],
         },

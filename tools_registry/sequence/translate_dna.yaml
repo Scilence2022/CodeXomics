@@ -37,6 +37,13 @@ parameters:
       type: string
       description: 'Browser client ID for multi-window support'
       default: 'default'
+    frame:
+      type: integer
+      enum:
+      - 0
+      - 1
+      - 2
+      description: Zero-based alternative to reading_frame. Supply only one frame spelling.
   required: ['dna']
 sample_usages:
   - user_query: 'Translate this DNA sequence to protein'

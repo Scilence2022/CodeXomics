@@ -190,11 +190,7 @@ describe('cancelling the conversation a timed-out test left running', () => {
 });
 
 describe('advanced_uniprot_search parameter normalization', () => {
-  const load = () =>
-    new (loadMethod(
-      'src/renderer/modules/chat/services/ProteinService.js',
-      'normalizeAdvancedUniprotParameters(parameters)'
-    ))();
+  const load = () => require('../../src/shared/protein-database');
 
   it('flattens the nested snake_case shape models actually emit', () => {
     // Verbatim payload from the failing benchmark run.
@@ -229,10 +225,10 @@ describe('advanced_uniprot_search parameter normalization', () => {
     });
   });
 
-  it('joins array keywords and defaults the limit', () => {
+  it('preserves separate keyword filters and defaults the limit', () => {
     const normalized = load().normalizeAdvancedUniprotParameters({ keywords: ['hydrolase', 'glycosidase'] });
 
-    expect(normalized.keywords).toBe('hydrolase glycosidase');
+    expect(normalized.keywords).toEqual(['hydrolase', 'glycosidase']);
     expect(normalized.limit).toBe(20);
   });
 

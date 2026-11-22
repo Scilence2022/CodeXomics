@@ -28,12 +28,19 @@ parameters:
       description: 'Whether to show file dialog regardless of filePath parameter'
       required: false
       default: false
-    fileType:
-      type: 'string'
-      description: 'File type hint for better handling'
-      required: false
-      default: 'auto'
-      enum: ['auto', 'gff', 'bed', 'gtf']
+    loadMode:
+      type: string
+      enum:
+      - merge
+      - new_track
+      description: 'Loading mode: "merge" (add to existing Genes & Features track) or "new_track" (create a separate
+        track). Omit to use the file loader preference or prompt.'
+
+    mergeWithExisting:
+      type: boolean
+      description: 'DEPRECATED: Use loadMode instead. Merge with existing Genes & Features track instead of creating
+        new track'
+      default: false
   required: []
 
 # Return value specification
@@ -58,19 +65,8 @@ returns:
 
 # Usage examples
 sample_usages:
-  - user_query: 'Load annotation file at /path/to/genes.gff'
-    tool_call: '{"tool_name": "load_annotation_file", "parameters": {"filePath": "/path/to/genes.gff", "showFileDialog": false}}'
-    expected_result: 'Successfully loads the GFF annotation file directly'
-
-  - user_query: 'Open file dialog to select an annotation file'
-    tool_call: '{"tool_name": "load_annotation_file", "parameters": {"showFileDialog": true}}'
-    expected_result: 'Opens file dialog for annotation file selection'
-
-  - user_query: 'Load features.bed file'
-    tool_call: '{"tool_name": "load_annotation_file", "parameters": {"filePath": "features.bed", "fileType": "bed"}}'
-    expected_result: 'Loads BED annotation file with type hint'
-
-# Tool relationships
+  - user_query: "Load /data/genes.gff into a separate annotation track."
+    tool_call: '{"tool_name": "load_annotation_file", "parameters": {"filePath": "/data/genes.gff", "loadMode": "new_track"}}'
 relationships:
   depends_on: ['load_genome_file']
   enhances: ['search_features', 'get_gene_details']

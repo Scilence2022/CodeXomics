@@ -83,7 +83,18 @@ class GenomeAnalysisService {
     const { chromosome, start, end } = this._normalizeRegionParams(params);
     if (this.app && this.app.getSequenceForRegion) {
       const sequence = await this.app.getSequenceForRegion(chromosome, start, end);
-      return { chromosome, start, end, sequence, length: sequence.length };
+      const result = { chromosome, start, end, sequence, length: sequence.length };
+      if (params.strand === '-' || params.strand === 'both') {
+        const reversed = window.UnifiedSequenceProcessing.reverseComplement(sequence, {
+          caseSensitive: true,
+          validateInput: false,
+        });
+        if (!reversed.success) throw new Error(reversed.error);
+        if (params.strand === '-') result.sequence = reversed.sequence;
+        else result.reverseComplement = reversed.sequence;
+      }
+      if (params.strand) result.strand = params.strand;
+      return result;
     }
     throw new Error('Sequence retrieval not available');
   }

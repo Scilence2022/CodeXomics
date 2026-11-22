@@ -25,21 +25,8 @@ parameters:
     organism:
       type: string
       description: 'Organism name for more specific search results'
-      default: 'Homo sapiens'
+      default: 'Escherichia coli'
       examples: ['Homo sapiens', 'Escherichia coli', 'Mus musculus', 'Saccharomyces cerevisiae']
-    max_resolution:
-      type: number
-      description: 'Maximum resolution in Angstroms (filters low-quality structures)'
-      minimum: 0.5
-      maximum: 10.0
-      default: 5.0
-    structure_methods:
-      type: array
-      description: 'Experimental methods to include in search'
-      items:
-        type: string
-        enum: ['x-ray', 'nmr', 'cryo-em', 'neutron', 'fiber diffraction']
-      default: ['x-ray', 'nmr', 'cryo-em']
     max_results:
       type: number
       description: 'Maximum number of structures to return'
@@ -50,6 +37,9 @@ parameters:
       type: string
       description: 'Browser client ID for multi-window support'
       default: 'default'
+    maxResults:
+      type: number
+      description: Maximum number of results to return
   required:
     - geneName
 
@@ -102,27 +92,8 @@ returns:
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: 'Search for PDB crystal structures of p53'
-    tool_call: "search_pdb_structures(geneName='p53', organism='Homo sapiens', structure_methods=['x-ray'])"
-    thought: 'User wants experimental crystal structures specifically from PDB database'
-    expected_result: 'List of X-ray crystal structures for p53 protein'
-
-  - user_query: 'Find experimental protein structures for lacZ in E. coli'
-    tool_call: "search_pdb_structures(geneName='lacZ', organism='Escherichia coli', max_results=5)"
-    thought: 'User wants experimental structures from PDB for lacZ gene in E. coli'
-    expected_result: 'Available experimental structures for lacZ from E. coli'
-
-  - user_query: 'Get high-resolution NMR structures for dnaA'
-    tool_call: "search_pdb_structures(geneName='dnaA', structure_methods=['nmr'], max_resolution=2.0)"
-    thought: 'User specifically wants high-resolution NMR structures'
-    expected_result: 'High-quality NMR structures for dnaA protein'
-
-  - user_query: 'Search PDB database for hemoglobin structures'
-    tool_call: "search_pdb_structures(geneName='hemoglobin', max_results=10)"
-    thought: 'User wants experimental structures from PDB database for hemoglobin'
-    expected_result: 'Experimental hemoglobin structures from PDB'
-
-# Tool relationships and dependencies
+  - user_query: "Find up to five experimental structures for lacZ."
+    tool_call: '{"tool_name": "search_pdb_structures", "parameters": {"geneName": "lacZ", "max_results": 5}}'
 relationships:
   depends_on: []
   conflicts_with: []

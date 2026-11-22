@@ -14,15 +14,34 @@ class ProteinTools {
     return {
       fetch_protein_structure: {
         name: 'fetch_protein_structure',
-        description: 'Fetch protein 3D structure from PDB database by gene name or PDB ID',
+        description:
+          'Fetch a structure by PDB ID or UniProt accession. Search by gene with search_pdb_structures first.',
         parameters: {
           type: 'object',
           properties: {
-            geneName: { type: 'string', description: 'Gene name to search for protein structure' },
+            uniprot_id: { type: 'string', description: 'Alternative spelling of uniprotId.' },
+            include_ligands: {
+              type: 'boolean',
+              description: 'PDB downloads include all deposited ligands. Only true is supported.',
+              enum: [true],
+              default: true,
+            },
+            geneName: { type: 'string', description: 'Optional gene label for a UniProt accession.' },
             pdbId: { type: 'string', description: 'Direct PDB ID (alternative to gene name)' },
-            organism: { type: 'string', description: 'Organism name for more specific search' },
             clientId: { type: 'string', description: 'Browser client ID' },
+            pdb_id: {
+              type: 'string',
+              description: "PDB ID for the structure (e.g., '1TUP', '2BEG', '4HHB')",
+              pattern: '^[0-9][A-Za-z0-9]{3}$',
+            },
+            uniprotId: { type: 'string', description: 'UniProt accession for an AlphaFold model.' },
           },
+          anyOf: [
+            { required: ['uniprot_id'] },
+            { required: ['pdb_id'] },
+            { required: ['pdbId'] },
+            { required: ['uniprotId'] },
+          ],
         },
       },
 
@@ -33,6 +52,10 @@ class ProteinTools {
         parameters: {
           type: 'object',
           properties: {
+            _dataRef: {
+              type: 'string',
+              description: 'Cache reference as returned by fetch_protein_structure or fetch_alphafold_structure.',
+            },
             pdbData: { type: 'string', description: 'Inline PDB structure data for internal calls' },
             proteinName: { type: 'string', description: 'Optional protein name for display' },
             pdbId: { type: 'string', description: 'RCSB PDB ID, UniProt accession, or AlphaFold model ID' },
@@ -53,6 +76,13 @@ class ProteinTools {
             show_waters: { type: 'boolean', description: 'Show water molecules' },
             center_on_ligand: { type: 'boolean', description: 'Center the initial view on the largest ligand' },
             clientId: { type: 'string', description: 'Browser client ID' },
+            protein_name: { type: 'string', description: 'Optional display name for the structure' },
+            viewer_type: {
+              type: 'string',
+              enum: ['ngl', 'default'],
+              description: 'Molecular viewer to use',
+              default: 'default',
+            },
           },
           required: [],
         },
@@ -68,6 +98,13 @@ class ProteinTools {
             organism: { type: 'string', description: 'Organism name (optional)' },
             maxResults: { type: 'number', description: 'Maximum number of results to return' },
             clientId: { type: 'string', description: 'Browser client ID' },
+            max_results: {
+              type: 'number',
+              description: 'Maximum number of structures to return',
+              minimum: 1,
+              maximum: 50,
+              default: 10,
+            },
           },
           required: ['geneName'],
         },
@@ -80,7 +117,7 @@ class ProteinTools {
           type: 'object',
           properties: {
             geneName: { type: 'string', description: 'Gene name to search' },
-            organism: { type: 'string', description: 'Organism name (default: Homo sapiens)' },
+            organism: { type: 'string', description: 'Organism name (default: Escherichia coli)' },
             maxResults: { type: 'number', description: 'Maximum number of results to return (default: 10)' },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
@@ -94,6 +131,8 @@ class ProteinTools {
         parameters: {
           type: 'object',
           properties: {
+            gene: { type: 'string', description: 'Alternative spelling of geneName.' },
+            gene_name: { type: 'string', description: 'Alternative spelling of geneName.' },
             uniprotId: { type: 'string', description: 'UniProt accession (e.g., P04637)' },
             uniprot_id: { type: 'string', description: 'Snake-case alias for uniprotId (e.g., P04637)' },
             geneName: { type: 'string', description: 'Gene name to resolve to a UniProt accession' },
@@ -104,8 +143,25 @@ class ProteinTools {
               default: true,
             },
             clientId: { type: 'string', description: 'Browser client ID' },
+            organism: {
+              type: 'string',
+              description: 'Organism name for gene name resolution',
+              default: 'Homo sapiens',
+            },
+            cache_locally: {
+              type: 'boolean',
+              description: 'Cache structure file locally for faster access',
+              default: true,
+            },
           },
           required: [],
+          anyOf: [
+            { required: ['gene'] },
+            { required: ['gene_name'] },
+            { required: ['uniprot_id'] },
+            { required: ['uniprotId'] },
+            { required: ['geneName'] },
+          ],
         },
       },
 

@@ -60,21 +60,6 @@ parameters:
       description: 'Scoring matrix for protein searches'
       default: 'BLOSUM62'
       examples: ['BLOSUM62', 'BLOSUM45', 'BLOSUM80', 'PAM30', 'PAM70']
-    gapCosts:
-      type: 'string'
-      description: 'Gap costs (existence, extension)'
-      default: '5,2'
-      examples: ['5,2', '2,1', '10,1']
-    filter:
-      type: 'string'
-      description: 'Low complexity filtering'
-      default: 'F'
-      enum: ['T', 'F']
-    organism:
-      type: 'string'
-      description: 'Limit search to specific organism'
-      default: null
-      examples: ['Escherichia coli', 'Homo sapiens', 'Saccharomyces cerevisiae']
     clientId:
       type: 'string'
       description: 'Browser client ID for multi-window support'
@@ -83,27 +68,8 @@ parameters:
 
 # High-quality examples for few-shot learning
 sample_usages:
-  - user_query: 'BLAST this DNA sequence against the nucleotide database'
-    tool_call: "blast_search(sequence='ATGCGCTATCG', blastType='blastn', database='nt', evalue='0.01')"
-    thought: 'User wants to find similar DNA sequences using BLASTn'
-    expected_result: 'List of similar nucleotide sequences with alignment scores and E-values'
-
-  - user_query: 'Search for similar proteins to this sequence'
-    tool_call: "blast_search(sequence='MKELLKAGWKELQP', blastType='blastp', database='nr', maxTargets=20)"
-    thought: 'User wants protein similarity search using BLASTp'
-    expected_result: 'List of similar proteins with detailed alignment information'
-
-  - user_query: 'Find homologous genes in E. coli only'
-    tool_call: "blast_search(sequence='ATGAAAGAATTGAAAGAAGCTGGCTGG', blastType='blastn', database='nt', organism='Escherichia coli')"
-    thought: 'User wants to restrict search to E. coli genome only'
-    expected_result: 'E. coli specific homologous sequences'
-
-  - user_query: 'High-stringency protein search with BLOSUM80'
-    tool_call: "blast_search(sequence='MKELLKAGWKELQP', blastType='blastp', database='swissprot', evalue='1e-10', matrix='BLOSUM80')"
-    thought: 'User wants high-stringency protein search with specific scoring matrix'
-    expected_result: 'High-confidence protein matches with detailed alignments'
-
-# Tool relationships and dependencies
+  - user_query: "Search nt with the supplied sequence."
+    tool_call: '{"tool_name": "blast_search", "parameters": {"sequence": "ACGTACGT", "blastType": "blastn", "database": "nt"}}'
 relationships:
   depends_on: []
   conflicts_with: []

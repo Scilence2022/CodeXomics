@@ -16,6 +16,13 @@ class SequenceTools {
         parameters: {
           type: 'object',
           properties: {
+            strand: {
+              type: 'string',
+              description:
+                'Return forward (+), reverse-complement (-), or forward sequence plus reverseComplement (both).',
+              enum: ['+', '-', 'both'],
+              default: '+',
+            },
             chromosome: {
               type: 'string',
               description:
@@ -74,7 +81,7 @@ class SequenceTools {
           type: 'object',
           properties: {
             dna: { type: 'string', description: 'DNA sequence to translate' },
-            frame: { type: 'number', description: 'Reading frame (0, 1, or 2)', default: 0 },
+            frame: { type: 'integer', enum: [0, 1, 2], description: 'Zero-based alternative to reading_frame.' },
             reading_frame: { type: 'number', description: 'Reading frame (1, 2, or 3)', enum: [1, 2, 3] },
             genetic_code: {
               type: 'string',
@@ -100,10 +107,22 @@ class SequenceTools {
         parameters: {
           type: 'object',
           properties: {
+            validate_sequence: {
+              type: 'boolean',
+              description: 'Validate IUPAC DNA symbols before conversion.',
+              default: false,
+            },
+            preserve_case: { type: 'boolean', description: 'Preserve the case of the input bases.', default: true },
             dna: { type: 'string', description: 'DNA sequence' },
             clientId: { type: 'string', description: 'Browser client ID' },
+            sequence: {
+              type: 'string',
+              description: 'DNA sequence to reverse complement (accepts ATGC nucleotides)',
+              pattern: '^[ATGCNatgcn]+$',
+            },
           },
-          required: ['dna'],
+          required: [],
+          anyOf: [{ required: ['sequence'] }, { required: ['dna'] }],
         },
       },
 
@@ -145,10 +164,13 @@ class SequenceTools {
         parameters: {
           type: 'object',
           properties: {
+            geneName: { type: 'string', description: 'Alternative spelling of gene_name.' },
             identifier: { type: 'string', description: 'Gene name or locus tag (e.g., b0062, araA)' },
             clientId: { type: 'string', description: 'Browser client ID' },
+            gene_name: { type: 'string', description: 'Gene name or locus tag to extract coding sequence from' },
           },
-          required: ['identifier'],
+          required: [],
+          anyOf: [{ required: ['geneName'] }, { required: ['gene_name'] }, { required: ['identifier'] }],
         },
       },
 
@@ -318,8 +340,8 @@ class SequenceTools {
   calculateGCContent(sequence) {
     if (!sequence || sequence.length === 0) return 0;
 
-    const gcCount = (sequence.match(/[GC]/gi) || []).length;
-    return ((gcCount / sequence.length) * 100).toFixed(2);
+    const processing = require('../../renderer/modules/UnifiedSequenceProcessing');
+    return processing.legacyComputeGC(sequence).toFixed(2);
   }
 
   translateDNA(dna, frame = 0, options = {}) {
@@ -327,11 +349,9 @@ class SequenceTools {
     return microbeFunctions.translateDNA(dna, frame, options);
   }
 
-  reverseComplement(dna) {
+  reverseComplement(input) {
     const processing = require('../../renderer/modules/UnifiedSequenceProcessing');
-    const result = processing.reverseComplement(dna, { caseSensitive: true, validateInput: false });
-    if (!result.success) throw new Error(result.error);
-    return result.sequence;
+    return processing.reverseComplementForTool(typeof input === 'string' ? { dna: input } : input);
   }
 
   calculateEntropy(sequence) {

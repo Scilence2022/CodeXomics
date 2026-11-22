@@ -218,7 +218,8 @@ class UnifiedSequenceProcessing {
           break;
         }
 
-        case 'weighted': { // Weighted GC calculation considering ambiguous bases
+        case 'weighted': {
+          // Weighted GC calculation considering ambiguous bases
           const baseCounts = this.countBases(sequenceUpper, includeAmbiguous);
           gcCount = baseCounts.g + baseCounts.c;
           totalBases = Object.values(baseCounts).reduce((a, b) => a + b, 0);
@@ -579,6 +580,16 @@ class UnifiedSequenceProcessing {
     }
 
     return distances[str1.length];
+  }
+
+  static reverseComplementForTool(parameters) {
+    const sequence = parameters.dna ?? parameters.sequence ?? parameters.dna_sequence;
+    const result = this.reverseComplement(sequence, {
+      caseSensitive: parameters.preserve_case ?? true,
+      validateInput: parameters.validate_sequence ?? false,
+    });
+    if (!result.success) throw new Error(result.error);
+    return result.sequence;
   }
 
   /**

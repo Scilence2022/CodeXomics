@@ -64,10 +64,15 @@ class DataTools {
         parameters: {
           type: 'object',
           properties: {
-            format: { type: 'string', description: 'Export format (fasta, genbank, gff, bed)' },
+            format: {
+              type: 'string',
+              description: 'Output format. Defaults to genbank.',
+              enum: ['fasta', 'genbank', 'gb', 'gbk', 'gff', 'gff3', 'bed', 'cds', 'protein'],
+              default: 'genbank',
+            },
             chromosome: { type: 'string', description: 'Chromosome (optional for full export)' },
-            start: { type: 'number', description: 'Start position (optional)' },
-            end: { type: 'number', description: 'End position (optional)' },
+            start: { type: 'integer', description: 'Start position (optional)' },
+            end: { type: 'integer', description: 'End position (optional)' },
             filename: {
               type: 'string',
               description:
@@ -77,17 +82,17 @@ class DataTools {
               type: 'boolean',
               description:
                 'When true, save the file directly without showing a save dialog. Essential for LLM/agent automated workflows where dialog prompts block execution.',
-              default: true,
+              default: false,
             },
             clientId: { type: 'string', description: 'Browser client ID' },
           },
-          required: ['format'],
+          required: [],
         },
       },
 
       codon_usage_analysis: {
         name: 'codon_usage_analysis',
-        description: 'Analyze codon usage patterns in a DNA coding sequence',
+        description: 'Analyze a supplied coding sequence on the MCP server. A gene name labels the result. Supply the sequence itself.',
         parameters: {
           type: 'object',
           properties: {
@@ -125,6 +130,11 @@ class DataTools {
             },
             maxGenes: { type: 'integer', description: 'Maximum number of genes to analyze (optional)' },
             clientId: { type: 'string', description: 'Browser client ID' },
+            genetic_code: {
+              type: 'string',
+              description:
+                'Genetic code: an NCBI translation table id ("11", "4") or a name (standard, bacterial, mycoplasma, vertebrate_mitochondrial). Omit it to use the code the genome is annotated with (/transl_table), which is almost always correct.',
+            },
           },
           required: [],
         },

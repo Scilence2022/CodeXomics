@@ -2,7 +2,7 @@
 
 基线为 `93329862`。评估覆盖 18 个类别的 214 个注册定义、181 个内置映射、130 个 MCP 定义，以及 ChatBox 从选择工具到下一轮读取结果的路径。评估分别衡量模型能否拿到工具、第一次调用是否符合契约，以及执行后能否依据结果继续。
 
-## 前后对照
+## 第一轮改造对照
 
 | 检查 | 改造前 | 改造后 |
 | --- | ---: | ---: |
@@ -56,6 +56,37 @@
 node scripts/assess-model-tool-usability.js /path/to/baseline /path/to/updated
 ```
 
-## 仍有差异的接口
+## 第二轮接口对齐
 
-仍有 28 个同名定义的字段集合不同，8 个的必填集合不同，两组存在重叠。差异数字包括兼容别名和入口特有参数。例如 MCP 的轨道切换工具同时接受 `trackName` 和 `track_name`，ChatBox 对模型公布 `track_name`。下一次针对这些接口做行为对齐时，应以各自处理器实际读取的字段和输出为准。文本模式现在会完整提供所选工具的 schema，复杂工具的文本提示可能更长。本次 token 测量覆盖原生调用模式。
+第一轮提交 `b5e99451` 留有 29 个需要复核的同名工具。其中 28 个的顶层业务字段不同，8 个的顶层必填字段不同。第二轮沿用第一轮统计口径，读取发布清单和 MCP 模块的真实定义，忽略路由字段。结果如下。
+
+| 比较对象 | 第一轮结束时 | 第二轮结束时 |
+| --- | ---: | ---: |
+| 具有同名定义的工具 | 123 | 123 |
+| 顶层业务字段集合不同 | 28 | 1 |
+| 顶层必填字段集合不同 | 8 | 1 |
+
+两个剩余计数都指向 `codon_usage_analysis`。ChatBox 能从已加载的基因组按基因名或 locus tag 取序列。独立 MCP 处理器要求直接传入 `sequence`，其中 `geneName` 只给结果加标签。两者有各自的分析实现和结果结构，MCP 的说明已写明这一点。
+
+### 模型调用时的变化
+
+| 涉及的工具 | 可观察的行为 |
+| --- | --- |
+| `search_uniprot_database`、`advanced_uniprot_search`、`get_uniprot_entry`、`get_interpro_entry_details` | 普通检索可只指定物种。高级检索接受平铺条件或嵌套的 `query_fields`，多个关键词按 AND 组合。两个入口均支持显式关闭序列、特征或功能字段。InterPro 的 `minimal` 只返回条目 ID、名称和类型。 |
+| `find_gene_by_name`、`search_features`、`bookmark_position`、`toggle_track` | 基因查询可精确匹配、区分大小写，并把命中的坐标和链方向传给后续调用。特征类型和结果条数直接作用于搜索。书签支持备注。两个轨道名拼写都可用，ChatBox 模型调用需明确给出 `visible` 或 `action`。MCP 继续接受只给轨道名的旧调用，其含义是反转当前状态。 |
+| `get_sequence`、`get_coding_sequence`、`reverse_complement`、`compute_gc`、`translate_dna`、`genome_codon_usage_analysis` | 区间读取尊重链方向。CDS 查询接受 `gene_name` 或 `identifier`。反向互补接受 `sequence` 或 `dna`，并执行大小写、字符验证选项。GC 百分比以 A、C、G、T 的数量为分母。翻译的 `frame` 从 0 开始，`reading_frame` 从 1 开始。全基因组密码子统计的 MCP 描述补齐了已有的 `genetic_code` 参数。 |
+| `fetch_protein_structure`、`fetch_alphafold_structure`、`open_protein_viewer`、`search_pdb_structures`、`search_alphafold_structures` | PDB 搜索和下载分别说明所需标识符。下载返回的 `_dataRef` 可以原样作为查看器输入。PDB 下载包含文件中已有的配体，显式要求去除配体会收到错误。搜索工具撤下了执行器未实现的分辨率、方法和置信度筛选。 |
+| `load_annotation_file`、`load_wig_tracks`、`export_data` | 模型能指定注释合并或另建轨道，WIG 工具接受单个路径或路径列表，`multiple: false` 会打开单选对话框。两个入口均可省略导出格式，默认使用 GenBank。 |
+| `start_annotation_research`、`blast_search`、`copy_sequence`、`cut_sequence`、`delete_sequence`、`execute_actions` | 注册描述对齐了已有的文献预算、BLAST 参数、链方向与动作确认选项。复制工具撤下了执行器未读取的调用方动作 ID 和注释开关。 |
+
+这些数字衡量字段名称和顶层必填集合。兼容调用和返回值仍有入口差异。例如，MCP 把反向互补字符串放在 `reverseComplement` 字段里，ChatBox 的本地路径可以直接返回字符串。旧调用方仍可按原有方式读取结果。
+
+### 复现
+
+`test/unit/shared-model-tool-contracts.test.js` 遍历同名定义，对新增差异报错。行为用例经过实际 MCP 分派、ChatBox 方法和原生对话框选项构建函数，并用固定数据比较两个入口发出的数据库请求和返回字段。全量 Vitest 在 Node.js 22.23.5 下通过，共 232 个测试文件、3,094 项测试。工具注册一致性检查通过。外部数据库响应使用替身。第一轮的八次模型首调用测量属于当时的版本，本轮没有重新测量模型成功率。
+
+```sh
+npm run tool-registry:generate
+npm run tool-registry:validate
+npm test -- --silent
+```

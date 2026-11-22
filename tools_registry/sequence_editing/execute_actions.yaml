@@ -37,6 +37,11 @@ parameters:
         (resolved against the current working directory). If not specified, a
         default filename with timestamp will be used. Only effective when
         auto_save is true.
+    confirm:
+      type: boolean
+      description: Confirm execution without additional user prompt (auto-resolves conflicts). Implied when auto_save
+        is true.
+      default: false
   required: []
 sample_usages:
   - user_query: Execute all pending actions and save automatically

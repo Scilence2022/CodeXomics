@@ -349,9 +349,11 @@ class NavigationAgent extends AgentBase {
           return await this.executeGetCurrentRegion(app);
 
         case 'jump_to_gene':
-        case 'find_gene_by_name':
-        case 'find_gene': // legacy alias
           return await this.executeJumpToGene(parameters, app);
+
+        case 'find_gene_by_name':
+        case 'find_gene':
+          return await this.multiAgentSystem.chatManager.findGeneByName(parameters);
 
         case 'scroll_left':
           return await this.executeScrollLeft(parameters, app);
@@ -858,6 +860,8 @@ class NavigationAgent extends AgentBase {
    * Execute search features
    */
   async executeSearchFeatures(parameters, app) {
+    const chatManager = this.multiAgentSystem?.chatManager;
+    if (chatManager?.searchFeatures) return chatManager.searchFeatures(parameters);
     const { query } = parameters;
     try {
       if (app.genomeBrowser && typeof app.genomeBrowser.searchFeatures === 'function') {

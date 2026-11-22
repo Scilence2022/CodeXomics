@@ -749,7 +749,7 @@ class FileOperationService {
       } else {
         this.requireExplicitFilePathForBenchmark('load_wig_tracks');
         if (!this.app?.fileManager) throw new Error('FileManager not available');
-        this.app.fileManager.openSpecificFileType('tracks');
+        this.app.fileManager.openSpecificFileType('tracks', { multiple });
         return {
           success: true,
           message: 'File dialog opened for WIG tracks selection',

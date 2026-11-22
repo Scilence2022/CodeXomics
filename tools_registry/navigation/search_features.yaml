@@ -48,15 +48,17 @@ parameters:
       description: 'Whether to require exact match or allow partial matching'
       default: false
     max_results:
-      type: number
-      description: 'Maximum number of results to return'
-      default: 50
+      type: integer
       minimum: 1
       maximum: 1000
+      description: Optional maximum number of matching records to return.
     clientId:
       type: string
       description: Browser client ID for multi-window support
       default: default
+    featureType:
+      type: string
+      description: Type of feature to filter by (e.g., CDS, tRNA, rRNA, gene, promoter)
   required:
     - query
 sample_usages:
@@ -104,8 +106,6 @@ error_handling:
   invalid_query: 'Returns error if search query is empty or invalid'
   invalid_feature_type: 'Returns error if specified feature type is not recognized'
 returns:
-  success: boolean - Whether search was successful
-  message: string - Status message or error description
-  features_found: number - Number of matching features
-  features: array - List of matching feature objects with details
-  total_results: number - Total available results (may be more than returned if limited by max_results)
+  query: "Original search text."
+  count: "Number of returned matches."
+  results: "Matching features or sequence hits."

@@ -64,7 +64,7 @@ class FileManager {
     await this.openSpecificFileType('any');
   }
 
-  getOpenDialogOptions(fileType) {
+  getOpenDialogOptions(fileType, { multiple = true } = {}) {
     const filtersByType = {
       genome: [
         { name: 'Genome Sequence Files', extensions: ['fasta', 'fa', 'fas', 'fna', 'gb', 'gbk', 'gbff', 'genbank'] },
@@ -135,13 +135,13 @@ class FileManager {
         normalizedType === 'any'
           ? 'Open File'
           : `Open ${normalizedType.charAt(0).toUpperCase()}${normalizedType.slice(1)} File`,
-      properties: normalizedType === 'tracks' ? ['openFile', 'multiSelections'] : ['openFile'],
+      properties: normalizedType === 'tracks' && multiple ? ['openFile', 'multiSelections'] : ['openFile'],
       filters: filtersByType[normalizedType],
     };
   }
 
-  async showOpenFileDialog(fileType) {
-    const dialogOptions = this.getOpenDialogOptions(fileType);
+  async showOpenFileDialog(fileType, options) {
+    const dialogOptions = this.getOpenDialogOptions(fileType, options);
 
     if (typeof window !== 'undefined' && window.electronAPI?.showOpenFileDialog) {
       return window.electronAPI.showOpenFileDialog(dialogOptions);
@@ -160,7 +160,7 @@ class FileManager {
     this.genomeBrowser.uiManager?.closeFileDropdown();
 
     try {
-      const result = await this.showOpenFileDialog(fileType);
+      const result = await this.showOpenFileDialog(fileType, options);
       if (!result || result.canceled) {
         return;
       }

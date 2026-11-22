@@ -78,6 +78,30 @@ parameters:
       type: string
       description: 'Browser client ID for multi-window support'
       default: 'default'
+    pdbData:
+      type: string
+      description: Inline PDB structure data for internal calls
+    proteinName:
+      type: string
+      description: Optional protein name for display
+    pdbId:
+      type: string
+      description: RCSB PDB ID, UniProt accession, or AlphaFold model ID
+    uniprotId:
+      type: string
+      description: UniProt accession for AlphaFold download
+    filePath:
+      type: string
+      description: Absolute local PDB file path
+    structureUrl:
+      type: string
+      description: HTTP(S) PDB URL to download and open
+    dataRef:
+      type: string
+      description: Cached data reference returned by a structure fetch tool
+    _dataRef:
+      type: string
+      description: Cache reference as returned by fetch_protein_structure or fetch_alphafold_structure.
   required: []
 sample_usages:
   - user_query: 'Open the AlphaFold model that was just downloaded for p53'
