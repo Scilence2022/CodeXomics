@@ -181,7 +181,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
           tool_name: 'codon_usage_analysis',
           parameters: {
             geneName: 'lacZ',
-            include_statistics: true,
+            include_statistics: this.schemaDefault(true),
           },
         },
         maxScore: 5,
@@ -195,12 +195,12 @@ class ManualSuite extends BenchmarkEvaluatorBase {
       // SEARCH TASKS - Manual + Simple
       {
         id: 'search_manual_01',
-        name: 'Search b1210 Locus Tags',
+        name: 'Find Locus Tag b1210',
         type: 'function_call',
         category: 'search',
         complexity: 'simple',
         evaluation: 'manual',
-        instruction: "Search for genes with locus tags starting with 'b1210'.",
+        instruction: "Find the best match for locus tag 'b1210'.",
         expectedResult: {
           tool_name: 'find_gene_by_name',
           parameters: {
@@ -228,6 +228,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'create_annotation',
           parameters: {
+            chromosome: '<current_chromosome>',
             start: 600000,
             end: 602000,
             name: 'my_custom_gene',
@@ -248,9 +249,9 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         category: 'annotation',
         complexity: 'simple',
         evaluation: 'manual',
-        instruction: 'Search for all annotations of type "CDS" in the current genome.',
+        instruction: 'List the first page of CDS annotations in the current genome.',
         expectedResult: {
-          tool_name: 'search_annotations',
+          tool_name: 'list_annotations',
           parameters: {
             type: 'CDS',
           },
@@ -260,7 +261,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
         manualVerification:
-          'Please verify: 1) Search returns CDS annotations correctly, 2) Results are relevant and complete.',
+          'Please verify: 1) Search returns CDS annotations correctly, 2) Results contain only CDS features.',
       },
       {
         id: 'annot_manual_03',
@@ -270,7 +271,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         complexity: 'simple',
         evaluation: 'manual',
         instruction:
-          'Merge a Deep Gene Research annotation proposal for the lacZ gene with conservative product, note, GO, EC, KO, and source evidence updates.',
+          'Preview merging a Deep Gene Research annotation proposal for lacZ with conservative product, note, GO, EC, KO, and evidence updates.',
         expectedResult: {
           tool_name: 'merge_gene_research_report',
           parameters: {
@@ -291,7 +292,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
               ecNumbers: ['3.2.1.23'],
               koTerms: ['K01190'],
             },
-            dry_run: true,
+            dryRun: true,
           },
         },
         maxScore: 5,
@@ -299,7 +300,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         timeout: 300000,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
         manualVerification:
-          'Please verify: 1) merge_gene_research_report is called for lacZ, 2) dry_run preview includes conservative annotation updates and evidence.',
+          'Please verify: 1) merge_gene_research_report is called for lacZ, 2) dryRun preview includes conservative annotation updates and evidence.',
       },
       {
         id: 'annot_manual_04',
@@ -371,7 +372,8 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         expectedResult: {
           tool_name: 'toggle_track',
           parameters: {
-            trackName: 'gc_content',
+            track_name: 'gc_content',
+            action: 'toggle',
           },
         },
         maxScore: 5,
@@ -481,11 +483,11 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         category: 'restriction',
         complexity: 'simple',
         evaluation: 'manual',
-        instruction: 'Find restriction enzyme recognition sites in the region around the lacZ gene.',
+        instruction: 'Find EcoRI recognition sites in the current visible region.',
         expectedResult: {
           tool_name: 'find_restriction_sites',
           parameters: {
-            geneName: 'lacZ',
+            enzyme: 'EcoRI',
           },
         },
         maxScore: 5,
@@ -505,14 +507,14 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         complexity: 'simple',
         evaluation: 'manual',
         instruction:
-          'Perform a BLAST search online with the sequence ATGAAAGCGCTGAAAGCGCTG using blastn program against the nr database with e-value threshold 0.001.',
+          'Perform a BLAST search online with the sequence ATGAAAGCGCTGAAAGCGCTG using blastn program against the nt database with e-value threshold 0.001.',
         expectedResult: {
           tool_name: 'blast_search_online',
           parameters: {
             sequence: 'ATGAAAGCGCTGAAAGCGCTG',
-            program: 'blastn',
-            database: 'nr',
-            evalue: 0.001,
+            blastType: 'blastn',
+            database: 'nt',
+            evalue: '0.001',
           },
         },
         maxScore: 5,
@@ -521,7 +523,7 @@ class ManualSuite extends BenchmarkEvaluatorBase {
         earlyReturn: true,
         evaluator: this.evaluateBasicFunctionCall.bind(this),
         manualVerification:
-          'Please verify: 1) BLAST search tool call is issued with correct parameters (sequence, program=blastn, database=nr, evalue=0.001), 2) Task is submitted successfully (do not wait for completion as online search time is variable).',
+          'Please verify: 1) BLAST search tool call is issued with correct parameters (sequence, blastType=blastn, database=nt, evalue=0.001), 2) Task is submitted successfully (do not wait for completion as online search time is variable).',
       },
 
       // DATABASE INTEGRATION TASKS - Manual + Simple

@@ -187,6 +187,7 @@ class StrictAutomaticEvaluator {
         'calculate_entropy',
         'calculate_molecular_weight',
         'calculate_primer_properties',
+        'codon_usage_analysis',
         'genome_codon_usage_analysis',
         'predict_promoter',
         'assess_annotation_quality',
@@ -610,9 +611,46 @@ class StrictAutomaticEvaluator {
     return serialized.length > 160 ? serialized.slice(0, 157) + '...' : serialized;
   }
 
+  normalizeEffectiveParameters(toolName, parameters) {
+    const actual = this.normalizeParameters(parameters);
+    if (toolName === 'advanced_uniprot_search') {
+      const database =
+        typeof module !== 'undefined' && module.exports
+          ? require('../../../shared/protein-database')
+          : window.proteinDatabase;
+      if (database) Object.assign(actual, database.normalizeAdvancedUniprotParameters(parameters));
+    }
+    // Apply the same precedence as execution before comparing aliases. Matching
+    // either value in a conflicting call could give credit for the wrong input.
+    const aliases = {
+      get_coding_sequence: { geneName: ['identifier', 'gene_name', 'geneName'] },
+      reverse_complement: { sequence: ['dna', 'sequence'] },
+      toggle_track: { trackName: ['trackName', 'track_name'] },
+      search_uniprot_database: {
+        searchQuery: ['query', 'search_query'],
+        searchType: ['searchType', 'search_type'],
+        reviewedOnly: ['reviewedOnly', 'reviewed_only'],
+        maxResults: ['limit', 'max_results'],
+      },
+      get_uniprot_entry: {
+        uniprotId: ['uniprot_id', 'uniprotId'],
+        includeSequence: ['include_sequence', 'includeSequence'],
+      },
+      codon_usage_analysis: { includeStatistics: ['include_statistics', 'includeStatistics'] },
+    };
+    for (const [canonical, keys] of Object.entries(aliases[toolName] || {})) {
+      const key = keys.find(candidate => Object.hasOwn(parameters, candidate));
+      if (key !== undefined) actual[canonical] = parameters[key];
+    }
+    if (['translate_dna', 'translate_sequence'].includes(toolName) && Object.hasOwn(parameters, 'frame')) {
+      actual.readingFrame = Number(parameters.frame) + 1;
+    }
+    return actual;
+  }
+
   compareParameters(actualParameters, expectedParameters, rawToolName = '') {
     const toolName = this.normalizeToolName(rawToolName);
-    const actual = this.normalizeParameters(this.normalizeArguments(actualParameters));
+    const actual = this.normalizeEffectiveParameters(toolName, this.normalizeArguments(actualParameters));
     const expected = this.normalizeParameters(expectedParameters || {});
     const alternatives = expected.benchmarkAnyOf;
     let mismatches = [];

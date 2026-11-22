@@ -7,12 +7,13 @@ import vm from 'vm';
 const require = createRequire(import.meta.url);
 const DynamicToolsSnapshotAdapter = require('../../src/renderer/modules/DynamicToolsSnapshotAdapter.js');
 const StrictAutomaticEvaluator = require('../../src/renderer/modules/benchmark-suites/StrictAutomaticEvaluator.js');
+const { buildBenchmarkToolResult } = require('../../scripts/lib/benchmark-tool-results');
 
 const ROOT = process.cwd();
 const SUITE_DIR = path.join(ROOT, 'src/renderer/modules/benchmark-suites');
 const MANIFEST_PATH = path.join(ROOT, 'tools_registry/generated/tool-registry-manifest.json');
 
-function loadAutomaticSuites() {
+function loadBenchmarkSuites() {
   const sandbox = {
     window: {
       songBenchmarkDebug: { detectedTools: [] },
@@ -42,12 +43,20 @@ function loadAutomaticSuites() {
     Promise,
   };
   vm.createContext(sandbox);
-  for (const file of ['BenchmarkEvaluatorBase.js', 'AutomaticSimpleSuite.js', 'AutomaticComplexSuite.js']) {
+  for (const file of [
+    'BenchmarkEvaluatorBase.js',
+    'AutomaticSimpleSuite.js',
+    'AutomaticComplexSuite.js',
+    'ManualSuite.js',
+    'ManualComplexSuite.js',
+  ]) {
     vm.runInContext(fs.readFileSync(path.join(SUITE_DIR, file), 'utf-8'), sandbox, { filename: file });
   }
   return {
     simple: new sandbox.window.AutomaticSimpleSuite(),
     complex: new sandbox.window.AutomaticComplexSuite(),
+    manual: new sandbox.window.ManualSuite(),
+    manualComplex: new sandbox.window.ManualComplexSuite(),
   };
 }
 
@@ -168,12 +177,12 @@ function expectedSteps(test) {
   }));
 }
 
-describe('automatic benchmark contracts against the current tool registry', () => {
+describe('benchmark contracts against the current tool registry', () => {
   let suites;
   let adapter;
 
   beforeAll(() => {
-    suites = loadAutomaticSuites();
+    suites = loadBenchmarkSuites();
     const snapshot = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
     adapter = new DynamicToolsSnapshotAdapter(snapshot, null);
   });
@@ -188,7 +197,7 @@ describe('automatic benchmark contracts against the current tool registry', () =
     let stepCount = 0;
     let alternativeCount = 0;
 
-    for (const suite of [suites.simple, suites.complex]) {
+    for (const suite of Object.values(suites)) {
       for (const test of suite.getTests()) {
         const completionSteps = Object.entries(test.expectedResult?.completionAlternatives || {}).map(
           ([toolName, parameters]) => ({ toolNames: [toolName], parameters })
@@ -196,6 +205,7 @@ describe('automatic benchmark contracts against the current tool registry', () =
         for (const step of [...expectedSteps(test), ...completionSteps]) {
           stepCount += 1;
           const candidates = expandExpectedValue(step.parameters);
+          const coveredCandidates = new Set();
           for (const toolName of step.toolNames) {
             alternativeCount += 1;
             const tool = adapter.toolsByName.get(toolName);
@@ -205,9 +215,11 @@ describe('automatic benchmark contracts against the current tool registry', () =
             }
 
             const schema = adapter.sanitizeNativeSchema(adapter.normalizeToolSchema(tool), true);
-            const attempts = candidates.map(candidate => {
+            const attempts = candidates.map((candidate, index) => {
               const parameters = materializeExpected(candidate, schema);
-              return { parameters, result: adapter.validateToolCall(toolName, parameters) };
+              const result = adapter.validateToolCall(toolName, parameters);
+              if (result.valid) coveredCandidates.add(index);
+              return { parameters, result };
             });
             if (attempts.some(attempt => attempt.result.valid)) continue;
 
@@ -217,6 +229,11 @@ describe('automatic benchmark contracts against the current tool registry', () =
                 .join(' | ')}`
             );
           }
+          candidates.forEach((candidate, index) => {
+            if (!coveredCandidates.has(index) && step.toolNames.length > 1) {
+              invalid.push(`${test.id}: no tool in ${step.toolNames.join(', ')} accepts ${JSON.stringify(candidate)}`);
+            }
+          });
         }
       }
     }
@@ -241,6 +258,90 @@ describe('automatic benchmark contracts against the current tool registry', () =
       },
     });
   }
+
+  it('accepts both UniProt query shapes and scores the effective filters', () => {
+    const test = suites.simple.getTests().find(candidate => candidate.id === 'db_auto_01');
+    const flat = { proteinName: 'beta-galactosidase', organism: 'Escherichia coli', reviewedOnly: true };
+    const nested = {
+      query_fields: { protein_name: flat.proteinName, organism: flat.organism },
+      filters: { reviewed_only: true },
+    };
+
+    for (const args of [flat, nested]) {
+      expect(evaluateRecordedCall(test, 'advanced_uniprot_search', args, true, 'contract').success).toBe(true);
+    }
+    expect(
+      evaluateRecordedCall(test, 'advanced_uniprot_search', { ...flat, reviewedOnly: false }, true, 'contract').success
+    ).toBe(false);
+  });
+
+  it('compares the effective arguments without rewriting the submitted schema', () => {
+    const evaluator = new StrictAutomaticEvaluator({ assessmentMode: 'contract' });
+    expect(
+      evaluator.compareParameters({ identifier: 'lacZ' }, { gene_name: 'lacZ' }, 'get_coding_sequence').match
+    ).toBe(true);
+    expect(
+      evaluator.compareParameters(
+        { gene_name: 'lacZ', identifier: 'araA' },
+        { gene_name: 'lacZ' },
+        'get_coding_sequence'
+      ).match
+    ).toBe(false);
+    expect(
+      evaluator.compareParameters(
+        { query: 'lacZ', searchType: 'gene_name' },
+        { search_query: 'lacZ', search_type: 'gene_name' },
+        'search_uniprot_database'
+      ).match
+    ).toBe(true);
+    expect(evaluator.compareParameters({ frame: 0 }, { reading_frame: 1 }, 'translate_dna').match).toBe(true);
+    expect(
+      evaluator.compareParameters({ frame: 1, reading_frame: 1 }, { reading_frame: 1 }, 'translate_dna').match
+    ).toBe(false);
+    expect(
+      evaluator.compareParameters(
+        { includeStatistics: true, include_statistics: false },
+        { include_statistics: false },
+        'codon_usage_analysis'
+      ).match
+    ).toBe(true);
+  });
+
+  it('feeds downstream calls result fields from the current tool contracts', async () => {
+    const cds = await buildBenchmarkToolResult('get_coding_sequence', { identifier: 'demo' });
+    expect(cds.codingSequence).toHaveLength(cds.length);
+    const translation = await buildBenchmarkToolResult('translate_dna', { dna: cds.codingSequence, frame: 0 });
+    expect(translation.protein).toHaveLength(Math.floor(cds.length / 3));
+    const workflow = suites.complex.getTests().find(candidate => candidate.id === 'analysis_auto_complex_03');
+    expect(workflow.expectedResult.parameters[2].sequence).toBe('{translate_dna.protein}');
+
+    const structure = await buildBenchmarkToolResult('fetch_alphafold_structure', { uniprotId: 'P04637' });
+    expect(adapter.validateToolCall('open_protein_viewer', { data_ref: structure._dataRef }).valid).toBe(true);
+    const search = await buildBenchmarkToolResult('search_uniprot_database', {
+      query: 'dapA',
+      searchType: 'gene_name',
+      organism: 'Escherichia coli',
+    });
+    expect(search.results[0].uniprotId).toBe('P0A6L2');
+    const entry = await buildBenchmarkToolResult('get_uniprot_entry', {
+      uniprotId: search.results[0].uniprotId,
+      includeSequence: false,
+    });
+    expect(entry.entry_info.uniprot_id).toBe('P0A6L2');
+    expect(entry).not.toHaveProperty('protein_sequence');
+  });
+
+  it('keeps summary and detailed codon usage distinct in offline benchmark results', async () => {
+    const args = { sequence: 'GCTNNNGCC' };
+    const summary = await buildBenchmarkToolResult('codon_usage_analysis', { ...args, includeStatistics: false });
+    expect(summary.totalCodons).toBe(2);
+    expect(summary).not.toHaveProperty('codonUsage');
+    const detailed = await buildBenchmarkToolResult('codon_usage_analysis', args);
+    expect(detailed.codonCounts).toEqual({ GCT: 1, GCC: 1 });
+    expect(await buildBenchmarkToolResult('codon_usage_analysis', { geneName: 'demo' })).toMatchObject({
+      success: false,
+    });
+  });
 
   it.each([
     ['search_auto_02', 'search_annotations', { query: 'DNA Polymerase', limit: 50 }, { query: 'RNA Polymerase' }],
