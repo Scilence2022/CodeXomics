@@ -78,6 +78,10 @@ class StrictAutomaticEvaluator {
     // explicit format writes the same file the dedicated tool would. A missing
     // format is not inferred from the schema default.
     this.parameterizedToolEquivalents = {
+      export_fasta_sequence: {
+        parameter: 'sequenceType',
+        values: { current_view: 'export_current_view_fasta' },
+      },
       export_data: {
         parameter: 'format',
         values: {
@@ -238,7 +242,10 @@ class StrictAutomaticEvaluator {
     if (!this.completionMode) return null;
     const rule = this.parameterizedToolEquivalents[this.normalizeToolName(call?.tool_name || '')];
     if (!rule) return null;
-    const parameters = this.normalizeObservedAliases(call.tool_name, this.normalizeArguments(call.parameters || {}));
+    const parameters = this.normalizeEffectiveParameters(
+      call.tool_name,
+      this.normalizeObservedAliases(call.tool_name, this.normalizeArguments(call.parameters || {}))
+    );
     const value = parameters?.[rule.parameter];
     if (typeof value !== 'string' || value.trim() === '') return null;
     if (rule.excludeWhen?.(parameters)) return null;
@@ -624,6 +631,8 @@ class StrictAutomaticEvaluator {
     // either value in a conflicting call could give credit for the wrong input.
     const aliases = {
       get_coding_sequence: { geneName: ['identifier', 'gene_name', 'geneName'] },
+      load_wig_tracks: { filePaths: ['filePaths', 'file_paths', 'filePath', 'file_path'] },
+      export_fasta_sequence: { sequenceType: ['sequence_type', 'sequenceType'] },
       reverse_complement: { sequence: ['dna', 'sequence'] },
       toggle_track: { trackName: ['trackName', 'track_name'] },
       search_uniprot_database: {
@@ -642,6 +651,13 @@ class StrictAutomaticEvaluator {
       const key = keys.find(candidate => Object.hasOwn(parameters, candidate));
       if (key !== undefined) actual[canonical] = parameters[key];
     }
+    if (toolName === 'load_wig_tracks' && typeof actual.filePaths === 'string') {
+      actual.filePaths = [actual.filePaths];
+    }
+    if (toolName === 'update_annotation' && Object.hasOwn(actual.updates || {}, 'description')) {
+      const { description, ...updates } = actual.updates;
+      actual.updates = { note: description, ...updates };
+    }
     if (['translate_dna', 'translate_sequence'].includes(toolName) && Object.hasOwn(parameters, 'frame')) {
       actual.readingFrame = Number(parameters.frame) + 1;
     }
@@ -651,7 +667,7 @@ class StrictAutomaticEvaluator {
   compareParameters(actualParameters, expectedParameters, rawToolName = '') {
     const toolName = this.normalizeToolName(rawToolName);
     const actual = this.normalizeEffectiveParameters(toolName, this.normalizeArguments(actualParameters));
-    const expected = this.normalizeParameters(expectedParameters || {});
+    const expected = this.normalizeEffectiveParameters(toolName, expectedParameters || {});
     const alternatives = expected.benchmarkAnyOf;
     let mismatches = [];
     const aliasMatches = [];
