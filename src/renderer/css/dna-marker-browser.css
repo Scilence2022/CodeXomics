@@ -1,0 +1,479 @@
+#dnaMarkerBrowserModal {
+  --marker-font-size: 14px;
+  --marker-subtle-text: var(--text-secondary);
+  --marker-selection: color-mix(in srgb, var(--primary-color) 12%, var(--bg-primary));
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg-modal);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--marker-font-size);
+}
+
+#dnaMarkerBrowserModal:not([open]),
+#dnaMarkerBrowserModal [hidden] {
+  display: none;
+}
+
+#dnaMarkerBrowserModal::backdrop {
+  background: transparent;
+}
+
+.font-small #dnaMarkerBrowserModal {
+  --marker-font-size: 13px;
+}
+
+.font-large #dnaMarkerBrowserModal {
+  --marker-font-size: 16px;
+}
+
+.font-extra-large #dnaMarkerBrowserModal {
+  --marker-font-size: 18px;
+}
+
+#dnaMarkerBrowserModal > .modal-content {
+  display: flex;
+  flex-direction: column;
+  width: min(1080px, calc(100vw - 32px)) !important;
+  height: min(760px, calc(100vh - 32px));
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: 1px solid var(--border-color);
+  cursor: auto;
+}
+
+#dnaMarkerBrowserModal .modal-header {
+  position: relative;
+  flex: none;
+  gap: 10px;
+  padding: 8px 14px 8px 32px !important;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+#dnaMarkerBrowserModal .modal-header h3 {
+  margin: 0;
+  font-size: 1.15em;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+#dnaMarkerBrowserModal .modal-header h3 i {
+  margin-right: 4px;
+  color: var(--marker-subtle-text);
+}
+
+#dnaMarkerBrowserModal .modal-close {
+  flex: none;
+  border-radius: var(--radius-md);
+}
+
+.marker-browser-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 28%) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.marker-browser-catalog {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+}
+
+.marker-browser-filters {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  color: var(--marker-subtle-text);
+  font-size: 0.93em;
+}
+
+.marker-browser-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.marker-browser-filters fieldset {
+  min-width: 0;
+  border: 0;
+}
+
+.marker-browser-filters fieldset legend,
+.marker-browser-fields label,
+.marker-browser-compare {
+  font-weight: 550;
+}
+
+.marker-browser-filters fieldset legend {
+  margin-bottom: 4px;
+}
+
+#dnaMarkerBrowserModal :is(input:not([type='radio']), select) {
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 400;
+}
+
+#dnaMarkerBrowserModal input::placeholder {
+  color: var(--marker-subtle-text);
+  opacity: 1;
+}
+
+#dnaMarkerBrowserModal input[aria-invalid='true'] {
+  border-color: var(--error-color);
+}
+
+#dnaMarkerBrowserModal :is(input, select, button):focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
+}
+
+.marker-browser-error {
+  margin-top: 4px;
+  color: color-mix(in srgb, var(--error-color) 55%, var(--text-primary));
+}
+
+.marker-browser-error:empty,
+.marker-browser-copy-status:empty {
+  margin: 0;
+}
+
+.marker-browser-result-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  padding: 7px 14px;
+  border-block: 1px solid var(--border-color);
+  color: var(--marker-subtle-text);
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
+}
+
+#dnaMarkerBrowserModal .marker-browser-button {
+  min-height: 28px;
+  padding: 3px 8px;
+  border-color: var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.86em;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+#dnaMarkerBrowserModal .marker-browser-button:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-tertiary);
+}
+
+.marker-browser-results,
+.marker-browser-detail {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.marker-browser-results {
+  padding: 8px;
+}
+
+.marker-browser-row {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.marker-browser-row:hover {
+  background: var(--bg-tertiary);
+}
+
+.marker-browser-row:has(:checked) {
+  border-color: color-mix(in srgb, var(--primary-color) 50%, var(--border-color));
+  background: var(--marker-selection);
+  box-shadow: inset 3px 0 var(--primary-color);
+}
+
+.marker-browser-row:has(:focus-visible) {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.marker-browser-row input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.marker-browser-row strong {
+  font-size: 0.97em;
+  font-weight: 600;
+}
+
+.marker-browser-row span,
+.marker-browser-empty {
+  color: var(--marker-subtle-text);
+  font-size: 0.88em;
+}
+
+.marker-browser-empty {
+  padding: 16px;
+}
+
+.marker-browser-detail {
+  padding: clamp(14px, 2.3vw, 24px);
+  container: marker-browser-detail / inline-size;
+}
+
+.marker-browser-selection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(11em, 42%);
+  align-items: end;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.marker-browser-identity p,
+.marker-browser-compare {
+  color: var(--marker-subtle-text);
+  font-size: 0.93em;
+}
+
+.marker-browser-identity h4 {
+  margin-top: 3px;
+  font-size: 1.55em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.marker-browser-compare select {
+  display: block;
+  margin-top: 4px;
+}
+
+.marker-browser-profile {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.marker-browser-figure,
+.marker-browser-band-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+}
+
+.marker-browser-figure figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.marker-browser-figure figcaption span,
+.marker-browser-metrics,
+.marker-browser-band-meta {
+  color: var(--marker-subtle-text);
+  font-size: 0.88em;
+}
+
+.marker-browser-chart {
+  padding: 16px 14px 18px 4.8em;
+}
+
+.marker-browser-chart.is-comparing {
+  padding-bottom: 36px;
+}
+
+.marker-browser-shared-bands {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+  color: var(--marker-subtle-text);
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
+}
+
+.marker-browser-plot {
+  position: relative;
+  display: flex;
+  justify-content: space-evenly;
+  gap: 8px;
+  height: 17em;
+  border-left: 1px solid var(--border-color);
+}
+
+.marker-browser-tick {
+  position: absolute;
+  inset-inline: 0;
+  border-top: 1px solid var(--border-color);
+  color: var(--marker-subtle-text);
+  font-size: 0.84em;
+  font-variant-numeric: tabular-nums;
+}
+
+.marker-browser-tick span {
+  position: absolute;
+  right: calc(100% + 7px);
+  transform: translateY(-50%);
+}
+
+.marker-browser-lane {
+  position: relative;
+  flex: 0 1 32%;
+  max-width: 5em;
+  background: color-mix(in srgb, var(--bg-tertiary) 55%, transparent);
+}
+
+.marker-browser-lane-label {
+  position: absolute;
+  inset: calc(100% + 9px) 0 auto;
+  text-align: center;
+  font-weight: 650;
+}
+
+.marker-browser-band {
+  position: absolute;
+  inset-inline: 4px;
+  height: 2px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--primary-color) 78%, var(--text-primary));
+  transform: translateY(-50%);
+}
+
+.marker-browser-band-details {
+  display: grid;
+  gap: 10px;
+}
+
+.marker-browser-band-card {
+  min-width: 0;
+  padding: 10px 12px 12px;
+}
+
+.marker-browser-band-card h5 {
+  font-size: 1em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.marker-browser-metrics {
+  margin-top: 2px;
+}
+
+.marker-browser-band-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.25em, 1fr));
+  gap: 4px;
+  margin-block: 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
+}
+
+.marker-browser-band-list li {
+  text-align: right;
+  padding: 2px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+}
+
+.marker-browser-band-meta {
+  display: grid;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
+.marker-browser-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.marker-browser-copy-status {
+  margin-top: 8px;
+  color: var(--marker-subtle-text);
+  font-size: 0.92em;
+}
+
+@container marker-browser-detail (width < 420px) {
+  .marker-browser-selection,
+  .marker-browser-profile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 680px), (max-height: 590px) {
+  .marker-browser-catalog {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .marker-browser-results {
+    flex-shrink: 0;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 680px) {
+  .marker-browser-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: max-content;
+    align-content: start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .marker-browser-catalog {
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .marker-browser-results {
+    max-height: 13em;
+    overflow-y: auto;
+  }
+
+  .marker-browser-detail {
+    overflow: visible;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  #dnaMarkerBrowserModal {
+    color-scheme: dark;
+  }
+}
