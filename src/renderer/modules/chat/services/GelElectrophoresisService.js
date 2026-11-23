@@ -7,11 +7,9 @@
  * Call virtual_digest first, then pass its fragmentDetails to this tool.
  *
  * Physics model:
- * - Fragment migration distance follows: d = a - b * log10(MW)
- *   where a, b depend on gel percentage, voltage, and run time
- * - Band intensity proportional to fragment concentration (uniform by default)
- * - Band width broadens with diffusion (Gaussian spread)
- * - Smearing near well for very large fragments (>20kb at 1% gel)
+ * Migration follows d = a - b * log10(MW), with coefficients based on gel
+ * percentage. Voltage informs the run-time estimate. The supplied run time
+ * is recorded with the simulation parameters.
  */
 class GelElectrophoresisService {
   constructor(app, chatManager) {
@@ -30,7 +28,7 @@ class GelElectrophoresisService {
     return this._markerDb;
   }
 
-  async simulateGelElectrophoresis(params) {
+  async simulateGelElectrophoresis(params = {}) {
     const {
       fragments,
       gelPercentage = 1.0,
@@ -51,19 +49,35 @@ class GelElectrophoresisService {
       };
     }
 
-    const fragmentSizes = fragments.map(f => f.length || f);
+    const fragmentSizes = [];
+    for (const [index, fragment] of fragments.entries()) {
+      const size = typeof fragment === 'number' ? fragment : fragment?.length;
+      if (!Number.isSafeInteger(size) || size <= 0 || typeof fragment === 'string' || Array.isArray(fragment)) {
+        return {
+          success: false,
+          error: `Fragment ${index + 1} must have a positive integer size in bp.`,
+          requiredParam: 'fragments',
+        };
+      }
+      fragmentSizes.push(size);
+    }
+
+    if (!Number.isFinite(gelPercentage) || gelPercentage < 0.5 || gelPercentage > 3) {
+      return { success: false, error: 'Agarose percentage must be between 0.5 and 3.' };
+    }
 
     const gelConfig = this._getGelConfig(gelPercentage);
     const ladderData = this._getLadderData(ladderType);
 
     const bands = this._calculateBands(fragmentSizes, gelConfig);
 
-    const ladderBands = showLadder ? this._calculateBands(ladderData.sizes, gelConfig) : [];
+    const ladderBands = this._calculateBands(ladderData.sizes, gelConfig);
 
     const result = {
       laneLabel,
       gelPercentage,
-      ladderType,
+      ladderType: ladderData.id,
+      ladderName: ladderData.name,
       voltage,
       runTime,
       showLadder,
@@ -77,12 +91,12 @@ class GelElectrophoresisService {
       totalFragments: fragmentSizes.length,
       fragmentSizes: fragmentSizes.sort((a, b) => b - a),
       bands,
-      ladderBands,
+      ladderBands: showLadder ? ladderBands : [],
       ladderSizes: showLadder ? ladderData.sizes : [],
       estimatedRunTime: this._estimateRunTime(fragmentSizes, gelPercentage, voltage),
     };
 
-    this._showGelVisualization(result);
+    this._showGelVisualization(result, ladderBands);
 
     return result;
   }
@@ -102,14 +116,15 @@ class GelElectrophoresisService {
 
     if (configs[percentage]) return configs[percentage];
 
-    const p = Math.max(0.5, Math.min(3.0, percentage));
-    const lo = Math.floor(p * 2) / 2;
-    const hi = Math.ceil(p * 2) / 2;
-    if (lo === hi) return configs[lo] || configs[1.0];
-
-    const t = (p - lo) / (hi - lo);
-    const cLo = configs[lo] || configs[1.0];
-    const cHi = configs[hi] || configs[1.0];
+    const concentrations = Object.keys(configs)
+      .map(Number)
+      .sort((a, b) => a - b);
+    const upperIndex = concentrations.findIndex(value => value > percentage);
+    const lo = concentrations[upperIndex - 1];
+    const hi = concentrations[upperIndex];
+    const t = (percentage - lo) / (hi - lo);
+    const cLo = configs[lo];
+    const cHi = configs[hi];
     return {
       a: cLo.a + t * (cHi.a - cLo.a),
       b: cLo.b + t * (cHi.b - cLo.b),
@@ -126,7 +141,7 @@ class GelElectrophoresisService {
     if (this.markerDb) {
       const marker = this.markerDb.get(type);
       if (marker && marker.sizes) {
-        return { name: marker.name, sizes: marker.sizes.filter(s => s > 0) };
+        return { id: marker.id, name: marker.name, sizes: marker.sizes.filter(s => s > 0) };
       }
     }
 
@@ -153,9 +168,8 @@ class GelElectrophoresisService {
       },
     };
 
-    const ladder = ladders[type];
-    if (ladder) return ladder;
-    return ladders['1kb'];
+    const id = Object.hasOwn(ladders, type) ? type : '1kb';
+    return { id, ...ladders[id] };
   }
 
   listMarkers(params = {}) {
@@ -221,10 +235,6 @@ class GelElectrophoresisService {
     const { a, b, wellToBottom, diffusionFactor } = gelConfig;
 
     return sizes.map((size, i) => {
-      if (size <= 0) {
-        return { index: i, size: 0, migrationDistance: 0, isSmear: true, intensity: 0.3, bandWidth: 3.0 };
-      }
-
       const logMW = Math.log10(size);
       const migration = a - b * logMW;
 
@@ -260,30 +270,31 @@ class GelElectrophoresisService {
     return Math.round(30 * sizeFactor * gelFactor * voltageFactor);
   }
 
-  _showGelVisualization(result) {
-    this._ensureDraggableResizable();
-
+  _showGelVisualization(result, ladderBands) {
+    if (typeof document === 'undefined') return;
     const modal = document.getElementById('gelElectrophoresisModal');
-    if (modal) {
-      this._setGelModalCollapsed(modal, false);
-    }
+    if (!modal) return;
 
-    const GelRendererClass = typeof window !== 'undefined' && window.GelRenderer ? window.GelRenderer : null;
+    this._setGelModalCollapsed(modal, false);
+    modal.classList.add('show');
+    this._ensureDraggableResizable();
+    window.modalDragManager?.raiseFloatingWindow(modal);
 
-    if (GelRendererClass) {
-      const renderer = new GelRendererClass();
-      renderer.render(result);
-      return;
+    const container = document.getElementById('gelResultsContainer');
+    const fallback = document.getElementById('gelResultsFallback');
+    if (window.GelRenderer) {
+      if (container) container.hidden = false;
+      if (fallback) fallback.hidden = true;
+      this._renderer ??= new window.GelRenderer();
+      this._renderer.render(result, ladderBands);
+    } else if (fallback) {
+      if (container) container.hidden = true;
+      fallback.hidden = false;
+      fallback.textContent =
+        `Gel viewer unavailable. ${result.totalFragments.toLocaleString()} fragments simulated. ` +
+        `Sizes (bp): ${result.fragmentSizes.slice(0, 15).join(', ')}${result.totalFragments > 15 ? ', …' : ''}.`;
     }
-
-    if (modal) {
-      const container = document.getElementById('gelResultsContainer');
-      if (container) {
-        this._renderFallbackHTML(container, result);
-      }
-      modal.classList.add('show');
-      window.modalDragManager?.raiseFloatingWindow(modal);
-    }
+    this._fitGelWindow(modal);
   }
 
   _ensureDraggableResizable() {
@@ -293,18 +304,21 @@ class GelElectrophoresisService {
     const modal = document.querySelector(selector);
     if (!modal) return;
 
+    window.addEventListener('resize', () => this._fitGelWindow(modal));
     if (window.modalDragManager) {
       window.modalDragManager.makeDraggable(selector);
     }
     if (window.resizableModalManager) {
       window.resizableModalManager.makeResizable(selector);
+      // Keep the CSS viewport cap when the application window shrinks after resizing the gel.
+      modal.querySelector('.modal-content').style.removeProperty('max-width');
     }
 
     const resetBtn = modal.querySelector('.reset-position-btn');
-    if (resetBtn && window.modalDragManager) {
+    if (resetBtn) {
       resetBtn.addEventListener('click', e => {
         e.stopPropagation();
-        window.modalDragManager.resetPosition(selector);
+        window.modalDragManager?.resetPosition(selector);
       });
     }
 
@@ -315,16 +329,38 @@ class GelElectrophoresisService {
       });
     });
 
+    modal.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        event.stopPropagation();
+        modal.classList.remove('show');
+      }
+    });
+
     const collapseBtn = modal.querySelector('.modal-collapse');
     if (collapseBtn) {
       collapseBtn.setAttribute('aria-expanded', 'true');
       collapseBtn.addEventListener('click', () => {
         const content = modal.querySelector('.modal-content');
         this._setGelModalCollapsed(modal, !content?.classList.contains('is-collapsed'));
+        this._fitGelWindow(modal);
       });
     }
 
     this._dragResizeInitialized = true;
+  }
+
+  _fitGelWindow(modal) {
+    if (!modal.classList.contains('show')) return;
+    const content = modal.querySelector('.modal-content');
+    if (content?.style.position !== 'fixed') return;
+
+    const padding = 16;
+    const maxLeft = window.innerWidth - content.offsetWidth - padding;
+    const maxTop = window.innerHeight - content.offsetHeight - padding;
+    const left = parseFloat(content.style.left) || 0;
+    const top = parseFloat(content.style.top) || 0;
+    content.style.left = `${Math.max(padding, Math.min(left, maxLeft))}px`;
+    content.style.top = `${Math.max(padding, Math.min(top, maxTop))}px`;
   }
 
   _setGelModalCollapsed(modal, shouldCollapse) {
@@ -353,6 +389,7 @@ class GelElectrophoresisService {
       body.hidden = true;
       content.classList.add('is-collapsed');
       collapseBtn?.setAttribute('aria-expanded', 'false');
+      collapseBtn?.setAttribute('aria-label', 'Expand gel results');
       if (icon) {
         icon.className = 'fas fa-chevron-down';
       }
@@ -374,37 +411,10 @@ class GelElectrophoresisService {
     }
 
     collapseBtn?.setAttribute('aria-expanded', 'true');
+    collapseBtn?.setAttribute('aria-label', 'Collapse gel results');
     if (icon) {
       icon.className = 'fas fa-chevron-up';
     }
-  }
-
-  _renderFallbackHTML(container, result) {
-    const fragmentRows = result.fragmentSizes
-      .map((size, i) => {
-        const band = result.bands[i];
-        const pos = band ? (band.normalizedPosition * 100).toFixed(1) : '?';
-        return `<tr><td>${i + 1}</td><td>${size.toLocaleString()} bp</td><td>${pos}%</td></tr>`;
-      })
-      .join('');
-
-    container.innerHTML = `
-      <div class="gel-results-summary">
-        <h4>Gel Electrophoresis Simulation</h4>
-        <p><strong>Lane:</strong> ${result.laneLabel || 'Digest'}</p>
-        <p><strong>Gel:</strong> ${result.gelPercentage}% agarose</p>
-        <p><strong>Ladder:</strong> ${result.ladderType}</p>
-        <p><strong>Fragments:</strong> ${result.totalFragments}</p>
-        <p><strong>Effective range:</strong> ${result.gelConfig.effectiveRange[0].toLocaleString()} - ${result.gelConfig.effectiveRange[1].toLocaleString()} bp</p>
-      </div>
-      <div class="gel-results-table">
-        <table>
-          <thead><tr><th>#</th><th>Size</th><th>Migration</th></tr></thead>
-          <tbody>${fragmentRows}</tbody>
-        </table>
-      </div>
-      <p class="gel-note">Canvas renderer (GelRenderer.js) provides full gel visualization. Load it for enhanced display.</p>
-    `;
   }
 }
 

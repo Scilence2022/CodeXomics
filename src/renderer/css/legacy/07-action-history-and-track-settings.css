@@ -973,8 +973,8 @@
     padding: 8px;
   }
 
-  /* The Primer Library keeps its drag and resize dimensions at desktop zoom levels. */
-  .modal-content:not(:where(.primer-library-modal *)) {
+  /* These floating tools manage their own dimensions across desktop zoom levels. */
+  .modal-content:not(:where(.primer-library-modal *, #gelElectrophoresisModal *)) {
     width: 95vw !important;
     max-width: 95vw !important;
     margin: 10px auto !important;
@@ -991,7 +991,7 @@
     max-width: 95vw !important;
   }
 
-  .modal-body:not(:where(.primer-library-modal *)) {
+  .modal-body:not(:where(.primer-library-modal *, #gelElectrophoresisModal *)) {
     max-height: calc(100vh - 140px) !important;
     overflow-y: auto !important;
     padding: 15px !important;
@@ -1018,7 +1018,7 @@
     padding: 12px 20px !important;
   }
 
-  .modal-header {
+  .modal-header:not(:where(#gelElectrophoresisModal *)) {
     flex: 0 0 auto !important;
     flex-shrink: 0 !important;
     padding: 15px !important;

@@ -87,6 +87,37 @@ describe('GelElectrophoresisService - simulateGelElectrophoresis', () => {
     expect(result).toBeDefined();
     expect(result.bandColorScheme).toBe('sybr_safe');
   });
+
+  it('keeps bands in input order while returning a sorted size summary', async () => {
+    const result = await service.simulateGelElectrophoresis({
+      fragments: [{ length: 500 }, 12000, { length: 500 }, 40],
+      showLadder: false,
+    });
+    expect(result.fragmentSizes).toEqual([12000, 500, 500, 40]);
+    expect(result.bands.map(({ index, size }) => [index, size])).toEqual([
+      [0, 500],
+      [1, 12000],
+      [2, 500],
+      [3, 40],
+    ]);
+    expect(result.bands[3].normalizedPosition).toBe(1);
+    expect(result.ladderBands).toEqual([]);
+    expect(result.ladderSizes).toEqual([]);
+  });
+
+  it('interpolates between the closest configured concentrations', async () => {
+    const result = await service.simulateGelElectrophoresis({ fragments: [1000], gelPercentage: 0.75 });
+    expect(result.gelConfig.a).toBeCloseTo((32.8 + 31.86) / 2);
+    expect(result.gelConfig.effectiveRange).toEqual([700, 17500]);
+  });
+
+  it.each([[0], [-1], [1.5], [null], ['1000'], [[1000]], [{ length: '1000' }]])(
+    'reports invalid fragment size %j',
+    async invalid => {
+      const result = await service.simulateGelElectrophoresis({ fragments: [1000, invalid] });
+      expect(result).toMatchObject({ success: false, error: expect.stringContaining('Fragment 2') });
+    }
+  );
 });
 
 describe('GelElectrophoresisService - listMarkers', () => {
