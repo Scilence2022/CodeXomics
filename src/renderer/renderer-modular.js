@@ -3270,6 +3270,10 @@ class GenomeBrowser {
       this.showDNAMarkerBrowserModal();
     });
 
+    ipcRenderer.on('open-gel-electrophoresis', () => {
+      this.chatManager?.services?.gel?.openGelWindow();
+    });
+
     ipcRenderer.on('open-evo2', () => {
       if (!window.evo2UI) window.evo2UI = new window.Evo2UI(window.genomeBrowser);
       window.evo2UI.open();

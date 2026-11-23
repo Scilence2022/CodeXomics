@@ -156,7 +156,7 @@ categories:
       - 'system_configuration'
       - 'interface_controls'
       - 'agent_skills'
-    tools_count: 13
+    tools_count: 17
 
   benchmark:
     name: 'Benchmark Management'

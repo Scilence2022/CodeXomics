@@ -268,6 +268,7 @@ function buildModuleDeps() {
     sendToCurrentMainWindow: wm.sendToCurrentMainWindow,
     createProjectManagerWindow: wm.createProjectManagerWindow,
     createCircosWindow: wm.createCircosWindow,
+    setCircosWindowVisibility: wm.setCircosWindowVisibility,
     createKEGGWindow: wm.createKEGGWindow,
     createGOWindow: wm.createGOWindow,
     createUniProtWindow: wm.createUniProtWindow,

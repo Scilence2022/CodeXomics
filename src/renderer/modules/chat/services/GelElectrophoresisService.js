@@ -270,16 +270,24 @@ class GelElectrophoresisService {
     return Math.round(30 * sizeFactor * gelFactor * voltageFactor);
   }
 
-  _showGelVisualization(result, ladderBands) {
-    if (typeof document === 'undefined') return;
+  openGelWindow() {
+    if (typeof document === 'undefined') return false;
     const modal = document.getElementById('gelElectrophoresisModal');
-    if (!modal) return;
+    if (!modal) return false;
 
     this._setGelModalCollapsed(modal, false);
     modal.classList.add('show');
     this._ensureDraggableResizable();
     window.modalDragManager?.raiseFloatingWindow(modal);
+    this._fitGelWindow(modal);
+    return true;
+  }
 
+  _showGelVisualization(result, ladderBands) {
+    if (!this.openGelWindow()) return;
+
+    const empty = document.getElementById('gelResultsEmpty');
+    if (empty) empty.hidden = true;
     const container = document.getElementById('gelResultsContainer');
     const fallback = document.getElementById('gelResultsFallback');
     if (window.GelRenderer) {
@@ -294,7 +302,7 @@ class GelElectrophoresisService {
         `Gel viewer unavailable. ${result.totalFragments.toLocaleString()} fragments simulated. ` +
         `Sizes (bp): ${result.fragmentSizes.slice(0, 15).join(', ')}${result.totalFragments > 15 ? ', …' : ''}.`;
     }
-    this._fitGelWindow(modal);
+    this._fitGelWindow(document.getElementById('gelElectrophoresisModal'));
   }
 
   _ensureDraggableResizable() {

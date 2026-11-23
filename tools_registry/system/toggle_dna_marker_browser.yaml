@@ -1,0 +1,37 @@
+name: 'toggle_dna_marker_browser'
+version: '1.0.0'
+description: 'Open, close, or toggle the DNA Marker / Ladder Browser.'
+category: 'system'
+subcategory: 'interface_controls'
+keywords:
+  - 'dna marker browser'
+  - 'dna marker / ladder browser'
+  - 'dna ladder browser'
+  - 'DNA 标记浏览器'
+  - 'DNA标记浏览器'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    action:
+      type: 'string'
+      description: "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state."
+      enum: ['open', 'close', 'toggle']
+  required: ['action']
+sample_usages:
+  - user_query: 'Open the DNA Marker / Ladder Browser window'
+    tool_call: "toggle_dna_marker_browser(action='open')"
+    expected_result: 'The window is open'
+  - user_query: 'Close the DNA Marker / Ladder Browser window'
+    tool_call: "toggle_dna_marker_browser(action='close')"
+    expected_result: 'The window is closed'
+returns:
+  success: 'boolean - Whether the window action succeeded'
+  new_state: "string - Either 'open' or 'closed' after the action"

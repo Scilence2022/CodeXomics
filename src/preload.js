@@ -181,6 +181,7 @@ const allowedListenChannels = [
   'configure-external-tools',
   'open-enzyme-browser',
   'open-dna-marker-browser',
+  'open-gel-electrophoresis',
   'open-evo2',
   'configure-search',
   'mcp-settings',
@@ -389,6 +390,7 @@ ipcRenderer.on('project-manager-action', (event, request) => {
 });
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  setCircosWindowVisibility: action => ipcRenderer.invoke('circos:set-window-visibility', action),
   getCircosGenome: () => ipcRenderer.invoke('get-circos-genome-data'),
   getCircosTracks: request => ipcRenderer.invoke('get-circos-tracks', request),
   navigateFromCircos: target => ipcRenderer.invoke('circos-navigate', target),
