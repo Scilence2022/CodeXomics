@@ -1,0 +1,506 @@
+#enzymeBrowserModal {
+  --enzyme-browser-font-size: 14px;
+  --enzyme-browser-selection: color-mix(in srgb, var(--primary-color) 12%, var(--bg-primary));
+  --enzyme-browser-cut: color-mix(in srgb, var(--primary-color) 75%, var(--text-primary));
+  --enzyme-browser-mono: var(--sequence-font-family, ui-monospace, monospace);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg-modal);
+  color: var(--text-primary);
+  font: var(--enzyme-browser-font-size) / 1.5 var(--font-family);
+}
+
+#enzymeBrowserModal[open] {
+  display: flex;
+}
+
+#enzymeBrowserModal [hidden] {
+  display: none;
+}
+
+#enzymeBrowserModal::backdrop {
+  background: transparent;
+}
+
+.font-small #enzymeBrowserModal {
+  --enzyme-browser-font-size: 13px;
+}
+
+.font-large #enzymeBrowserModal {
+  --enzyme-browser-font-size: 16px;
+}
+
+.font-extra-large #enzymeBrowserModal {
+  --enzyme-browser-font-size: 18px;
+}
+
+#enzymeBrowserModal > .modal-content {
+  display: flex;
+  flex-direction: column;
+  width: min(1060px, calc(100vw - 32px)) !important;
+  height: min(720px, calc(100dvh - 32px));
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: 1px solid var(--border-color);
+  cursor: auto;
+}
+
+#enzymeBrowserModal .modal-header {
+  position: relative;
+  flex: none;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 14px 8px 32px !important;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+#enzymeBrowserModal .modal-header h3 {
+  font-size: 1.15em;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+#enzymeBrowserModal .modal-header i {
+  margin-inline-end: 4px;
+  color: var(--text-secondary);
+}
+
+#enzymeBrowserModal .modal-close {
+  flex: none;
+}
+
+#enzymeBrowserModal .modal-close:hover {
+  background: var(--bg-tertiary);
+}
+
+.enzyme-browser-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.enzyme-browser-filters {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(0, 1fr));
+  flex: none;
+  gap: 10px 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.enzyme-browser-filters label {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 0.89em;
+  font-weight: 600;
+}
+
+#enzymeBrowserModal :is(input[type='search'], select) {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  margin-top: 4px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 450;
+}
+
+.enzyme-browser-search > span {
+  display: block;
+  position: relative;
+}
+
+.enzyme-browser-search i {
+  position: absolute;
+  inset-inline-start: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+#enzymeBrowserModal input[type='search'] {
+  padding-inline-start: 30px;
+}
+
+#enzymeBrowserModal input::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+#enzymeBrowserModal :is(input, select, button):focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
+}
+
+#enzymeBrowserModal .enzyme-browser-button {
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.88em;
+  font-weight: 550;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+#enzymeBrowserModal .enzyme-browser-button:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background: var(--bg-tertiary);
+}
+
+#enzymeBrowserModal .enzyme-browser-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.enzyme-browser-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 30%) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.enzyme-browser-catalog {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-secondary);
+  border-inline-end: 1px solid var(--border-color);
+}
+
+.enzyme-browser-result-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.enzyme-browser-result-bar p,
+.enzyme-browser-empty {
+  font-size: 0.89em;
+}
+
+#enzymeBrowserResults,
+.enzyme-browser-detail {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#enzymeBrowserResults {
+  padding: 6px 8px;
+}
+
+.enzyme-browser-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  position: relative;
+  gap: 1px 8px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.enzyme-browser-row:hover {
+  background: var(--bg-tertiary);
+}
+
+.enzyme-browser-row:has(:checked) {
+  border-color: color-mix(in srgb, var(--primary-color) 50%, var(--border-color));
+  background: var(--enzyme-browser-selection);
+  box-shadow: inset 3px 0 var(--primary-color);
+}
+
+.enzyme-browser-row:has(:focus-visible) {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.enzyme-browser-row input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.enzyme-browser-row strong {
+  font-weight: 650;
+}
+
+.enzyme-browser-row-end,
+.enzyme-browser-row code {
+  color: var(--text-secondary);
+  font-size: 0.86em;
+}
+
+#enzymeBrowserModal code {
+  font-family: var(--enzyme-browser-mono);
+}
+
+.enzyme-browser-row code {
+  grid-column: 1 / -1;
+  letter-spacing: 0.06em;
+}
+
+.enzyme-browser-empty {
+  padding: 16px;
+  color: var(--text-secondary);
+}
+
+.enzyme-browser-detail {
+  padding: clamp(14px, 2.4vw, 28px);
+  container: enzyme-browser-detail / inline-size;
+  overflow-wrap: anywhere;
+}
+
+.enzyme-browser-identity p,
+.enzyme-browser-metrics dt,
+.enzyme-browser-offsets,
+.enzyme-browser-catalog-details dt,
+.enzyme-browser-copy-status {
+  color: var(--text-secondary);
+  font-size: 0.89em;
+}
+
+.enzyme-browser-identity h4 {
+  margin-top: 2px;
+  font-size: 1.9em;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.enzyme-browser-metrics {
+  display: grid;
+  grid-template-columns: 1.25fr 0.65fr 1fr;
+  gap: 8px 16px;
+  margin-block: 15px 18px;
+}
+
+.enzyme-browser-metrics dd {
+  margin-top: 2px;
+  font-weight: 620;
+}
+
+.enzyme-browser-metrics code {
+  letter-spacing: 0.055em;
+}
+
+.enzyme-browser-cleavage {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+}
+
+.enzyme-browser-cleavage figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.enzyme-browser-strands {
+  display: grid;
+  grid-template-columns: minmax(0, max-content);
+  justify-content: start;
+  gap: 5px;
+  padding: 16px 12px;
+  overflow-x: auto;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.enzyme-browser-strand {
+  display: grid;
+  grid-template-columns: 2ch minmax(0, max-content) 2ch;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.enzyme-browser-strand code {
+  display: flex;
+  align-items: center;
+  font-size: 1.12em;
+  line-height: 1.9;
+}
+
+.enzyme-browser-strand code span {
+  width: 1.18em;
+  min-width: 1ch;
+  text-align: center;
+}
+
+.enzyme-browser-base {
+  background: var(--enzyme-browser-selection);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.enzyme-browser-flank {
+  background: var(--bg-primary);
+}
+
+.enzyme-browser-cut {
+  position: relative;
+  flex: none;
+  width: 0;
+  height: 1.9em;
+}
+
+.enzyme-browser-cut::before {
+  content: '';
+  position: absolute;
+  inset: -3px auto -3px -1px;
+  width: 2px;
+  background: var(--enzyme-browser-cut);
+}
+
+.enzyme-browser-offsets {
+  padding: 9px 12px 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.enzyme-browser-offsets dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+}
+
+.enzyme-browser-offsets dl div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+
+.enzyme-browser-offsets dd {
+  color: var(--text-primary);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.enzyme-browser-offsets p {
+  margin-top: 5px;
+}
+
+.enzyme-browser-copy-status:not(:empty) {
+  margin-top: 6px;
+}
+
+.enzyme-browser-catalog-details {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.enzyme-browser-related {
+  margin-top: 14px;
+}
+
+.enzyme-browser-related h5 {
+  font-size: 0.94em;
+  font-weight: 650;
+}
+
+.enzyme-browser-related ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  list-style: none;
+}
+
+@container enzyme-browser-detail (width < 390px) {
+  .enzyme-browser-metrics {
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 8px 14px;
+  }
+
+  .enzyme-browser-metrics > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-height: 540px) {
+  .enzyme-browser-workspace {
+    overflow-y: auto;
+  }
+
+  .enzyme-browser-layout {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 720px) {
+  #enzymeBrowserModal .modal-header {
+    padding-inline-start: 14px !important;
+  }
+
+  .enzyme-browser-workspace {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .enzyme-browser-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding-inline: 12px;
+  }
+
+  .enzyme-browser-search {
+    grid-column: 1 / -1;
+  }
+
+  .enzyme-browser-layout {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+  }
+
+  .enzyme-browser-catalog {
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  #enzymeBrowserResults {
+    max-height: min(13em, 28vh);
+  }
+
+  .enzyme-browser-detail {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 410px) {
+  .enzyme-browser-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
