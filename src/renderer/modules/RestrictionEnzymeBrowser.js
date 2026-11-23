@@ -23,7 +23,7 @@ class RestrictionEnzymeBrowser {
   createDialog() {
     this.dialog = document.createElement('dialog');
     this.dialog.id = 'enzymeBrowserModal';
-    this.dialog.className = 'modal';
+    this.dialog.className = 'modal floating-tool-window';
     this.dialog.setAttribute('aria-labelledby', 'enzymeBrowserTitle');
     this.dialog.innerHTML = `
       <div class="modal-content">
@@ -116,12 +116,6 @@ class RestrictionEnzymeBrowser {
 
     const filters = this.dialog.querySelector('.enzyme-browser-filters');
     this.fields.search.addEventListener('input', () => this.renderResults());
-    this.fields.search.addEventListener('keydown', event => {
-      if (event.key !== 'Escape' || event.isComposing) return;
-      // Chromium's search control otherwise consumes Escape to clear its value.
-      event.preventDefault();
-      this.dialog.close();
-    });
     filters.addEventListener('change', event => {
       if (event.target.matches('select')) this.renderResults();
     });
@@ -139,14 +133,16 @@ class RestrictionEnzymeBrowser {
     });
     this.dialog.querySelector('[data-action="copy"]').addEventListener('click', () => this.copyRecognition());
     this.dialog.querySelector('.modal-close').addEventListener('click', () => this.dialog.close());
-    this.dialog.addEventListener('pointerdown', event => {
-      this.pressedBackdrop = event.target === this.dialog;
-    });
-    this.dialog.addEventListener('click', event => {
-      if (this.pressedBackdrop && event.target === this.dialog) this.dialog.close();
+    this.dialog.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.dialog.close();
     });
     this.dialog.addEventListener('close', () => {
-      if (!this.dialog.open) this.clearCopyStatus();
+      if (this.dialog.open) return;
+      this.dialog.classList.remove('show', 'is-front');
+      this.clearCopyStatus();
     });
 
     for (const [value, label] of Object.entries(RestrictionEnzymeBrowser.endLabels)) {
@@ -159,6 +155,7 @@ class RestrictionEnzymeBrowser {
 
   open(database) {
     if (this.dialog.open) {
+      window.modalDragManager?.raiseFloatingWindow(this.dialog);
       this.fields.search.focus();
       return;
     }
@@ -181,7 +178,9 @@ class RestrictionEnzymeBrowser {
     dragManager?.resetPosition('#enzymeBrowserModal');
     this.clearCopyStatus();
     this.renderResults();
-    this.dialog.showModal();
+    this.dialog.classList.add('show');
+    this.dialog.show();
+    dragManager?.raiseFloatingWindow(this.dialog);
     this.fields.search.focus();
     this.revealSelection();
   }
