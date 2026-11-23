@@ -359,4 +359,6 @@ class RestrictionEnzymeBrowser {
   }
 }
 
-window.RestrictionEnzymeBrowser = RestrictionEnzymeBrowser;
+if (typeof window !== 'undefined') {
+  window.RestrictionEnzymeBrowser = RestrictionEnzymeBrowser;
+}
