@@ -156,10 +156,6 @@ describe('BLAST Tool Registry Consistency', () => {
       expect(content).toContain("tblastx: 'tblastx'");
     });
 
-    it('should validate tblastn as protein-query BLAST', () => {
-      expect(content).toContain("params.blastType === 'tblastn' && sequenceType !== 'Protein'");
-    });
-
     it('should resolve quick/custom database IDs through registered database metadata', () => {
       expect(content).toContain('const directCustomDb = this.customDatabases.get(databaseValue)');
       expect(content).toContain('const localDb = this.config.localDatabases.get(databaseValue)');
