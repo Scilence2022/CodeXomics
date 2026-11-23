@@ -11399,6 +11399,10 @@ TOOL AVAILABILITY:
         'toggle_sidebar',
         'toggle_sidebar_panel',
         'toggle_top_banner',
+        'toggle_gel_electrophoresis',
+        'toggle_dna_marker_browser',
+        'toggle_restriction_enzyme_browser',
+        'toggle_circos_genome_plotter',
       ],
     };
 
@@ -11718,6 +11722,10 @@ ${coreTools}
       toggle_sidebar: () => this.toggleSidebar(parameters),
       toggle_sidebar_panel: () => this.toggleSidebarPanel(parameters),
       toggle_top_banner: () => this.toggleTopBanner(parameters),
+      toggle_gel_electrophoresis: () => this.services.ui.toggleGelElectrophoresis(parameters),
+      toggle_dna_marker_browser: () => this.services.ui.toggleDnaMarkerBrowser(parameters),
+      toggle_restriction_enzyme_browser: () => this.services.ui.toggleRestrictionEnzymeBrowser(parameters),
+      toggle_circos_genome_plotter: () => this.services.ui.toggleCircosGenomePlotter(parameters),
 
       // Benchmark tools
       open_benchmark: () => this.openBenchmark(parameters),
@@ -13142,6 +13150,10 @@ For complete tool documentation with all ${toolCount} available tools, ask me to
       'toggle_sidebar',
       'toggle_sidebar_panel',
       'toggle_top_banner',
+      'toggle_gel_electrophoresis',
+      'toggle_dna_marker_browser',
+      'toggle_restriction_enzyme_browser',
+      'toggle_circos_genome_plotter',
     ];
 
     // Add plugin functions if available

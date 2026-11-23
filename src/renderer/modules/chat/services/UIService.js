@@ -8,6 +8,55 @@ class UIService {
     this.chatManager = chatManager;
   }
 
+  toggleGelElectrophoresis(parameters) {
+    return this.setAnalysisDialogVisibility('gelElectrophoresisModal', parameters, () =>
+      this.chatManager.services.gel.openGelWindow()
+    );
+  }
+
+  toggleDnaMarkerBrowser(parameters) {
+    return this.setAnalysisDialogVisibility('dnaMarkerBrowserModal', parameters, () =>
+      this.app.showDNAMarkerBrowserModal()
+    );
+  }
+
+  toggleRestrictionEnzymeBrowser(parameters) {
+    return this.setAnalysisDialogVisibility('enzymeBrowserModal', parameters, () => this.app.showEnzymeBrowserModal());
+  }
+
+  async toggleCircosGenomePlotter({ action } = {}) {
+    if (!['open', 'close', 'toggle'].includes(action)) {
+      return { success: false, error: 'Expected open, close, or toggle.' };
+    }
+    try {
+      return await window.electronAPI.setCircosWindowVisibility(action);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  setAnalysisDialogVisibility(id, { action } = {}, show) {
+    if (!['open', 'close', 'toggle'].includes(action)) {
+      return { success: false, error: 'Expected open, close, or toggle.' };
+    }
+    const isOpen = modal => (modal?.localName === 'dialog' ? modal.open : modal?.classList.contains('show') === true);
+    let modal = document.getElementById(id);
+    const open = action === 'open' || (action === 'toggle' && !isOpen(modal));
+    try {
+      if (open) {
+        if (!isOpen(modal) || id === 'gelElectrophoresisModal') show();
+        modal = document.getElementById(id);
+        if (!isOpen(modal)) return { success: false, error: 'The requested window could not be opened.' };
+      } else if (isOpen(modal)) {
+        if (modal.localName === 'dialog') modal.close();
+        else modal.classList.remove('show');
+      }
+      return { success: true, new_state: open ? 'open' : 'closed' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
   showChatHistoryModal() {
     const history = this.chatManager.configManager.getChatHistory();
 
@@ -133,10 +182,12 @@ class UIService {
     document.getElementById('chatDockContainer');
     document.getElementById('chatDockSplitter');
     let isDragging = false;
-    let startX; let startY; let startLeft; let startTop;
+    let startX;
+    let startY;
+    let startLeft;
+    let startTop;
     const dragThreshold = 5; // Minimum pixels to consider as drag
     let hasMoved = false;
-
 
     chatHeader.addEventListener('mousedown', e => {
       // Don't drag if clicking on buttons

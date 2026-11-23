@@ -38,9 +38,9 @@ When adding a new AI-callable tool, update every relevant registry. Missing one 
 
 Current local facts to keep in mind:
 
-- `tools_registry/` contains 214 tool schemas across 18 category directories. `tool_categories.yaml` is category metadata.
-- `builtInToolsMap` maps 181 built-in tools.
-- MCP tools mode advertises 130 tools to an administrator. Scoped credentials receive a filtered list.
+- `tools_registry/` contains 218 tool schemas across 18 category directories. `tool_categories.yaml` is category metadata.
+- `builtInToolsMap` maps 185 built-in tools.
+- MCP tools mode advertises 134 tools to an administrator. Scoped credentials receive a filtered list.
 - MCP agent mode exposes only `codexomics_chat`, `list_genome_windows`, and `switch_active_window`.
 
 ## 3. Keyword Regex Rules

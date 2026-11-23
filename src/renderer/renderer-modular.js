@@ -1633,13 +1633,15 @@ class GenomeBrowser {
     if (!modal) {
       modal = document.createElement('div');
       modal.id = `${type}BrowserModal`;
-      modal.className = 'modal';
+      modal.className = 'modal floating-tool-window';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-labelledby', `${type}BrowserTitle`);
       modal.innerHTML = `
         <div class="modal-content" style="max-width: 800px; min-width: 500px;">
           <div class="modal-header">
-            <h3><i class="fas fa-database"></i> ${title}</h3>
+            <h3 id="${type}BrowserTitle"><i class="fas fa-database" aria-hidden="true"></i> ${title}</h3>
             <div class="modal-controls">
-              <button class="modal-close" type="button">&times;</button>
+              <button class="modal-close" type="button" aria-label="Close browser">&times;</button>
             </div>
           </div>
           <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
@@ -1659,6 +1661,12 @@ class GenomeBrowser {
       modal.querySelector('.modal-close').addEventListener('click', () => {
         modal.classList.remove('show');
       });
+      modal.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !event.defaultPrevented) {
+          event.stopPropagation();
+          modal.classList.remove('show');
+        }
+      });
 
       const searchInput = modal.querySelector(`#${type}BrowserSearch`);
       searchInput.addEventListener('input', () => {
@@ -1672,6 +1680,7 @@ class GenomeBrowser {
 
     this._populateDatabaseBrowserResults(type, dataLoader, '');
     modal.classList.add('show');
+    window.modalDragManager?.raiseFloatingWindow(modal);
 
     const searchInput = modal.querySelector(`#${type}BrowserSearch`);
     if (searchInput) {
@@ -3365,6 +3374,10 @@ class GenomeBrowser {
 
     ipcRenderer.on('open-dna-marker-browser', () => {
       this.showDNAMarkerBrowserModal();
+    });
+
+    ipcRenderer.on('open-gel-electrophoresis', () => {
+      this.chatManager?.services?.gel?.openGelWindow();
     });
 
     ipcRenderer.on('open-evo2', () => {

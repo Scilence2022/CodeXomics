@@ -1134,6 +1134,34 @@ class BuiltInToolsIntegration {
       priority: 1,
     });
 
+    this.builtInToolsMap.set('toggle_gel_electrophoresis', {
+      method: 'toggleGelElectrophoresis',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('toggle_dna_marker_browser', {
+      method: 'toggleDnaMarkerBrowser',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('toggle_restriction_enzyme_browser', {
+      method: 'toggleRestrictionEnzymeBrowser',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
+    this.builtInToolsMap.set('toggle_circos_genome_plotter', {
+      method: 'toggleCircosGenomePlotter',
+      category: 'system',
+      type: 'built-in',
+      priority: 1,
+    });
+
     this.builtInToolsMap.set('toggle_chatbox', {
       method: 'toggleChatBox',
       category: 'system',
@@ -2216,6 +2244,26 @@ class BuiltInToolsIntegration {
       });
     }
 
+    const analysisWindowRequests = [];
+    const visibilityVerb = /\b(open|close|show|hide|toggle|launch)\b|打开|关闭|显示|隐藏|切换/i;
+    if (visibilityVerb.test(query)) {
+      const analysisWindows = {
+        toggle_gel_electrophoresis: /\b(gel\s+electrophoresis|virtual\s+gel|gel\s+(windows?|dialogs?))\b|凝胶电泳/i,
+        toggle_dna_marker_browser:
+          /\b(dna\s+markers?(?:\s*\/\s*ladders?)?|dna\s+ladders?|marker\s+browsers?)\b|DNA\s*标记|分子量标准浏览器/i,
+        toggle_restriction_enzyme_browser:
+          /\b((restriction\s+)?enzyme\s+(browsers?|windows?))\b|限制(?:性内切)?酶(?:浏览器|窗口|界面)/i,
+        toggle_circos_genome_plotter: /\bcircos\b|环形基因组(?:图|绘图)/i,
+      };
+      for (const [name, pattern] of Object.entries(analysisWindows)) {
+        const verb = `(?:${visibilityVerb.source})`;
+        const target = `(?:${pattern.source})`;
+        if (!new RegExp(`${verb}.*?${target}|${target}.*?${verb}`, 'is').test(query)) continue;
+        analysisWindowRequests.push(name);
+        relevantTools.push({ name, confidence: 0.98, reason: 'Analysis window visibility requested' });
+      }
+    }
+
     // Check for primary interface visibility and collapse/expand controls
     if (
       /\b(show|hide|open|close|toggle)\s+.*?\bchat\s*box\b(?!\s+settings)/i.test(query) ||
@@ -2933,8 +2981,9 @@ class BuiltInToolsIntegration {
     }
 
     if (
-      /\b(gel|electrophoresis|agarose)\b/i.test(query) ||
-      /\b(run|simulate|show|visualize)\s+.*?\b(gel|electrophoresis)\b/i.test(query)
+      /\b(run|simulate|visualize)\s+.*?\b(gel|electrophoresis)\b/i.test(query) ||
+      (!analysisWindowRequests.includes('toggle_gel_electrophoresis') &&
+        /\b(gel|electrophoresis|agarose)\b/i.test(query))
     ) {
       relevantTools.push({
         name: 'simulate_gel_electrophoresis',

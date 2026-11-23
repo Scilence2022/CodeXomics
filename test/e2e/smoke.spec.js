@@ -11,6 +11,53 @@ const { test, expect, _electron: electron } = require('@playwright/test');
 
 const APP_ROOT = path.join(__dirname, '..', '..');
 
+async function verifyAnalysisWindowControls(app, genomeView) {
+  const action = (tool, state) =>
+    genomeView.evaluate(
+      ([name, visibility]) => window.genomeBrowser.chatManager.executeToolByName(name, { action: visibility }),
+      [tool, state]
+    );
+  const gel = genomeView.locator('#gelElectrophoresisModal');
+  await app.evaluate(({ BrowserWindow, Menu }) => {
+    const tools = Menu.getApplicationMenu().items.find(item => item.label === 'Tools').submenu;
+    const item = tools.items.find(entry => entry.label === 'Gel Electrophoresis');
+    item.click(item, BrowserWindow.getFocusedWindow(), {});
+  });
+  await expect(gel.locator('#gelResultsEmpty')).toBeVisible();
+  expect(await action('toggle_gel_electrophoresis', 'close')).toMatchObject({ new_state: 'closed' });
+  await expect(gel).toBeHidden();
+
+  await genomeView.evaluate(() =>
+    window.genomeBrowser.chatManager.services.gel.simulateGelElectrophoresis({
+      fragments: [500, 800, 1100],
+      laneLabel: 'Smoke test',
+    })
+  );
+  await expect(gel.getByText('Smoke test', { exact: true })).toBeVisible();
+  await action('toggle_gel_electrophoresis', 'close');
+  expect(await action('toggle_gel_electrophoresis', 'open')).toMatchObject({ new_state: 'open' });
+  await expect(gel.getByText('Smoke test', { exact: true })).toBeVisible();
+  await action('toggle_gel_electrophoresis', 'close');
+
+  for (const [tool, dialog] of [
+    ['toggle_dna_marker_browser', '#dnaMarkerBrowserModal'],
+    ['toggle_restriction_enzyme_browser', '#enzymeBrowserModal'],
+  ]) {
+    expect(await action(tool, 'open')).toMatchObject({ new_state: 'open' });
+    await expect(genomeView.locator(dialog)).toBeVisible();
+    await expect(genomeView.locator(`${dialog}.floating-tool-window:not(:modal)`)).toBeVisible();
+    expect(await action(tool, 'close')).toMatchObject({ new_state: 'closed' });
+    await expect(genomeView.locator(dialog)).toBeHidden();
+  }
+
+  const plotterCount = () => app.windows().filter(page => page.url().endsWith('/circos-plotter.html')).length;
+  expect(await action('toggle_circos_genome_plotter', 'open')).toMatchObject({ new_state: 'open' });
+  expect(await action('toggle_circos_genome_plotter', 'open')).toMatchObject({ new_state: 'open' });
+  await expect.poll(plotterCount).toBe(1);
+  expect(await action('toggle_circos_genome_plotter', 'close')).toMatchObject({ new_state: 'closed' });
+  await expect.poll(plotterCount).toBe(0);
+}
+
 async function verifyDownloadPublication(genomeView, fixtureDirectory) {
   const filename = 'download.gbk';
   const destination = path.join(fixtureDirectory, filename);
@@ -290,6 +337,8 @@ require(${JSON.stringify(path.join(APP_ROOT, 'src/main.js'))});
     expect(written).toMatchObject({ success: true, filePath: exportPath, fileSize: 10 });
     expect(await fs.readFile(exportPath, 'utf8')).toBe('new export');
     if (process.platform !== 'win32') expect((await fs.stat(exportPath)).mode & 0o777).toBe(0o640);
+    await test.step('Controls analysis windows from the Tools menu and ChatBox', () =>
+      verifyAnalysisWindowControls(app, genomeView));
     await verifyDownloadPublication(genomeView, fixtureDirectory);
 
     const pluginSource = path.join(fixtureDirectory, 'plugin-source');

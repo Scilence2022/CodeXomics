@@ -12,6 +12,7 @@ const {
 } = require('./security-utils');
 const workspaceHostManager = require('./workspace-host-manager');
 const { bindCircosSource } = require('./circos-ipc');
+const circosWindows = new WeakMap();
 
 // External references (set by main module via setWindowMgmtDependencies)
 let mainWindow;
@@ -250,59 +251,83 @@ function getCustomExternalToolsMenuItems() {
 // Create menu
 
 function createCircosWindow() {
-  try {
-    // Create new window for the Circos genome plotter
-    const circosWindow = new BrowserWindow({
-      width: 1400,
-      height: 900,
-      minWidth: 1000,
-      minHeight: 700,
-      webPreferences: createSecureWebPreferences(),
-      title: 'Circos Genome Plotter - CodeXomics',
-      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
-      show: false,
-    });
-
-    bindCircosSource(circosWindow, getCurrentMainWindow());
-    const circosPath = path.join(__dirname, '..', 'circos-plotter.html');
-
-    // Load the Circos plotter HTML
-    circosWindow.loadFile(circosPath);
-
-    // Show window when ready
-    circosWindow.once('ready-to-show', () => {
-      circosWindow.show();
-      // Set up a dedicated menu system for the Circos Plotter
-      createCircosPlotterMenu(circosWindow);
-      currentActiveWindow = circosWindow;
-    });
-
-    // Switch to the Circos menu when the Circos window gains focus
-    circosWindow.on('focus', () => {
-      if (currentActiveWindow !== circosWindow) {
-        currentActiveWindow = circosWindow;
-        createCircosPlotterMenu(circosWindow);
-        console.log('Switched to Circos Plotter menu');
-      }
-    });
-
-    openDevToolsInDevelopment(circosWindow);
-
-    // Handle window closed
-    circosWindow.on('closed', () => {
-      console.log('Circos Genome Plotter window closed');
-      if (currentActiveWindow === circosWindow) {
-        currentActiveWindow = null;
-        // Switch back to the main window menu
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          createMenu();
-          console.log('Switched back to main window menu');
-        }
-      }
-    });
-  } catch (error) {
+  setCircosWindowVisibility(getCurrentMainWindow(), 'open').catch(error => {
     console.error('Failed to open Circos Genome Plotter:', error);
+  });
+}
+
+async function setCircosWindowVisibility(source, action) {
+  if (!['open', 'close', 'toggle'].includes(action)) throw new Error('Expected open, close, or toggle.');
+  if (!source || source.isDestroyed() || source.webContents.isDestroyed()) {
+    throw new Error('The source genome window is unavailable.');
   }
+
+  const contents = source.webContents;
+  let plotter = circosWindows.get(contents);
+  while (plotter?.closing) {
+    await plotter.closing;
+    plotter = circosWindows.get(contents);
+  }
+
+  const open = action === 'open' || (action === 'toggle' && !plotter);
+  if (!open) {
+    if (plotter) {
+      plotter.closing = new Promise(resolve => plotter.window.once('closed', resolve));
+      plotter.window.close();
+      await plotter.closing;
+    }
+    return { success: true, new_state: 'closed' };
+  }
+
+  if (contents.isDestroyed()) throw new Error('The source genome window is unavailable.');
+  plotter ??= createCircosPlotter(source);
+  await plotter.ready;
+  if (plotter.window.isDestroyed() || plotter.closing) throw new Error('The Circos plotter was closed while opening.');
+  if (plotter.window.isMinimized()) plotter.window.restore();
+  plotter.window.show();
+  plotter.window.focus();
+  return { success: true, new_state: 'open' };
+}
+
+function createCircosPlotter(source) {
+  const circosWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 1000,
+    minHeight: 700,
+    webPreferences: createSecureWebPreferences(),
+    title: 'Circos Genome Plotter - CodeXomics',
+    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+    show: false,
+  });
+  const contents = source.webContents;
+  const closeWithSource = () => circosWindow.destroy();
+  bindCircosSource(circosWindow, source);
+  contents.once('destroyed', closeWithSource);
+
+  circosWindow.on('focus', () => {
+    if (currentActiveWindow !== circosWindow) {
+      currentActiveWindow = circosWindow;
+      createCircosPlotterMenu(circosWindow);
+    }
+  });
+  circosWindow.once('closed', () => {
+    contents.removeListener('destroyed', closeWithSource);
+    circosWindows.delete(contents);
+    if (currentActiveWindow === circosWindow) {
+      currentActiveWindow = null;
+      if (mainWindow && !mainWindow.isDestroyed()) createMenu();
+    }
+  });
+
+  const ready = circosWindow.loadFile(path.join(__dirname, '..', 'circos-plotter.html')).catch(error => {
+    if (!circosWindow.isDestroyed()) circosWindow.destroy();
+    throw error;
+  });
+  const plotter = { window: circosWindow, ready, closing: null };
+  circosWindows.set(contents, plotter);
+  openDevToolsInDevelopment(circosWindow);
+  return plotter;
 }
 
 // ========== BIOLOGICAL DATABASES TOOLS ==========
@@ -2189,6 +2214,7 @@ module.exports = {
   sendToCurrentMainWindow,
   getCustomExternalToolsMenuItems,
   createCircosWindow,
+  setCircosWindowVisibility,
   createKEGGWindow,
   createGOWindow,
   createUniProtWindow,

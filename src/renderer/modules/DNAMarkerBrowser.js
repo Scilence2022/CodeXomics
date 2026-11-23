@@ -19,7 +19,7 @@ class DNAMarkerBrowser {
   createDialog() {
     this.dialog = document.createElement('dialog');
     this.dialog.id = 'dnaMarkerBrowserModal';
-    this.dialog.className = 'modal';
+    this.dialog.className = 'modal floating-tool-window';
     this.dialog.setAttribute('aria-labelledby', 'dnaMarkerBrowserTitle');
     this.dialog.innerHTML = `
       <div class="modal-content">
@@ -117,11 +117,11 @@ class DNAMarkerBrowser {
       if (action) this.copyMarkerValue(action);
     });
     this.dialog.querySelector('.modal-close').addEventListener('click', () => this.dialog.close());
-    this.dialog.addEventListener('pointerdown', event => {
-      this.pressedBackdrop = event.target === this.dialog;
-    });
-    this.dialog.addEventListener('click', event => {
-      if (this.pressedBackdrop && event.target === this.dialog) this.dialog.close();
+    this.dialog.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        event.stopPropagation();
+        this.dialog.close();
+      }
     });
     this.dialog.addEventListener('close', () => {
       if (this.dialog.open) return;
@@ -151,7 +151,8 @@ class DNAMarkerBrowser {
     window.modalDragManager?.resetPosition('#dnaMarkerBrowserModal');
     this.renderResults();
     this.dialog.classList.add('show');
-    this.dialog.showModal();
+    this.dialog.show();
+    window.modalDragManager?.raiseFloatingWindow(this.dialog);
   }
 
   static searchTerms(text) {
