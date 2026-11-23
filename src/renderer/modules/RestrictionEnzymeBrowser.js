@@ -6,11 +6,16 @@ class RestrictionEnzymeBrowser {
     "5'_overhang": '5′ overhang',
     "3'_overhang": '3′ overhang',
     blunt: 'Blunt',
+    nick: 'Single-strand nick',
   };
 
-  static classLabels = {
-    typeII: 'Type II',
-    typeIIs: 'Type IIS',
+  static catalogSets = {
+    commercial: enzyme => enzyme.commercial,
+    nonredundant: enzyme => enzyme.commercial,
+    long: enzyme => !enzyme.nicking && enzyme.recognitionLength >= 6,
+    outside: enzyme => !enzyme.nicking && enzyme.cutsOutsideSite,
+    typeIIs: enzyme => enzyme.isotype === 'typeIIs',
+    nicking: enzyme => enzyme.nicking,
   };
 
   constructor() {
@@ -47,8 +52,19 @@ class RestrictionEnzymeBrowser {
             <label>Site length
               <select data-field="length"><option value="">Any length</option></select>
             </label>
-            <label>Enzyme type
-              <select data-field="type"><option value="">All types</option></select>
+            <label>Enzyme set
+              <select data-field="set">
+                <option value="">All enzymes</option>
+                <option value="commercial">Commercial listings</option>
+                <option value="nonredundant">Nonredundant commercial</option>
+                <option value="long">6+ bp cutters</option>
+                <option value="outside">Outside-site cutters</option>
+                <option value="typeIIs">Type IIS (verified)</option>
+                <option value="nicking">Nicking enzymes</option>
+              </select>
+            </label>
+            <label>Supplier
+              <select data-field="supplier"><option value="">All suppliers</option></select>
             </label>
           </div>
           <div class="enzyme-browser-layout">
@@ -88,8 +104,9 @@ class RestrictionEnzymeBrowser {
               </figure>
               <p class="enzyme-browser-copy-status" role="status"></p>
               <dl class="enzyme-browser-catalog-details">
-                <div data-field="aliasesRow"><dt>Catalog names and aliases</dt><dd data-field="aliases"></dd></div>
-                <div data-field="notesRow"><dt>Catalog notes</dt><dd data-field="notes"></dd></div>
+                <div><dt>Listed suppliers</dt><dd data-field="suppliers"></dd></div>
+                <div><dt>Data source</dt><dd data-field="source"></dd></div>
+                <div data-field="aliasesRow"><dt>Lookup aliases</dt><dd data-field="aliases"></dd></div>
               </dl>
               <section class="enzyme-browser-related" aria-labelledby="enzymeBrowserRelatedTitle" hidden>
                 <h5 id="enzymeBrowserRelatedTitle">Same recognition sequence</h5>
@@ -148,9 +165,6 @@ class RestrictionEnzymeBrowser {
     for (const [value, label] of Object.entries(RestrictionEnzymeBrowser.endLabels)) {
       this.fields.end.add(new Option(label, value));
     }
-    for (const [value, label] of Object.entries(RestrictionEnzymeBrowser.classLabels)) {
-      this.fields.type.add(new Option(label, value));
-    }
   }
 
   open(database) {
@@ -172,6 +186,16 @@ class RestrictionEnzymeBrowser {
         ...lengths.map(length => new Option(`${length} bp`, String(length)))
       );
       this.fields.length.value = lengths.includes(Number(previousLength)) ? previousLength : '';
+
+      const selectedSupplier = this.fields.supplier.value;
+      const suppliers = Object.entries(catalog?.supplierNames ?? {}).sort((a, b) => collator.compare(a[1], b[1]));
+      this.fields.supplier.replaceChildren(
+        new Option('All suppliers', ''),
+        ...suppliers.map(([code, name]) => new Option(name, code))
+      );
+      this.fields.supplier.value = Object.hasOwn(catalog?.supplierNames ?? {}, selectedSupplier)
+        ? selectedSupplier
+        : '';
     }
     const dragManager = window.modalDragManager;
     if (!this.dialog.querySelector('.draggable-handle')) dragManager?.makeDraggable('#enzymeBrowserModal');
@@ -191,22 +215,32 @@ class RestrictionEnzymeBrowser {
   }
 
   clearFilters() {
-    const { search, end, length, type } = this.fields;
-    search.value = end.value = length.value = type.value = '';
+    const { search, end, length, set, supplier } = this.fields;
+    search.value = end.value = length.value = set.value = supplier.value = '';
   }
 
   renderResults(preferredName = this.selected?.name) {
-    const { search, end, length, type, count } = this.fields;
+    const { search, end, length, set, supplier, count } = this.fields;
     const terms = search.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const inSet = RestrictionEnzymeBrowser.catalogSets[set.value];
     this.matches = this.enzymes.filter(enzyme => {
       if (end.value && enzyme.overhangType !== end.value) return false;
       if (length.value && enzyme.recognitionLength !== Number(length.value)) return false;
-      if (type.value && enzyme.isotype !== type.value) return false;
-      const searchable = [enzyme.name, enzyme.recognition, ...enzyme.isoschizomers].map(value => value.toLowerCase());
+      if (inSet && !inSet(enzyme)) return false;
+      if (supplier.value && !enzyme.supplierCodes.includes(supplier.value)) return false;
+      const searchable = [enzyme.name, enzyme.recognition, ...enzyme.aliases].map(value => value.toLowerCase());
       return terms.every(term => searchable.some(value => value.includes(term)));
     });
 
-    this.clearButton.disabled = !search.value && !end.value && !length.value && !type.value;
+    if (set.value === 'nonredundant') {
+      const unique = new Map();
+      for (const enzyme of this.matches) {
+        if (!unique.has(enzyme.cleavageKey) || enzyme.name === preferredName) unique.set(enzyme.cleavageKey, enzyme);
+      }
+      this.matches = [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    }
+
+    this.clearButton.disabled = !search.value && !end.value && !length.value && !set.value && !supplier.value;
     count.textContent = `${this.matches.length} of ${this.enzymes.length} enzymes`;
     this.results.hidden = this.matches.length === 0;
     this.empty.hidden = this.matches.length > 0;
@@ -252,17 +286,23 @@ class RestrictionEnzymeBrowser {
     this.detail.scrollTop = 0;
     const fields = this.fields;
     fields.name.textContent = enzyme.name;
-    fields.typeLabel.textContent = RestrictionEnzymeBrowser.classLabels[enzyme.isotype];
+    fields.typeLabel.textContent = enzyme.nicking
+      ? 'Nicking enzyme · Catalog only'
+      : enzyme.isotype === 'typeIIs'
+        ? 'Type IIS'
+        : 'Double-strand cutter';
     fields.recognition.textContent = enzyme.recognition;
     fields.lengthLabel.textContent = `${enzyme.recognitionLength} bp`;
     const endLabel = RestrictionEnzymeBrowser.endLabels[enzyme.overhangType];
     fields.endLabel.textContent = enzyme.overhangLength ? `${endLabel} · ${enzyme.overhangLength} nt` : endLabel;
-    fields.topCut.textContent = `${enzyme.topCut} nt`;
-    fields.bottomCut.textContent = `${enzyme.bottomCut} nt`;
-    fields.aliasesRow.hidden = enzyme.isoschizomers.length === 0;
-    fields.aliases.textContent = enzyme.isoschizomers.join(', ');
-    fields.notesRow.hidden = !enzyme.notes;
-    fields.notes.textContent = enzyme.notes;
+    fields.topCut.textContent = enzyme.topCut === null ? 'No cut' : `${enzyme.topCut} nt`;
+    fields.bottomCut.textContent = enzyme.bottomCut === null ? 'No cut' : `${enzyme.bottomCut} nt`;
+    fields.suppliers.textContent = enzyme.suppliers.join(', ') || 'No supplier listed in the source';
+    fields.source.textContent = enzyme.rebaseId
+      ? `REBASE EMBOSS 404 (2024) · REBASE ID ${enzyme.rebaseId}`
+      : 'New England Biolabs recognition sequence reference';
+    fields.aliasesRow.hidden = enzyme.aliases.length === 0;
+    fields.aliases.textContent = enzyme.aliases.join(', ');
 
     this.renderCleavage(enzyme);
     this.renderRelated(enzyme);
@@ -299,16 +339,18 @@ class RestrictionEnzymeBrowser {
       base.textContent = sequence[position] ?? '·';
       bases.append(base);
     }
-    const marker = document.createElement('i');
-    marker.className = 'enzyme-browser-cut';
-    bases.insertBefore(marker, bases.children[cut - start] ?? null);
+    if (cut !== null) {
+      const marker = document.createElement('i');
+      marker.className = 'enzyme-browser-cut';
+      bases.insertBefore(marker, bases.children[cut - start] ?? null);
+    }
 
     row.append(left, bases, right);
     return row;
   }
 
   renderRelated(enzyme) {
-    const related = this.enzymes.filter(entry => entry !== enzyme && entry.recognition === enzyme.recognition);
+    const related = this.enzymes.filter(entry => entry !== enzyme && entry.recognitionKey === enzyme.recognitionKey);
     this.related.hidden = related.length === 0;
     this.relatedList.replaceChildren(
       ...related.map(entry => {
@@ -318,6 +360,9 @@ class RestrictionEnzymeBrowser {
         button.className = 'btn enzyme-browser-button';
         button.dataset.enzyme = entry.name;
         button.textContent = entry.name;
+        if (entry.cleavageKey !== enzyme.cleavageKey) {
+          button.textContent += ' · different cut';
+        }
         item.append(button);
         return item;
       })

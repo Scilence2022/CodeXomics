@@ -46,6 +46,31 @@ async function verifyAnalysisWindowControls(app, genomeView) {
     expect(await action(tool, 'open')).toMatchObject({ new_state: 'open' });
     await expect(genomeView.locator(dialog)).toBeVisible();
     await expect(genomeView.locator(`${dialog}.floating-tool-window:not(:modal)`)).toBeVisible();
+    if (tool === 'toggle_restriction_enzyme_browser') {
+      const browser = genomeView.locator(dialog);
+      const search = browser.getByRole('searchbox');
+      const set = browser.getByRole('combobox', { name: 'Enzyme set' });
+      const rows = browser.getByRole('radio');
+      await expect(browser.locator('[data-field="count"]')).toHaveText(/7\d\d of 7\d\d enzymes/);
+
+      await search.fill('EcoRI GAATTC');
+      await expect(rows).toHaveCount(2);
+      await set.selectOption('nonredundant');
+      await expect(rows).toHaveCount(1);
+
+      await set.selectOption('nicking');
+      await search.fill('Nt.BspQI');
+      await expect(rows).toHaveCount(1);
+      await expect(browser.locator('[data-field="bottomCut"]')).toHaveText('No cut');
+      await expect(browser.locator('.enzyme-browser-cut')).toHaveCount(1);
+
+      await set.selectOption('outside');
+      await browser.getByRole('combobox', { name: 'Supplier' }).selectOption('B');
+      await search.fill('FokI');
+      await expect(rows).toHaveCount(1);
+      await expect(browser.locator('[data-field="topCut"]')).toHaveText('14 nt');
+      await expect(browser.locator('[data-field="source"]')).toContainText('REBASE ID');
+    }
     expect(await action(tool, 'close')).toMatchObject({ new_state: 'closed' });
     await expect(genomeView.locator(dialog)).toBeHidden();
   }

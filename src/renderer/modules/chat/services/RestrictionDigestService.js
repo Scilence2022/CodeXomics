@@ -2,7 +2,7 @@
 /**
  * RestrictionDigestService - Core restriction enzyme analysis service
  * Extracted from ChatManager.js with major enhancements:
- * - Full enzyme database (80+ enzymes) via RestrictionEnzymeDatabase
+ * - Offline restriction enzyme catalog via RestrictionEnzymeDatabase
  * - Staggered cut support (5' overhang, 3' overhang, blunt end)
  * - IUPAC ambiguity code matching
  * - Proper fragment calculation accounting for cut offsets
@@ -52,8 +52,8 @@ class RestrictionDigestService {
         throw new Error('No chromosome specified and none currently selected');
       }
 
-      regionStart = start || this.app.currentPosition?.start || 0;
-      regionEnd = end || this.app.currentPosition?.end || this.app.currentSequence?.[chr]?.length || 0;
+      regionStart = start ?? this.app.currentPosition?.start ?? 0;
+      regionEnd = end ?? this.app.currentPosition?.end ?? this.app.currentSequence?.[chr]?.length ?? 0;
 
       seq = await this.app.getSequenceForRegion(chr, regionStart, regionEnd);
       if (!seq || seq.length === 0) {
@@ -73,6 +73,11 @@ class RestrictionDigestService {
     }
 
     const enzymeData = this._resolveEnzyme(enzyme);
+    if (enzymeData.nicking) {
+      throw new Error(
+        `${enzymeData.name} is a catalog-only nicking enzyme. This analysis requires double-strand cuts.`
+      );
+    }
     const sites = this._findSitesInSequence(seq, enzymeData, regionStart);
 
     return {
@@ -145,10 +150,18 @@ class RestrictionDigestService {
       });
 
       for (const site of result.sites) {
+        if (
+          site.topStrandCut < regionStart ||
+          site.bottomStrandCut < regionStart ||
+          site.topStrandCut > regionEnd ||
+          site.bottomStrandCut > regionEnd
+        ) {
+          continue;
+        }
         allCutEvents.push({
           position: site.position,
-          topStrandCut: site.position + enzymeData.topCut,
-          bottomStrandCut: site.position + enzymeData.bottomCut,
+          topStrandCut: site.topStrandCut,
+          bottomStrandCut: site.bottomStrandCut,
           enzyme: enzymeName,
           strand: site.strand,
           recognitionSite: site.site,
@@ -199,10 +212,9 @@ class RestrictionDigestService {
 
     const { query, minRecognitionLength, maxRecognitionLength, overhangType, commercialOnly = true } = params;
 
-    let results = commercialOnly ? this.enzymeDb.getCommerciallyAvailable() : this.enzymeDb.getAll();
-
-    if (query) {
-      results = this.enzymeDb.search(query);
+    let results = query ? this.enzymeDb.search(query) : this.enzymeDb.getAll();
+    if (commercialOnly) {
+      results = results.filter(enzyme => enzyme.commercial);
     }
 
     if (minRecognitionLength) {
@@ -225,6 +237,10 @@ class RestrictionDigestService {
         topCut: e.topCut,
         bottomCut: e.bottomCut,
         commercial: e.commercial,
+        suppliers: e.suppliers,
+        rebaseId: e.rebaseId,
+        nicking: e.nicking,
+        aliases: e.aliases,
         isoschizomers: e.isoschizomers,
       })),
       total: results.length,
@@ -252,11 +268,7 @@ class RestrictionDigestService {
 
     const recognition = fallback[name];
     if (!recognition) {
-      const available = this.enzymeDb ? this.enzymeDb.getNames().sort().join(', ') : Object.keys(fallback).join(', ');
-      throw new Error(
-        `Unknown restriction enzyme: ${name}. Available enzymes: ${available}. ` +
-          `Use list_restriction_enzymes to browse the full database.`
-      );
+      throw new Error(`Unknown restriction enzyme: ${name}. Use list_restriction_enzymes to browse the catalog.`);
     }
 
     return {
@@ -275,72 +287,40 @@ class RestrictionDigestService {
 
   _findSitesInSequence(sequence, enzymeData, offset) {
     const sites = [];
-    const recognition = enzymeData.recognition;
-    const hasIUPAC = /[^ACGT]/.test(recognition.toUpperCase());
+    const { recognition, topCut, bottomCut } = enzymeData;
+    const sequenceUpper = sequence.toUpperCase();
+    const database = this.enzymeDb;
+    const reverse = database?.reverseComplementIUPAC(recognition) ?? this._reverseComplement(recognition);
 
-    if (hasIUPAC && this.enzymeDb) {
-      const regex = this.enzymeDb.getIUPACRegex(recognition);
-      let match;
-      const upperSeq = sequence.toUpperCase();
-      while ((match = regex.exec(upperSeq)) !== null) {
+    const collectSites = (motif, strand, topOffset, bottomOffset) => {
+      const append = (index, site) => {
+        const position = offset + index;
         sites.push({
-          position: offset + match.index,
-          site: match[0],
-          strand: '+',
-          topStrandCut: offset + match.index + enzymeData.topCut,
-          bottomStrandCut: offset + match.index + enzymeData.bottomCut,
+          position,
+          site,
+          strand,
+          topStrandCut: position + topOffset,
+          bottomStrandCut: position + bottomOffset,
         });
-      }
-
-      const rcRecognition = this.enzymeDb.reverseComplementIUPAC(recognition);
-      if (rcRecognition !== recognition.toUpperCase()) {
-        const rcRegex = this.enzymeDb.getIUPACRegex(rcRecognition);
-        regex.lastIndex = 0;
-        while ((match = rcRegex.exec(upperSeq)) !== null) {
-          sites.push({
-            position: offset + match.index,
-            site: match[0],
-            strand: '-',
-            topStrandCut: offset + match.index + enzymeData.topCut,
-            bottomStrandCut: offset + match.index + enzymeData.recognitionLength - enzymeData.bottomCut - 1,
-          });
+      };
+      if (database && /[^ACGT]/.test(motif)) {
+        const regex = database.getIUPACRegex(motif);
+        let match;
+        while ((match = regex.exec(sequenceUpper)) !== null) {
+          append(match.index, match[0]);
+          regex.lastIndex = match.index + 1;
         }
+        return;
       }
-    } else {
-      const upperSeq = sequence.toUpperCase();
-      const upperRecognition = recognition.toUpperCase();
-      const siteLength = upperRecognition.length;
+      for (let index = sequenceUpper.indexOf(motif); index !== -1; index = sequenceUpper.indexOf(motif, index + 1)) {
+        append(index, motif);
+      }
+    };
 
-      for (let i = 0; i <= upperSeq.length - siteLength; i++) {
-        const subsequence = upperSeq.substring(i, i + siteLength);
-        if (subsequence === upperRecognition) {
-          sites.push({
-            position: offset + i,
-            site: subsequence,
-            strand: '+',
-            topStrandCut: offset + i + enzymeData.topCut,
-            bottomStrandCut: offset + i + enzymeData.recognitionLength - enzymeData.bottomCut - 1,
-          });
-        }
-      }
-
-      const reverseComplement = this._reverseComplement(upperRecognition);
-      if (reverseComplement !== upperRecognition) {
-        for (let i = 0; i <= upperSeq.length - siteLength; i++) {
-          const subsequence = upperSeq.substring(i, i + siteLength);
-          if (subsequence === reverseComplement) {
-            sites.push({
-              position: offset + i,
-              site: subsequence,
-              strand: '-',
-              topStrandCut: offset + i + enzymeData.topCut,
-              bottomStrandCut: offset + i + enzymeData.recognitionLength - enzymeData.bottomCut - 1,
-            });
-          }
-        }
-      }
+    collectSites(recognition, '+', topCut, bottomCut);
+    if (reverse !== recognition) {
+      collectSites(reverse, '-', recognition.length - bottomCut, recognition.length - topCut);
     }
-
     return sites.sort((a, b) => a.position - b.position);
   }
 

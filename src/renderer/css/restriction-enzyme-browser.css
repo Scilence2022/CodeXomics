@@ -86,7 +86,7 @@
 
 .enzyme-browser-filters {
   display: grid;
-  grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(215px, 1.65fr) repeat(2, minmax(0, 0.85fr)) repeat(2, minmax(0, 1.25fr));
   flex: none;
   gap: 10px 12px;
   padding: 14px 16px;
@@ -466,7 +466,7 @@
   }
 
   .enzyme-browser-filters {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     padding-inline: 12px;
   }
 
@@ -494,7 +494,7 @@
   }
 }
 
-@media (max-width: 410px) {
+@media (max-width: 580px) {
   .enzyme-browser-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
