@@ -1,0 +1,775 @@
+/* BLAST uses the shared floating-window chrome and inherits the active preset. */
+:is(#blastSearchModal, #blastResultsModal) {
+  --blast-accent: color-mix(in srgb, var(--primary-color) 70%, var(--text-primary));
+  --blast-selected: color-mix(in srgb, var(--primary-color) 12%, var(--bg-primary));
+  --blast-danger: color-mix(in srgb, var(--error-color) 70%, var(--text-primary));
+}
+
+:is(#blastSearchModal, #blastResultsModal) > .modal-content {
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  width: min(940px, 94vw);
+  min-width: min(400px, 94vw);
+  max-width: 96vw;
+  min-height: min(300px, 88vh);
+  max-height: 92vh;
+  margin: 0;
+  overflow: hidden;
+}
+
+#blastResultsModal > .modal-content {
+  width: min(1080px, 94vw);
+}
+
+:is(#blastSearchModal, #blastResultsModal) > .modal-content > .modal-header {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  color: var(--text-primary);
+}
+
+:is(#blastSearchModal, #blastResultsModal) .modal-header h3 {
+  color: inherit;
+  font-size: 15px;
+}
+
+:is(#blastSearchModal, #blastResultsModal) .modal-header h3 i {
+  color: var(--blast-accent);
+}
+
+:is(#blastSearchModal, #blastResultsModal) .modal-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+:is(#blastSearchModal, #blastResultsModal) .modal-controls :is(.modal-collapse, .modal-close) {
+  color: var(--text-primary);
+  background: transparent;
+}
+
+:is(#blastSearchModal, #blastResultsModal) .modal-controls :is(.modal-collapse, .modal-close):hover {
+  background: var(--bg-tertiary);
+}
+
+:is(#blastSearchModal, #blastResultsModal).collapsed > .modal-content {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+:is(#blastSearchModal, #blastResultsModal).collapsed > .modal-content > :not(.modal-header),
+:is(#blastSearchModal, #blastResultsModal) [hidden] {
+  display: none !important;
+}
+
+:is(#blastSearchModal, #blastResultsModal) :focus-visible {
+  outline: 2px solid var(--blast-accent);
+  outline-offset: 2px;
+}
+
+#blastSearchModal .blast-workspace-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 16px;
+  padding-inline: 18px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+#blastSearchModal .blast-workspace-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 8px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#blastSearchModal .blast-workspace-tabs button:hover,
+#blastSearchModal .blast-workspace-tabs .active {
+  color: var(--blast-accent);
+}
+
+#blastSearchModal .blast-workspace-tabs .active {
+  border-bottom-color: var(--primary-color);
+  font-weight: 650;
+}
+
+#blastSearchModal .blast-modal-body,
+#blastResultsModal .blast-results-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  height: auto;
+  overflow: auto;
+  padding: 16px;
+  background: var(--bg-secondary);
+}
+
+#blastSearchModal :is(.blast-search-container, .blast-panel) {
+  display: grid;
+  gap: 12px;
+}
+
+#blastSearchModal :is(.blast-setup, .blast-workspace-grid, .blast-databases-grid) {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: 12px;
+  align-items: start;
+}
+
+#blastSearchModal .blast-setup,
+#blastSearchModal .blast-panel,
+#blastSearchModal .blast-db-management-section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+#blastSearchModal .blast-panel {
+  min-width: 0;
+}
+
+#blastSearchModal .blast-setup > section {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+#blastSearchModal :is(.blast-panel, .blast-setup, .blast-databases-grid) h4 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+#blastSearchModal .blast-picker {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 3px;
+  width: fit-content;
+  padding: 3px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+}
+
+#blastSearchModal .blast-picker button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 9px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+  transform: none;
+}
+
+#blastSearchModal .blast-picker button:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+#blastSearchModal .blast-picker button.active {
+  background: var(--blast-selected);
+  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
+  color: var(--blast-accent);
+}
+
+#blastSearchModal .blast-picker button i {
+  font-size: inherit;
+  margin: 0;
+  color: inherit;
+}
+
+#blastSearchModal :is(.blast-help, .help-text) {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+#blastSearchModal #blastDatabaseHint:empty {
+  display: none;
+}
+
+#blastSearchModal :is(.blast-query-actions, .blast-database-actions, .blast-footer-actions, .quick-db-buttons) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+#blastSearchModal .blast-query-actions .btn,
+#blastSearchModal .blast-databases-grid .btn {
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+#blastSearchModal #blastQuerySequence {
+  display: block;
+  width: 100%;
+  min-height: 135px;
+  padding: 10px 12px;
+  resize: vertical;
+  font:
+    13px/1.6 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+:is(#blastSearchModal, #blastResultsModal) :is(textarea, select, input:not([type='checkbox']):not([type='file'])) {
+  min-width: 0;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+#blastSearchModal #blastQuerySequence:is(.dragover, :focus) {
+  border-color: var(--primary-color);
+  box-shadow: none;
+}
+
+#blastSearchModal #blastQuerySequence[aria-invalid='true'] {
+  border-color: var(--blast-danger);
+}
+
+#blastSearchModal #blastQueryFeedback {
+  color: var(--blast-danger);
+}
+
+#blastSearchModal #blastUploadZone.dragover {
+  background: var(--blast-selected);
+  border-color: var(--primary-color);
+}
+
+#blastSearchModal .blast-query-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+#blastSearchModal #blastQueryLength {
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+#blastSearchModal .blast-query-meta button {
+  margin-inline-start: auto;
+}
+
+#blastSearchModal .blast-link {
+  border: 0;
+  background: transparent;
+  color: var(--blast-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+#blastSearchModal .blast-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#blastSearchModal .blast-field {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+}
+
+#blastSearchModal .blast-field-wide,
+#blastSearchModal :is(.blast-database-inventory, #dbOperationLog) {
+  grid-column: 1 / -1;
+}
+
+#blastSearchModal .blast-field > label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#blastSearchModal .blast-field :is(select, input) {
+  width: 100%;
+  height: 32px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+}
+
+#blastSearchModal .blast-advanced {
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}
+
+:is(#blastSearchModal, #blastResultsModal) summary {
+  color: var(--blast-accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#blastSearchModal .blast-advanced .blast-fields {
+  margin-top: 10px;
+}
+
+#blastSearchModal .blast-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+#blastSearchModal .blast-check input {
+  accent-color: var(--primary-color);
+}
+
+#blastSearchModal .blast-footer {
+  flex: 0 0 auto;
+  flex-flow: row wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 9px 16px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+}
+
+#blastSearchModal .blast-footer-state {
+  flex: 1;
+  min-width: 0;
+}
+
+#blastSearchModal .blast-footer .btn {
+  width: auto;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+#blastSearchModal .blast-footer .btn:disabled {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: none;
+  opacity: 1;
+}
+
+#blastSearchModal .blast-databases-grid .form-group,
+#blastSearchModal .blast-databases-grid .database-list {
+  margin-block: 10px 0;
+}
+
+#blastSearchModal .blast-databases-grid .help-text {
+  margin-block: 4px 10px;
+}
+
+#blastSearchModal #createCustomDbBtn {
+  margin-top: 10px;
+}
+
+#blastSearchModal :is(.database-item, .db-operation-log, .log-content, .quick-db-status) {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+#blastSearchModal :is(.database-name, .db-operation-log h5) {
+  color: var(--text-primary);
+}
+
+#blastSearchModal :is(.database-details, .database-path, .database-note, .log-timestamp, .log-info) {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+#blastSearchModal .database-path {
+  border-color: var(--border-color);
+  background: var(--bg-primary);
+}
+
+#blastResultsModal #blastResultsContainer {
+  height: auto;
+  overflow: visible;
+  padding: 0;
+}
+
+#blastResultsModal .blast-results-modern {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+#blastResultsModal :is(.blast-results-header, .blast-results-controls, .blast-hit, .no-hits-message, .blast-loading) {
+  margin: 0;
+  padding: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+#blastResultsModal
+  :is(.header-badges, .controls-section, .filter-controls, .sort-controls, .view-controls, .btn-group) {
+  display: flex;
+  align-items: end;
+  flex-flow: row wrap;
+  gap: 6px;
+}
+
+#blastResultsModal .controls-section {
+  gap: 8px 16px;
+}
+
+#blastResultsModal .header-badges .badge {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 3px 8px;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+}
+
+#blastResultsModal .blast-result-query {
+  margin-top: 6px;
+}
+
+#blastResultsModal .blast-result-query pre {
+  max-height: 140px;
+  overflow: auto;
+  padding: 8px 10px;
+  margin-top: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+#blastResultsModal .blast-result-message {
+  margin-top: 6px;
+  color: var(--blast-danger);
+  overflow-wrap: anywhere;
+}
+
+#blastResultsModal .control-group {
+  display: grid;
+  gap: 3px;
+}
+
+#blastResultsModal .control-group label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+#blastResultsModal .control-group :is(select, .btn),
+#blastResultsModal #exportBlastBtn {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+#blastResultsModal .view-controls .btn.active {
+  color: var(--blast-accent);
+  background: var(--blast-selected);
+  border-color: var(--primary-color);
+}
+
+#blastResultsModal #organismFilter {
+  max-width: min(220px, 60vw);
+}
+
+#blastResultsModal :is(.summary-stats, .score-grid, .alignment-stats, .hit-scores) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+#blastResultsModal :is(.stat-card, .score-card, .alignment-stats .stat) {
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+
+#blastResultsModal .summary-stats {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#blastResultsModal .stat-card {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+#blastResultsModal :is(.hit-accession, .external-link) {
+  color: var(--blast-accent);
+}
+
+#blastResultsModal
+  :is(.stat-label, .score-label, .hits-counter, .blast-results-footer, .hit-organism, .hit-meta, .hsp-ranges) {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+#blastResultsModal :is(.stat-value, .score-value) {
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+#blastResultsModal .hits-counter {
+  margin-top: 6px;
+}
+
+#blastResultsModal .hits-list > * + * {
+  margin-top: 6px;
+}
+
+#blastResultsModal .blast-hit {
+  padding: 0;
+}
+
+#blastResultsModal .blast-hit:hover {
+  border-color: var(--border-hover);
+  box-shadow: none;
+}
+
+#blastResultsModal .hit-header,
+#blastResultsModal .hit-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: start;
+}
+
+#blastResultsModal .hit-header {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+#blastResultsModal .hit-header:hover {
+  background: var(--bg-secondary);
+}
+
+#blastResultsModal .hit-header:focus-visible {
+  outline-offset: -2px;
+}
+
+#blastResultsModal .hit-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+
+#blastResultsModal .hit-description {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+#blastResultsModal .score-item {
+  display: grid;
+}
+
+#blastResultsModal .hit-actions {
+  margin-top: 6px;
+}
+
+#blastResultsModal .hit-details:empty {
+  display: none;
+}
+
+#blastResultsModal .expanded .hit-expand i {
+  transform: rotate(180deg);
+}
+
+#blastResultsModal .hit-details-content {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+#blastResultsModal .hit-details-content h6 {
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+#blastResultsModal .alignment-text {
+  max-height: 350px;
+  overflow: auto;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font:
+    12px/1.6 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+#blastResultsModal .alignment-viewer.wrapped .alignment-text {
+  white-space: pre-wrap;
+}
+
+#blastResultsModal .hsps-list {
+  display: grid;
+  gap: 6px;
+}
+
+#blastResultsModal .hsp-item {
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+#blastResultsModal :is(.no-hits-message, .blast-loading) {
+  padding: 24px 12px;
+  text-align: center;
+}
+
+#blastResultsModal :is(.no-hits-message, .blast-loading) i {
+  color: var(--blast-accent);
+}
+
+#blastResultsModal :is(.no-hits-message, .blast-loading) p {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+@container (max-width: 720px) {
+  #blastSearchModal :is(.blast-setup, .blast-workspace-grid, .blast-databases-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #blastResultsModal .hit-card-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (max-width: 500px) {
+  #blastSearchModal .blast-footer-state {
+    flex-basis: 100%;
+  }
+
+  #blastSearchModal .blast-footer-actions {
+    margin-inline-start: auto;
+  }
+
+  #blastResultsModal .hit-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  #blastResultsModal .hit-scores {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  #blastResultsModal :is(.summary-stats, .alignment-stats) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.blast-raw-dialog {
+  inset: 0;
+  width: min(920px, 92vw);
+  max-height: 88vh;
+  margin: auto;
+  padding: 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.blast-raw-dialog::backdrop {
+  background: var(--bg-modal);
+}
+
+.blast-raw-dialog :is(.blast-raw-header, .blast-raw-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.blast-raw-dialog .blast-raw-header {
+  justify-content: space-between;
+}
+
+.blast-raw-dialog .blast-raw-actions {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.blast-raw-dialog select {
+  padding: 5px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.blast-raw-dialog pre {
+  max-height: 62vh;
+  overflow: auto;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font:
+    12px/1.5 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+}
