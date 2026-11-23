@@ -3,6 +3,14 @@
  * Provides utility tools for file operations including downloading and viewing files
  */
 
+const analysisWindowDescriptions = {
+  toggle_gel_electrophoresis:
+    'Open, close, or toggle the Gel Electrophoresis results window. Opening keeps the latest simulation available.',
+  toggle_dna_marker_browser: 'Open, close, or toggle the DNA Marker / Ladder Browser.',
+  toggle_restriction_enzyme_browser: 'Open, close, or toggle the Restriction Enzyme Browser.',
+  toggle_circos_genome_plotter: 'Open, close, or toggle the Circos Genome Plotter for the target genome window.',
+};
+
 class UtilityTools {
   constructor(server) {
     this.server = server;
@@ -11,6 +19,26 @@ class UtilityTools {
 
   defineTools() {
     return {
+      ...Object.fromEntries(
+        Object.entries(analysisWindowDescriptions).map(([name, description]) => [
+          name,
+          {
+            name,
+            description,
+            parameters: {
+              type: 'object',
+              properties: {
+                action: {
+                  type: 'string',
+                  description: "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+                  enum: ['open', 'close', 'toggle'],
+                },
+              },
+              required: ['action'],
+            },
+          },
+        ])
+      ),
       download_internet_file: {
         name: 'download_internet_file',
         description:
@@ -227,7 +255,8 @@ class UtilityTools {
 
     try {
       // Send request to client and wait for response
-      const response = await this.server.executeToolOnClient(`utility_${toolName}`, parameters, clientId);
+      const clientToolName = Object.hasOwn(analysisWindowDescriptions, toolName) ? toolName : `utility_${toolName}`;
+      const response = await this.server.executeToolOnClient(clientToolName, parameters, clientId);
 
       console.log(`✅ [UtilityTools] Tool ${toolName} executed successfully`);
       return response;

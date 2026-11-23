@@ -1242,6 +1242,12 @@ function createMenu() {
             },
           ],
         },
+        {
+          label: 'Gel Electrophoresis',
+          click: () => {
+            sendToCurrentMainWindow('open-gel-electrophoresis');
+          },
+        },
 
         { type: 'separator' },
         {

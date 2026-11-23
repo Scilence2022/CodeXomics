@@ -1,19 +1,19 @@
 {
   "success": true,
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-11-22T02:24:13.124Z",
-  "registryHash": "affbcc33918ad5acba9554ae7ddfd0a720f871e311bccd8052b17dc3889f0d1d",
+  "generatedAt": "2026-11-23T01:00:58.559Z",
+  "registryHash": "7c8d9e64e37a0f66082bf8b7ba22e26acacddc3e0bcfcd40b0925097e8b5c3c1",
   "roots": {
     "appRegistry": "app://tools_registry",
     "userRegistry": null
   },
   "counts": {
-    "tools": 214,
-    "appTools": 214,
+    "tools": 218,
+    "appTools": 218,
     "userTools": 0,
-    "uniqueTools": 214,
+    "uniqueTools": 218,
     "categories": 18,
-    "builtInTools": 181,
+    "builtInTools": 185,
     "diagnostics": 0
   },
   "categories": {
@@ -184,7 +184,7 @@
           "interface_controls",
           "agent_skills"
         ],
-        "tools_count": 13
+        "tools_count": 17
       },
       "benchmark": {
         "name": "Benchmark Management",
@@ -25362,6 +25362,305 @@
       "builtin": {
         "name": "toggle_chatbox",
         "method": "toggleChatBox",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "toggle_circos_genome_plotter",
+      "version": "1.0.0",
+      "description": "Open, close, or toggle the Circos Genome Plotter for the target genome window.",
+      "category": "system",
+      "subcategory": "interface_controls",
+      "keywords": [
+        "circos genome plotter",
+        "circos window",
+        "open circos",
+        "close circos",
+        "环形基因组图"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+            "enum": [
+              "open",
+              "close",
+              "toggle"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the Circos Genome Plotter window",
+          "tool_call": "toggle_circos_genome_plotter(action='open')",
+          "expected_result": "The window is open"
+        },
+        {
+          "user_query": "Close the Circos Genome Plotter window",
+          "tool_call": "toggle_circos_genome_plotter(action='close')",
+          "expected_result": "The window is closed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the window action succeeded",
+        "new_state": "string - Either 'open' or 'closed' after the action"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_circos_genome_plotter.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleCircosGenomePlotter"
+      },
+      "builtin": {
+        "name": "toggle_circos_genome_plotter",
+        "method": "toggleCircosGenomePlotter",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "toggle_dna_marker_browser",
+      "version": "1.0.0",
+      "description": "Open, close, or toggle the DNA Marker / Ladder Browser.",
+      "category": "system",
+      "subcategory": "interface_controls",
+      "keywords": [
+        "dna marker browser",
+        "dna marker / ladder browser",
+        "dna ladder browser",
+        "DNA 标记浏览器",
+        "DNA标记浏览器"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+            "enum": [
+              "open",
+              "close",
+              "toggle"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the DNA Marker / Ladder Browser window",
+          "tool_call": "toggle_dna_marker_browser(action='open')",
+          "expected_result": "The window is open"
+        },
+        {
+          "user_query": "Close the DNA Marker / Ladder Browser window",
+          "tool_call": "toggle_dna_marker_browser(action='close')",
+          "expected_result": "The window is closed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the window action succeeded",
+        "new_state": "string - Either 'open' or 'closed' after the action"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_dna_marker_browser.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleDnaMarkerBrowser"
+      },
+      "builtin": {
+        "name": "toggle_dna_marker_browser",
+        "method": "toggleDnaMarkerBrowser",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "toggle_gel_electrophoresis",
+      "version": "1.0.0",
+      "description": "Open, close, or toggle the Gel Electrophoresis results window. Opening keeps the latest simulation available.",
+      "category": "system",
+      "subcategory": "interface_controls",
+      "keywords": [
+        "gel electrophoresis window",
+        "virtual gel window",
+        "凝胶电泳窗口",
+        "打开凝胶电泳",
+        "关闭凝胶电泳"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+            "enum": [
+              "open",
+              "close",
+              "toggle"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the Gel Electrophoresis window",
+          "tool_call": "toggle_gel_electrophoresis(action='open')",
+          "expected_result": "The window is open"
+        },
+        {
+          "user_query": "Close the Gel Electrophoresis window",
+          "tool_call": "toggle_gel_electrophoresis(action='close')",
+          "expected_result": "The window is closed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the window action succeeded",
+        "new_state": "string - Either 'open' or 'closed' after the action"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_gel_electrophoresis.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleGelElectrophoresis"
+      },
+      "builtin": {
+        "name": "toggle_gel_electrophoresis",
+        "method": "toggleGelElectrophoresis",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    {
+      "name": "toggle_restriction_enzyme_browser",
+      "version": "1.0.0",
+      "description": "Open, close, or toggle the Restriction Enzyme Browser.",
+      "category": "system",
+      "subcategory": "interface_controls",
+      "keywords": [
+        "restriction enzyme browser",
+        "enzyme browser",
+        "限制酶浏览器",
+        "限制性内切酶浏览器"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+            "enum": [
+              "open",
+              "close",
+              "toggle"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the Restriction Enzyme Browser window",
+          "tool_call": "toggle_restriction_enzyme_browser(action='open')",
+          "expected_result": "The window is open"
+        },
+        {
+          "user_query": "Close the Restriction Enzyme Browser window",
+          "tool_call": "toggle_restriction_enzyme_browser(action='close')",
+          "expected_result": "The window is closed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the window action succeeded",
+        "new_state": "string - Either 'open' or 'closed' after the action"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_restriction_enzyme_browser.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleRestrictionEnzymeBrowser"
+      },
+      "builtin": {
+        "name": "toggle_restriction_enzyme_browser",
+        "method": "toggleRestrictionEnzymeBrowser",
         "category": "system",
         "type": "built-in",
         "priority": 1,
@@ -51604,6 +51903,305 @@
         "source": "builtin_tools_map"
       }
     },
+    "toggle_circos_genome_plotter": {
+      "name": "toggle_circos_genome_plotter",
+      "version": "1.0.0",
+      "description": "Open, close, or toggle the Circos Genome Plotter for the target genome window.",
+      "category": "system",
+      "subcategory": "interface_controls",
+      "keywords": [
+        "circos genome plotter",
+        "circos window",
+        "open circos",
+        "close circos",
+        "环形基因组图"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+            "enum": [
+              "open",
+              "close",
+              "toggle"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the Circos Genome Plotter window",
+          "tool_call": "toggle_circos_genome_plotter(action='open')",
+          "expected_result": "The window is open"
+        },
+        {
+          "user_query": "Close the Circos Genome Plotter window",
+          "tool_call": "toggle_circos_genome_plotter(action='close')",
+          "expected_result": "The window is closed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the window action succeeded",
+        "new_state": "string - Either 'open' or 'closed' after the action"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_circos_genome_plotter.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleCircosGenomePlotter"
+      },
+      "builtin": {
+        "name": "toggle_circos_genome_plotter",
+        "method": "toggleCircosGenomePlotter",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "toggle_dna_marker_browser": {
+      "name": "toggle_dna_marker_browser",
+      "version": "1.0.0",
+      "description": "Open, close, or toggle the DNA Marker / Ladder Browser.",
+      "category": "system",
+      "subcategory": "interface_controls",
+      "keywords": [
+        "dna marker browser",
+        "dna marker / ladder browser",
+        "dna ladder browser",
+        "DNA 标记浏览器",
+        "DNA标记浏览器"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+            "enum": [
+              "open",
+              "close",
+              "toggle"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the DNA Marker / Ladder Browser window",
+          "tool_call": "toggle_dna_marker_browser(action='open')",
+          "expected_result": "The window is open"
+        },
+        {
+          "user_query": "Close the DNA Marker / Ladder Browser window",
+          "tool_call": "toggle_dna_marker_browser(action='close')",
+          "expected_result": "The window is closed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the window action succeeded",
+        "new_state": "string - Either 'open' or 'closed' after the action"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_dna_marker_browser.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleDnaMarkerBrowser"
+      },
+      "builtin": {
+        "name": "toggle_dna_marker_browser",
+        "method": "toggleDnaMarkerBrowser",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "toggle_gel_electrophoresis": {
+      "name": "toggle_gel_electrophoresis",
+      "version": "1.0.0",
+      "description": "Open, close, or toggle the Gel Electrophoresis results window. Opening keeps the latest simulation available.",
+      "category": "system",
+      "subcategory": "interface_controls",
+      "keywords": [
+        "gel electrophoresis window",
+        "virtual gel window",
+        "凝胶电泳窗口",
+        "打开凝胶电泳",
+        "关闭凝胶电泳"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+            "enum": [
+              "open",
+              "close",
+              "toggle"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the Gel Electrophoresis window",
+          "tool_call": "toggle_gel_electrophoresis(action='open')",
+          "expected_result": "The window is open"
+        },
+        {
+          "user_query": "Close the Gel Electrophoresis window",
+          "tool_call": "toggle_gel_electrophoresis(action='close')",
+          "expected_result": "The window is closed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the window action succeeded",
+        "new_state": "string - Either 'open' or 'closed' after the action"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_gel_electrophoresis.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleGelElectrophoresis"
+      },
+      "builtin": {
+        "name": "toggle_gel_electrophoresis",
+        "method": "toggleGelElectrophoresis",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
+    "toggle_restriction_enzyme_browser": {
+      "name": "toggle_restriction_enzyme_browser",
+      "version": "1.0.0",
+      "description": "Open, close, or toggle the Restriction Enzyme Browser.",
+      "category": "system",
+      "subcategory": "interface_controls",
+      "keywords": [
+        "restriction enzyme browser",
+        "enzyme browser",
+        "限制酶浏览器",
+        "限制性内切酶浏览器"
+      ],
+      "priority": 1,
+      "execution": {
+        "type": "client",
+        "timeout": 5000,
+        "retries": 0,
+        "requires_auth": false,
+        "requires_data": false,
+        "requires_network": false
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state.",
+            "enum": [
+              "open",
+              "close",
+              "toggle"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "sample_usages": [
+        {
+          "user_query": "Open the Restriction Enzyme Browser window",
+          "tool_call": "toggle_restriction_enzyme_browser(action='open')",
+          "expected_result": "The window is open"
+        },
+        {
+          "user_query": "Close the Restriction Enzyme Browser window",
+          "tool_call": "toggle_restriction_enzyme_browser(action='close')",
+          "expected_result": "The window is closed"
+        }
+      ],
+      "returns": {
+        "success": "boolean - Whether the window action succeeded",
+        "new_state": "string - Either 'open' or 'closed' after the action"
+      },
+      "source": "app_registry",
+      "sourceFile": "system/toggle_restriction_enzyme_browser.yaml",
+      "isBuiltIn": true,
+      "isExternal": false,
+      "execution_type": "built-in",
+      "implementation": {
+        "type": "built-in",
+        "method": "toggleRestrictionEnzymeBrowser"
+      },
+      "builtin": {
+        "name": "toggle_restriction_enzyme_browser",
+        "method": "toggleRestrictionEnzymeBrowser",
+        "category": "system",
+        "type": "built-in",
+        "priority": 1,
+        "isBuiltIn": true,
+        "isExternal": false,
+        "source": "builtin_tools_map"
+      }
+    },
     "toggle_settings_modal": {
       "name": "toggle_settings_modal",
       "version": "1.0.0",
@@ -54397,6 +54995,46 @@
       "source": "builtin_tools_map"
     },
     {
+      "name": "toggle_gel_electrophoresis",
+      "method": "toggleGelElectrophoresis",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "toggle_dna_marker_browser",
+      "method": "toggleDnaMarkerBrowser",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "toggle_restriction_enzyme_browser",
+      "method": "toggleRestrictionEnzymeBrowser",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
+      "name": "toggle_circos_genome_plotter",
+      "method": "toggleCircosGenomePlotter",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    {
       "name": "toggle_chatbox",
       "method": "toggleChatBox",
       "category": "system",
@@ -56202,6 +56840,46 @@
     "toggle_settings_modal": {
       "name": "toggle_settings_modal",
       "method": "toggleSettingsModal",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "toggle_gel_electrophoresis": {
+      "name": "toggle_gel_electrophoresis",
+      "method": "toggleGelElectrophoresis",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "toggle_dna_marker_browser": {
+      "name": "toggle_dna_marker_browser",
+      "method": "toggleDnaMarkerBrowser",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "toggle_restriction_enzyme_browser": {
+      "name": "toggle_restriction_enzyme_browser",
+      "method": "toggleRestrictionEnzymeBrowser",
+      "category": "system",
+      "type": "built-in",
+      "priority": 1,
+      "isBuiltIn": true,
+      "isExternal": false,
+      "source": "builtin_tools_map"
+    },
+    "toggle_circos_genome_plotter": {
+      "name": "toggle_circos_genome_plotter",
+      "method": "toggleCircosGenomePlotter",
       "category": "system",
       "type": "built-in",
       "priority": 1,

@@ -1,0 +1,37 @@
+name: 'toggle_gel_electrophoresis'
+version: '1.0.0'
+description: 'Open, close, or toggle the Gel Electrophoresis results window. Opening keeps the latest simulation available.'
+category: 'system'
+subcategory: 'interface_controls'
+keywords:
+  - 'gel electrophoresis window'
+  - 'virtual gel window'
+  - '凝胶电泳窗口'
+  - '打开凝胶电泳'
+  - '关闭凝胶电泳'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    action:
+      type: 'string'
+      description: "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state."
+      enum: ['open', 'close', 'toggle']
+  required: ['action']
+sample_usages:
+  - user_query: 'Open the Gel Electrophoresis window'
+    tool_call: "toggle_gel_electrophoresis(action='open')"
+    expected_result: 'The window is open'
+  - user_query: 'Close the Gel Electrophoresis window'
+    tool_call: "toggle_gel_electrophoresis(action='close')"
+    expected_result: 'The window is closed'
+returns:
+  success: 'boolean - Whether the window action succeeded'
+  new_state: "string - Either 'open' or 'closed' after the action"

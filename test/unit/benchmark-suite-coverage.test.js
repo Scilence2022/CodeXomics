@@ -43,6 +43,11 @@ const BUILTIN_TOOL_EXEMPTIONS = {
   // Specialized track toggle dropped from the automatic simple suite.
   toggle_annotation_track:
     'Specialized annotation-track toggle; the generic toggle_track pattern stays covered by the track_auto_* tests.',
+  toggle_gel_electrophoresis: 'Window lifecycle and simulation retention are covered by analysis-window control tests.',
+  toggle_dna_marker_browser: 'Native dialog lifecycle is covered by analysis-window control tests.',
+  toggle_restriction_enzyme_browser: 'Enzyme browser lifecycle is covered by analysis-window control tests.',
+  toggle_circos_genome_plotter:
+    'Native window lifecycle and source-window isolation are covered by analysis-window control tests.',
   // Agent Skill discovery tools, deliberately outside the benchmark.
   // LLMContextService omits the skill index whenever isBenchmarkMode() is true, so these
   // tools are unreachable during a benchmark run by design; benchmark prompts and the

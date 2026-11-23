@@ -3301,8 +3301,12 @@ Supported formats:
                 </div>
             </div>
             <div class="modal-body gel-results-body" id="gelResultsBody">
+                <div class="gel-window-empty" id="gelResultsEmpty">
+                    <h4>No simulation results yet</h4>
+                    <p>Ask ChatBox to simulate a gel using fragment sizes or a virtual digest result.</p>
+                </div>
                 <p id="gelResultsFallback" hidden></p>
-                <div id="gelResultsContainer">
+                <div id="gelResultsContainer" hidden>
                     <dl class="gel-summary">
                         <div><dt>Sample</dt><dd data-gel="sample"></dd></div>
                         <div><dt>Agarose</dt><dd data-gel="agarose"></dd></div>

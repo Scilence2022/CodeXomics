@@ -571,7 +571,7 @@ function getBamReaderState(reader) {
  * @param {Function} deps.createMCPServerManagerWindow - Create MCP server manager window
  * @param {Function} deps.createResourceManagerWindow - Create resource manager window
  * @param {Function} deps.createDebugWindow - Create debug window
- * @param {Function} deps.createCircosWindow - Create Circos plotter window
+ * @param {Function} deps.setCircosWindowVisibility - Set the source genome window's Circos plotter state
  * @param {Function} deps.createKEGGWindow - Create KEGG window
  * @param {Function} deps.createGOWindow - Create GO window
  * @param {Function} deps.createUniProtWindow - Create UniProt window
@@ -615,6 +615,7 @@ function registerIpcHandlers(deps) {
     notifyWindowGenomeNameChanged,
 
     getCurrentMainWindow,
+    setCircosWindowVisibility,
 
     createKEGGWindow,
     createGOWindow,
@@ -648,20 +649,21 @@ function registerIpcHandlers(deps) {
   const samQueriesBySender = new WeakMap();
   const getMainGenomeTarget = () =>
     (typeof getCurrentMainWindow === 'function' && getCurrentMainWindow()) || mainWindow || null;
-  const isRegisteredGenomeSender = event => {
+  const getGenomeSender = event => {
     const sender = event?.sender;
-    if (!sender || (typeof sender.isDestroyed === 'function' && sender.isDestroyed())) return false;
+    if (!sender || (typeof sender.isDestroyed === 'function' && sender.isDestroyed())) return null;
     const mainTarget = getMainGenomeTarget();
-    if (mainTarget?.webContents === sender) return true;
+    if (mainTarget?.webContents === sender) return mainTarget;
     for (const [, entry] of windowRegistry.entries()) {
       const window = entry?.window || entry;
-      if (window?.webContents === sender) return true;
+      if (window?.webContents === sender) return window;
     }
     for (const handle of workspaceHostManager.getAllViewHandles()) {
-      if (handle?.webContents === sender) return true;
+      if (handle?.webContents === sender) return handle;
     }
-    return false;
+    return null;
   };
+  const isRegisteredGenomeSender = event => Boolean(getGenomeSender(event));
 
   require('./evo2-service').registerEvo2Ipc({ ipcMain, app, isRegisteredGenomeSender });
   require('./checkpoint-store').registerCheckpointIpc({ ipcMain, app, isRegisteredGenomeSender });
@@ -4045,6 +4047,15 @@ function registerIpcHandlers(deps) {
   // =====================================================================
 
   registerCircosIpc(ipcMain);
+  ipcMain.handle('circos:set-window-visibility', async (event, action) => {
+    const source = isMainFrameAtFile(event, genomePage) && getGenomeSender(event);
+    if (!source) return { success: false, error: 'Circos window controls require a registered genome window.' };
+    try {
+      return await setCircosWindowVisibility(source, action);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
 
   // Handle gene sequence requests
   ipcMain.handle('get-gene-sequence', async (event, geneName) => {

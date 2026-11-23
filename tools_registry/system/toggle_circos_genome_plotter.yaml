@@ -1,0 +1,37 @@
+name: 'toggle_circos_genome_plotter'
+version: '1.0.0'
+description: 'Open, close, or toggle the Circos Genome Plotter for the target genome window.'
+category: 'system'
+subcategory: 'interface_controls'
+keywords:
+  - 'circos genome plotter'
+  - 'circos window'
+  - 'open circos'
+  - 'close circos'
+  - '环形基因组图'
+priority: 1
+execution:
+  type: 'client'
+  timeout: 5000
+  retries: 0
+  requires_auth: false
+  requires_data: false
+  requires_network: false
+parameters:
+  type: 'object'
+  properties:
+    action:
+      type: 'string'
+      description: "Use 'open' or 'close' to set visibility, or 'toggle' to switch the current state."
+      enum: ['open', 'close', 'toggle']
+  required: ['action']
+sample_usages:
+  - user_query: 'Open the Circos Genome Plotter window'
+    tool_call: "toggle_circos_genome_plotter(action='open')"
+    expected_result: 'The window is open'
+  - user_query: 'Close the Circos Genome Plotter window'
+    tool_call: "toggle_circos_genome_plotter(action='close')"
+    expected_result: 'The window is closed'
+returns:
+  success: 'boolean - Whether the window action succeeded'
+  new_state: "string - Either 'open' or 'closed' after the action"

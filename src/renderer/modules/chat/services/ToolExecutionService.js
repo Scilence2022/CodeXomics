@@ -155,6 +155,18 @@ class ToolExecutionService {
         return service[this._toCamelCase(toolName)](parameters);
       }
 
+      // Window controls always run against this renderer, including calls delegated by MCP.
+      if (
+        [
+          'toggle_gel_electrophoresis',
+          'toggle_dna_marker_browser',
+          'toggle_restriction_enzyme_browser',
+          'toggle_circos_genome_plotter',
+        ].includes(toolName)
+      ) {
+        return await this.chatManager.executeLocalTool(toolName, parameters);
+      }
+
       // --- PRIORITY 2: NEW EXTRACTED SERVICES ---
       // 1. File Operation Services
       const fileService =
