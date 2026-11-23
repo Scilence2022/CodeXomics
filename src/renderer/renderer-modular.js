@@ -1624,17 +1624,8 @@ class GenomeBrowser {
   }
 
   showDNAMarkerBrowserModal() {
-    this._showDatabaseBrowserModal('dnaMarker', 'DNA Marker / Ladder Browser', () => {
-      const DbClass = window.DNAMarkerDatabase;
-      if (!DbClass) return [];
-      const db = new DbClass();
-      return db.getAll().map(m => ({
-        id: m.id,
-        name: m.name,
-        subtitle: `${m.brand} | ${m.sizes.length} bands | ${m.sizeRange[0].toLocaleString()}-${m.sizeRange[1].toLocaleString()} bp`,
-        detail: m,
-      }));
-    });
+    this.dnaMarkerBrowser ??= new window.DNAMarkerBrowser();
+    this.dnaMarkerBrowser.open(this.chatManager?.services?.gel?.markerDb);
   }
 
   _showDatabaseBrowserModal(type, title, dataLoader) {
