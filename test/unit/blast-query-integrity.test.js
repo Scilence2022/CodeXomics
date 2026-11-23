@@ -28,3 +28,33 @@ describe('BLAST query source integrity', () => {
     }
   );
 });
+
+describe('BLAST search form query validation', () => {
+  const m = manager({});
+
+  it('normalizes a single FASTA record without changing its residues', () => {
+    expect(m.parseSearchQuery('>example\r\nacgu ryn\r\n AGTC', 'blastn')).toEqual({
+      sequence: 'ACGURYNAGTC',
+      error: '',
+    });
+  });
+
+  it('rejects multiple records and unexpected characters', () => {
+    expect(m.parseSearchQuery('>first\nACGTACGTACGT\n >second\nACGTACGTACGT', 'blastn').error).toMatch(
+      /one FASTA record/
+    );
+    expect(m.parseSearchQuery('ACGTACGTACGT12', 'blastn').error).toMatch(/Remove characters/);
+  });
+
+  it.each(['blastp', 'tblastn'])('requires a protein query for %s', program => {
+    expect(m.parseSearchQuery('ACGTACGTACGT', program).error).toMatch(/requires a protein query/);
+    expect(m.parseSearchQuery('MTEYKLVVVG', program).error).toBe('');
+  });
+
+  it('converts the zero-based viewport into one-based inclusive query coordinates', () => {
+    const m = manager({ currentChromosome: 'chr', currentPosition: { start: 0, end: 100 } });
+    expect(m.getCurrentQueryRegion()).toEqual({ chromosome: 'chr', start: 1, end: 100 });
+    m.app.currentPosition = { start: 50, end: 150 };
+    expect(m.getCurrentQueryRegion()).toEqual({ chromosome: 'chr', start: 51, end: 150 });
+  });
+});

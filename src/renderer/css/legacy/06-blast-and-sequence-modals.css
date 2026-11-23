@@ -2,58 +2,6 @@
  * Extracted from src/renderer/styles.css to keep the renderer CSS entry point small.
  */
 
-/* Fix for collapsed Blast modal height */
-.modal.collapsed .blast-modal-content {
-  min-height: auto !important;
-  max-height: 80px !important;
-}
-
-.blast-modal-body {
-  padding: 0;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-  max-height: calc(90vh - 200px);
-}
-
-.blast-search-container {
-  padding: 24px;
-}
-
-#blastSearchModal .modal-footer {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  gap: 12px !important;
-  padding: 20px !important;
-  border-top: 1px solid #e5e7eb !important;
-  background: #f9fafb !important;
-  flex-shrink: 0 !important;
-  position: relative !important;
-  z-index: 10 !important;
-  margin-top: auto !important;
-}
-
-#blastSearchModal .modal-footer .keyboard-shortcut-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 500;
-  opacity: 0.8;
-}
-
-#blastSearchModal .modal-footer .keyboard-shortcut-hint i {
-  font-size: 14px;
-}
-
-#blastSearchModal .modal-footer .modal-footer-buttons {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
 .blast-db-management-section {
   margin-bottom: 32px;
   padding: 24px;
@@ -698,80 +646,6 @@
   color: #60a5fa;
 }
 
-.blast-search-container h4 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 16px 0;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e5e7eb;
-  font-weight: 600;
-  color: #374151;
-}
-
-.blast-search-container h4 i {
-  color: #3b82f6;
-}
-
-.blast-type-section {
-  margin-bottom: 32px;
-}
-
-.blast-type-tabs {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-}
-
-/* BLAST type buttons - ensure these override any generic .tab-button styles */
-.blast-type-tabs .tab-button {
-  display: flex !important;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px 12px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  background: var(--bg-primary);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-
-.blast-type-tabs .tab-button:hover:not(.active) {
-  border-color: #3b82f6;
-  background: #f8fafc;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.blast-type-tabs .tab-button.active {
-  border-color: #3b82f6 !important;
-  background: #eff6ff !important;
-  color: #1e40af !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-}
-
-.blast-type-tabs .tab-button i {
-  font-size: 24px;
-  margin-bottom: 8px;
-  color: #6b7280;
-}
-
-.blast-type-tabs .tab-button.active i {
-  color: #3b82f6;
-}
-
-.tab-description {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.blast-type-tabs .tab-button.active .tab-description {
-  color: #1e40af;
-}
-
 .blast-query-section {
   margin-bottom: 32px;
 }
@@ -810,24 +684,6 @@
 
 .input-source-panel.active {
   display: block;
-}
-
-#blastQuerySequence {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  resize: vertical;
-  transition: border-color 0.3s ease;
-}
-
-#blastQuerySequence:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .sequence-info {
@@ -975,112 +831,10 @@
   padding: 16px;
 }
 
-.blast-service-section {
-  margin-bottom: 20px;
-}
-
-.service-tabs {
-  display: flex;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.service-tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  background: var(--bg-primary);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-
-.service-tab:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f9fafb;
-}
-
-.service-tab:not(:disabled):hover {
-  border-color: #3b82f6;
-  background: #f8fafc;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.service-tab.active {
-  border-color: #10b981;
-  background: #ecfdf5;
-  color: #065f46;
-}
-
-.service-tab i {
-  font-size: 32px;
-  margin-bottom: 12px;
-  color: #6b7280;
-}
-
-.service-tab.active i {
-  color: #10b981;
-}
-
-.service-description {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 8px;
-}
-
-.service-tab.active .service-description {
-  color: #065f46;
-}
-
-.blast-results-content {
-  max-width: 1200px;
-  width: 95vw;
-  max-height: 90vh;
-  min-width: 600px;
-  min-height: 400px;
-  position: relative;
-  overflow: auto;
-}
-
-.blast-results-body {
-  padding: 0;
-  overflow: hidden;
-  height: calc(100% - 60px);
-  /* Account for header height */
-}
-
-/* Make modal resizable - properties managed by ResizableModalManager but keeping limits */
-#blastResultsModal .modal-content {
-  overflow: auto;
-  min-width: 600px;
-  min-height: 400px;
-  max-width: 95vw;
-  max-height: 95vh;
-}
-
-/* Fix for collapsed Blast Results modal height */
-#blastResultsModal.modal.collapsed .modal-content {
-  min-height: auto !important;
-  max-height: 80px !important;
-  overflow: hidden;
-}
-
 .results-controls {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-#blastResultsContainer {
-  height: calc(90vh - 120px);
-  overflow-y: auto;
-  padding: 24px;
 }
 
 .blast-results-header {

@@ -9,6 +9,9 @@ class BlastManager {
     this.currentSearchId = null;
     this.searchResults = null;
     this.isSearching = false;
+    this.localBlastStatus = 'checking';
+    this.databaseSelections = new Map();
+    this.queryRevision = 0;
 
     // Rate limiting properties
     this.lastBlastSubmission = 0; // Track last submission time for rate limiting
@@ -215,36 +218,21 @@ class BlastManager {
   }
 
   async initializeLocalBlast() {
-    console.log('BlastManager: Initializing local BLAST...');
     try {
       if (!this.canUseLocalBlastRuntime()) {
-        console.info('BlastManager: Local BLAST command execution is unavailable in the hardened renderer');
-        this.enableLocalBlast();
+        this.localBlastStatus = 'unavailable';
         return;
       }
 
       await this.initializeLocalDatabasePath();
-
-      // Check if BLAST+ is installed
-      const isInstalled = await this.checkBlastInstallation();
-      console.log('BlastManager: BLAST+ installed status:', isInstalled);
-
-      // Enable local BLAST UI even if BLAST+ is not installed
-      // Users can still create databases from loaded genomes
-      this.enableLocalBlast();
-
-      if (isInstalled) {
-        // Load local databases only if BLAST+ is installed
-        await this.loadLocalDatabases();
-      } else {
-        console.warn(
-          'BLAST+ is not installed. Local database creation is available, but searching requires BLAST+ installation.'
-        );
-      }
+      const installed = await this.checkBlastInstallation();
+      if (installed) await this.loadLocalDatabases();
+      this.localBlastStatus = installed ? 'ready' : 'missing';
     } catch (error) {
+      this.localBlastStatus = 'unavailable';
       console.warn('Error initializing local BLAST:', error.message);
-      // Still enable the UI for database creation
-      this.enableLocalBlast();
+    } finally {
+      this.updateDatabaseOptions();
     }
   }
 
@@ -383,24 +371,6 @@ class BlastManager {
     }
 
     throw new Error('Local BLAST command execution requires main-process IPC in the hardened renderer');
-  }
-
-  enableLocalBlast() {
-    // Use setTimeout to ensure DOM elements are available
-    setTimeout(() => {
-      const localTab = document.querySelector('.service-tab[data-service="local"]');
-      if (localTab) {
-        localTab.disabled = false;
-        localTab.classList.remove('disabled');
-        const description = localTab.querySelector('.service-description');
-        if (description) {
-          description.textContent = 'Local database search';
-        }
-        console.log('BlastManager: Local BLAST service enabled');
-      } else {
-        console.warn('BlastManager: Local BLAST service tab not found');
-      }
-    }, 100);
   }
 
   async loadLocalDatabases() {
@@ -752,63 +722,31 @@ class BlastManager {
   }
 
   updateDatabaseOptions(blastType = null) {
-    const select = document.getElementById('blastDatabase');
+    const select = typeof document !== 'undefined' && document.getElementById('blastDatabase');
     if (!select) return;
 
-    const activeType =
-      blastType || document.querySelector('.blast-type-tabs .tab-button.active')?.dataset.blastType || 'blastn';
-    const activeService = document.querySelector('.service-tabs .service-tab.active')?.dataset.service;
+    const activeType = blastType || this.searchProgram;
+    const activeService = this.searchService;
 
-    // Clear existing options
-    select.innerHTML = '';
-
+    const selectionKey = `${activeService}:${activeType}`;
+    const proteinDatabase = activeType === 'blastp' || activeType === 'blastx';
     let databases = [];
 
-    // Add local databases if local service is selected
     if (activeService === 'local') {
-      // Add databases from config.localDatabases (scanned from file system)
       for (const [name, info] of this.config.localDatabases) {
-        // Check if database is compatible with the selected BLAST type
-        let isCompatible = false;
-        if (info.type === 'blastn' && (activeType === 'blastn' || activeType === 'tblastn')) {
-          isCompatible = true;
-        } else if (info.type === 'blastp' && (activeType === 'blastp' || activeType === 'blastx')) {
-          isCompatible = true;
-        }
-
-        if (isCompatible) {
-          databases.push({
-            value: name,
-            label: `Local: ${name}`,
-            description: info.description,
-          });
+        if (info.type === (proteinDatabase ? 'blastp' : 'blastn')) {
+          databases.push({ value: name, label: name, description: info.description });
         }
       }
-
-      // Add databases from customDatabases (created through the app)
+      const discoveredNames = new Set(databases.map(database => database.value));
       for (const [id, database] of this.customDatabases) {
-        // Only include ready databases
-        if (database.status !== 'ready') continue;
-
-        // Check if database is compatible with the selected BLAST type
-        let isCompatible = false;
-        const dbType = database.type;
-        if (dbType === 'nucl' && (activeType === 'blastn' || activeType === 'tblastn')) {
-          isCompatible = true;
-        } else if (dbType === 'prot' && (activeType === 'blastp' || activeType === 'blastx')) {
-          isCompatible = true;
-        }
-
-        if (isCompatible) {
-          // Avoid duplicate entries - check if already added from config.localDatabases
-          const alreadyExists = databases.some(db => db.value === database.name || db.value === id);
-          if (!alreadyExists) {
-            databases.push({
-              value: id, // Use the database ID as the value
-              label: `Custom: ${database.name}`,
-              description: `${database.type === 'nucl' ? 'Nucleotide' : 'Protein'} database`,
-            });
-          }
+        if (
+          database.status === 'ready' &&
+          database.type === (proteinDatabase ? 'prot' : 'nucl') &&
+          !discoveredNames.has(database.name) &&
+          !discoveredNames.has(id)
+        ) {
+          databases.push({ value: id, label: database.name });
         }
       }
     } else {
@@ -848,110 +786,52 @@ class BlastManager {
       }
     }
 
-    // Add standard databases first
-    databases.forEach(db => {
-      const option = document.createElement('option');
-      option.value = db.value;
-      option.textContent = db.label;
-      if (db.description) {
-        option.title = db.description;
-      }
-      select.appendChild(option);
+    const remembered = this.databaseSelections?.get(selectionKey);
+    const options = databases.map(({ value, label, description }) => {
+      const option = new Option(label, value);
+      if (description) option.title = description;
+      return option;
     });
+    if (!options.length) options.push(new Option('No compatible database', ''));
+    select.replaceChildren(...options);
+    select.disabled = databases.length === 0;
+    if (databases.some(database => database.value === remembered)) select.value = remembered;
 
-    // Add custom databases that are compatible with current BLAST type
-    this.addCustomDatabaseOptions(activeType);
+    const local = activeService === 'local';
+    const hint = document.getElementById('blastDatabaseHint');
+    hint.textContent = local
+      ? {
+          checking: 'Checking BLAST+ and local databases…',
+          unavailable: 'Local BLAST is unavailable in this session.',
+          missing: 'Install or configure BLAST+ to run local searches.',
+          ready: databases.length
+            ? `${databases.length} compatible ${databases.length === 1 ? 'database' : 'databases'}`
+            : `Create a ${proteinDatabase ? 'protein' : 'nucleotide'} database to search locally.`,
+        }[this.localBlastStatus] || ''
+      : '';
+    document.getElementById('manageBlastDatabasesBtn').hidden = !local;
+    document.getElementById('configureBlastBtn').hidden = !local || this.localBlastStatus !== 'missing';
+    this.updateSearchAvailability();
   }
 
   refreshDatabaseUi(options = {}) {
-    const { service = null, blastType = null } = options;
-
-    if (service) {
-      const serviceButton = document.querySelector(`.service-tabs .service-tab[data-service="${service}"]`);
-      if (serviceButton && !serviceButton.disabled) {
-        document.querySelectorAll('.service-tabs .service-tab').forEach(btn => {
-          btn.classList.remove('active');
-        });
-        serviceButton.classList.add('active');
-      }
-    }
-
-    if (blastType) {
-      const blastTypeButton = document.querySelector(`.blast-type-tabs .tab-button[data-blast-type="${blastType}"]`);
-      if (blastTypeButton) {
-        document.querySelectorAll('.blast-type-tabs .tab-button').forEach(btn => {
-          btn.classList.remove('active');
-        });
-        blastTypeButton.classList.add('active');
-      }
-    }
-
+    const { service, blastType } = options;
     this.populateAvailableDatabasesList();
     this.updateExistingLocalDatabases();
-    this.updateDatabaseOptions(blastType);
-  }
-
-  addCustomDatabaseOptions(blastType) {
-    const select = document.getElementById('blastDatabase');
-    if (!select || !this.customDatabases) return;
-
-    // Add a separator if there are custom databases
-    const customDbs = Array.from(this.customDatabases.values()).filter(
-      db => db.status === 'ready' && this.isDatabaseCompatible(db, blastType)
-    );
-
-    if (customDbs.length > 0) {
-      // Add separator
-      const separator = document.createElement('option');
-      separator.disabled = true;
-      separator.textContent = '── Custom Databases ──';
-      separator.style.fontStyle = 'italic';
-      separator.style.backgroundColor = '#f5f5f5';
-      select.appendChild(separator);
-
-      // Add custom databases
-      customDbs.forEach(database => {
-        const option = document.createElement('option');
-        option.value = `custom_${database.id}`;
-        option.textContent = `${database.name} (${database.type === 'nucl' ? 'Nucleotide' : 'Protein'})`;
-        option.title = `Custom database - ${database.source === 'project' ? 'from project genome' : 'from file'}`;
-        select.appendChild(option);
-      });
-    }
-  }
-
-  isDatabaseCompatible(database, blastType) {
-    // Check if database type is compatible with BLAST type
-    const dbType = database.type;
-
-    switch (blastType) {
-      case 'blastn':
-        return dbType === 'nucl';
-      case 'blastp':
-        return dbType === 'prot';
-      case 'blastx':
-        return dbType === 'prot';
-      case 'tblastn':
-        return dbType === 'nucl';
-      case 'tblastx':
-        return dbType === 'nucl';
-      default:
-        return true; // Allow all if unknown type
-    }
+    if (service) this.selectService(service);
+    if (blastType) this.selectBlastType(blastType);
+    else if (!service) this.updateDatabaseOptions();
   }
 
   initializeUI() {
-    // Make this instance globally accessible for onclick handlers
     window.blastManager = this;
+    this.setupAllEventListeners();
+    this.updateSearchControls();
+    this.validateSequence();
+    this.updateDatabaseOptions();
 
-    // Use a timeout to ensure DOM is fully rendered
-    setTimeout(() => {
-      this.setupEventListeners();
-      this.initializeModal();
-      this.ensureModalFooterVisibility();
-      this.selectBlastType('blastn'); // Set default BLAST type
-      this.initializeResizable(); // Make BLAST modal resizable
-    }, 100);
+    // The shared resize manager is initialized after renderer modules start.
+    setTimeout(() => this.initializeResizable(), 100);
   }
 
   initializeResizable() {
@@ -969,97 +849,11 @@ class BlastManager {
     }
   }
 
-  ensureModalFooterVisibility() {
-    // Check if modal footer is properly styled and visible
-    const modal = document.getElementById('blastSearchModal');
-    const modalContent = modal?.querySelector('.modal-content');
-    const modalFooter = modal?.querySelector('.modal-footer');
-    const runBlastBtn = document.getElementById('runBlastBtn');
-
-    if (modal && modalContent) {
-      // Ensure modal uses flexbox layout
-      modalContent.style.display = 'flex';
-      modalContent.style.flexDirection = 'column';
-      modalContent.style.maxHeight = '90vh';
-      modalContent.style.overflow = 'hidden';
-
-      console.log('✓ Modal layout fixed');
-    }
-
-    if (modalFooter) {
-      // Ensure modal footer has proper styles and is always visible
-      modalFooter.style.display = 'flex';
-      modalFooter.style.justifyContent = 'flex-end';
-      modalFooter.style.gap = '12px';
-      modalFooter.style.padding = '20px';
-      modalFooter.style.borderTop = '1px solid #e5e7eb';
-      modalFooter.style.background = '#f9fafb';
-      modalFooter.style.flexShrink = '0';
-      modalFooter.style.position = 'relative';
-      modalFooter.style.zIndex = '10';
-      modalFooter.style.marginTop = 'auto';
-
-      console.log('✓ Modal footer visibility ensured');
-    }
-
-    if (runBlastBtn) {
-      // Ensure run button is visible and properly styled
-      runBlastBtn.style.display = 'inline-flex';
-      runBlastBtn.style.alignItems = 'center';
-      runBlastBtn.style.gap = '6px';
-      runBlastBtn.style.visibility = 'visible';
-      runBlastBtn.style.opacity = '1';
-      runBlastBtn.style.position = 'relative';
-      runBlastBtn.style.zIndex = '11';
-
-      console.log('✓ Run BLAST button visibility ensured');
-    }
-
-    // Force a reflow to ensure styles are applied
-    if (modalFooter) {
-      modalFooter.offsetHeight;
-    }
-  }
-
-  setupEventListeners() {
-    // Wait for elements to be available with retries
-    this.waitForElementAndSetupListeners();
-  }
-
-  waitForElementAndSetupListeners(retryCount = 0) {
-    const maxRetries = 10;
-    const retryDelay = 500;
-
-    // Check if critical elements exist
-    const blastBtn = document.getElementById('blastBtn');
-    const runBlastBtn = document.getElementById('runBlastBtn');
-    const blastModal = document.getElementById('blastSearchModal');
-
-    if (!blastBtn || !runBlastBtn || !blastModal) {
-      if (retryCount < maxRetries) {
-        console.log(`BlastManager: Waiting for DOM elements... (attempt ${retryCount + 1}/${maxRetries})`);
-        setTimeout(() => {
-          this.waitForElementAndSetupListeners(retryCount + 1);
-        }, retryDelay);
-        return;
-      } else {
-        console.error('BlastManager: Failed to find required DOM elements after maximum retries');
-        return;
-      }
-    }
-
-    // Now set up all event listeners
-    this.setupAllEventListeners();
-  }
-
   async initializeDatabaseManagement() {
     console.log('BlastManager: Initializing database management...');
 
-    // Load existing custom databases from ConfigManager or localStorage
-    await this.loadCustomDatabases();
-
-    // Set up database management event listeners
     this.setupDatabaseManagementListeners();
+    await this.loadCustomDatabases();
 
     // Populate UI elements
     this.populateAvailableDatabasesList();
@@ -1299,68 +1093,26 @@ class BlastManager {
         this.autoGenerateDbName();
       });
     }
-
-    // Add keyboard shortcut listener for BLAST modal
-    this.setupKeyboardShortcuts();
   }
-
-  setupKeyboardShortcuts() {
-    // Add global keyboard listener for BLAST modal
-    document.addEventListener('keydown', event => {
-      // Check if BLAST modal is open
-      const blastModal = document.getElementById('blastSearchModal');
-      if (!blastModal || !blastModal.classList.contains('show')) {
-        return;
-      }
-
-      // Check for Ctrl+Enter (or Cmd+Enter on Mac)
-      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Only trigger if we're on the BLAST Search tab
-        const blastSearchTab = document.getElementById('blast-search-tab');
-        if (blastSearchTab && blastSearchTab.classList.contains('active')) {
-          console.log('BlastManager: Keyboard shortcut triggered (Ctrl+Enter)');
-          this.runBlastSearch();
-
-          // Show visual feedback
-          this.showNotification('BLAST search started via keyboard shortcut', 'info');
-        }
-      }
-    });
-
-    console.log('✓ Keyboard shortcuts set up (Ctrl+Enter to run BLAST)');
-  }
-
-  // populateProjectGenomesList method removed - Project Genomes functionality disabled
 
   populateAvailableDatabasesList() {
     const container = document.getElementById('availableDatabasesList');
     if (!container) return;
 
-    let html = `
-            <!-- Standard NCBI Databases -->
-            <div class="database-item">
-                <div class="database-info">
-                    <div class="database-name">NCBI Nucleotide collection (nt)</div>
-                    <div class="database-details">Remote database • Nucleotide sequences</div>
-                </div>
-                <div class="status-indicator status-success">
-                    <i class="fas fa-check"></i> Available
-                </div>
-            </div>
-            
-            <div class="database-item">
-                <div class="database-info">
-                    <div class="database-name">NCBI Non-redundant protein sequences (nr)</div>
-                    <div class="database-details">Remote database • Protein sequences</div>
-                </div>
-                <div class="status-indicator status-success">
-                    <i class="fas fa-check"></i> Available
-                </div>
-            </div>
-        `;
+    const managedNames = new Set([...this.customDatabases.values()].map(database => database.name));
+    let html = [...this.config.localDatabases.values()]
+      .filter(database => !managedNames.has(database.name))
+      .map(
+        database => `
+        <div class="database-item">
+          <div class="database-info">
+            <div class="database-name">${this.escapeHtml(database.name)}</div>
+            <div class="database-details">${database.type === 'blastn' ? 'Nucleotide' : 'Protein'} · Discovered locally</div>
+          </div>
+        </div>
+      `
+      )
+      .join('');
 
     // Add custom databases
     this.customDatabases.forEach((database, id) => {
@@ -1377,19 +1129,19 @@ class BlastManager {
                 <div class="database-item">
                     <div class="database-info">
                         <div class="database-name">${this.escapeHtml(database.name)}</div>
-                        <div class="database-details">Local database • ${locationInfo} • ${database.type === 'nucl' ? 'Nucleotide' : 'Protein'}</div>
+                        <div class="database-details">Local database • ${this.escapeHtml(locationInfo)} • ${database.type === 'nucl' ? 'Nucleotide' : 'Protein'}</div>
                         ${database.sourceDirectory ? `<div class="database-path">Path: ${this.escapeHtml(database.sourceDirectory)}</div>` : ''}
-                        ${database.note ? `<div class="database-note" style="font-size: 12px; color: #666; margin-top: 4px;">${this.escapeHtml(database.note)}</div>` : ''}
+                        ${database.note ? `<div class="database-note">${this.escapeHtml(database.note)}</div>` : ''}
                     </div>
                     <div class="database-actions">
-                        <div class="status-indicator status-${database.status}" style="flex: 1; min-width: 0; margin-right: 8px;">
+                        <div class="status-indicator status-${this.escapeHtml(database.status)}">
                             <i class="fas fa-${database.status === 'ready' ? 'check' : database.status === 'creating' ? 'spinner fa-spin' : 'exclamation-triangle'}"></i>
-                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${database.status.charAt(0).toUpperCase() + database.status.slice(1)}</span>
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(database.status.charAt(0).toUpperCase() + database.status.slice(1))}</span>
                         </div>
-                        <button class="btn btn-sm btn-info view-db-details-btn" data-db-id="${id}" title="View database details" style="flex-shrink: 0; margin-right: 4px;">
+                        <button class="btn btn-sm btn-secondary view-db-details-btn" data-db-id="${this.escapeHtml(id)}" title="View database details" aria-label="View database details">
                             <i class="fas fa-info-circle"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger delete-custom-db-btn" data-db-id="${id}" title="Delete database" style="flex-shrink: 0;">
+                        <button class="btn btn-sm btn-danger delete-custom-db-btn" data-db-id="${this.escapeHtml(id)}" title="Delete database" aria-label="Delete database">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -1397,7 +1149,7 @@ class BlastManager {
             `;
     });
 
-    container.innerHTML = html;
+    container.innerHTML = html || '<p class="blast-help">No local databases found.</p>';
 
     // Add event listeners for view details buttons
     container.querySelectorAll('.view-db-details-btn').forEach(btn => {
@@ -2510,7 +2262,7 @@ class BlastManager {
   escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   showOperationLog() {
@@ -2539,257 +2291,113 @@ class BlastManager {
   }
 
   setupAllEventListeners() {
-    console.log('BlastManager: Setting up event listeners...');
+    const search = document.getElementById('blastSearchModal');
+    const results = document.getElementById('blastResultsModal');
+    if (!search || !results) return;
 
-    // BLAST button in header
-    const blastBtn = document.getElementById('blastBtn');
-    if (blastBtn) {
-      blastBtn.addEventListener('click', () => {
-        console.log('BlastManager: BLAST button clicked');
-        this.showBlastModal();
+    document.getElementById('blastBtn')?.addEventListener('click', () => this.showBlastModal());
+    for (const [modal, close] of [
+      [search, () => this.hideBlastModal()],
+      [results, () => this.hideResultsModal()],
+    ]) {
+      const collapse = modal.querySelector('.modal-collapse');
+      modal.querySelector('.modal-close').addEventListener('click', close);
+      collapse.addEventListener('click', () => {
+        const collapsed = modal.classList.toggle('collapsed');
+        collapse.setAttribute('aria-expanded', String(!collapsed));
+        collapse.title = collapsed ? 'Expand window' : 'Collapse window';
+        collapse.setAttribute('aria-label', collapse.title);
+        collapse.querySelector('i').className = collapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
       });
-      console.log('✓ BLAST button listener added');
-    } else {
-      console.warn('✗ BLAST button not found');
     }
 
-    // Modal close handlers
-    const searchModalCloseButtons = document.querySelectorAll('#blastSearchModal .modal-close');
-    searchModalCloseButtons.forEach(btn => {
-      btn.addEventListener('click', () => this.hideBlastModal());
-    });
-    console.log(`✓ Search modal close buttons: ${searchModalCloseButtons.length}`);
-
-    // Modal collapse button
-    const collapseButton = document.querySelector('#blastSearchModal .modal-collapse');
-    if (collapseButton) {
-      collapseButton.addEventListener('click', () => {
-        const modal = document.getElementById('blastSearchModal');
-        modal.classList.toggle('collapsed');
-        // Change the icon
-        const icon = collapseButton.querySelector('i');
-        if (modal.classList.contains('collapsed')) {
-          icon.classList.remove('fa-chevron-up');
-          icon.classList.add('fa-chevron-down');
-        } else {
-          icon.classList.remove('fa-chevron-down');
-          icon.classList.add('fa-chevron-up');
-        }
-      });
-      console.log('✓ Modal collapse button listener added');
-    } else {
-      console.warn('✗ Modal collapse button not found');
+    for (const button of search.querySelectorAll('[data-blast-type]')) {
+      button.addEventListener('click', () => this.selectBlastType(button.dataset.blastType));
+    }
+    for (const button of search.querySelectorAll('[data-service]')) {
+      button.addEventListener('click', () => this.selectService(button.dataset.service));
+    }
+    for (const button of search.querySelectorAll('.blast-workspace-tabs button')) {
+      button.addEventListener('click', () => this.switchModalTab(button.dataset.tab));
     }
 
-    const resultsModalCloseButtons = document.querySelectorAll('#blastResultsModal .modal-close');
-    resultsModalCloseButtons.forEach(btn => {
-      btn.addEventListener('click', () => this.hideResultsModal());
-    });
-    console.log(`✓ Results modal close buttons: ${resultsModalCloseButtons.length}`);
-
-    // Results modal collapse button
-    const resultsCollapseButton = document.querySelector('#blastResultsModal .modal-collapse');
-    if (resultsCollapseButton) {
-      resultsCollapseButton.addEventListener('click', () => {
-        const modal = document.getElementById('blastResultsModal');
-        modal.classList.toggle('collapsed');
-        // Change the icon
-        const icon = resultsCollapseButton.querySelector('i');
-        if (modal.classList.contains('collapsed')) {
-          icon.classList.remove('fa-chevron-up');
-          icon.classList.add('fa-chevron-down');
-        } else {
-          icon.classList.remove('fa-chevron-down');
-          icon.classList.add('fa-chevron-up');
-        }
-      });
-      console.log('✓ Results modal collapse button listener added');
-    } else {
-      console.warn('✗ Results modal collapse button not found');
-    }
-
-    // BLAST type tabs
-    const typeTabButtons = document.querySelectorAll('.blast-type-tabs .tab-button');
-    typeTabButtons.forEach(btn => {
-      btn.addEventListener('click', e => {
-        console.log('BlastManager: BLAST type tab clicked:', e.target.closest('.tab-button').dataset.blastType);
-        this.selectBlastType(e.target.closest('.tab-button').dataset.blastType);
-      });
-    });
-    console.log(`✓ BLAST type tab buttons: ${typeTabButtons.length}`);
-
-    // Input source tabs
-    const sourceTabButtons = document.querySelectorAll('.input-source-tabs .source-tab');
-    sourceTabButtons.forEach(btn => {
-      btn.addEventListener('click', e => {
-        console.log('BlastManager: Input source tab clicked:', e.target.dataset.source);
-        this.selectInputSource(e.target.dataset.source);
-      });
-    });
-    console.log(`✓ Input source tab buttons: ${sourceTabButtons.length}`);
-
-    // Service tabs
-    const serviceTabButtons = document.querySelectorAll('.service-tabs .service-tab');
-    serviceTabButtons.forEach(btn => {
-      btn.addEventListener('click', e => {
-        if (!e.target.closest('.service-tab').disabled) {
-          console.log('BlastManager: Service tab clicked:', e.target.closest('.service-tab').dataset.service);
-          this.selectService(e.target.closest('.service-tab').dataset.service);
-        }
-      });
-    });
-    console.log(`✓ Service tab buttons: ${serviceTabButtons.length}`);
-
-    // Query sequence input
-    const querySequence = document.getElementById('blastQuerySequence');
-    if (querySequence) {
-      querySequence.addEventListener('input', () => {
-        this.validateSequence();
-      });
-      console.log('✓ Query sequence input listener added');
-    } else {
-      console.warn('✗ Query sequence input not found');
-    }
-
-    // Paste button for BLAST query input
-    const pasteBtn = document.getElementById('pasteSequenceInputBtn');
-    if (pasteBtn) {
-      pasteBtn.addEventListener('click', async () => {
-        console.log('BlastManager: Paste button clicked (BLAST modal)');
-        try {
-          const text = await navigator.clipboard.readText();
-          const textarea = document.getElementById('blastQuerySequence');
-          if (textarea) {
-            textarea.value = text;
-            this.validateSequence();
-          }
-        } catch (error) {
-          console.error('Failed to paste from clipboard:', error);
-          this.showNotification('Failed to paste from clipboard. Please check clipboard permissions.', 'error');
-        }
-      });
-      console.log('✓ Paste button listener added (BLAST modal)');
-    } else {
-      console.warn('✗ Paste button not found (pasteSequenceInputBtn)');
-    }
-
-    // Load current region button
-    const loadRegionBtn = document.getElementById('loadCurrentRegionBtn');
-    if (loadRegionBtn) {
-      loadRegionBtn.addEventListener('click', () => {
-        console.log('BlastManager: Load current region button clicked');
-        this.loadCurrentRegion();
-      });
-      console.log('✓ Load current region button listener added');
-    } else {
-      console.warn('✗ Load current region button not found');
-    }
-
-    // File upload
+    const query = document.getElementById('blastQuerySequence');
     const fileInput = document.getElementById('blastFileInput');
-    if (fileInput) {
-      fileInput.addEventListener('change', e => {
-        console.log('BlastManager: File input changed');
-        this.handleFileUpload(e.target.files[0]);
-      });
-      console.log('✓ File input listener added');
-    } else {
-      console.warn('✗ File input not found');
-    }
-
-    const uploadZone = document.getElementById('blastUploadZone');
-    if (uploadZone) {
-      uploadZone.addEventListener('click', () => {
-        console.log('BlastManager: Upload zone clicked');
-        const fileInput = document.getElementById('blastFileInput');
-        if (fileInput) fileInput.click();
-      });
-
-      // Drag and drop for file upload
-      uploadZone.addEventListener('dragover', e => {
-        e.preventDefault();
-        uploadZone.classList.add('dragover');
-      });
-
-      uploadZone.addEventListener('dragleave', () => {
-        uploadZone.classList.remove('dragover');
-      });
-
-      uploadZone.addEventListener('drop', e => {
-        e.preventDefault();
-        uploadZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-          this.handleFileUpload(e.dataTransfer.files[0]);
-        }
-      });
-      console.log('✓ Upload zone listeners added');
-    } else {
-      console.warn('✗ Upload zone not found');
-    }
-
-    // Run BLAST button
-    const runBlastBtn = document.getElementById('runBlastBtn');
-    if (runBlastBtn) {
-      runBlastBtn.addEventListener('click', () => {
-        console.log('BlastManager: Run BLAST button clicked');
-        this.runBlastSearch();
-      });
-      console.log('✓ Run BLAST button listener added');
-    } else {
-      console.warn('✗ Run BLAST button not found');
-    }
-
-    // Export results button
-    const exportBtn = document.getElementById('exportBlastBtn');
-    if (exportBtn) {
-      exportBtn.addEventListener('click', () => {
-        console.log('BlastManager: Export button clicked');
-        this.exportResults();
-      });
-      console.log('✓ Export button listener added');
-    } else {
-      console.warn('✗ Export button not found');
-    }
-
-    // Advanced parameters toggle
-    const advancedDetails = document.querySelector('.advanced-parameters details');
-    if (advancedDetails) {
-      advancedDetails.addEventListener('toggle', e => {
-        const icon = e.target.querySelector('summary i');
-        if (icon) {
-          icon.style.transform = e.target.open ? 'rotate(90deg)' : 'rotate(0deg)';
-        }
-      });
-      console.log('✓ Advanced parameters toggle listener added');
-    } else {
-      console.warn('✗ Advanced parameters toggle not found');
-    }
-
-    // Modal tab switching
-    const modalTabButtons = document.querySelectorAll('.modal-tabs .tab-button');
-    modalTabButtons.forEach(btn => {
-      btn.addEventListener('click', e => {
-        const button = e.target.closest('.tab-button');
-        const tabName = button?.dataset.tab;
-        if (tabName) {
-          console.log('BlastManager: Modal tab clicked:', tabName);
-          this.switchModalTab(tabName);
-        }
-      });
+    const upload = document.getElementById('blastUploadZone');
+    query.addEventListener('input', () => this.setQueryOrigin());
+    document.getElementById('clearBlastQueryBtn').addEventListener('click', () => this.setQuery(''));
+    document.getElementById('pasteSequenceInputBtn').addEventListener('click', async () => {
+      const request = ++this.queryRevision;
+      try {
+        const sequence = await navigator.clipboard.readText();
+        if (request === this.queryRevision && sequence.trim()) this.setQuery(sequence, 'Pasted from clipboard');
+      } catch (error) {
+        this.showNotification('Clipboard could not be read. Paste directly into the query editor.', 'error');
+      }
     });
-    console.log(`✓ Modal tab buttons: ${modalTabButtons.length}`);
 
-    // Create Local Database button
-    const createDbBtn = document.getElementById('createLocalDbBtn');
-    if (createDbBtn) {
-      createDbBtn.addEventListener('click', () => {
-        console.log('BlastManager: Create local database button clicked');
-        this.createDatabaseFromLoadedGenome();
+    const loadRegion = document.getElementById('loadCurrentRegionBtn');
+    loadRegion.addEventListener('click', () => this.loadCurrentRegion());
+    loadRegion.addEventListener('pointerenter', () => this.updateCurrentRegionDisplay());
+    loadRegion.addEventListener('focus', () => this.updateCurrentRegionDisplay());
+    upload.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      this.handleFileUpload(fileInput.files[0]);
+      fileInput.value = '';
+    });
+    for (const target of [upload, query]) {
+      target.addEventListener('dragover', event => {
+        if (!event.dataTransfer.types.includes('Files')) return;
+        event.preventDefault();
+        target.classList.add('dragover');
       });
-      console.log('✓ Create local database button listener added');
+      target.addEventListener('dragleave', () => target.classList.remove('dragover'));
+      target.addEventListener('drop', event => {
+        target.classList.remove('dragover');
+        if (!event.dataTransfer.files.length) return;
+        event.preventDefault();
+        this.handleFileUpload(event.dataTransfer.files[0]);
+      });
     }
 
-    console.log('BlastManager: All event listeners setup completed');
+    const database = document.getElementById('blastDatabase');
+    database.addEventListener('change', () => {
+      this.databaseSelections.set(`${this.searchService}:${this.searchProgram}`, database.value);
+      this.updateSearchAvailability();
+    });
+    for (const id of ['blastGapOpen', 'blastGapExtend']) {
+      document.getElementById(id).addEventListener('input', () => this.updateSearchAvailability());
+    }
+    document.getElementById('manageBlastDatabasesBtn').addEventListener('click', () => {
+      this.switchModalTab('db-management');
+      search.querySelector('[data-tab="db-management"]').focus();
+    });
+    document.getElementById('configureBlastBtn').addEventListener('click', () => {
+      window.ipcRenderer?.send?.('open-blast-config-window');
+    });
+    window.addEventListener('storage', event => {
+      if (event.key === 'blast-config' && this.canUseLocalBlastRuntime()) this.initializeLocalBlast();
+    });
+
+    const run = document.getElementById('runBlastBtn');
+    run.addEventListener('click', () => this.runBlastSearch());
+    search.addEventListener('keydown', event => {
+      if (
+        event.key !== 'Enter' ||
+        !(event.ctrlKey || event.metaKey) ||
+        run.disabled ||
+        document.getElementById('blast-search-tab').hidden ||
+        search.classList.contains('collapsed')
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      this.runBlastSearch();
+    });
+
+    document.getElementById('showLastBlastResultsBtn').addEventListener('click', () => this.showResultsModal());
+    document.getElementById('exportBlastBtn').addEventListener('click', () => this.exportResults());
   }
 
   // Add a notification method for user feedback
@@ -2806,751 +2414,14 @@ class BlastManager {
     }
   }
 
-  // Inject necessary CSS styles
-  injectStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-            .tab-content-padding {
-                padding: 15px;
-            }
-            
-            #db-management-tab > * {
-                padding-left: 15px;
-                padding-right: 15px;
-            }
-
-            /* Modern BLAST Results Styles */
-            .blast-results-modern {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-                min-height: 100vh;
-                padding: 20px;
-            }
-
-            /* Header Styles */
-            .blast-results-header {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
-                overflow: hidden;
-            }
-
-            .header-title {
-                padding: 20px 24px;
-                border-bottom: 1px solid #e2e8f0;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }
-
-            .header-title h3 {
-                margin: 0;
-                font-size: 1.5rem;
-                font-weight: 600;
-            }
-
-            .header-badges {
-                display: flex;
-                gap: 8px;
-            }
-
-            .badge {
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 0.85rem;
-                font-weight: 500;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            }
-
-            .badge-source { background: rgba(255, 255, 255, 0.2); }
-            .badge-database { background: rgba(255, 255, 255, 0.15); }
-            .badge-type { background: rgba(255, 255, 255, 0.1); }
-
-            .query-summary {
-                padding: 20px 24px;
-                display: grid;
-                grid-template-columns: 1fr 2fr;
-                gap: 24px;
-            }
-
-            .query-info h4 {
-                margin: 0 0 16px 0;
-                color: #374151;
-                font-size: 1.1rem;
-            }
-
-            .query-details {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .query-detail {
-                display: flex;
-                justify-content: space-between;
-                padding: 8px 0;
-                border-bottom: 1px solid #f3f4f6;
-            }
-
-            .query-detail .label {
-                font-weight: 500;
-                color: #6b7280;
-            }
-
-            .query-detail .value {
-                font-weight: 600;
-                color: #111827;
-            }
-
-            .sequence-preview {
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 16px;
-            }
-
-            .sequence-preview pre {
-                margin: 0;
-                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-                font-size: 0.85rem;
-                line-height: 1.5;
-                color: #374151;
-                word-break: break-all;
-                white-space: pre-wrap;
-            }
-
-            /* Controls Styles */
-            .blast-results-controls {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
-                padding: 20px 24px;
-            }
-
-            .controls-section {
-                display: grid;
-                grid-template-columns: 2fr 1fr 1fr;
-                gap: 24px;
-                align-items: end;
-            }
-
-            .filter-controls, .sort-controls, .view-controls {
-                display: flex;
-                gap: 16px;
-                align-items: end;
-            }
-
-            .control-group {
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-            }
-
-            .control-group label {
-                font-size: 0.85rem;
-                font-weight: 500;
-                color: #374151;
-            }
-
-            .form-control {
-                padding: 8px 12px;
-                border: 1px solid #d1d5db;
-                border-radius: 6px;
-                font-size: 0.9rem;
-                transition: border-color 0.2s;
-            }
-
-            .form-control:focus {
-                outline: none;
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-            }
-
-            .btn {
-                padding: 8px 16px;
-                border: none;
-                border-radius: 6px;
-                font-size: 0.9rem;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.2s;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            }
-
-            .btn-secondary {
-                background: #6b7280;
-                color: white;
-            }
-
-            .btn-secondary:hover {
-                background: #4b5563;
-            }
-
-            .btn-success {
-                background: #10b981;
-                color: white;
-            }
-
-            .btn-success:hover {
-                background: #059669;
-            }
-
-            .btn-outline-primary {
-                background: white;
-                color: #3b82f6;
-                border: 1px solid #3b82f6;
-            }
-
-            .btn-outline-primary:hover,
-            .btn-outline-primary.active {
-                background: #3b82f6;
-                color: white;
-            }
-
-            .btn-group {
-                display: flex;
-                border-radius: 6px;
-                overflow: hidden;
-            }
-
-            .btn-group .btn {
-                border-radius: 0;
-                border-right: 1px solid #d1d5db;
-            }
-
-            .btn-group .btn:last-child {
-                border-right: none;
-            }
-
-            /* Summary Stats */
-            .blast-results-summary {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
-                padding: 20px 24px;
-            }
-
-            .summary-stats {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 16px;
-                margin-bottom: 16px;
-            }
-
-            .stat-card {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                padding: 16px;
-                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-                border-radius: 8px;
-                border: 1px solid #e2e8f0;
-            }
-
-            .stat-icon {
-                width: 48px;
-                height: 48px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-                color: white;
-                font-size: 1.2rem;
-            }
-
-            .stat-content {
-                flex: 1;
-            }
-
-            .stat-value {
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: #111827;
-                line-height: 1;
-            }
-
-            .stat-label {
-                font-size: 0.85rem;
-                color: #6b7280;
-                margin-top: 4px;
-            }
-
-            .hits-counter {
-                text-align: right;
-                padding: 12px 24px;
-                background: transparent;
-                font-weight: 500;
-                color: #6b7280;
-                font-size: 0.9rem;
-                border-top: 1px solid #e2e8f0;
-                margin-top: 10px;
-            }
-
-            /* Hits Container */
-            .blast-hits-container {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
-                overflow: hidden;
-            }
-
-            .hits-list {
-                max-height: 800px;
-                overflow-y: auto;
-            }
-
-            /* Hit Styles */
-            .blast-hit {
-                border-bottom: 1px solid #e2e8f0;
-                transition: all 0.2s;
-            }
-
-            .blast-hit:last-child {
-                border-bottom: none;
-            }
-
-            .blast-hit:hover {
-                background: #f8fafc;
-            }
-
-            /* Compact Hit Styles */
-            .blast-hit.compact .hit-header {
-                padding: 16px 24px;
-                cursor: pointer;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .hit-main-info {
-                flex: 1;
-                min-width: 0;
-            }
-
-            .hit-title {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                margin-bottom: 4px;
-            }
-
-            .hit-accession {
-                font-weight: 600;
-                color: #3b82f6;
-                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            }
-
-            .hit-description {
-                color: #374151;
-                font-size: 0.95rem;
-            }
-
-            .hit-organism {
-                font-size: 0.85rem;
-                color: #6b7280;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            }
-
-            .hit-scores {
-                display: flex;
-                gap: 20px;
-                margin-left: 20px;
-            }
-
-            .score-item {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 2px;
-            }
-
-            .score-label {
-                font-size: 0.75rem;
-                color: #6b7280;
-                font-weight: 500;
-            }
-
-            .score-value {
-                font-size: 0.9rem;
-                font-weight: 600;
-                color: #111827;
-            }
-
-            .hit-expand {
-                margin-left: 20px;
-                color: #6b7280;
-                transition: transform 0.2s;
-            }
-
-            .blast-hit.expanded .hit-expand {
-                transform: rotate(180deg);
-            }
-
-            .hit-details {
-                max-height: 0;
-                overflow: hidden;
-                transition: max-height 0.3s ease-out;
-            }
-
-            .blast-hit.expanded .hit-details {
-                max-height: 1000px;
-            }
-
-            /* Detailed Hit Styles */
-            .blast-hit.detailed {
-                margin-bottom: 16px;
-            }
-
-            .hit-card {
-                margin: 16px 24px;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                overflow: hidden;
-            }
-
-            .hit-card-header {
-                padding: 20px;
-                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                gap: 20px;
-            }
-
-            .hit-title-section {
-                flex: 1;
-            }
-
-            .hit-title {
-                margin: 0 0 8px 0;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-
-            .external-link {
-                color: #6b7280;
-                text-decoration: none;
-                transition: color 0.2s;
-            }
-
-            .external-link:hover {
-                color: #3b82f6;
-            }
-
-            .hit-description {
-                margin: 0 0 12px 0;
-                color: #374151;
-                line-height: 1.4;
-            }
-
-            .hit-meta {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 16px;
-            }
-
-            .meta-item {
-                font-size: 0.85rem;
-                color: #6b7280;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            }
-
-            .hit-scores-detailed {
-                flex-shrink: 0;
-            }
-
-            .score-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 12px;
-            }
-
-            .score-card {
-                padding: 12px;
-                border-radius: 6px;
-                text-align: center;
-                border: 1px solid #e2e8f0;
-                background: white;
-            }
-
-            .score-card.primary {
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-                color: white;
-                border-color: #3b82f6;
-            }
-
-            .score-card .score-value {
-                font-size: 1.1rem;
-                font-weight: 700;
-                line-height: 1;
-            }
-
-            .score-card .score-label {
-                font-size: 0.75rem;
-                margin-top: 4px;
-                opacity: 0.8;
-            }
-
-            .hit-card-body {
-                padding: 20px;
-            }
-
-            /* Score Color Classes */
-            .excellent { color: #059669; }
-            .very-good { color: #0891b2; }
-            .good { color: #0d9488; }
-            .fair { color: #d97706; }
-            .poor { color: #dc2626; }
-
-            .score-card.excellent { border-color: #059669; background: #ecfdf5; }
-            .score-card.very-good { border-color: #0891b2; background: #ecfeff; }
-            .score-card.good { border-color: #0d9488; background: #f0fdfa; }
-            .score-card.fair { border-color: #d97706; background: #fffbeb; }
-            .score-card.poor { border-color: #dc2626; background: #fef2f2; }
-
-            /* Hit Details Content */
-            .hit-details-content {
-                padding: 20px;
-                border-top: 1px solid #e2e8f0;
-            }
-
-            .alignment-info h6,
-            .alignment-display h6 {
-                margin: 0 0 12px 0;
-                color: #374151;
-                font-size: 1rem;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-
-            .alignment-stats {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 12px;
-                margin-bottom: 20px;
-            }
-
-            .alignment-stats .stat {
-                display: flex;
-                justify-content: space-between;
-                padding: 8px 12px;
-                background: #f8fafc;
-                border-radius: 4px;
-                border: 1px solid #e2e8f0;
-            }
-
-            .alignment-stats .stat-label {
-                font-weight: 500;
-                color: #6b7280;
-            }
-
-            .alignment-stats .stat-value {
-                font-weight: 600;
-                color: #111827;
-                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            }
-
-            .alignment-viewer {
-                background: #1f2937;
-                border-radius: 8px;
-                overflow: hidden;
-            }
-
-            .alignment-controls {
-                padding: 12px 16px;
-                background: #374151;
-                border-bottom: 1px solid #4b5563;
-            }
-
-            .alignment-text {
-                padding: 16px;
-                margin: 0;
-                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-                font-size: 0.85rem;
-                line-height: 1.4;
-                color: #f9fafb;
-                background: #1f2937;
-                overflow-x: auto;
-                white-space: pre;
-            }
-
-            .alignment-viewer.wrapped .alignment-text {
-                white-space: pre-wrap;
-                word-break: break-all;
-            }
-
-            /* Multiple HSPs */
-            .multiple-hsps {
-                margin-top: 20px;
-                padding-top: 20px;
-                border-top: 1px solid #e2e8f0;
-            }
-
-            .hsps-list {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .hsp-item {
-                padding: 12px;
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 6px;
-            }
-
-            .hsp-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 4px;
-            }
-
-            .hsp-number {
-                font-weight: 600;
-                color: #374151;
-            }
-
-            .hsp-score,
-            .hsp-evalue {
-                font-size: 0.85rem;
-                color: #6b7280;
-            }
-
-            .hsp-ranges {
-                font-size: 0.85rem;
-                color: #6b7280;
-                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            }
-
-            /* No Hits Message */
-            .no-hits-message {
-                padding: 60px 20px;
-                text-align: center;
-                color: #6b7280;
-            }
-
-            .no-hits-content i {
-                font-size: 3rem;
-                margin-bottom: 16px;
-                opacity: 0.5;
-            }
-
-            .no-hits-content h4 {
-                margin: 0 0 8px 0;
-                color: #374151;
-            }
-
-            .no-hits-content p {
-                margin: 0;
-                font-size: 0.9rem;
-            }
-
-            /* Footer */
-            .blast-results-footer {
-                background: transparent;
-                border-radius: 0;
-                box-shadow: none;
-                padding: 12px 24px;
-                text-align: right;
-                border-top: 1px solid #e2e8f0;
-                margin-top: 10px;
-            }
-
-            .footer-info {
-                color: #9ca3af;
-                font-size: 0.8rem;
-                line-height: 1.4;
-            }
-
-            .footer-info small {
-                display: block;
-            }
-
-            /* Responsive Design */
-            @media (max-width: 1024px) {
-                .controls-section {
-                    grid-template-columns: 1fr;
-                    gap: 16px;
-                }
-                
-                .query-summary {
-                    grid-template-columns: 1fr;
-                }
-                
-                .hit-scores {
-                    flex-wrap: wrap;
-                    gap: 12px;
-                }
-                
-                .score-grid {
-                    grid-template-columns: 1fr;
-                }
-            }
-
-            @media (max-width: 768px) {
-                .blast-results-modern {
-                    padding: 12px;
-                }
-                
-                .header-title {
-                    flex-direction: column;
-                    gap: 12px;
-                    align-items: flex-start;
-                }
-                
-                .filter-controls,
-                .sort-controls,
-                .view-controls {
-                    flex-direction: column;
-                    gap: 8px;
-                }
-                
-                .hit-card-header {
-                    flex-direction: column;
-                    gap: 16px;
-                }
-                
-                .alignment-stats {
-                    grid-template-columns: 1fr;
-                }
-            }
-        `;
-    document.head.appendChild(style);
-  }
-
-  initializeModal() {
-    // Initialize modal-specific functionality if needed
-    // This can be expanded later for modal-specific features
-    this.injectStyles(); // Inject styles when modal is initialized
-  }
-
   showBlastModal() {
     const modal = document.getElementById('blastSearchModal');
     if (modal) {
       modal.classList.add('show');
       window.modalDragManager?.raiseFloatingWindow(modal);
       this.updateCurrentRegionDisplay();
-      // Populate loaded genome list when modal is opened
-      this.updateLoadedGenomeList();
+      this.updateSearchAvailability();
+      modal.querySelector('.blast-workspace-tabs .active')?.focus();
     }
   }
 
@@ -3558,6 +2429,7 @@ class BlastManager {
     const modal = document.getElementById('blastSearchModal');
     if (modal) {
       modal.classList.remove('show');
+      document.getElementById('blastBtn')?.focus();
     }
   }
 
@@ -3566,7 +2438,7 @@ class BlastManager {
     if (modal) {
       modal.classList.add('show');
       window.modalDragManager?.raiseFloatingWindow(modal);
-      // Resizable functionality is now initialized centrally upon app load
+      modal.querySelector('.modal-close')?.focus();
     }
   }
 
@@ -3574,117 +2446,121 @@ class BlastManager {
     const modal = document.getElementById('blastResultsModal');
     if (modal) {
       modal.classList.remove('show');
+      const search = document.getElementById('blastSearchModal');
+      const target = search?.classList.contains('show')
+        ? search.querySelector('.blast-workspace-tabs .active')
+        : document.getElementById('blastBtn');
+      target?.focus();
     }
+  }
+
+  get searchProgram() {
+    return document.querySelector('#blastSearchModal [data-blast-type].active')?.dataset.blastType || 'blastn';
+  }
+
+  get searchService() {
+    return document.querySelector('#blastSearchModal [data-service].active')?.dataset.service || 'local';
   }
 
   selectBlastType(blastType) {
-    console.log('BlastManager: Selecting BLAST type:', blastType);
-
-    // CRITICAL FIX: Remove active class from ALL buttons first
-    const allButtons = document.querySelectorAll('.blast-type-tabs .tab-button');
-    console.log(`BlastManager: Found ${allButtons.length} BLAST type buttons`);
-
-    allButtons.forEach(btn => {
-      btn.classList.remove('active');
-      console.log(`BlastManager: Removed active from button:`, btn.dataset.blastType);
-    });
-
-    // Add active class ONLY to the selected button
-    const targetBtn = document.querySelector(`.blast-type-tabs .tab-button[data-blast-type="${blastType}"]`);
-    if (targetBtn) {
-      targetBtn.classList.add('active');
-      console.log('BlastManager: Added active class to', blastType, 'button');
-      console.log('BlastManager: Button classList:', targetBtn.classList.toString());
-    } else {
-      console.warn('BlastManager: Could not find button for BLAST type:', blastType);
-    }
-
-    // Update database options based on BLAST type
-    this.updateDatabaseOptions(blastType);
-  }
-
-  selectInputSource(source) {
-    // Update active tab
-    document.querySelectorAll('.input-source-tabs .source-tab').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    document.querySelector(`[data-source="${source}"]`).classList.add('active');
-
-    // Update active panel
-    document.querySelectorAll('.input-source-panel').forEach(panel => {
-      panel.classList.remove('active');
-    });
-    document.querySelector(`.input-source-panel[data-source="${source}"]`).classList.add('active');
-
-    if (source === 'current') {
-      this.updateCurrentRegionDisplay();
-    }
+    this.selectSearchOption('[data-blast-type]', 'blastType', blastType);
+    this.updateSearchControls();
+    this.validateSequence();
+    this.updateDatabaseOptions();
   }
 
   selectService(service) {
-    // Update active tab
-    document.querySelectorAll('.service-tabs .service-tab').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    document.querySelector(`[data-service="${service}"]`).classList.add('active');
-
-    // Update database options when service changes
+    this.selectSearchOption('[data-service]', 'service', service);
+    this.updateSearchControls();
     this.updateDatabaseOptions();
+  }
 
-    // Ensure run button is enabled when service changes
-    this.updateRunButton(false);
+  selectSearchOption(selector, key, value) {
+    const buttons = document.querySelectorAll(`#blastSearchModal ${selector}`);
+    if (![...buttons].some(button => button.dataset[key] === value)) return;
+    for (const button of buttons) {
+      const active = button.dataset[key] === value;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+  }
+
+  updateSearchControls() {
+    if (!document.getElementById('blastSearchModal')) return;
+    const program = this.searchProgram;
+    const local = this.searchService === 'local';
+    document.getElementById('blastProgramHint').textContent = {
+      blastn: 'Nucleotide query × nucleotide database',
+      blastp: 'Protein query × protein database',
+      blastx: 'Translated nucleotide query × protein database',
+      tblastn: 'Protein query × translated nucleotide database',
+    }[program];
+    document.getElementById('blastServiceHint').textContent = local
+      ? 'Search a BLAST+ database on this computer.'
+      : 'Submits the query sequence to NCBI. Results may take a few minutes.';
+    document.getElementById('blastWordSizeField').hidden = program !== 'blastn';
+    const scoring = program === 'blastp' || (!local && program !== 'blastn');
+    for (const id of ['blastMatrixField', 'blastGapOpenField', 'blastGapExtendField']) {
+      document.getElementById(id).hidden = !scoring;
+    }
+    document.getElementById('blastLowComplexityLabel').textContent = local
+      ? 'Use soft masking'
+      : 'Filter low-complexity regions';
+  }
+
+  getCurrentQueryRegion() {
+    const { currentChromosome: chromosome, currentPosition } = this.app;
+    if (!chromosome || !currentPosition) return null;
+    // The viewport uses zero-based, half-open bounds. The sequence provider uses one-based, inclusive coordinates.
+    const start = Math.floor(currentPosition.start) + 1;
+    const end = Math.floor(currentPosition.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 1 || end < start) return null;
+    return { chromosome, start, end };
   }
 
   updateCurrentRegionDisplay() {
-    if (!this.app?.genomeBrowser?.currentState) return;
-
-    const state = this.app.genomeBrowser.currentState;
-
-    document.getElementById('currentChromDisplay').textContent = state.currentChromosome || '-';
-    document.getElementById('currentStartDisplay').textContent = state.currentPosition?.start
-      ? state.currentPosition.start.toLocaleString()
-      : '-';
-    document.getElementById('currentEndDisplay').textContent = state.currentPosition?.end
-      ? state.currentPosition.end.toLocaleString()
-      : '-';
-
-    const length =
-      state.currentPosition?.start && state.currentPosition?.end
-        ? state.currentPosition.end - state.currentPosition.start + 1
-        : 0;
-    document.getElementById('currentLengthDisplay').textContent = length ? length.toLocaleString() : '-';
+    const button = document.getElementById('loadCurrentRegionBtn');
+    if (!button) return;
+    const region = this.getCurrentQueryRegion();
+    button.title = region
+      ? `Use ${region.chromosome}:${region.start.toLocaleString()}–${region.end.toLocaleString()}`
+      : 'Load a genome to use the visible region';
   }
 
   async loadCurrentRegion() {
-    try {
-      if (!this.app?.genomeBrowser?.currentState) {
-        throw new Error('No genome data loaded');
-      }
-
-      const state = this.app.genomeBrowser.currentState;
-      if (!state.currentChromosome || !state.currentPosition) {
-        throw new Error('No current region selected');
-      }
-
-      // Get sequence from the current region
-      const sequenceData = await this.getSequenceFromRegion(
-        state.currentChromosome,
-        state.currentPosition.start,
-        state.currentPosition.end
-      );
-
-      // Set the sequence in the textarea
-      document.getElementById('blastQuerySequence').value = sequenceData;
-
-      // Switch to manual input tab to show the loaded sequence
-      this.selectInputSource('manual');
-
-      // Validate the sequence
-      this.validateSequence();
-    } catch (error) {
-      console.error('Error loading current region:', error);
-      this.showNotification('Error loading current region: ' + error.message, 'error');
+    const region = this.getCurrentQueryRegion();
+    if (!region) {
+      this.showNotification('Load a genome before using the visible region.', 'warning');
+      return;
     }
+
+    const request = ++this.queryRevision;
+    const { chromosome, start, end } = region;
+    try {
+      const sequence = await this.getSequenceFromRegion(chromosome, start, end);
+      if (request === this.queryRevision) {
+        this.setQuery(sequence, `Visible region · ${chromosome}:${start.toLocaleString()}–${end.toLocaleString()}`);
+      }
+    } catch (error) {
+      if (request === this.queryRevision) {
+        this.showNotification(`Could not load the visible region: ${error.message}`, 'error');
+      }
+    }
+  }
+
+  setQuery(sequence, origin = '') {
+    const query = document.getElementById('blastQuerySequence');
+    query.value = sequence;
+    this.setQueryOrigin(origin);
+    query.focus();
+  }
+
+  setQueryOrigin(origin = '') {
+    this.queryRevision++;
+    const label = document.getElementById('blastQueryOrigin');
+    label.textContent = origin;
+    label.hidden = !origin;
+    this.validateSequence();
   }
 
   async getSequenceFromRegion(chromosome, start, end) {
@@ -3700,33 +2576,48 @@ class BlastManager {
 
   validateSequence() {
     const textarea = document.getElementById('blastQuerySequence');
-    const lengthSpan = document.getElementById('sequenceLength');
-    const typeSpan = document.getElementById('sequenceType');
+    if (!textarea) return;
+    const { sequence, error } = this.parseSearchQuery(textarea.value);
+    this.queryError = error;
 
-    if (!textarea || !lengthSpan || !typeSpan) return;
+    const proteinQuery = this.searchProgram === 'blastp' || this.searchProgram === 'tblastn';
+    const detectedType = sequence ? this.detectSequenceType(sequence) : 'No sequence';
+    const unit = error ? 'residues' : proteinQuery ? 'aa' : 'nt';
+    document.getElementById('blastQueryLength').textContent = `${sequence.length.toLocaleString()} ${unit}`;
+    document.getElementById('blastQueryType').textContent = detectedType;
+    document.getElementById('clearBlastQueryBtn').hidden = !textarea.value;
+    const feedback = document.getElementById('blastQueryFeedback');
+    feedback.textContent = textarea.value.trim() ? error : '';
+    feedback.hidden = !feedback.textContent;
+    textarea.setAttribute('aria-invalid', String(!feedback.hidden));
+    this.updateSearchAvailability();
+  }
 
-    const sequence = this.cleanSequence(textarea.value);
-
-    if (!sequence) {
-      lengthSpan.textContent = 'Length: 0 bp';
-      typeSpan.textContent = 'Type: Not detected';
-      return;
+  parseSearchQuery(rawSequence, program = this.searchProgram) {
+    const input = rawSequence.trim();
+    const headers = input.match(/^[^\S\r\n]*>[^\r\n]*/gm) || [];
+    if (headers.length > 1 || (headers.length && !input.startsWith('>'))) {
+      return { sequence: '', error: 'Enter exactly one FASTA record or one raw sequence.' };
     }
 
-    lengthSpan.textContent = `Length: ${sequence.length.toLocaleString()} bp`;
-
-    // Detect sequence type
-    const sequenceType = this.detectSequenceType(sequence);
-    typeSpan.textContent = `Type: ${sequenceType}`;
-
-    // Update visual feedback
+    const residues = headers.length ? input.replace(/^>[^\r\n]*/, '') : input;
+    const sequence = residues.replace(/\s/g, '').toUpperCase();
+    if (/[^A-Z*]/.test(sequence)) {
+      return { sequence, error: 'Remove characters other than sequence letters, whitespace and protein stop symbols.' };
+    }
     if (sequence.length < 10) {
-      textarea.style.borderColor = '#ef4444';
-      typeSpan.style.color = '#ef4444';
-    } else {
-      textarea.style.borderColor = '#10b981';
-      typeSpan.style.color = '#10b981';
+      return { sequence, error: 'Enter a query of at least 10 residues.' };
     }
+
+    const proteinQuery = program === 'blastp' || program === 'tblastn';
+    const nucleotide = /^[ACGTURYSWKMBDHVN]+$/.test(sequence);
+    if (proteinQuery && nucleotide) {
+      return { sequence, error: `${program.toUpperCase()} requires a protein query.` };
+    }
+    if (!proteinQuery && !nucleotide) {
+      return { sequence, error: `${program.toUpperCase()} requires a nucleotide query.` };
+    }
+    return { sequence, error: '' };
   }
 
   cleanSequence(rawSequence) {
@@ -3744,12 +2635,11 @@ class BlastManager {
   detectSequenceType(sequence) {
     if (!sequence) return 'Unknown';
 
-    const dnaPattern = /^[ATGCRYSWKMBDHVN]+$/i;
-    const proteinPattern = /[EFILPQZ]/i;
+    const dnaPattern = /^[ACGTURYSWKMBDHVN]+$/i;
+    const proteinPattern = /^[A-Z*]+$/i;
 
-    if (proteinPattern.test(sequence)) {
-      return 'Protein';
-    } else if (dnaPattern.test(sequence)) {
+    if (dnaPattern.test(sequence)) {
+      if (/U/i.test(sequence)) return 'DNA/RNA';
       const atgcCount = (sequence.match(/[ATGC]/gi) || []).length;
       const totalCount = sequence.length;
 
@@ -3758,9 +2648,8 @@ class BlastManager {
       } else {
         return 'DNA/RNA (with ambiguous bases)';
       }
-    } else {
-      return 'Unknown';
     }
+    return proteinPattern.test(sequence) ? 'Protein' : 'Unknown';
   }
 
   async handleFileUpload(file) {
@@ -3772,14 +2661,12 @@ class BlastManager {
       return;
     }
 
+    const request = ++this.queryRevision;
     try {
       const text = await this.readFileAsText(file);
-      document.getElementById('blastQuerySequence').value = text;
-      this.selectInputSource('manual');
-      this.validateSequence();
-      this.showNotification(`File "${file.name}" loaded successfully`, 'success');
+      if (request === this.queryRevision) this.setQuery(text, `Imported · ${file.name}`);
     } catch (error) {
-      this.showNotification(`Error reading file: ${error.message}`, 'error');
+      if (request === this.queryRevision) this.showNotification(`Could not read file: ${error.message}`, 'error');
     }
   }
 
@@ -3793,119 +2680,108 @@ class BlastManager {
   }
 
   async runBlastSearch() {
-    if (this.isSearching) {
-      this.showNotification('A BLAST search is already in progress', 'warning');
+    if (this.isSearching) return;
+
+    this.validateSequence();
+    const issue = this.getSearchBlocker();
+    if (issue) {
+      this.updateSearchAvailability();
       return;
     }
 
+    const searchParams = this.collectSearchParameters();
+    const startedAt = performance.now();
+    const previousResults = this.searchResults;
+    this.isSearching = true;
+    this.showSearchProgress(searchParams);
+    const searchWindow = document.getElementById('blastSearchModal');
+
     try {
-      // Validate inputs
-      const searchParams = this.collectSearchParameters();
-      this.validateSearchParameters(searchParams);
-
-      // Show loading state
-      this.isSearching = true;
-      this.updateRunButton(true);
-      this.hideBlastModal();
-      this.showSearchProgress();
-
-      // Run the search
       const results = await this.executeBlastSearch(searchParams);
-
-      // Display results
-      this.searchResults = results;
-      this.displayResults(results);
-      this.showResultsModal();
-
-      // Refresh Blast track to show new results
-      if (this.app && this.app.genomeBrowser && this.app.genomeBrowser.trackRenderer) {
-        this.app.genomeBrowser.trackRenderer.refreshTrack('blast');
+      if (!results.isError) {
+        results.statistics = { ...results.statistics, elapsedSeconds: (performance.now() - startedAt) / 1000 };
       }
+      this.displayResults(results);
+      this.searchResults = results;
+
+      if (
+        searchWindow.classList.contains('show') &&
+        !searchWindow.classList.contains('collapsed') &&
+        !document.getElementById('blast-search-tab').hidden
+      ) {
+        this.showResultsModal();
+      }
+      if (!results.isError) this.refreshBlastTrack();
+      this.searchOutcome = results.isError
+        ? 'Search failed. Open results for details.'
+        : `${results.hits.length.toLocaleString()} ${results.hits.length === 1 ? 'hit' : 'hits'} found.`;
     } catch (error) {
       console.error('BLAST search error:', error);
-      this.showNotification(`BLAST search failed: ${error.message}`, 'error');
+      this.searchOutcome = `Search failed: ${error.message}`;
+      this.searchResults = previousResults;
+      if (previousResults) {
+        this.displayResults(previousResults);
+      } else {
+        const container = document.getElementById('blastResultsContainer');
+        container.textContent = this.searchOutcome;
+      }
     } finally {
       this.isSearching = false;
-      this.updateRunButton(false);
-      this.hideSearchProgress();
+      this.updateSearchAvailability();
     }
   }
 
   collectSearchParameters() {
-    const sequence = this.cleanSequence(document.getElementById('blastQuerySequence').value);
-
-    // DEBUG: Check all BLAST type buttons and their states
-    console.log('=== Collecting BLAST parameters ===');
-    const allTypeButtons = document.querySelectorAll('.blast-type-tabs .tab-button');
-    console.log(`Total BLAST type buttons found: ${allTypeButtons.length}`);
-    allTypeButtons.forEach(btn => {
-      console.log(
-        `Button ${btn.dataset.blastType}: active=${btn.classList.contains('active')}, classList=${btn.classList.toString()}`
-      );
-    });
-
-    const blastType = document.querySelector('.blast-type-tabs .tab-button.active')?.dataset.blastType;
-    console.log(`Selected blastType from active button: ${blastType}`);
-
-    const database = document.getElementById('blastDatabase').value;
-    const evalue = document.getElementById('blastEvalue').value;
-    const maxTargets = document.getElementById('blastMaxTargets').value;
-    const wordSize = document.getElementById('blastWordSize').value;
-    const matrix = document.getElementById('blastMatrix').value;
-    const gapOpen = document.getElementById('blastGapOpen').value;
-    const gapExtend = document.getElementById('blastGapExtend').value;
-    const lowComplexity = document.getElementById('blastLowComplexity').checked;
-    const service = document.querySelector('.service-tabs .service-tab.active')?.dataset.service;
-
-    const params = {
-      sequence,
-      blastType,
-      database,
-      evalue,
-      maxTargets,
-      wordSize,
-      matrix,
-      gapOpen,
-      gapExtend,
-      lowComplexity,
-      service,
+    const value = id => document.getElementById(id).value;
+    const readAdvanced = id => (document.getElementById(`${id}Field`).hidden ? undefined : value(id));
+    return {
+      sequence: this.parseSearchQuery(value('blastQuerySequence')).sequence,
+      blastType: this.searchProgram,
+      service: this.searchService,
+      database: value('blastDatabase'),
+      evalue: value('blastEvalue'),
+      maxTargets: value('blastMaxTargets'),
+      wordSize: readAdvanced('blastWordSize'),
+      matrix: readAdvanced('blastMatrix'),
+      gapOpen: readAdvanced('blastGapOpen'),
+      gapExtend: readAdvanced('blastGapExtend'),
+      lowComplexity: document.getElementById('blastLowComplexity').checked,
     };
-
-    console.log('Collected parameters:', params);
-    return params;
   }
 
-  validateSearchParameters(params) {
-    if (!params.sequence || params.sequence.length < 10) {
-      throw new Error('Query sequence must be at least 10 characters long');
+  getSearchBlocker() {
+    if (this.searchService === 'local' && this.localBlastStatus !== 'ready') {
+      return document.getElementById('blastDatabaseHint').textContent;
     }
+    if (!document.getElementById('blastDatabase').value) return 'Select a compatible database.';
+    if (this.queryError) return this.queryError;
 
-    if (!params.blastType) {
-      throw new Error('Please select a BLAST type');
-    }
-
-    if (!params.database) {
-      throw new Error('Please select a database');
-    }
-
-    if (!params.service) {
-      throw new Error('Please select a search service');
-    }
-
-    // Validate sequence type matches BLAST type
-    const sequenceType = this.detectSequenceType(params.sequence);
-    if (params.blastType === 'blastp' && sequenceType !== 'Protein') {
-      throw new Error('BLASTP requires a protein sequence');
-    }
+    const gapOpen = document.getElementById('blastGapOpen');
+    const gapExtend = document.getElementById('blastGapExtend');
     if (
-      (params.blastType === 'blastn' || params.blastType === 'blastx' || params.blastType === 'tblastx') &&
-      sequenceType === 'Protein'
+      !document.getElementById('blastGapOpenField').hidden &&
+      (!gapOpen.validity.valid || !gapExtend.validity.valid || Boolean(gapOpen.value) !== Boolean(gapExtend.value))
     ) {
-      throw new Error(`${params.blastType.toUpperCase()} cannot be used with protein sequences`);
+      return 'Enter both gap penalties as whole numbers in range, or leave both blank.';
     }
-    if (params.blastType === 'tblastn' && sequenceType !== 'Protein') {
-      throw new Error('TBLASTN requires a protein query sequence');
-    }
+    return '';
+  }
+
+  updateSearchAvailability() {
+    const button = document.getElementById('runBlastBtn');
+    if (!button) return;
+    const blocker = this.getSearchBlocker();
+    button.disabled = this.isSearching || Boolean(blocker);
+    button.innerHTML = this.isSearching
+      ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Searching…'
+      : '<i class="fas fa-play" aria-hidden="true"></i> Run BLAST';
+    const status = document.getElementById('blastSearchStatus');
+    status.textContent = this.isSearching ? this.searchProgress : blocker || this.searchOutcome || '';
+    status.hidden = !status.textContent;
+    document.getElementById('blastShortcut').hidden = !status.hidden;
+    const viewResults = document.getElementById('showLastBlastResultsBtn');
+    viewResults.hidden = !this.isSearching && !this.searchResults;
+    viewResults.textContent = this.isSearching ? 'View progress' : 'View results';
   }
 
   async executeBlastSearch(params) {
@@ -4232,8 +3108,8 @@ class BlastManager {
       this.appendNCBIFilterParam(formData, params);
     } else if (blastType === 'blastp' || blastType === 'blastx' || blastType === 'tblastn' || blastType === 'tblastx') {
       formData.append('MATRIX', params.matrix || 'BLOSUM62');
-      if (blastType !== 'tblastx') {
-        formData.append('GAPCOSTS', `${params.gapOpen || 11} ${params.gapExtend || 1}`);
+      if (blastType !== 'tblastx' && params.gapOpen !== '' && params.gapExtend !== '') {
+        formData.append('GAPCOSTS', `${params.gapOpen ?? 11} ${params.gapExtend ?? 1}`);
       }
       this.appendNCBIFilterParam(formData, params);
     }
@@ -4657,6 +3533,7 @@ class BlastManager {
   }
 
   async executeLocalBlast(params) {
+    let queryFile;
     try {
       // Validate database exists before attempting search
       const databasePath = this.resolveDatabasePath(params.database);
@@ -4667,7 +3544,7 @@ class BlastManager {
       }
 
       // Create temporary FASTA file for query sequence
-      const queryFile = await this.createTempFastaFile(params.sequence);
+      queryFile = await this.createTempFastaFile(params.sequence);
 
       // Build BLAST command
       const blastCommand = this.buildBlastCommand(params, queryFile);
@@ -4690,9 +3567,6 @@ class BlastManager {
       this.searchResults = results;
 
       this.refreshBlastTrack();
-
-      // Clean up temporary file
-      await this.cleanupTempFile(queryFile);
 
       return results;
     } catch (error) {
@@ -4721,6 +3595,8 @@ class BlastManager {
         rawText: `Error: ${error.message}`,
         blastCommand: 'Command failed',
       };
+    } finally {
+      if (queryFile) await this.cleanupTempFile(queryFile);
     }
   }
 
@@ -4872,16 +3748,18 @@ class BlastManager {
 
     // Add type-specific parameters
     if (blastType === 'blastn') {
-      command += ` -word_size ${params.wordSize || '11'}`;
+      const wordSize = params.wordSize ?? '11';
+      if (wordSize) command += ` -word_size ${wordSize}`;
     } else if (blastType === 'blastp') {
       command += ` -matrix ${params.matrix || 'BLOSUM62'}`;
-      command += ` -gapopen ${params.gapOpen || '11'}`;
-      command += ` -gapextend ${params.gapExtend || '1'}`;
+      if (params.gapOpen !== '' && params.gapExtend !== '') {
+        command += ` -gapopen ${params.gapOpen ?? '11'} -gapextend ${params.gapExtend ?? '1'}`;
+      }
     }
 
     // Add filtering options
-    if (params.lowComplexity) {
-      command += ' -soft_masking true';
+    if (typeof params.lowComplexity === 'boolean') {
+      command += ` -soft_masking ${params.lowComplexity}`;
     }
 
     return command;
@@ -5141,6 +4019,7 @@ class BlastManager {
     const container = document.getElementById('blastResultsContainer');
     if (!container) return;
 
+    document.getElementById('exportBlastBtn').disabled = Boolean(results.isError);
     // Store results for filtering and sorting
     this.currentResults = results;
     this.filteredHits = [...results.hits];
@@ -5160,7 +4039,7 @@ class BlastManager {
                 ${this.renderResultsHeader(results)}
                 ${this.renderResultsControls(results)}
                 ${this.renderResultsSummary(results)}
-                ${this.renderHitsList(results)}
+                ${this.renderHitsList()}
                 ${this.renderResultsFooter(results)}
             </div>
         `;
@@ -5168,132 +4047,45 @@ class BlastManager {
     // Setup event listeners
     this.setupResultsEventListeners();
 
-    // Initialize results
-    this.updateHitsDisplay();
+    this.applySorting();
   }
 
   renderResultsHeader(results) {
-    // Handle error cases
-    if (results.isError) {
-      return `
-                <div class="blast-results-header">
-                    <div class="header-title">
-                        <h3><i class="fas fa-exclamation-triangle"></i> BLAST Search Error</h3>
-                        <div class="header-badges">
-                            <span class="badge badge-source">
-                                <i class="${results.source === 'NCBI' ? 'fas fa-cloud' : 'fas fa-desktop'}"></i> ${results.source || 'Unknown'}
-                            </span>
-                            <span class="badge badge-error">
-                                <i class="fas fa-times-circle"></i> Error
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div class="error-info">
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>BLAST Search Failed:</strong> ${results.errorMessage}
-                        </div>
-                    </div>
-                    
-                    <div class="query-summary">
-                        <div class="query-info">
-                            <h4><i class="fas fa-dna"></i> Query Information</h4>
-                            <div class="query-details">
-                                <div class="query-detail">
-                                    <span class="label">Length:</span>
-                                    <span class="value">${results.queryInfo.length.toLocaleString()} ${results.queryInfo.type === 'Protein' ? 'aa' : 'bp'}</span>
-                                </div>
-                                <div class="query-detail">
-                                    <span class="label">Type:</span>
-                                    <span class="value">${results.queryInfo.type}</span>
-                                </div>
-                                <div class="query-detail">
-                                    <span class="label">Error Time:</span>
-                                    <span class="value">${results.timestamp ? new Date(results.timestamp).toLocaleString() : new Date().toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-    }
-
-    const sourceIcon =
-      results.source === 'NCBI' ? 'fas fa-cloud' : results.source === 'Local' ? 'fas fa-desktop' : 'fas fa-flask';
-
-    const databaseInfo = this.getDatabaseInfo(results.parameters.database);
-    const dbTypeIcon = databaseInfo.type === 'protein' ? 'fas fa-dna' : 'fas fa-code-branch';
+    const parameters = results.parameters || {};
+    const { queryInfo = {}, source, isError, jobId } = results;
+    const program = parameters.blastType;
+    const unit =
+      program === 'blastp' || program === 'tblastn' || (!program && queryInfo.type === 'Protein') ? 'aa' : 'nt';
+    const metadata = [
+      source,
+      program?.toUpperCase(),
+      parameters.database,
+      Number.isFinite(queryInfo.length) ? `${queryInfo.length.toLocaleString()} ${unit}` : '',
+      jobId ? `RID ${jobId}` : '',
+    ].filter(Boolean);
 
     return `
-            <div class="blast-results-header">
-                <div class="header-title">
-                    <h3><i class="fas fa-search"></i> BLAST Search Results</h3>
-                    <div class="header-badges">
-                        <span class="badge badge-source">
-                            <i class="${sourceIcon}"></i> ${results.source || 'Unknown'}
-                        </span>
-                        <span class="badge badge-database">
-                            <i class="${dbTypeIcon}"></i> ${results.parameters.database}
-                        </span>
-                        <span class="badge badge-type">
-                            <i class="fas fa-cog"></i> ${results.parameters.blastType.toUpperCase()}
-                        </span>
-                        <span class="badge badge-result-type ${results.isRealResults !== false ? 'real-results' : 'mock-results'}">
-                            <i class="${results.isRealResults !== false ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'}"></i> 
-                            ${results.isRealResults !== false ? 'Real Results' : 'Simulated'}
-                        </span>
-                    </div>
-                </div>
-                
-                ${
-                  results.isRealResults === false && results.errorMessage
-                    ? `
-                <div class="error-info">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Note:</strong> These are simulated results. Original error: ${results.errorMessage}
-                    </div>
-                </div>
-                `
-                    : ''
-                }
-                
-                <div class="query-summary">
-                    <div class="query-info">
-                        <h4><i class="fas fa-dna"></i> Query Information</h4>
-                        <div class="query-details">
-                            <div class="query-detail">
-                                <span class="label">Length:</span>
-                                <span class="value">${results.queryInfo.length.toLocaleString()} ${results.queryInfo.type === 'Protein' ? 'aa' : 'bp'}</span>
-                            </div>
-                            <div class="query-detail">
-                                <span class="label">Type:</span>
-                                <span class="value">${results.queryInfo.type}</span>
-                            </div>
-                            <div class="query-detail">
-                                <span class="label">Search Time:</span>
-                                <span class="value">${results.timestamp ? new Date(results.timestamp).toLocaleString() : new Date().toLocaleString()}</span>
-                            </div>
-                            ${
-                              results.jobId
-                                ? `<div class="query-detail">
-                                <span class="label">Job ID:</span>
-                                <span class="value">${results.jobId}</span>
-                            </div>`
-                                : ''
-                            }
-                        </div>
-                    </div>
-                    
-                    <div class="query-sequence">
-                        <div class="sequence-preview">
-                            <pre>${results.queryInfo.sequence}</pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+      <div class="blast-results-header">
+        <div class="header-badges">
+          ${metadata.map(value => `<span class="badge">${this.escapeHtml(value)}</span>`).join('')}
+        </div>
+        ${
+          isError
+            ? `<p class="blast-result-message" role="alert">${this.escapeHtml(results.errorMessage || 'BLAST search failed.')}</p>`
+            : ''
+        }
+        ${
+          !isError && results.isRealResults === false
+            ? `<p class="blast-result-message">Simulated results ${this.escapeHtml(results.errorMessage || '')}</p>`
+            : ''
+        }
+        ${
+          queryInfo.sequence
+            ? `<details class="blast-result-query"><summary>${queryInfo.sequence.endsWith('...') ? 'Query preview' : 'Query sequence'}</summary><pre>${this.escapeHtml(queryInfo.sequence)}</pre></details>`
+            : ''
+        }
+      </div>
+    `;
   }
 
   renderResultsControls(results) {
@@ -5329,7 +4121,9 @@ class BlastManager {
                             <select id="organismFilter" class="form-control">
                                 <option value="">All organisms</option>
                                 ${this.getUniqueOrganisms(results.hits)
-                                  .map(org => `<option value="${org}">${org}</option>`)
+                                  .map(
+                                    org => `<option value="${this.escapeHtml(org)}">${this.escapeHtml(org)}</option>`
+                                  )
                                   .join('')}
                             </select>
                         </div>
@@ -5348,7 +4142,7 @@ class BlastManager {
                         </div>
                         
                         <div class="control-group">
-                            <button id="sortOrder" class="btn btn-secondary">
+                            <button id="sortOrder" class="btn btn-secondary" data-direction="desc">
                                 <i class="fas fa-sort-amount-down"></i> Desc
                             </button>
                         </div>
@@ -5368,13 +4162,11 @@ class BlastManager {
                         </div>
                         
                         <div class="control-group">
-                            <button id="exportResults" class="btn btn-success">
-                                <i class="fas fa-download"></i> Export
-                            </button>
+                            <button id="resetBlastFilters" class="btn btn-secondary">Reset filters</button>
                         </div>
                         
                         <div class="control-group">
-                            <button id="viewRawOutput" class="btn btn-info">
+                            <button id="viewRawOutput" class="btn btn-secondary" ${results.rawText || results.rawOutput || results.rawXML ? '' : 'disabled'}>
                                 <i class="fas fa-file-alt"></i> Raw Output
                             </button>
                         </div>
@@ -5385,52 +4177,39 @@ class BlastManager {
   }
 
   renderResultsSummary(results) {
-    const stats = results.statistics;
+    const { totalSequences, totalLetters, elapsedSeconds } = results.statistics || {};
+    const databaseStats = [
+      ['DB sequences', totalSequences],
+      ['DB letters', totalLetters],
+      ['Elapsed', Number.isFinite(elapsedSeconds) ? `${elapsedSeconds.toFixed(1)} s` : ''],
+    ].filter(([, value]) => value && value !== 'Unknown');
 
     return `
-            <div class="blast-results-summary">
-                <div class="summary-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
-                        <div class="stat-content">
-                            <div class="stat-value">${results.hits.length}</div>
-                            <div class="stat-label">Hits Found</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-database"></i></div>
-                        <div class="stat-content">
-                            <div class="stat-value">${stats.totalSequences}</div>
-                            <div class="stat-label">DB Sequences</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-font"></i></div>
-                        <div class="stat-content">
-                            <div class="stat-value">${this.formatLargeNumber(stats.totalLetters)}</div>
-                            <div class="stat-label">DB Letters</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                        <div class="stat-content">
-                            <div class="stat-value">${stats.searchTime}</div>
-                            <div class="stat-label">Search Time</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="hits-counter">
-                    <span id="hitsCounter">Showing ${results.hits.length} of ${results.hits.length} hits</span>
-                </div>
+      <div class="blast-results-summary">
+        ${
+          databaseStats.length
+            ? `<dl class="summary-stats">
+          ${databaseStats
+            .map(
+              ([label, value]) => `
+            <div class="stat-card">
+              <dt class="stat-label">${label}</dt>
+              <dd class="stat-value">${this.escapeHtml(value)}</dd>
             </div>
-        `;
+          `
+            )
+            .join('')}
+        </dl>`
+            : ''
+        }
+        <div class="hits-counter">
+          <span id="hitsCounter" role="status">Showing ${results.hits.length} of ${results.hits.length} hits</span>
+        </div>
+      </div>
+    `;
   }
 
-  renderHitsList(results) {
+  renderHitsList() {
     return `
             <div class="blast-hits-container">
                 <div id="hitsList" class="hits-list">
@@ -5449,18 +4228,14 @@ class BlastManager {
   }
 
   renderResultsFooter(results) {
-    return `
-            <div class="blast-results-footer">
-                <div class="footer-info">
-                    <small>
-                        Search ID: ${results.searchId} | 
-                        Generated: ${new Date().toLocaleString()} |
-                        Database: ${results.parameters.database} |
-                        E-value threshold: ${results.parameters.evalue}
-                    </small>
-                </div>
-            </div>
-        `;
+    const metadata = [
+      results.searchId ? `Search ID ${results.searchId}` : '',
+      results.timestamp ? new Date(results.timestamp).toLocaleString() : '',
+      results.parameters?.evalue ? `E-value threshold ${results.parameters.evalue}` : '',
+    ].filter(Boolean);
+    return metadata.length
+      ? `<div class="blast-results-footer"><small>${this.escapeHtml(metadata.join(' · '))}</small></div>`
+      : '';
   }
 
   updateHitsDisplay() {
@@ -5473,7 +4248,13 @@ class BlastManager {
     if (this.filteredHits.length === 0) {
       hitsList.style.display = 'none';
       noHitsMessage.style.display = 'block';
-      hitsCounter.textContent = 'No hits match the current filters';
+      hitsList.replaceChildren();
+      const noResults = this.currentResults.hits.length === 0;
+      noHitsMessage.querySelector('h4').textContent = noResults ? 'No hits found' : 'No hits match the current filters';
+      noHitsMessage.querySelector('p').textContent = noResults
+        ? 'Try a different database or adjust the search parameters.'
+        : 'Reset or adjust the filters to see more hits.';
+      hitsCounter.textContent = `Showing 0 of ${this.currentResults.hits.length} hits`;
       return;
     }
 
@@ -5498,44 +4279,41 @@ class BlastManager {
 
     return `
             <div class="blast-hit compact" data-hit-index="${index}">
-                <div class="hit-header" onclick="this.parentElement.classList.toggle('expanded')">
-                    <div class="hit-main-info">
-                        <div class="hit-title">
-                            <span class="hit-accession">${hit.accession}</span>
-                            <span class="hit-description">${this.truncateDescription(hit.description, 80)}</span>
-                        </div>
-                        <div class="hit-organism">
-                            <i class="fas fa-microscope"></i> ${hit.organism || 'Unknown organism'}
-                        </div>
-                    </div>
+                <button type="button" class="hit-header" aria-expanded="false">
+                    <span class="hit-main-info">
+                        <span class="hit-title">
+                            <span class="hit-accession">${this.escapeHtml(hit.accession)}</span>
+                            <span class="hit-description">${this.escapeHtml(this.truncateDescription(hit.description, 120))}</span>
+                        </span>
+                        <span class="hit-organism">
+                            <i class="fas fa-microscope"></i> ${this.escapeHtml(hit.organism || 'Unknown organism')}
+                        </span>
+                    </span>
                     
-                    <div class="hit-scores">
-                        <div class="score-item">
+                    <span class="hit-scores">
+                        <span class="score-item">
                             <span class="score-label">Score:</span>
-                            <span class="score-value">${hit.score}</span>
-                        </div>
-                        <div class="score-item ${evalueClass}">
+                            <span class="score-value">${this.escapeHtml(hit.score)}</span>
+                        </span>
+                        <span class="score-item ${evalueClass}">
                             <span class="score-label">E-value:</span>
-                            <span class="score-value">${hit.evalue}</span>
-                        </div>
-                        <div class="score-item ${identityClass}">
+                            <span class="score-value">${this.escapeHtml(hit.evalue)}</span>
+                        </span>
+                        <span class="score-item ${identityClass}">
                             <span class="score-label">Identity:</span>
-                            <span class="score-value">${hit.identity}</span>
-                        </div>
-                        <div class="score-item">
+                            <span class="score-value">${this.escapeHtml(hit.identity)}</span>
+                        </span>
+                        <span class="score-item">
                             <span class="score-label">Coverage:</span>
-                            <span class="score-value">${hit.coverage}</span>
-                        </div>
-                    </div>
+                            <span class="score-value">${this.escapeHtml(hit.coverage)}</span>
+                        </span>
+                    </span>
                     
-                    <div class="hit-expand">
+                    <span class="hit-expand">
                         <i class="fas fa-chevron-down"></i>
-                    </div>
-                </div>
-                
-                <div class="hit-details">
-                    ${this.renderHitDetails(hit)}
-                </div>
+                    </span>
+                </button>
+                <div class="hit-details"></div>
             </div>
         `;
   }
@@ -5544,29 +4322,36 @@ class BlastManager {
     const evalueClass = this.getEvalueClass(hit.evalue);
     const identityClass = this.getIdentityClass(parseFloat(hit.identity));
 
+    const program = this.currentResults.parameters?.blastType;
+    const proteinSubject = program === 'blastp' || program === 'blastx';
+
     return `
             <div class="blast-hit detailed" data-hit-index="${index}">
                 <div class="hit-card">
                     <div class="hit-card-header">
                         <div class="hit-title-section">
                             <h5 class="hit-title">
-                                <span class="hit-accession">${hit.accession}</span>
-                                <a href="https://www.ncbi.nlm.nih.gov/protein/${hit.accession}" target="_blank" class="external-link">
+                                <span class="hit-accession">${this.escapeHtml(hit.accession)}</span>
+                                ${
+                                  this.currentResults.source === 'NCBI' && hit.accession
+                                    ? `<a href="https://www.ncbi.nlm.nih.gov/${proteinSubject ? 'protein' : 'nuccore'}/${encodeURIComponent(hit.accession)}" target="_blank" rel="noopener noreferrer" class="external-link" aria-label="Open accession at NCBI">
                                     <i class="fas fa-external-link-alt"></i>
-                                </a>
+                                </a>`
+                                    : ''
+                                }
                             </h5>
-                            <p class="hit-description">${hit.description}</p>
+                            <p class="hit-description">${this.escapeHtml(hit.description)}</p>
                             <div class="hit-meta">
                                 <span class="meta-item">
-                                    <i class="fas fa-microscope"></i> ${hit.organism || 'Unknown organism'}
+                                    <i class="fas fa-microscope"></i> ${this.escapeHtml(hit.organism || 'Unknown organism')}
                                 </span>
                                 <span class="meta-item">
-                                    <i class="fas fa-ruler"></i> ${hit.length.toLocaleString()} ${this.currentResults.queryInfo.type === 'Protein' ? 'aa' : 'bp'}
+                                    <i class="fas fa-ruler"></i> ${hit.length.toLocaleString()} ${proteinSubject ? 'aa' : 'nt'}
                                 </span>
                                 ${
                                   hit.taxonomyId
                                     ? `<span class="meta-item">
-                                    <i class="fas fa-sitemap"></i> TaxID: ${hit.taxonomyId}
+                                    <i class="fas fa-sitemap"></i> TaxID: ${this.escapeHtml(hit.taxonomyId)}
                                 </span>`
                                     : ''
                                 }
@@ -5576,34 +4361,32 @@ class BlastManager {
                         <div class="hit-scores-detailed">
                             <div class="score-grid">
                                 <div class="score-card primary">
-                                    <div class="score-value">${hit.score}</div>
+                                    <div class="score-value">${this.escapeHtml(hit.score)}</div>
                                     <div class="score-label">Bit Score</div>
                                 </div>
                                 <div class="score-card ${evalueClass}">
-                                    <div class="score-value">${hit.evalue}</div>
+                                    <div class="score-value">${this.escapeHtml(hit.evalue)}</div>
                                     <div class="score-label">E-value</div>
                                 </div>
                                 <div class="score-card ${identityClass}">
-                                    <div class="score-value">${hit.identity}</div>
+                                    <div class="score-value">${this.escapeHtml(hit.identity)}</div>
                                     <div class="score-label">Identity</div>
                                 </div>
                                 <div class="score-card">
-                                    <div class="score-value">${hit.coverage}</div>
+                                    <div class="score-value">${this.escapeHtml(hit.coverage)}</div>
                                     <div class="score-label">Coverage</div>
                                 </div>
                             </div>
                             
                             <div class="hit-actions">
-                                <button class="btn btn-sm btn-outline-primary toggle-details" data-hit-index="${index}">
-                                    <i class="fas fa-chevron-down"></i> More Details
+                                <button class="btn btn-sm btn-secondary toggle-details" type="button" aria-expanded="false">
+                                    Show alignment
                                 </button>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="hit-details-section" style="display: none;">
-                        ${this.renderHitDetails(hit)}
-                    </div>
+                    <div class="hit-details-section" hidden></div>
                 </div>
             </div>
         `;
@@ -5617,25 +4400,25 @@ class BlastManager {
                     <div class="alignment-stats">
                         <div class="stat">
                             <span class="stat-label">Query Range:</span>
-                            <span class="stat-value">${hit.queryRange.from}-${hit.queryRange.to}</span>
+                            <span class="stat-value">${this.escapeHtml(hit.queryRange.from)}-${this.escapeHtml(hit.queryRange.to)}</span>
                         </div>
                         <div class="stat">
                             <span class="stat-label">Subject Range:</span>
-                            <span class="stat-value">${hit.hitRange.from}-${hit.hitRange.to}</span>
+                            <span class="stat-value">${this.escapeHtml(hit.hitRange.from)}-${this.escapeHtml(hit.hitRange.to)}</span>
                         </div>
                         <div class="stat">
                             <span class="stat-label">Alignment Length:</span>
-                            <span class="stat-value">${hit.alignmentLength}</span>
+                            <span class="stat-value">${this.escapeHtml(hit.alignmentLength)}</span>
                         </div>
                         <div class="stat">
                             <span class="stat-label">Identities:</span>
-                            <span class="stat-value">${hit.identityCount}/${hit.alignmentLength} (${hit.identity})</span>
+                            <span class="stat-value">${this.escapeHtml(hit.identityCount)}/${this.escapeHtml(hit.alignmentLength)} (${this.escapeHtml(hit.identity)})</span>
                         </div>
                         ${
                           hit.gaps
                             ? `<div class="stat">
                             <span class="stat-label">Gaps:</span>
-                            <span class="stat-value">${hit.gaps}/${hit.alignmentLength} (${((hit.gaps / hit.alignmentLength) * 100).toFixed(1)}%)</span>
+                            <span class="stat-value">${this.escapeHtml(hit.gaps)}/${this.escapeHtml(hit.alignmentLength)} (${((hit.gaps / hit.alignmentLength) * 100).toFixed(1)}%)</span>
                         </div>`
                             : ''
                         }
@@ -5650,7 +4433,7 @@ class BlastManager {
                                 <i class="fas fa-text-width"></i> Toggle Wrap
                             </button>
                         </div>
-                        <pre class="alignment-text">${this.formatAlignment(hit.alignment, hit.queryRange, hit.hitRange)}</pre>
+                        <pre class="alignment-text">${this.escapeHtml(this.formatAlignment(hit.alignment, hit.queryRange, hit.hitRange))}</pre>
                     </div>
                 </div>
                 
@@ -5731,10 +4514,10 @@ class BlastManager {
                             <div class="hsp-header">
                                 <span class="hsp-number">HSP ${index + 1}</span>
                                 <span class="hsp-score">Score: ${hsp.bitScore.toFixed(1)} bits</span>
-                                <span class="hsp-evalue">E-value: ${hsp.evalue}</span>
+                                <span class="hsp-evalue">E-value: ${this.escapeHtml(hsp.evalue)}</span>
                             </div>
                             <div class="hsp-ranges">
-                                Query: ${hsp.queryFrom}-${hsp.queryTo}, Subject: ${hsp.hitFrom}-${hsp.hitTo}
+                                Query: ${this.escapeHtml(hsp.queryFrom)}-${this.escapeHtml(hsp.queryTo)}, Subject: ${this.escapeHtml(hsp.hitFrom)}-${this.escapeHtml(hsp.hitTo)}
                             </div>
                         </div>
                     `
@@ -5745,50 +4528,31 @@ class BlastManager {
         `;
   }
 
-  showSearchProgress() {
+  showSearchProgress(params) {
     const container = document.getElementById('blastResultsContainer');
-    if (!container) return;
-
+    document.getElementById('exportBlastBtn').disabled = true;
     container.innerHTML = `
-            <div class="blast-loading">
-                <i class="fas fa-spinner fa-spin"></i>
-                <h4>Running BLAST Search...</h4>
-                <p id="progressMessage">Please wait while we search the database</p>
-                <div class="blast-progress">
-                    <div class="blast-progress-bar" style="width: 30%"></div>
-                </div>
-            </div>
-        `;
-
-    this.showResultsModal();
+      <div class="blast-loading" role="status">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        <h4>Running BLAST search</h4>
+        <p id="progressMessage"></p>
+      </div>
+    `;
+    const service = params.service === 'ncbi' ? 'NCBI BLAST' : 'Local BLAST';
+    this.updateSearchProgress(`${service} · ${params.blastType.toUpperCase()} · ${params.database}`);
+    this.updateSearchAvailability();
   }
 
   updateSearchProgress(message) {
+    if (!this.isSearching) return;
+    this.searchProgress = message;
     const progressMessage = document.getElementById('progressMessage');
-    if (progressMessage) {
-      progressMessage.textContent = message;
-    }
-  }
-
-  hideSearchProgress() {
-    // Progress will be replaced by results or error message
-  }
-
-  updateRunButton(isRunning) {
-    const button = document.getElementById('runBlastBtn');
-    if (!button) return;
-
-    if (isRunning) {
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
-    } else {
-      button.disabled = false;
-      button.innerHTML = '<i class="fas fa-play"></i> Run BLAST Search';
-    }
+    if (progressMessage) progressMessage.textContent = message;
+    document.getElementById('blastSearchStatus').textContent = message;
   }
 
   exportResults() {
-    if (!this.searchResults) {
+    if (!this.searchResults || this.searchResults.isError || this.isSearching) {
       this.showNotification('No results to export', 'warning');
       return;
     }
@@ -5816,8 +4580,12 @@ class BlastManager {
       const resultsToSave = {
         version: '1.0',
         timestamp: new Date().toISOString(),
-        query: this.searchResults.query,
-        database: this.searchResults.database,
+        query:
+          this.searchResults.parameters?.sequence || this.searchResults.query || this.searchResults.queryInfo?.sequence,
+        queryInfo: this.searchResults.queryInfo,
+        database: this.searchResults.database || this.searchResults.parameters?.database,
+        source: this.searchResults.source,
+        statistics: this.searchResults.statistics,
         parameters: this.searchResults.parameters,
         hits: this.searchResults.hits || [],
       };
@@ -5850,43 +4618,9 @@ class BlastManager {
    * Update the Blast results display after loading new results
    */
   updateBlastResultsDisplay() {
-    console.log('🔬 BlastManager.updateBlastResultsDisplay() called');
-
-    // Ensure we have results to display
-    if (!this.searchResults) {
-      console.warn('BlastManager: No search results to display');
-      return;
-    }
-
-    // Get the results container
-    const resultsContainer = document.getElementById('blastResultsContainer');
-    if (!resultsContainer) {
-      console.warn('BlastManager: Results container not found');
-      return;
-    }
-
-    // Store current results reference
-    this.currentResults = this.searchResults;
-
-    // Reset filtered hits to all hits initially
-    this.filteredHits = [...this.searchResults.hits];
-
-    // Render the complete results interface
-    resultsContainer.innerHTML = `
-            ${this.renderResultsHeader(this.searchResults)}
-            ${this.renderResultsControls(this.searchResults)}
-            ${this.renderResultsSummary(this.searchResults)}
-            ${this.renderHitsList(this.searchResults)}
-            ${this.renderResultsFooter(this.searchResults)}
-        `;
-
-    // Update hits display with filtered results
-    this.updateHitsDisplay();
-
-    // Set up event listeners for controls
-    this.setupResultsControls();
-
-    // Show the results modal
+    if (!this.searchResults) return;
+    this.displayResults(this.searchResults);
+    this.updateSearchAvailability();
     this.showResultsModal();
   }
 
@@ -5895,182 +4629,90 @@ class BlastManager {
    * @param {Object} blastResults - The Blast results data from JSON file
    */
   loadBlastResults(blastResults) {
-    console.log('🔬 BlastManager.loadBlastResults() called with results:', blastResults);
+    if (!Array.isArray(blastResults?.hits)) throw new Error('BLAST results must contain a hits array');
 
-    // Validate results structure
-    try {
-      if (!blastResults) {
-        throw new Error('Empty Blast results data');
-      }
-
-      // Validate required fields
-      const requiredFields = ['query', 'hits'];
-      for (const field of requiredFields) {
-        if (blastResults[field] === undefined) {
-          throw new Error(`Missing required field: ${field}`);
-        }
-      }
-
-      // Ensure hits is an array
-      if (!Array.isArray(blastResults.hits)) {
-        throw new Error('Hits must be an array');
-      }
-
-      // Set search results
-      this.searchResults = blastResults;
-
-      // Update UI to show loaded results
-      this.updateBlastResultsDisplay();
-
-      // Add results to Blast Track automatically
-      if (this.genomeBrowser && this.genomeBrowser.trackRenderer) {
-        // Ensure Blast Track is visible
-        const blastTrack = document.querySelector('.blast-track');
-        if (!blastTrack) {
-          // If Blast Track doesn't exist, try to create it
-          this.genomeBrowser.trackRenderer.toggleBlastTrack(true);
-        } else {
-          // If Blast Track exists but is hidden, show it
-          blastTrack.style.display = 'block';
-        }
-
-        // Refresh all tracks to display Blast results
-        this.genomeBrowser.trackRenderer.refreshAllTracks();
-      }
-
-      // Show success message
-      const hitCount = blastResults.hits.length;
-      this.genomeBrowser.updateStatus(
-        `Blast results loaded successfully: ${hitCount} ${hitCount === 1 ? 'hit' : 'hits'} found`
-      );
-    } catch (error) {
-      console.error('❌ Error validating or loading Blast results:', error);
-      this.genomeBrowser.updateStatus(`Error loading Blast results: ${error.message}`, 'error');
-      throw error; // Re-throw to allow caller to handle
-    }
+    const sequence =
+      [blastResults.queryInfo?.sequence, blastResults.query, blastResults.parameters?.sequence].find(
+        sequence => typeof sequence === 'string'
+      ) || '';
+    const parameters = { database: blastResults.database, ...blastResults.parameters };
+    this.searchResults = {
+      ...blastResults,
+      parameters,
+      queryInfo: {
+        ...blastResults.queryInfo,
+        sequence,
+        length: blastResults.queryInfo?.length ?? sequence.length,
+        type: blastResults.queryInfo?.type || this.detectSequenceType(sequence),
+      },
+    };
+    this.updateBlastResultsDisplay();
+    this.refreshBlastTrack();
   }
 
   showRawOutput() {
-    if (!this.searchResults) {
-      this.showNotification('No results available', 'warning');
-      return;
-    }
+    const { rawOutput, rawText, rawXML } = this.searchResults || {};
+    const formats = new Map();
+    if (rawText || rawOutput) formats.set('Text', rawText || rawOutput);
+    if (rawXML) formats.set('XML', rawXML);
+    if (!formats.size) return;
 
-    this.searchResults.rawOutput || this.searchResults.rawText || 'No raw output available';
-    const isRealResults = this.searchResults.isRealResults !== false;
+    const opener = document.activeElement;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'blast-raw-dialog';
+    dialog.setAttribute('aria-labelledby', 'blastRawTitle');
+    dialog.innerHTML = `
+      <div class="blast-raw-header">
+        <h3 id="blastRawTitle">Raw BLAST output</h3>
+        <form method="dialog"><button class="btn btn-secondary" autofocus>Close</button></form>
+      </div>
+      <div class="blast-raw-actions">
+        <label for="blastRawFormat">Format</label>
+        <select id="blastRawFormat"></select>
+        <button type="button" class="btn btn-secondary" data-action="copy">Copy</button>
+        <button type="button" class="btn btn-secondary" data-action="download">Download</button>
+        <span role="status"></span>
+      </div>
+      <pre tabindex="0"></pre>
+    `;
 
-    // Create modal for raw output
-    const modal = document.createElement('div');
-    modal.className = 'modal fade show';
-    modal.style.display = 'block';
-    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-    modal.innerHTML = `
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="fas fa-file-alt"></i> 
-                            Raw BLAST Output 
-                            <span class="badge ${isRealResults ? 'badge-success' : 'badge-warning'}">
-                                ${isRealResults ? 'Real Results' : 'Simulated Results'}
-                            </span>
-                        </h5>
-                        <button type="button" class="btn-close" onclick="this.closest('.modal').remove()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="raw-output-controls mb-3">
-                            <div class="btn-group" role="group">
-                                ${
-                                  this.searchResults.rawText
-                                    ? `
-                                <button class="btn btn-outline-primary active" onclick="this.parentElement.parentElement.nextElementSibling.querySelector('.raw-text').style.display='block'; this.parentElement.parentElement.nextElementSibling.querySelector('.raw-xml').style.display='none'; this.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">
-                                    <i class="fas fa-align-left"></i> Text Format
-                                </button>
-                                `
-                                    : ''
-                                }
-                                ${
-                                  this.searchResults.rawXML
-                                    ? `
-                                <button class="btn btn-outline-primary ${!this.searchResults.rawText ? 'active' : ''}" onclick="this.parentElement.parentElement.nextElementSibling.querySelector('.raw-xml').style.display='block'; this.parentElement.parentElement.nextElementSibling.querySelector('.raw-text').style.display='none'; this.parentElement.querySelectorAll('.btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">
-                                    <i class="fas fa-code"></i> XML Format
-                                </button>
-                                `
-                                    : ''
-                                }
-                                <button class="btn btn-outline-success" onclick="navigator.clipboard.writeText(this.parentElement.parentElement.nextElementSibling.querySelector('[style*=block] pre, pre').textContent); alert('Copied to clipboard!');">
-                                    <i class="fas fa-copy"></i> Copy
-                                </button>
-                                <button class="btn btn-outline-info" onclick="
-                                    const content = this.parentElement.parentElement.nextElementSibling.querySelector('[style*=block] pre, pre').textContent;
-                                    const blob = new Blob([content], { type: 'text/plain' });
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'blast_raw_output.txt';
-                                    a.click();
-                                    URL.revokeObjectURL(url);
-                                ">
-                                    <i class="fas fa-download"></i> Download
-                                </button>
-                            </div>
-                        </div>
-                        <div class="raw-output-content">
-                            ${
-                              this.searchResults.rawText
-                                ? `
-                            <div class="raw-text" style="display: ${this.searchResults.rawXML ? 'block' : 'block'};">
-                                <pre class="raw-output-pre">${this.escapeHtml(this.searchResults.rawText)}</pre>
-                            </div>
-                            `
-                                : ''
-                            }
-                            ${
-                              this.searchResults.rawXML
-                                ? `
-                            <div class="raw-xml" style="display: ${this.searchResults.rawText ? 'none' : 'block'};">
-                                <pre class="raw-output-pre">${this.escapeHtml(this.searchResults.rawXML)}</pre>
-                            </div>
-                            `
-                                : ''
-                            }
-                            ${
-                              !this.searchResults.rawText && !this.searchResults.rawXML
-                                ? `
-                            <div class="no-raw-output">
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle"></i>
-                                    <strong>No raw output available.</strong><br>
-                                    ${isRealResults ? 'Raw output was not captured for this search.' : 'This is a simulated result - no actual BLAST output was generated.'}
-                                    ${this.searchResults.blastCommand ? `<br><br><strong>Command used:</strong><br><code>${this.searchResults.blastCommand}</code>` : ''}
-                                </div>
-                            </div>
-                            `
-                                : ''
-                            }
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-    document.body.appendChild(modal);
-
-    // Add escape key listener
-    const escapeHandler = e => {
-      if (e.key === 'Escape') {
-        modal.remove();
-        document.removeEventListener('keydown', escapeHandler);
-      }
+    const format = dialog.querySelector('select');
+    format.replaceChildren(...Array.from(formats.keys(), name => new Option(name, name)));
+    const output = dialog.querySelector('pre');
+    const status = dialog.querySelector('[role="status"]');
+    const renderOutput = () => {
+      output.textContent = formats.get(format.value);
+      status.textContent = '';
     };
-    document.addEventListener('keydown', escapeHandler);
+    format.addEventListener('change', renderOutput);
+    dialog.querySelector('[data-action="copy"]').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(output.textContent);
+        status.textContent = 'Copied';
+      } catch (error) {
+        status.textContent = 'Clipboard unavailable';
+      }
+    });
+    dialog.querySelector('[data-action="download"]').addEventListener('click', () => {
+      const xml = format.value === 'XML';
+      this.downloadFile(
+        xml ? 'blast_raw_output.xml' : 'blast_raw_output.txt',
+        output.textContent,
+        xml ? 'application/xml' : 'text/plain'
+      );
+    });
+    dialog.addEventListener(
+      'close',
+      () => {
+        dialog.remove();
+        opener?.focus();
+      },
+      { once: true }
+    );
+
+    renderOutput();
+    document.body.appendChild(dialog);
+    dialog.showModal();
   }
 
   /**
@@ -6088,10 +4730,10 @@ class BlastManager {
 
     output += 'QUERY INFORMATION:\n';
     output += '-----------------\n';
-    output += `Query: ${results.query}\n`;
-    output += `Database: ${results.database || results.parameters.database || 'Unknown'}\n`;
-    output += `BLAST Type: ${results.parameters.blastType.toUpperCase() || 'Unknown'}\n`;
-    output += `E-value Threshold: ${results.parameters.evalue || '1e-5'}\n`;
+    output += `Query: ${results.parameters?.sequence || results.query || results.queryInfo?.sequence || 'Unavailable'}\n`;
+    output += `Database: ${results.database || results.parameters?.database || 'Unknown'}\n`;
+    output += `BLAST Type: ${results.parameters?.blastType?.toUpperCase() || 'Unknown'}\n`;
+    output += `E-value Threshold: ${results.parameters?.evalue || 'Unknown'}\n`;
     output += `Hits Found: ${results.hits.length}\n\n`;
 
     // Add results statistics
@@ -6112,7 +4754,7 @@ class BlastManager {
       output += `- Accession: ${hit.accession}\n`;
       output += `- Description: ${hit.description}\n`;
       output += `- Organism: ${hit.organism || 'Unknown'}\n`;
-      output += `- Score: ${hit.score} bits\n`;
+      output += `- Score: ${hit.score}\n`;
       output += `- E-value: ${hit.evalue}\n`;
       output += `- Identity: ${hit.identity}\n`;
       output += `- Coverage: ${hit.coverage}\n`;
@@ -6133,36 +4775,16 @@ class BlastManager {
   }
 
   switchModalTab(tabName) {
-    console.log('BlastManager: Switching modal tab to:', tabName);
-
-    // Switch tab buttons - ONLY target modal-tabs, not blast-type-tabs!
-    document.querySelectorAll('.modal-tabs .tab-button').forEach(btn => {
-      btn.classList.remove('active');
-    });
-
-    const targetTab = document.querySelector(`.modal-tabs .tab-button[data-tab="${tabName}"]`);
-    if (targetTab) {
-      targetTab.classList.add('active');
-      console.log('BlastManager: Activated modal tab:', tabName);
+    this.selectSearchOption('.blast-workspace-tabs button', 'tab', tabName);
+    const managing = tabName === 'db-management';
+    document.getElementById('blast-search-tab').hidden = managing;
+    document.getElementById('db-management-tab').hidden = !managing;
+    document.getElementById('blastSearchFooter').hidden = managing;
+    if (managing) {
+      this.populateAvailableDatabasesList();
     } else {
-      console.warn('BlastManager: Could not find modal tab button for:', tabName);
-    }
-
-    // Switch tab content
-    document.querySelectorAll('.blast-modal-body .tab-content').forEach(content => {
-      content.classList.remove('active');
-    });
-
-    const targetContent = document.getElementById(`${tabName}-tab`);
-    if (targetContent) {
-      targetContent.classList.add('active');
-      console.log('BlastManager: Activated tab content:', tabName);
-    }
-
-    // Update loaded genome list when switching to database management tab
-    if (tabName === 'db-management') {
-      this.updateLoadedGenomeList();
-      this.updateExistingLocalDatabases();
+      this.updateCurrentRegionDisplay();
+      this.updateSearchAvailability();
     }
   }
 
@@ -6626,11 +5248,21 @@ class BlastManager {
     if (identityFilter) identityFilter.addEventListener('change', () => this.applyFilters());
     if (organismFilter) organismFilter.addEventListener('change', () => this.applyFilters());
 
+    document.getElementById('resetBlastFilters')?.addEventListener('click', () => {
+      for (const filter of [evalueFilter, identityFilter, organismFilter]) filter.value = '';
+      this.applyFilters();
+    });
+
     // Sort controls
     const sortBy = document.getElementById('sortBy');
     const sortOrder = document.getElementById('sortOrder');
 
-    if (sortBy) sortBy.addEventListener('change', () => this.applySorting());
+    if (sortBy) {
+      sortBy.addEventListener('change', () => {
+        this.setSortOrder(sortBy.value !== 'evalue');
+        this.applySorting();
+      });
+    }
     if (sortOrder) {
       sortOrder.addEventListener('click', () => {
         this.toggleSortOrder();
@@ -6658,12 +5290,6 @@ class BlastManager {
       });
     }
 
-    // Export button
-    const exportButton = document.getElementById('exportResults');
-    if (exportButton) {
-      exportButton.addEventListener('click', () => this.exportResults());
-    }
-
     // Raw output button
     const rawOutputBtn = document.getElementById('viewRawOutput');
     if (rawOutputBtn) {
@@ -6672,38 +5298,20 @@ class BlastManager {
   }
 
   setupHitEventListeners() {
-    // Add click handlers for expandable hits in compact view
-    document.querySelectorAll('.blast-hit.compact .hit-header').forEach(header => {
-      header.addEventListener('click', e => {
-        e.preventDefault();
-        const hit = header.closest('.blast-hit');
-        hit.classList.toggle('expanded');
-
-        const icon = header.querySelector('.hit-expand i');
-        if (hit.classList.contains('expanded')) {
-          icon.classList.remove('fa-chevron-down');
-          icon.classList.add('fa-chevron-up');
-        } else {
-          icon.classList.remove('fa-chevron-up');
-          icon.classList.add('fa-chevron-down');
+    const list = document.getElementById('hitsList');
+    list.querySelectorAll('.hit-header, .toggle-details').forEach(button => {
+      button.addEventListener('click', () => {
+        const hit = button.closest('.blast-hit');
+        const details = hit.querySelector('.hit-details, .hit-details-section');
+        const expanded = button.getAttribute('aria-expanded') !== 'true';
+        button.setAttribute('aria-expanded', String(expanded));
+        hit.classList.toggle('expanded', expanded);
+        details.hidden = !expanded;
+        if (expanded && !details.hasChildNodes()) {
+          details.innerHTML = this.renderHitDetails(this.filteredHits[hit.dataset.hitIndex]);
         }
-      });
-    });
-
-    // Add click handlers for "More Details" buttons in detailed view
-    document.querySelectorAll('.toggle-details').forEach(button => {
-      button.addEventListener('click', e => {
-        e.preventDefault();
-        const hitIndex = button.dataset.hitIndex;
-        const hit = document.querySelector(`[data-hit-index="${hitIndex}"]`);
-        const detailsSection = hit.querySelector('.hit-details-section');
-
-        if (detailsSection.style.display === 'none') {
-          detailsSection.style.display = 'block';
-          button.innerHTML = '<i class="fas fa-chevron-up"></i> Less Details';
-        } else {
-          detailsSection.style.display = 'none';
-          button.innerHTML = '<i class="fas fa-chevron-down"></i> More Details';
+        if (button.classList.contains('toggle-details')) {
+          button.textContent = expanded ? 'Hide alignment' : 'Show alignment';
         }
       });
     });
@@ -6742,62 +5350,30 @@ class BlastManager {
 
   applySorting() {
     const sortBy = document.getElementById('sortBy')?.value || 'bitScore';
-    const sortOrder = document.getElementById('sortOrder');
-    const isDescending = sortOrder?.textContent.includes('Desc');
+    const descending = document.getElementById('sortOrder')?.dataset.direction !== 'asc';
 
     this.filteredHits.sort((a, b) => {
-      let valueA;
-      let valueB;
-
-      switch (sortBy) {
-        case 'bitScore':
-          valueA = parseFloat(a.bitScore) || 0;
-          valueB = parseFloat(b.bitScore) || 0;
-          break;
-        case 'evalue':
-          valueA = parseFloat(a.evalue) || Infinity;
-          valueB = parseFloat(b.evalue) || Infinity;
-          break;
-        case 'identity':
-          valueA = parseFloat(a.identity) || 0;
-          valueB = parseFloat(b.identity) || 0;
-          break;
-        case 'coverage':
-          valueA = parseFloat(a.coverage) || 0;
-          valueB = parseFloat(b.coverage) || 0;
-          break;
-        case 'length':
-          valueA = a.length || 0;
-          valueB = b.length || 0;
-          break;
-        default:
-          valueA = parseFloat(a.bitScore) || 0;
-          valueB = parseFloat(b.bitScore) || 0;
-      }
-
-      if (sortBy === 'evalue') {
-        // For E-value, smaller is better
-        return isDescending ? valueB - valueA : valueA - valueB;
-      } else {
-        // For others, larger is better
-        return isDescending ? valueB - valueA : valueA - valueB;
-      }
+      const valueA = parseFloat(a[sortBy]);
+      const valueB = parseFloat(b[sortBy]);
+      if (!Number.isFinite(valueA)) return Number.isFinite(valueB) ? 1 : 0;
+      if (!Number.isFinite(valueB)) return -1;
+      return descending ? valueB - valueA : valueA - valueB;
     });
 
     this.updateHitsDisplay();
   }
 
-  toggleSortOrder() {
+  setSortOrder(descending) {
     const sortOrder = document.getElementById('sortOrder');
     if (!sortOrder) return;
+    sortOrder.dataset.direction = descending ? 'desc' : 'asc';
+    sortOrder.innerHTML = descending
+      ? '<i class="fas fa-sort-amount-down" aria-hidden="true"></i> Desc'
+      : '<i class="fas fa-sort-amount-up" aria-hidden="true"></i> Asc';
+  }
 
-    const isDescending = sortOrder.textContent.includes('Desc');
-
-    if (isDescending) {
-      sortOrder.innerHTML = '<i class="fas fa-sort-amount-up"></i> Asc';
-    } else {
-      sortOrder.innerHTML = '<i class="fas fa-sort-amount-down"></i> Desc';
-    }
+  toggleSortOrder() {
+    this.setSortOrder(document.getElementById('sortOrder')?.dataset.direction === 'asc');
   }
 
   /**

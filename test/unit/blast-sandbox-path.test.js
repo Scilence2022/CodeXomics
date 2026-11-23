@@ -11,7 +11,6 @@ function createManager(getAppPaths) {
   const manager = Object.create(BlastManager.prototype);
   manager.app = {};
   manager.config = { localDbPath: null };
-  manager.enableLocalBlast = vi.fn();
   manager.checkBlastInstallation = vi.fn(async () => true);
   manager.loadLocalDatabases = vi.fn();
   return manager;
@@ -28,6 +27,7 @@ describe('local BLAST paths in sandboxed renderer', () => {
     await initialization;
     expect(manager.config.localDbPath).toBe('/Users/test/Library/Application Support/CodeXomics/blast/db');
     expect(manager.loadLocalDatabases).toHaveBeenCalledOnce();
+    expect(manager.localBlastStatus).toBe('ready');
     expect(manager.getCurrentDatabasePath()).toBe(manager.config.localDbPath);
   });
 
@@ -49,6 +49,6 @@ describe('local BLAST paths in sandboxed renderer', () => {
     expect(manager.checkBlastInstallation).not.toHaveBeenCalled();
     expect(manager.loadLocalDatabases).not.toHaveBeenCalled();
     expect(manager.config.localDbPath).toBeNull();
-    expect(manager.enableLocalBlast).toHaveBeenCalledOnce();
+    expect(manager.localBlastStatus).toBe('unavailable');
   });
 });
