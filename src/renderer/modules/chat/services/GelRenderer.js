@@ -1,560 +1,414 @@
 /**
- * GelRenderer - Canvas-based agarose gel electrophoresis visualization
- * Renders realistic gel images with wells, DNA bands, ladder lanes,
- * and size annotations on an HTML5 Canvas element.
- *
- * Color schemes: ethidium_bromide (classic orange/red), gel_red (red),
- * sybr_safe (green), methylene_blue (blue), uv_default (violet)
+ * Displays a simulated gel and its fragment data in the floating results window.
  */
 class GelRenderer {
   constructor() {
-    this.canvas = null;
-    this.ctx = null;
-    this.dpr = window.devicePixelRatio || 1;
-    this._currentResult = null;
-    this._currentScheme = 'ethidium_bromide';
-
     this.colorSchemes = {
-      ethidium_bromide: {
-        name: 'Ethidium Bromide',
-        bandColor: 'rgba(220, 60, 30, 0.88)',
-        bandSmearColor: 'rgba(220, 60, 30, 0.25)',
-        ladderColor: 'rgba(255, 120, 80, 0.7)',
-        bandGradientEdge: [220, 60, 30],
-        bandGradientMid: [240, 80, 40],
-        smearRGB: [220, 60, 30],
-      },
-      gel_red: {
-        name: 'Gel Red',
-        bandColor: 'rgba(255, 40, 40, 0.88)',
-        bandSmearColor: 'rgba(255, 40, 40, 0.25)',
-        ladderColor: 'rgba(255, 100, 100, 0.7)',
-        bandGradientEdge: [255, 40, 40],
-        bandGradientMid: [255, 70, 50],
-        smearRGB: [255, 40, 40],
-      },
-      sybr_safe: {
-        name: 'SYBR Safe',
-        bandColor: 'rgba(40, 200, 80, 0.88)',
-        bandSmearColor: 'rgba(40, 200, 80, 0.25)',
-        ladderColor: 'rgba(100, 220, 130, 0.7)',
-        bandGradientEdge: [40, 200, 80],
-        bandGradientMid: [60, 220, 100],
-        smearRGB: [40, 200, 80],
-      },
-      methylene_blue: {
-        name: 'Methylene Blue',
-        bandColor: 'rgba(40, 80, 220, 0.88)',
-        bandSmearColor: 'rgba(40, 80, 220, 0.25)',
-        ladderColor: 'rgba(100, 130, 255, 0.7)',
-        bandGradientEdge: [40, 80, 220],
-        bandGradientMid: [60, 100, 240],
-        smearRGB: [40, 80, 220],
-      },
-      uv_default: {
-        name: 'UV Default',
-        bandColor: 'rgba(80, 40, 180, 0.85)',
-        bandSmearColor: 'rgba(80, 40, 180, 0.3)',
-        ladderColor: 'rgba(180, 140, 255, 0.7)',
-        bandGradientEdge: [80, 40, 180],
-        bandGradientMid: [90, 50, 200],
-        smearRGB: [80, 40, 180],
-      },
+      ethidium_bromide: { name: 'Ethidium Bromide', rgb: '255, 117, 68' },
+      gel_red: { name: 'Gel Red', rgb: '255, 77, 106' },
+      sybr_safe: { name: 'SYBR Safe', rgb: '102, 238, 159' },
+      methylene_blue: { name: 'Methylene Blue', rgb: '113, 160, 255' },
+      uv_default: { name: 'UV Default', rgb: '182, 146, 255' },
     };
-
-    this.layout = {
-      canvasWidth: 600,
-      canvasHeight: 700,
-      gelLeft: 80,
-      gelRight: 520,
-      gelTop: 60,
-      gelBottom: 620,
-      wellWidth: 10,
-      wellDepth: 12,
-      laneSpacing: 4,
-      ladderLaneWidth: 60,
-      gelBgColor: '#0a0a1a',
-      gelBorderColor: '#333355',
-      wellColor: '#050510',
-      labelColor: '#ffffff',
-      sizeLabelColor: '#aaccff',
-      scaleLabelColor: '#aaccff',
-      canvasBgColor: '#12121a',
+    this.statusLabels = {
+      in_gel: 'In gel',
+      diffuse: 'Diffuse',
+      in_well: 'In well',
+      at_front: 'At front',
     };
+    this.layout = { width: 560, height: 432, left: 70, right: 532, well: 56, start: 74, front: 398 };
+    this.pageSize = 40;
+    this.number = new Intl.NumberFormat();
   }
 
-  render(result) {
-    const modal = document.getElementById('gelElectrophoresisModal');
-    if (!modal) {
-      console.warn('GelRenderer: gelElectrophoresisModal not found in DOM');
-      return;
-    }
-
+  render(result, ladderBands = result.ladderBands) {
     const container = document.getElementById('gelResultsContainer');
-    if (!container) {
-      console.warn('GelRenderer: gelResultsContainer not found in DOM');
+    if (!container) return;
+    if (this.container !== container) this._bindControls(container);
+
+    this.result = result;
+    this.ladderBands = ladderBands ?? [];
+    this.selectedSize = null;
+    this.page = 0;
+    this.descending = true;
+    this.sizes = this._groupFragments(result.bands);
+    this.sortedSizes = [...this.sizes.values()].sort((a, b) => b.band.size - a.band.size);
+    this.plottedBands = this._getPlottedBands();
+    this.sampleName = result.laneLabel || 'Digest';
+    this.ladderName = result.ladderName || result.ladderType;
+    this.fields.sample.textContent = this.sampleName;
+    this.fields.agarose.textContent = `${result.gelPercentage}%`;
+    this.fields.total.textContent = this.number.format(result.totalFragments);
+    this.fields.range.textContent = `${result.gelConfig.effectiveRange.map(size => this.number.format(size)).join('–')} bp`;
+    this.fields.filter.value = 'all';
+    this.fields['export-status'].hidden = true;
+    this.scheme.value = Object.hasOwn(this.colorSchemes, result.bandColorScheme)
+      ? result.bandColorScheme
+      : 'ethidium_bromide';
+    this.fields.ladder.disabled = this.ladderBands.length === 0;
+    this.fields.ladder.checked = result.showLadder && !this.fields.ladder.disabled;
+    this.fields.ladder.parentElement.title = this.ladderName;
+
+    this._renderTable();
+    this._updateImage();
+  }
+
+  _bindControls(container) {
+    this.container = container;
+    this.fields = Object.fromEntries(
+      [...container.querySelectorAll('[data-gel]')].map(node => [node.dataset.gel, node])
+    );
+    this.canvas = container.querySelector('.gel-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    const { width, height } = this.layout;
+    const scale = Math.max(2, Math.min(window.devicePixelRatio || 1, 3));
+    this.canvas.width = width * scale;
+    this.canvas.height = height * scale;
+    this.ctx?.setTransform(this.canvas.width / width, 0, 0, this.canvas.height / height, 0, 0);
+    this.canvas.hidden = !this.ctx;
+    this.fields['image-controls'].hidden = !this.ctx;
+
+    this.scheme = container.querySelector('#gelColorSchemeSelect');
+    this.scheme.replaceChildren(
+      ...Object.entries(this.colorSchemes).map(([value, { name }]) => new Option(name, value))
+    );
+    this.scheme.addEventListener('change', () => this._updateImage());
+    this.fields.ladder.addEventListener('change', () => this._updateImage());
+
+    this.fields.sort.addEventListener('click', () => {
+      this.descending = !this.descending;
+      this.page = 0;
+      this._renderTable();
+    });
+    this.fields.filter.addEventListener('change', () => {
+      this._selectSize(null);
+      this.page = 0;
+      this._renderTable();
+    });
+    this.fields.previous.addEventListener('click', () => {
+      this.page -= 1;
+      this._renderTable();
+    });
+    this.fields.next.addEventListener('click', () => {
+      this.page += 1;
+      this._renderTable();
+    });
+    this.fields.rows.addEventListener('click', event => {
+      const button = event.target.closest('button[data-size]');
+      if (!button) return;
+      const size = Number(button.dataset.size);
+      this._selectSize(this.selectedSize === size ? null : size);
+    });
+    this.fields.clear.addEventListener('click', () => {
+      const selectedButton = this.fields.rows.querySelector('button[aria-pressed="true"]');
+      this._selectSize(null);
+      (selectedButton || this.fields.filter).focus();
+    });
+
+    this.canvas.addEventListener('pointermove', event => {
+      this.canvas.style.cursor = this._bandAtPointer(event) ? 'pointer' : '';
+    });
+    this.canvas.addEventListener('click', event => this._selectFromImage(event));
+
+    const pngButton = container.querySelector('#exportGelBtn');
+    pngButton.disabled = !this.ctx;
+    pngButton.addEventListener('click', () => this._exportPNG());
+    this.fields.csv.addEventListener('click', () => this._exportCSV());
+  }
+
+  _bandStatus(band) {
+    if (band.isInWell) return 'in_well';
+    if (band.normalizedPosition >= 1) return 'at_front';
+    return band.isSmear ? 'diffuse' : 'in_gel';
+  }
+
+  _groupFragments(bands) {
+    const sizes = new Map();
+    for (const band of bands) {
+      const existing = sizes.get(band.size);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        sizes.set(band.size, { band, count: 1, status: this._bandStatus(band) });
+      }
+    }
+    return sizes;
+  }
+
+  _filteredSizes() {
+    const filter = this.fields.filter.value;
+    const rows = this.sortedSizes.filter(row => filter === 'all' || row.status === filter);
+    return this.descending ? rows : rows.reverse();
+  }
+
+  _renderTable() {
+    const rows = this._filteredSizes();
+    const start = this.page * this.pageSize;
+    const end = Math.min(start + this.pageSize, rows.length);
+    this.fields.rows.replaceChildren(...rows.slice(start, end).map(row => this._buildRow(row)));
+    this.fields.empty.hidden = rows.length > 0;
+    this.fields.sort.parentElement.setAttribute('aria-sort', this.descending ? 'descending' : 'ascending');
+    this.fields.sort.querySelector('span').textContent = this.descending ? '↓' : '↑';
+    this.fields.count.textContent = rows.length
+      ? `${this.number.format(start + 1)}–${this.number.format(end)} of ${this.number.format(rows.length)} sizes`
+      : '0 sizes';
+    this.fields.previous.disabled = this.page === 0;
+    this.fields.next.disabled = end === rows.length;
+    this.fields['table-scroll'].scrollTop = 0;
+    this._updateRowSelection();
+  }
+
+  _buildRow({ band, count, status }) {
+    const row = document.createElement('tr');
+    const size = document.createElement('button');
+    size.type = 'button';
+    size.className = 'gel-size-button';
+    size.dataset.size = band.size;
+    size.textContent = this.number.format(band.size);
+    size.setAttribute('aria-label', `${size.textContent} bp`);
+    row.insertCell().appendChild(size);
+    row.insertCell().textContent = this.number.format(count);
+    row.insertCell().textContent = `${(band.normalizedPosition * 100).toFixed(1)}%`;
+    const statusCell = row.insertCell();
+    statusCell.dataset.status = status;
+    statusCell.textContent = this.statusLabels[status];
+    return row;
+  }
+
+  _updateRowSelection() {
+    for (const button of this.fields.rows.querySelectorAll('button')) {
+      const selected = Number(button.dataset.size) === this.selectedSize;
+      button.setAttribute('aria-pressed', String(selected));
+      button.closest('tr').classList.toggle('is-selected', selected);
+    }
+  }
+
+  _selectSize(size) {
+    this.selectedSize = size;
+    this._updateRowSelection();
+    this._updateImage();
+  }
+
+  _selectFromImage(event) {
+    const hit = this._bandAtPointer(event);
+    if (!hit || this.selectedSize === hit.band.size) {
+      this._selectSize(null);
       return;
     }
-
-    this._currentResult = result;
-    if (result.bandColorScheme && this.colorSchemes[result.bandColorScheme]) {
-      this._currentScheme = result.bandColorScheme;
-    }
-    container.innerHTML = '';
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'gel-visualization-wrapper';
-
-    const infoPanel = this._createInfoPanel(result);
-    wrapper.appendChild(infoPanel);
-
-    this.canvas = document.createElement('canvas');
-    this.canvas.className = 'gel-canvas';
-    this.canvas.width = this.layout.canvasWidth * this.dpr;
-    this.canvas.height = this.layout.canvasHeight * this.dpr;
-    this.canvas.style.width = this.layout.canvasWidth + 'px';
-    this.canvas.style.height = this.layout.canvasHeight + 'px';
-
-    this.ctx = this.canvas.getContext('2d');
-    this.ctx.scale(this.dpr, this.dpr);
-
-    this._drawGel(result);
-
-    wrapper.appendChild(this.canvas);
-
-    const controlsPanel = this._createControlsPanel(result);
-    wrapper.appendChild(controlsPanel);
-
-    container.appendChild(wrapper);
-
-    this._wireExportButton();
-    modal.classList.add('show');
-    window.modalDragManager?.raiseFloatingWindow(modal);
+    const filter = this.fields.filter;
+    if (filter.value !== 'all' && filter.value !== hit.status) filter.value = 'all';
+    const index = this._filteredSizes().findIndex(row => row.band.size === hit.band.size);
+    this.page = Math.floor(index / this.pageSize);
+    this.selectedSize = hit.band.size;
+    this._renderTable();
+    this._updateImage();
+    const button = this.fields.rows.querySelector('[aria-pressed="true"]');
+    button?.scrollIntoView({ block: 'nearest' });
   }
 
-  _wireExportButton() {
-    const headerExportBtn = document.getElementById('exportGelBtn');
-    if (headerExportBtn) {
-      const newBtn = headerExportBtn.cloneNode(true);
-      headerExportBtn.parentNode.replaceChild(newBtn, headerExportBtn);
-      newBtn.id = 'exportGelBtn';
-      newBtn.addEventListener('click', () => this._exportPNG());
-    }
-  }
+  _bandAtPointer(event) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) * this.layout.width) / rect.width;
+    const y = ((event.clientY - rect.top) * this.layout.height) / rect.height;
+    if (Math.abs(x - this.sampleLane.x) > this.sampleLane.width / 2 + 8) return null;
 
-  _createInfoPanel(result) {
-    const panel = document.createElement('div');
-    panel.className = 'gel-info-panel';
-
-    const schemeOptions = Object.entries(this.colorSchemes)
-      .map(
-        ([key, val]) => `<option value="${key}"${key === this._currentScheme ? ' selected' : ''}>${val.name}</option>`
-      )
-      .join('');
-
-    panel.innerHTML = `
-      <div class="gel-info-header">
-        <span class="gel-info-title">Gel Electrophoresis</span>
-        <span class="gel-info-subtitle">${result.gelPercentage}% agarose | ${result.ladderType} ladder</span>
-      </div>
-      <div class="gel-info-stats">
-        <div class="gel-stat">
-          <span class="gel-stat-label">Lane</span>
-          <span class="gel-stat-value">${result.laneLabel || 'Digest'}</span>
-        </div>
-        <div class="gel-stat">
-          <span class="gel-stat-label">Fragments</span>
-          <span class="gel-stat-value">${result.totalFragments}</span>
-        </div>
-        <div class="gel-stat">
-          <span class="gel-stat-label">Range</span>
-          <span class="gel-stat-value">${result.gelConfig.effectiveRange[0].toLocaleString()}-${result.gelConfig.effectiveRange[1].toLocaleString()} bp</span>
-        </div>
-      </div>
-      <div class="gel-color-scheme-row">
-        <label for="gelColorSchemeSelect" class="gel-color-scheme-label">Stain / Color:</label>
-        <select id="gelColorSchemeSelect" class="gel-color-scheme-select">${schemeOptions}</select>
-      </div>
-    `;
-
-    const select = panel.querySelector('#gelColorSchemeSelect');
-    select.addEventListener('change', e => {
-      this._currentScheme = e.target.value;
-      if (this._currentResult) {
-        this._redraw();
-      }
-    });
-
-    return panel;
-  }
-
-  _redraw() {
-    if (!this.canvas || !this.ctx || !this._currentResult) return;
-
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.ctx.scale(this.dpr, this.dpr);
-    this._drawGel(this._currentResult);
-  }
-
-  _createControlsPanel(result) {
-    const panel = document.createElement('div');
-    panel.className = 'gel-controls-panel';
-
-    const sizeTable = this._createSizeTable(result);
-
-    panel.appendChild(sizeTable);
-    return panel;
-  }
-
-  _createSizeTable(result) {
-    const table = document.createElement('div');
-    table.className = 'gel-size-table';
-
-    const sortedFragments = result.fragmentSizes.map((size, i) => ({ index: i + 1, size }));
-    sortedFragments.sort((a, b) => b.size - a.size);
-
-    const rows = sortedFragments
-      .map(f => `<tr><td>${f.index}</td><td>${f.size.toLocaleString()} bp</td></tr>`)
-      .join('');
-
-    table.innerHTML = `
-      <div class="gel-size-table-title">Fragment Sizes</div>
-      <table>
-        <thead><tr><th>#</th><th>Size</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
-    return table;
-  }
-
-  _getScheme() {
-    return this.colorSchemes[this._currentScheme] || this.colorSchemes.ethidium_bromide;
-  }
-
-  _drawGel(result) {
-    const { ctx, layout } = this;
-    const { gelLeft, gelRight } = layout;
-    const scheme = this._getScheme();
-
-    // Fill canvas with dark background
-    ctx.fillStyle = layout.canvasBgColor || '#12121a';
-    ctx.fillRect(0, 0, layout.canvasWidth, layout.canvasHeight);
-
-    this._drawGelBackground();
-    this._drawGelGradient();
-
-    const hasLadder = result.showLadder && result.ladderBands && result.ladderBands.length > 0;
-    const numLanes = 1 + (hasLadder ? 1 : 0);
-    const gelWidth = gelRight - gelLeft;
-
-    // Distribute lanes evenly with a max width
-    const laneWidth = Math.min(80, (gelWidth * 0.7) / Math.max(1, numLanes));
-    const totalLanesWidth = numLanes * laneWidth;
-    const spacing = (gelWidth - totalLanesWidth) / (numLanes + 1);
-
-    let currentX = gelLeft + spacing;
-
-    if (hasLadder) {
-      this._drawLane(currentX, laneWidth, result.ladderBands, true, result.ladderSizes, scheme);
-      this._drawLaneLabel(currentX, laneWidth, 'Ladder', spacing);
-      currentX += laneWidth + spacing;
-    }
-
-    this._drawLane(currentX, laneWidth, result.bands, false, result.fragmentSizes, scheme);
-    this._drawLaneLabel(currentX, laneWidth, result.laneLabel || 'Digest', spacing);
-
-    this._drawGelBorder();
-    this._drawSizeScale(result);
-  }
-
-  _drawGelBackground() {
-    const { ctx, layout } = this;
-    const { gelLeft, gelRight, gelTop, gelBottom } = layout;
-
-    ctx.fillStyle = layout.gelBgColor;
-    ctx.fillRect(gelLeft, gelTop, gelRight - gelLeft, gelBottom - gelTop);
-  }
-
-  _drawGelGradient() {
-    const { ctx, layout } = this;
-    const { gelLeft, gelRight, gelTop, gelBottom } = layout;
-
-    const gradient = ctx.createLinearGradient(gelLeft, gelTop, gelLeft, gelBottom);
-    gradient.addColorStop(0, 'rgba(10, 10, 50, 0.0)');
-    gradient.addColorStop(0.15, 'rgba(15, 15, 60, 0.15)');
-    gradient.addColorStop(0.5, 'rgba(20, 20, 70, 0.08)');
-    gradient.addColorStop(0.85, 'rgba(10, 10, 40, 0.05)');
-    gradient.addColorStop(1, 'rgba(5, 5, 30, 0.0)');
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(gelLeft, gelTop, gelRight - gelLeft, gelBottom - gelTop);
-  }
-
-  _drawGelBorder() {
-    const { ctx, layout } = this;
-    const { gelLeft, gelRight, gelTop, gelBottom } = layout;
-
-    ctx.strokeStyle = layout.gelBorderColor;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(gelLeft, gelTop, gelRight - gelLeft, gelBottom - gelTop);
-  }
-
-  _drawLane(x, width, bands, isLadder, sizes, scheme) {
-    const { ctx, layout } = this;
-    const { gelTop, gelBottom, wellDepth } = layout;
-
-    ctx.fillStyle = layout.wellColor;
-    ctx.fillRect(x + 1, gelTop, width - 2, wellDepth);
-
-    ctx.strokeStyle = 'rgba(60, 60, 120, 0.4)';
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(x + 1, gelTop, width - 2, wellDepth);
-
-    const gelHeight = gelBottom - gelTop - wellDepth;
-    const bandCenterX = x + width / 2;
-
-    const sortedBands = bands.slice().sort((a, b) => {
-      const posA = a.normalizedPosition !== undefined ? a.normalizedPosition : a.migrationDistance / layout.gelTop;
-      const posB = b.normalizedPosition !== undefined ? b.normalizedPosition : b.migrationDistance / layout.gelTop;
-      return posA - posB;
-    });
-
-    for (const band of sortedBands) {
-      if (band.isInWell || band.size <= 0) continue;
-
-      const normalizedPos =
-        band.normalizedPosition !== undefined
-          ? band.normalizedPosition
-          : band.migrationDistance / layout.wellToBottomDistance;
-
-      const yPos = gelTop + wellDepth + normalizedPos * gelHeight;
-
-      if (yPos < gelTop + wellDepth || yPos > gelBottom - 2) continue;
-
-      const intensity = band.intensity || 1.0;
-      const bandWidth = band.bandWidth || 0.3;
-      const pixelHeight = Math.max(1.5, bandWidth * 8);
-
-      if (isLadder) {
-        this._drawBand(bandCenterX, yPos, width * 0.7, pixelHeight, scheme.ladderColor, intensity, scheme);
-      } else if (band.isSmear) {
-        this._drawSmearBand(bandCenterX, yPos, width * 0.7, pixelHeight * 3, scheme.bandSmearColor, intensity, scheme);
-        this._drawBand(bandCenterX, yPos, width * 0.5, pixelHeight, scheme.bandColor, intensity * 0.6, scheme);
-      } else {
-        this._drawBand(bandCenterX, yPos, width * 0.7, pixelHeight, scheme.bandColor, intensity, scheme);
+    let nearest = null;
+    let distance = (7 * this.layout.height) / rect.height;
+    for (const row of this.plottedBands.values()) {
+      const offset = Math.abs(this._bandY(row.band) - y);
+      if (offset < distance) {
+        nearest = row;
+        distance = offset;
       }
     }
+    return nearest;
+  }
 
-    if (isLadder && sizes) {
-      this._drawLadderSizeLabels(x, width, bands, sizes, gelHeight);
+  _updateImage() {
+    const selected = this.sizes.get(this.selectedSize);
+    this.fields.clear.hidden = !selected;
+    if (selected) {
+      const { band, count, status } = selected;
+      const fragments = count === 1 ? '1 fragment' : `${this.number.format(count)} fragments`;
+      this.fields.detail.textContent = `${this.number.format(band.size)} bp · ${fragments} · ${this.statusLabels[status]}`;
+    } else {
+      this.fields.detail.textContent = this.ctx
+        ? 'Select a band or a size to inspect it.'
+        : 'Gel image is unavailable. Fragment data is available in the table.';
     }
+    if (this.ctx) this._drawGel(selected);
   }
 
-  _drawBand(cx, cy, halfWidth, height, color, intensity, scheme) {
-    const { ctx } = this;
-    const [eR, eG, eB] = scheme.bandGradientEdge;
-    const [mR, mG, mB] = scheme.bandGradientMid;
-
-    ctx.save();
-
-    // Add glowing effect
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = `rgba(${mR}, ${mG}, ${mB}, ${0.8 * intensity})`;
-
-    const gradient = ctx.createLinearGradient(cx - halfWidth, cy, cx + halfWidth, cy);
-    const baseAlpha = 0.3 * intensity;
-    gradient.addColorStop(0, `rgba(${eR}, ${eG}, ${eB}, ${baseAlpha})`);
-    gradient.addColorStop(0.15, `rgba(${mR}, ${mG}, ${mB}, ${0.7 * intensity})`);
-    gradient.addColorStop(0.5, color);
-    gradient.addColorStop(0.85, `rgba(${mR}, ${mG}, ${mB}, ${0.7 * intensity})`);
-    gradient.addColorStop(1, `rgba(${eR}, ${eG}, ${eB}, ${baseAlpha})`);
-
-    ctx.fillStyle = gradient;
-
-    // Draw with rounded corners for realism
-    const x = cx - halfWidth;
-    const y = cy - height / 2;
-    const w = halfWidth * 2;
-    const h = height;
-    const r = Math.min(2, h / 2);
-
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
+  _bandY(band) {
+    const { start, front } = this.layout;
+    return start + band.normalizedPosition * (front - start);
   }
 
-  _drawSmearBand(cx, cy, halfWidth, height, color, intensity, scheme) {
-    const { ctx } = this;
-    const [sR, sG, sB] = scheme.smearRGB;
-
-    const gradient = ctx.createLinearGradient(cx, cy - height / 2, cx, cy + height / 2);
-    gradient.addColorStop(0, `rgba(${sR}, ${sG}, ${sB}, 0.0)`);
-    gradient.addColorStop(0.3, `rgba(${sR}, ${sG}, ${sB}, ${0.15 * intensity})`);
-    gradient.addColorStop(0.5, `rgba(${sR}, ${sG}, ${sB}, ${0.25 * intensity})`);
-    gradient.addColorStop(0.7, `rgba(${sR}, ${sG}, ${sB}, ${0.15 * intensity})`);
-    gradient.addColorStop(1, `rgba(${sR}, ${sG}, ${sB}, 0.0)`);
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(cx - halfWidth, cy - height / 2, halfWidth * 2, height);
-  }
-
-  _drawLadderSizeLabels(laneX, laneWidth, bands, sizes, gelHeight) {
+  _drawGel(selected) {
     const { ctx, layout } = this;
-    const { gelTop, wellDepth } = layout;
+    const { width, height, left, right, well, start, front } = layout;
+    const showLadder = this.fields.ladder.checked;
+    const { rgb } = this.colorSchemes[this.scheme.value];
 
-    ctx.save();
-    ctx.font = 'bold 11px monospace';
-    ctx.fillStyle = layout.sizeLabelColor;
+    ctx.fillStyle = '#0d131e';
+    ctx.fillRect(0, 0, width, height);
+    const gel = ctx.createLinearGradient(left, well, right, front);
+    gel.addColorStop(0, '#171f2f');
+    gel.addColorStop(1, '#101725');
+    ctx.fillStyle = gel;
+    ctx.fillRect(left, well - 8, right - left, front - well + 8);
+    ctx.strokeStyle = '#364155';
+    ctx.strokeRect(left, well - 8, right - left, front - well + 8);
+
+    const laneWidth = showLadder ? 126 : 182;
+    const ladderLane = { x: left + (right - left) * 0.27, width: laneWidth };
+    this.sampleLane = { x: left + (right - left) * (showLadder ? 0.72 : 0.5), width: laneWidth };
+    if (showLadder) this._drawLadder(ladderLane, rgb);
+    this._drawLane(this.sampleLane, this.sampleName);
+    this._drawSample(rgb);
+    if (selected) this._drawSelection(selected);
+
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = '#a8b7cd';
     ctx.textAlign = 'right';
-
-    for (let i = 0; i < bands.length && i < sizes.length; i++) {
-      const band = bands[i];
-      const size = sizes[i];
-      if (!band || !size || size <= 0) continue;
-
-      const normalizedPos =
-        band.normalizedPosition !== undefined ? band.normalizedPosition : band.migrationDistance / layout.gelTop;
-
-      const yPos = gelTop + wellDepth + normalizedPos * gelHeight;
-
-      if (yPos < gelTop + wellDepth + 5 || yPos > layout.gelBottom - 5) continue;
-
-      const label = size >= 1000 ? `${(size / 1000).toFixed(size % 1000 === 0 ? 0 : 1)}kb` : `${size}bp`;
-
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillText(label, laneX - 3, yPos + 4);
-      ctx.fillStyle = layout.sizeLabelColor;
-      ctx.fillText(label, laneX - 4, yPos + 3);
-    }
-
-    ctx.restore();
+    ctx.textBaseline = 'middle';
+    if (!showLadder) ctx.fillText('Well', left - 10, start - 11);
+    ctx.fillText('Front', left - 10, front);
+    ctx.fillText(`${this.result.gelPercentage}% agarose`, right, height - 15);
   }
 
-  _drawLaneLabel(x, width, label, spacing = 20) {
+  _drawLane({ x, width }, label) {
     const { ctx, layout } = this;
+    ctx.fillStyle = '#0a101a';
+    ctx.fillRect(x - width / 2, layout.well, width, 10);
+    ctx.strokeStyle = '#404d63';
+    ctx.strokeRect(x - width / 2, layout.well, width, 10);
 
-    ctx.save();
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = layout.labelColor;
+    ctx.fillStyle = '#e2eaf5';
+    ctx.font = '600 15px system-ui';
+    ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-
-    // Truncate label if it's too long
-    let displayLabel = label;
-    const maxWidth = width + spacing * 0.9;
-
-    if (ctx.measureText(displayLabel).width > maxWidth) {
-      while (displayLabel.length > 3 && ctx.measureText(displayLabel + '...').width > maxWidth) {
-        displayLabel = displayLabel.slice(0, -1);
-      }
-      displayLabel += '...';
-    }
-
-    // Move text higher up to avoid overlapping the well
-    ctx.fillText(displayLabel, x + width / 2, layout.gelTop - 15);
-    ctx.restore();
+    ctx.fillText(label, x, 26, width + 55);
   }
 
-  _drawSizeScale(result) {
+  _drawLadder(lane, rgb) {
     const { ctx, layout } = this;
-    const { gelLeft, gelRight } = layout;
-
-    if (!result.ladderBands || result.ladderBands.length === 0) return;
-
-    ctx.save();
-    ctx.font = 'bold 10px monospace';
-    ctx.fillStyle = layout.scaleLabelColor;
-    ctx.textAlign = 'center';
-
-    const scaleSizes = [10000, 5000, 2000, 1000, 500, 200, 100];
-    const gelConfig = result.gelConfig;
-
-    for (const size of scaleSizes) {
-      if (size < gelConfig.effectiveRange[0] * 0.5 || size > gelConfig.effectiveRange[1] * 2) continue;
-
-      const logMW = Math.log10(size);
-      const { a, b, wellToBottom } = this._getGelParamsFromResult(result);
-      const migration = a - b * logMW;
-      const normalizedPos = Math.max(0, Math.min(1, migration / wellToBottom));
-
-      const yPos =
-        layout.gelTop + layout.wellDepth + normalizedPos * (layout.gelBottom - layout.gelTop - layout.wellDepth);
-
-      if (yPos < layout.gelTop + 15 || yPos > layout.gelBottom - 5) continue;
-
-      ctx.strokeStyle = 'rgba(120, 120, 180, 0.18)';
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(gelLeft, yPos);
-      ctx.lineTo(gelRight, yPos);
-      ctx.stroke();
-
-      const label = size >= 1000 ? `${size / 1000}kb` : `${size}bp`;
-
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-      ctx.fillText(label, gelRight + 26, yPos + 4);
-      ctx.fillStyle = layout.scaleLabelColor;
-      ctx.fillText(label, gelRight + 25, yPos + 3);
+    this._drawLane(lane, this.ladderName);
+    const visible = this.ladderBands
+      .filter(band => !band.isInWell && band.normalizedPosition < 1)
+      .sort((a, b) => a.normalizedPosition - b.normalizedPosition);
+    let previousLabel = layout.start - 16;
+    for (const band of visible) {
+      const y = this._bandY(band);
+      this._drawBand(lane, y, rgb, 0.75, 3);
+      if (y - previousLabel < 17 || y > layout.front - 16) continue;
+      previousLabel = y;
+      ctx.fillStyle = '#a8b7cd';
+      ctx.textAlign = 'right';
+      ctx.font = '12px system-ui';
+      ctx.fillText(this.number.format(band.size), layout.left - 10, y);
+      ctx.fillStyle = '#404d63';
+      ctx.fillRect(layout.left, Math.round(y), 12, 1);
     }
-
-    ctx.restore();
+    ctx.fillStyle = '#a8b7cd';
+    ctx.fillText('bp', layout.left - 10, 26);
   }
 
-  _getGelParamsFromResult(result) {
-    if (result.gelConfig && result.gelConfig.a !== undefined && result.gelConfig.b !== undefined) {
-      return {
-        a: result.gelConfig.a,
-        b: result.gelConfig.b,
-        wellToBottom: result.gelConfig.wellToBottomDistance || 12,
-      };
-    }
-
-    if (result.bands && result.bands.length > 0 && result.bands[0].migrationDistance !== undefined) {
-      const sizes = result.fragmentSizes || [];
-      if (sizes.length >= 2) {
-        const sortedSizes = sizes.slice().sort((a, b) => a - b);
-        const small = sortedSizes[0];
-        const large = sortedSizes[sortedSizes.length - 1];
-        const bands = result.bands.slice().sort((a, b) => b.migrationDistance - a.migrationDistance);
-        const d1 = bands[0].migrationDistance;
-        const d2 = bands[bands.length - 1].migrationDistance;
-        if (d1 !== d2) {
-          const b = (d1 - d2) / (Math.log10(large) - Math.log10(small));
-          const a = d1 + b * Math.log10(small);
-          return { a, b, wellToBottom: Math.max(a, 12) };
-        }
+  _getPlottedBands() {
+    // Collapse bands at indistinguishable display positions to bound drawing work for large digests.
+    const plotted = new Map();
+    for (const row of this.sizes.values()) {
+      const { band, status } = row;
+      if (status === 'in_well' || status === 'at_front') continue;
+      const pixel = Math.round(this._bandY(band));
+      if (!plotted.has(pixel) || plotted.get(pixel).band.intensity < band.intensity) {
+        plotted.set(pixel, row);
       }
     }
-    return { a: 30.54, b: 7.51, wellToBottom: 12 };
+    return plotted;
+  }
+
+  _drawSample(rgb) {
+    for (const { band, count } of this.plottedBands.values()) {
+      const intensity = Math.min(1, band.intensity * (0.72 + Math.log2(count) * 0.18));
+      const height = Math.max(2, band.bandWidth * 10) * (band.isSmear ? 3 : 1);
+      this._drawBand(this.sampleLane, this._bandY(band), rgb, intensity, height);
+    }
+  }
+
+  _drawBand({ x, width }, y, rgb, intensity, height) {
+    const { ctx } = this;
+    const left = x - width * 0.46;
+    const right = x + width * 0.46;
+    const gradient = ctx.createLinearGradient(left, y, right, y);
+    gradient.addColorStop(0, `rgba(${rgb}, 0.05)`);
+    gradient.addColorStop(0.18, `rgba(${rgb}, ${intensity})`);
+    gradient.addColorStop(0.82, `rgba(${rgb}, ${intensity})`);
+    gradient.addColorStop(1, `rgba(${rgb}, 0.05)`);
+    ctx.save();
+    ctx.shadowColor = `rgba(${rgb}, ${intensity})`;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = gradient;
+    ctx.fillRect(left, y - height / 2, right - left, height);
+    ctx.restore();
+  }
+
+  _drawSelection({ band, status }) {
+    const { ctx, layout } = this;
+    const { x, width } = this.sampleLane;
+    const y = status === 'in_well' ? layout.well + 5 : this._bandY(band);
+    ctx.strokeStyle = '#e2eaf5';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - width / 2 - 4, y - 7, width + 8, 14);
+    ctx.lineWidth = 1;
   }
 
   _exportPNG() {
-    if (!this.canvas) {
-      console.warn('GelRenderer: No canvas to export');
-      return;
-    }
-
     try {
-      const dataURL = this.canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = 'gel_electrophoresis.png';
-      link.href = dataURL;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error('GelRenderer: Export PNG failed:', err);
+      this._drawGel();
+      this._download(this.canvas.toDataURL('image/png'), 'gel_electrophoresis.png');
+    } catch (error) {
+      this._showExportError('gel image', error);
+    } finally {
+      this._updateImage();
     }
+  }
+
+  _exportCSV() {
+    try {
+      const rows = this.result.bands.map(band =>
+        [band.index + 1, band.size, (band.normalizedPosition * 100).toFixed(3), this._bandStatus(band)].join(',')
+      );
+      const csv = ['fragment,size_bp,migration_pct,status', ...rows, ''].join('\r\n');
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      try {
+        this._download(url, 'gel_fragments.csv');
+      } finally {
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch (error) {
+      this._showExportError('fragment data', error);
+    }
+  }
+
+  _download(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    try {
+      link.click();
+      this.fields['export-status'].hidden = true;
+    } finally {
+      link.remove();
+    }
+  }
+
+  _showExportError(label, error) {
+    console.error(`GelRenderer: Failed to export ${label}`, error);
+    const status = this.fields['export-status'];
+    status.textContent = `Could not export ${label}.`;
+    status.hidden = false;
   }
 }
 

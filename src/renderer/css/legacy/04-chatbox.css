@@ -1030,19 +1030,19 @@
 }
 
 @media (max-width: 480px) {
-  .modal-content {
+  .modal-content:not(:where(#gelElectrophoresisModal *)) {
     width: 98vw !important;
     max-width: 98vw !important;
     margin: 5px auto !important;
     max-height: calc(100vh - 10px) !important;
   }
 
-  .modal-body {
+  .modal-body:not(:where(#gelElectrophoresisModal *)) {
     max-height: calc(100vh - 120px) !important;
     padding: 10px !important;
   }
 
-  .modal-header,
+  .modal-header:not(:where(#gelElectrophoresisModal *)),
   .modal-footer {
     padding: 10px !important;
   }

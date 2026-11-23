@@ -3351,25 +3351,88 @@ Supported formats:
 
     <!-- Gel Electrophoresis Modal -->
     <div id="gelElectrophoresisModal" class="modal floating-tool-window" role="dialog" aria-labelledby="gelElectrophoresisTitle">
-        <div class="modal-content gel-results-content resizable" style="max-width: none; width: 820px; min-width: 500px;">
+        <div class="modal-content gel-results-content resizable" data-min-width="360" data-min-height="280">
             <div class="modal-header">
-                <h3 id="gelElectrophoresisTitle"><i class="fas fa-grip-lines-vertical"></i> Gel Electrophoresis</h3>
-                <div class="results-controls modal-controls">
-                    <button class="reset-position-btn" title="Reset Position">
-                        <i class="fas fa-crosshairs"></i>
+                <h3 id="gelElectrophoresisTitle"><i class="fas fa-grip-lines-vertical" aria-hidden="true"></i> Gel Electrophoresis</h3>
+                <div class="modal-controls">
+                    <button class="btn btn-ghost btn-sm btn-icon reset-position-btn" type="button" title="Reset position" aria-label="Reset position">
+                        <i class="fas fa-crosshairs" aria-hidden="true"></i>
                     </button>
-                    <button class="modal-collapse" type="button" title="Toggle collapse">
-                        <i class="fas fa-chevron-up"></i>
+                    <button class="btn btn-ghost btn-sm btn-icon modal-collapse" type="button" aria-label="Collapse gel results" aria-expanded="true" aria-controls="gelResultsBody">
+                        <i class="fas fa-chevron-up" aria-hidden="true"></i>
                     </button>
-                    <button id="exportGelBtn" class="btn btn-secondary">
-                        <i class="fas fa-download"></i>
-                        Export PNG
-                    </button>
-                    <button class="modal-close" type="button">&times;</button>
+                    <button class="modal-close" type="button" aria-label="Close gel results">&times;</button>
                 </div>
             </div>
-            <div class="modal-body gel-results-body">
+            <div class="modal-body gel-results-body" id="gelResultsBody">
+                <p id="gelResultsFallback" hidden></p>
                 <div id="gelResultsContainer">
+                    <dl class="gel-summary">
+                        <div><dt>Sample</dt><dd data-gel="sample"></dd></div>
+                        <div><dt>Agarose</dt><dd data-gel="agarose"></dd></div>
+                        <div><dt>Fragments</dt><dd data-gel="total"></dd></div>
+                        <div><dt>Effective range</dt><dd data-gel="range"></dd></div>
+                    </dl>
+                    <div class="gel-results-grid">
+                        <section class="gel-panel" aria-labelledby="gelImageTitle">
+                            <div class="gel-panel-header">
+                                <h4 id="gelImageTitle">Gel image</h4>
+                                <button id="exportGelBtn" class="btn btn-secondary btn-sm" type="button" aria-label="Export gel image as PNG">
+                                    <i class="fas fa-download" aria-hidden="true"></i> PNG
+                                </button>
+                            </div>
+                            <div class="gel-panel-controls" data-gel="image-controls">
+                                <label for="gelColorSchemeSelect">Stain</label>
+                                <select id="gelColorSchemeSelect" class="form-select"></select>
+                                <label class="gel-ladder-toggle"><input type="checkbox" data-gel="ladder"> Ladder</label>
+                            </div>
+                            <div class="gel-image">
+                                <canvas class="gel-canvas" role="img" aria-label="Simulated electrophoresis gel" aria-describedby="gelImageDetail"></canvas>
+                            </div>
+                            <div class="gel-panel-footer">
+                                <p id="gelImageDetail" data-gel="detail" role="status"></p>
+                                <button class="btn btn-ghost btn-sm" type="button" data-gel="clear" hidden>Clear</button>
+                            </div>
+                        </section>
+                        <section class="gel-panel" aria-labelledby="gelFragmentsTitle">
+                            <div class="gel-panel-header">
+                                <h4 id="gelFragmentsTitle">Fragments</h4>
+                                <button class="btn btn-secondary btn-sm" type="button" data-gel="csv" aria-label="Export all fragments as CSV">
+                                    <i class="fas fa-download" aria-hidden="true"></i> CSV
+                                </button>
+                            </div>
+                            <div class="gel-panel-controls">
+                                <label for="gelStatusFilter">Status</label>
+                                <select id="gelStatusFilter" class="form-select" data-gel="filter">
+                                    <option value="all">All</option>
+                                    <option value="in_gel">In gel</option>
+                                    <option value="diffuse">Diffuse</option>
+                                    <option value="in_well">In well</option>
+                                    <option value="at_front">At front</option>
+                                </select>
+                            </div>
+                            <div class="gel-table-scroll" data-gel="table-scroll">
+                                <table class="gel-fragment-table" aria-labelledby="gelFragmentsTitle">
+                                    <thead><tr>
+                                        <th scope="col" aria-sort="descending"><button class="gel-sort" type="button" data-gel="sort">Size (bp) <span aria-hidden="true">↓</span></button></th>
+                                        <th scope="col">Count</th>
+                                        <th scope="col" title="Distance from the well as a percentage of the gel">Migration</th>
+                                        <th scope="col">Status</th>
+                                    </tr></thead>
+                                    <tbody data-gel="rows"></tbody>
+                                </table>
+                                <p class="gel-empty" data-gel="empty" hidden>No fragments match this status.</p>
+                            </div>
+                            <div class="gel-panel-footer gel-pagination">
+                                <p data-gel="count" role="status"></p>
+                                <div class="gel-page-buttons">
+                                    <button class="btn btn-ghost btn-icon btn-sm" type="button" data-gel="previous" aria-label="Previous fragment page"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                                    <button class="btn btn-ghost btn-icon btn-sm" type="button" data-gel="next" aria-label="Next fragment page"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                    <p class="gel-export-status" role="status" data-gel="export-status" hidden></p>
                 </div>
             </div>
 
