@@ -1,85 +1,195 @@
-// @ts-check
+/* global restrictionEnzymeCatalog */
+
+// Manufacturer references for entries outside the REBASE snapshot:
+// https://www.neb.com/en/tools-and-resources/selection-charts/alphabetized-list-of-recognition-specificities
+// https://www.neb.com/tools-and-resources/selection-charts/type-iis-restriction-enzymes
+const RESTRICTION_PRODUCT_VARIANTS = {
+  'AgeI-HF': 'AgeI',
+  'BamHI-HF': 'BamHI',
+  'BbsI-HF': 'BbsI',
+  'BsaI-HFv2': 'BsaI',
+  'BsmBI-v2': 'BsmBI',
+  'EcoRI-HF': 'EcoRI',
+  'EcoRV-HF': 'EcoRV',
+  'HindIII-HF': 'HindIII',
+  'NheI-HF': 'NheI',
+  'NotI-HF': 'NotI',
+  'SalI-HF': 'SalI',
+  'SbfI-HF': 'SbfI',
+};
+
+const RESTRICTION_LEGACY_ALIASES = {
+  'BamHI-HFv2': 'BamHI-HF',
+  'BstEII-v2': 'BstEII',
+  'ClaI-v2': 'ClaI',
+  'EcoRI-HFv2': 'EcoRI-HF',
+  'HpaI-v2': 'HpaI',
+  'MfeI-v2': 'MfeI',
+  'NheI-HFv2': 'NheI-HF',
+  'NotI-HFv2': 'NotI-HF',
+  'PvuII-HFv2': 'PvuII',
+  'SwaI-v2': 'SwaI',
+  'XhoI-v2': 'XhoI',
+  HfI: 'HinfI',
+  NlaII: 'MboI',
+  Tsp509I: 'TasI',
+};
+
+// Absolute offsets from the beginning of the top-strand motif. Missing
+// strand offsets are null so they can never be mistaken for blunt cuts.
+const RESTRICTION_NICKASES = [
+  ['Nb.BbvCI', 'CCTCAGC', null, 5],
+  ['Nb.BsmI', 'GAATGC', null, 5],
+  ['Nb.BsrDI', 'GCAATG', null, 6],
+  ['Nb.BssSI', 'CACGAG', null, 5],
+  ['Nb.BtsI', 'GCAGTG', null, 6],
+  ['Nt.AlwI', 'GGATC', 9, null],
+  ['Nt.BbvCI', 'CCTCAGC', 2, null],
+  ['Nt.BsmAI', 'GTCTC', 6, null],
+  ['Nt.BspQI', 'GCTCTTC', 8, null],
+  ['Nt.BstNBI', 'GAGTC', 9, null],
+  ['Nt.CviPII', 'CCD', 0, null],
+  ['WarmStart Nt.BstNBI', 'GAGTC', 9, null],
+];
+
+// Single-cut entries cross-checked against NEB's Type IIS selection chart.
+const VERIFIED_TYPE_IIS_ENZYMES = new Set([
+  'AcuI',
+  'AlwI',
+  'BbsI',
+  'BbvI',
+  'BccI',
+  'BceAI',
+  'BciVI',
+  'BcoDI',
+  'BfuAI',
+  'BmrI',
+  'BpmI',
+  'BpuEI',
+  'BsaI',
+  'BseRI',
+  'BsgI',
+  'BsmAI',
+  'BsmBI',
+  'BsmFI',
+  'BsmI',
+  'BspCNI',
+  'BspMI',
+  'BspQI',
+  'BsrDI',
+  'BsrI',
+  'BtgZI',
+  'BtsCI',
+  'BtsI',
+  'BtsIMutI',
+  'EarI',
+  'EciI',
+  'Esp3I',
+  'FauI',
+  'FokI',
+  'HgaI',
+  'HphI',
+  'HpyAV',
+  'MboII',
+  'MlyI',
+  'MmeI',
+  'MnlI',
+  'NmeAIII',
+  'PaqCI',
+  'PleI',
+  'SapI',
+  'SfaNI',
+]);
+
 /**
- * RestrictionEnzymeDatabase - Comprehensive restriction enzyme database
- * Contains 80+ commonly used restriction endonucleases with:
- * - Recognition sequences (IUPAC-aware)
- * - Cleavage positions (staggered cut support: 5' overhang, 3' overhang, blunt)
- * - Commercial availability, isoschizomers, and methylation sensitivity
- *
- * Data sourced from REBASE (Roberts et al., Nucleic Acids Research) conventions.
- * Cut positions use the standard dual-coordinate system:
- *   topCut = cut position on top (sense) strand, counted from the 5' end of top strand
- *   bottomCut = cut position on bottom (antisense) strand, also counted from the 5' end of top strand
- *
- * Example: EcoRI (G^AATTC / CTTAA^G)
- *   topCut = 1  (cut after 1st base G on top strand)
- *   bottomCut = 5 (cut after 5th base CTTAA on bottom strand, from top 5' end)
- *   → 5' overhang of length |1-5| = 4 bases (AATT)
- *
- * Overhang determination:
- *   - topCut < bottomCut → 5' overhang
- *   - topCut > bottomCut → 3' overhang
- *   - topCut === bottomCut → blunt end
+ * Offline restriction catalog. All offsets are zero-based boundaries relative
+ * to the beginning of the 5′→3′ recognition motif on the top strand.
  */
 class RestrictionEnzymeDatabase {
   constructor() {
+    const catalog =
+      typeof restrictionEnzymeCatalog !== 'undefined'
+        ? restrictionEnzymeCatalog
+        : require('../../../data/restriction-enzyme-catalog');
+    this.supplierNames = catalog.suppliers;
     this._enzymes = new Map();
-    this._aliasMap = new Map();
-    this._initializeDatabase();
-  }
+    this._aliases = new Map();
 
-  _addEnzyme(entry) {
-    const {
-      name,
-      recognition,
-      topCut,
-      bottomCut,
-      isPalindromic = true,
-      isotype = 'typeII',
-      commercial = true,
-      isoschizomers = [],
-      methylationSensitive = false,
-      microRebase = true,
-      notes = '',
-    } = entry;
+    for (const [name, recognition, topCut, bottomCut, supplierCodes, rebaseId] of catalog.enzymes) {
+      this._addEnzyme({ name, recognition, topCut, bottomCut, supplierCodes, rebaseId });
+    }
+    for (const [name, parent] of Object.entries(RESTRICTION_PRODUCT_VARIANTS)) {
+      const { recognition, topCut, bottomCut, isotype } = this.get(parent);
+      this._addEnzyme({ name, recognition, topCut, bottomCut, isotype, supplierCodes: 'N' });
+    }
+    for (const [name, recognition, topCut, bottomCut] of RESTRICTION_NICKASES) {
+      this._addEnzyme({ name, recognition, topCut, bottomCut, supplierCodes: 'N' });
+    }
+    for (const [alias, name] of Object.entries(RESTRICTION_LEGACY_ALIASES)) {
+      const enzyme = this.get(name);
+      this._aliases.set(alias.toLowerCase(), enzyme);
+      enzyme.aliases.push(alias);
+    }
 
-    const enzyme = {
-      name,
-      recognition: recognition.toUpperCase(),
-      recognitionLength: recognition.length,
-      topCut,
-      bottomCut,
-      isPalindromic,
-      isotype,
-      commercial,
-      isoschizomers,
-      methylationSensitive,
-      microRebase,
-      notes,
-      overhangType: this._determineOverhangType(topCut, bottomCut, recognition.length),
-      overhangLength: Math.abs(topCut - bottomCut),
-    };
-
-    this._enzymes.set(name, enzyme);
-
-    for (const alias of isoschizomers) {
-      this._aliasMap.set(alias, name);
+    const groups = new Map();
+    for (const enzyme of this._enzymes.values()) {
+      const group = groups.get(enzyme.cleavageKey) ?? [];
+      group.push(enzyme);
+      groups.set(enzyme.cleavageKey, group);
+    }
+    for (const group of groups.values()) {
+      for (const enzyme of group) {
+        enzyme.isoschizomers = group.filter(entry => entry !== enzyme).map(entry => entry.name);
+      }
     }
   }
 
-  _determineOverhangType(topCut, bottomCut, seqLen) {
+  _addEnzyme({ name, recognition, topCut, bottomCut, supplierCodes, rebaseId = null, isotype = null }) {
+    const recognitionLength = recognition.length;
+    const nicking = topCut === null || bottomCut === null;
+    const overhangType = nicking ? 'nick' : this._determineOverhangType(topCut, bottomCut);
+    const reverse = this.reverseComplementIUPAC(recognition);
+    const reverseTop = bottomCut === null ? null : recognitionLength - bottomCut;
+    const reverseBottom = topCut === null ? null : recognitionLength - topCut;
+    const forwardKey = [recognition, topCut, bottomCut].join(':');
+    const reverseKey = [reverse, reverseTop, reverseBottom].join(':');
+    const enzyme = {
+      name,
+      recognition,
+      recognitionLength,
+      topCut,
+      bottomCut,
+      isPalindromic: recognition === reverse,
+      isotype: VERIFIED_TYPE_IIS_ENZYMES.has(name) ? 'typeIIs' : isotype,
+      commercial: supplierCodes.length > 0,
+      supplierCodes,
+      suppliers: Array.from(supplierCodes, code => this.supplierNames[code]),
+      rebaseId,
+      nicking,
+      cutsOutsideSite: [topCut, bottomCut].some(cut => cut !== null && (cut < 0 || cut > recognitionLength)),
+      overhangType,
+      overhangLength: nicking ? null : Math.abs(topCut - bottomCut),
+      recognitionKey: recognition < reverse ? recognition : reverse,
+      cleavageKey: forwardKey < reverseKey ? forwardKey : reverseKey,
+      aliases: [],
+      isoschizomers: [],
+    };
+    this._enzymes.set(name.toLowerCase(), enzyme);
+  }
+
+  _determineOverhangType(topCut, bottomCut) {
     if (topCut === bottomCut) return 'blunt';
-    if (topCut < bottomCut) return "5'_overhang";
-    return "3'_overhang";
+    return topCut < bottomCut ? "5'_overhang" : "3'_overhang";
   }
 
   get(name) {
-    const lookup = this._aliasMap.get(name) || name;
-    return this._enzymes.get(lookup) || null;
+    if (typeof name !== 'string') return null;
+    const key = name.trim().toLowerCase();
+    return this._enzymes.get(key) ?? this._aliases.get(key) ?? null;
   }
 
   has(name) {
-    return this._enzymes.has(name) || this._aliasMap.has(name);
+    return this.get(name) !== null;
   }
 
   getAll() {
@@ -87,529 +197,26 @@ class RestrictionEnzymeDatabase {
   }
 
   getNames() {
-    return Array.from(this._enzymes.keys());
+    return this.getAll().map(enzyme => enzyme.name);
   }
 
   getByOverhangType(type) {
-    return this.getAll().filter(e => e.overhangType === type);
+    return this.getAll().filter(enzyme => enzyme.overhangType === type);
   }
 
-  getByRecognitionLength(len) {
-    return this.getAll().filter(e => e.recognitionLength === len);
+  getByRecognitionLength(length) {
+    return this.getAll().filter(enzyme => enzyme.recognitionLength === length);
   }
 
   getCommerciallyAvailable() {
-    return this.getAll().filter(e => e.commercial);
+    return this.getAll().filter(enzyme => enzyme.commercial);
   }
 
   search(query) {
-    const q = query.toLowerCase();
-    return this.getAll().filter(
-      e =>
-        e.name.toLowerCase().includes(q) ||
-        e.recognition.toLowerCase().includes(q) ||
-        e.isoschizomers.some(a => a.toLowerCase().includes(q))
+    const text = query.trim().toLowerCase();
+    return this.getAll().filter(enzyme =>
+      [enzyme.name, enzyme.recognition, ...enzyme.aliases].some(value => value.toLowerCase().includes(text))
     );
-  }
-
-  _initializeDatabase() {
-    // === 6-cutter palindromic enzymes (most common for genomic digestion) ===
-    // 5' overhang enzymes: topCut < bottomCut
-    this._addEnzyme({
-      name: 'EcoRI',
-      recognition: 'GAATTC',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['EcoRI-HF', 'EcoRI-HFv2'],
-      notes: "Most widely used; 5' sticky end",
-    });
-    this._addEnzyme({
-      name: 'BamHI',
-      recognition: 'GGATCC',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['BamHI-HFv2'],
-      notes: 'Common cloning enzyme',
-    });
-    this._addEnzyme({
-      name: 'HindIII',
-      recognition: 'AAGCTT',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['HindIII-HF'],
-      notes: 'Common cloning enzyme',
-    });
-    this._addEnzyme({
-      name: 'XhoI',
-      recognition: 'CTCGAG',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['XhoI-v2'],
-      notes: 'Compatible with SalI overhang',
-    });
-    this._addEnzyme({
-      name: 'SalI',
-      recognition: 'GTCGAC',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['SalI-HF'],
-      notes: 'Compatible with XhoI overhang',
-    });
-    this._addEnzyme({
-      name: 'SpeI',
-      recognition: 'ACTAGT',
-      topCut: 1,
-      bottomCut: 5,
-      notes: 'Compatible with XbaI/NheI/AvrII overhang',
-    });
-    this._addEnzyme({
-      name: 'XbaI',
-      recognition: 'TCTAGA',
-      topCut: 1,
-      bottomCut: 5,
-      notes: 'Compatible with SpeI/NheI/AvrII overhang',
-    });
-    this._addEnzyme({
-      name: 'NheI',
-      recognition: 'GCTAGC',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['NheI-HFv2'],
-      notes: 'Compatible with SpeI/XbaI/AvrII overhang',
-    });
-    this._addEnzyme({
-      name: 'AvaI',
-      recognition: 'CYCGRG',
-      topCut: 1,
-      bottomCut: 5,
-      notes: 'IUPAC: Y=C/T, R=A/G; degenerate recognition',
-    });
-    this._addEnzyme({
-      name: 'BglII',
-      recognition: 'AGATCT',
-      topCut: 1,
-      bottomCut: 5,
-      notes: 'Compatible with BamHI overhang',
-    });
-    this._addEnzyme({
-      name: 'MluI',
-      recognition: 'ACGCGT',
-      topCut: 1,
-      bottomCut: 5,
-      notes: 'CpG methylation sensitive',
-    });
-    this._addEnzyme({
-      name: 'NcoI',
-      recognition: 'CCATGG',
-      topCut: 1,
-      bottomCut: 5,
-      notes: 'Start codon-containing site',
-    });
-    this._addEnzyme({ name: 'BsiWI', recognition: 'CGTACG', topCut: 1, bottomCut: 5, notes: "5' overhang" });
-    this._addEnzyme({ name: 'BssHII', recognition: 'GCGCGC', topCut: 1, bottomCut: 5, notes: "5' overhang" });
-    this._addEnzyme({ name: 'BsrGI', recognition: 'TGTACA', topCut: 1, bottomCut: 5, notes: "5' overhang" });
-    this._addEnzyme({
-      name: 'AgeI',
-      recognition: 'ACCGGT',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['AgeI-HF'],
-      notes: "5' overhang",
-    });
-    this._addEnzyme({
-      name: 'BclI',
-      recognition: 'TGATCA',
-      topCut: 1,
-      bottomCut: 5,
-      notes: "5' overhang; compatible with BstBI overhang",
-    });
-    this._addEnzyme({
-      name: 'BmtI',
-      recognition: 'GCTAGC',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['NheI'],
-      notes: "5' overhang",
-    });
-    this._addEnzyme({ name: 'BsiHKCI', recognition: 'GTGCAC', topCut: 1, bottomCut: 5, notes: "5' overhang" });
-    this._addEnzyme({
-      name: 'MfeI',
-      recognition: 'CAATTG',
-      topCut: 1,
-      bottomCut: 5,
-      isoschizomers: ['MfeI-v2'],
-      notes: "5' overhang; compatible with EcoRI overhang",
-    });
-    this._addEnzyme({ name: 'EaeI', recognition: 'YGGCCR', topCut: 1, bottomCut: 5, notes: 'IUPAC: Y=C/T, R=A/G' });
-    this._addEnzyme({ name: 'HaeII', recognition: 'RGCGCY', topCut: 1, bottomCut: 5, notes: 'IUPAC: R=A/G, Y=C/T' });
-    this._addEnzyme({ name: 'AflIII', recognition: 'ACRYGT', topCut: 1, bottomCut: 5, notes: 'IUPAC: R=A/G, Y=C/T' });
-    // 3' overhang enzymes: topCut > bottomCut
-    this._addEnzyme({ name: 'KpnI', recognition: 'GGTACC', topCut: 5, bottomCut: 1, notes: "3' overhang" });
-    this._addEnzyme({
-      name: 'SacI',
-      recognition: 'GAGCTC',
-      topCut: 5,
-      bottomCut: 1,
-      isoschizomers: ['SstI'],
-      notes: "3' overhang",
-    });
-    this._addEnzyme({ name: 'PstI', recognition: 'CTGCAG', topCut: 5, bottomCut: 1, notes: "3' overhang" });
-    this._addEnzyme({ name: 'ApaI', recognition: 'GGGCCC', topCut: 5, bottomCut: 1, notes: "3' overhang" });
-    this._addEnzyme({ name: 'SphI', recognition: 'GCATGC', topCut: 5, bottomCut: 1, notes: "3' overhang" });
-    this._addEnzyme({ name: 'AatII', recognition: 'GACGTC', topCut: 5, bottomCut: 1, notes: "3' overhang" });
-    // Blunt end enzymes: topCut === bottomCut
-    this._addEnzyme({
-      name: 'SmaI',
-      recognition: 'CCCGGG',
-      topCut: 3,
-      bottomCut: 3,
-      isoschizomers: ['XmaI'],
-      notes: 'Blunt end; XmaI is neoschizomer with staggered cut',
-    });
-    this._addEnzyme({
-      name: 'ClaI',
-      recognition: 'ATCGAT',
-      topCut: 3,
-      bottomCut: 3,
-      isoschizomers: ['ClaI-v2'],
-      notes: 'Blunt end',
-    });
-    this._addEnzyme({
-      name: 'EcoRV',
-      recognition: 'GATATC',
-      topCut: 3,
-      bottomCut: 3,
-      isoschizomers: ['EcoRV-HF'],
-      notes: 'Blunt end; very common for blunt-end cloning',
-    });
-    this._addEnzyme({
-      name: 'HincII',
-      recognition: 'GTYRAC',
-      topCut: 3,
-      bottomCut: 3,
-      isoschizomers: ['HindII'],
-      notes: 'IUPAC: Y=C/T, R=A/G; blunt end',
-    });
-    this._addEnzyme({
-      name: 'NdeI',
-      recognition: 'CATATG',
-      topCut: 3,
-      bottomCut: 3,
-      notes: 'Start codon-containing site; blunt end',
-    });
-    this._addEnzyme({ name: 'NruI', recognition: 'TCGCGA', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({
-      name: 'PvuII',
-      recognition: 'CAGCTG',
-      topCut: 3,
-      bottomCut: 3,
-      isoschizomers: ['PvuII-HFv2'],
-      notes: 'Blunt end',
-    });
-    this._addEnzyme({
-      name: 'StuI',
-      recognition: 'AGGCCT',
-      topCut: 3,
-      bottomCut: 3,
-      isoschizomers: ['Eco147I'],
-      notes: 'Blunt end',
-    });
-    this._addEnzyme({ name: 'ScaI', recognition: 'AGTACT', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({ name: 'DraI', recognition: 'TTTAAA', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({
-      name: 'HpaI',
-      recognition: 'GTTAAC',
-      topCut: 3,
-      bottomCut: 3,
-      isoschizomers: ['HpaI-v2'],
-      notes: 'Blunt end',
-    });
-    this._addEnzyme({ name: 'BstBI', recognition: 'TTCGAA', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({ name: 'NarI', recognition: 'GGCGCC', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({ name: 'PvuI', recognition: 'CGATCG', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({ name: 'SnaBI', recognition: 'TACGTA', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({ name: 'SspI', recognition: 'AATATT', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({ name: 'ZraI', recognition: 'GATGAT', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-
-    // === 4-cutter enzymes (frequent cutters) ===
-    this._addEnzyme({
-      name: 'AluI',
-      recognition: 'AGCT',
-      topCut: 2,
-      bottomCut: 2,
-      notes: 'Blunt end; very frequent cutter',
-    });
-    this._addEnzyme({
-      name: 'HaeIII',
-      recognition: 'GGCC',
-      topCut: 2,
-      bottomCut: 2,
-      notes: 'Blunt end; frequent cutter',
-    });
-    this._addEnzyme({
-      name: 'MboI',
-      recognition: 'GATC',
-      topCut: 0,
-      bottomCut: 4,
-      isoschizomers: ['Sau3AI', 'NlaII'],
-      notes: "5' overhang; methylation sensitive (dam)",
-    });
-    this._addEnzyme({
-      name: 'MseI',
-      recognition: 'TTAA',
-      topCut: 2,
-      bottomCut: 2,
-      isoschizomers: ['Tsp509I'],
-      notes: 'Blunt end',
-    });
-    this._addEnzyme({ name: 'RsaI', recognition: 'GTAC', topCut: 2, bottomCut: 2, notes: 'Blunt end' });
-    this._addEnzyme({
-      name: 'TaqI',
-      recognition: 'TCGA',
-      topCut: 1,
-      bottomCut: 3,
-      isoschizomers: ['TspRI'],
-      notes: "5' overhang; thermophilic",
-    });
-    this._addEnzyme({
-      name: 'HinfI',
-      recognition: 'GANTC',
-      topCut: 1,
-      bottomCut: 4,
-      notes: "IUPAC: N=any; 5' overhang",
-    });
-    this._addEnzyme({
-      name: 'DdeI',
-      recognition: 'CTNAG',
-      topCut: 2,
-      bottomCut: 3,
-      notes: "IUPAC: N=any; 5' overhang",
-    });
-    this._addEnzyme({
-      name: 'HpaII',
-      recognition: 'CCGG',
-      topCut: 0,
-      bottomCut: 4,
-      isoschizomers: ['MspI'],
-      notes: "5' overhang; methylation sensitive (CpG)",
-    });
-    this._addEnzyme({ name: 'MluCI', recognition: 'AATT', topCut: 2, bottomCut: 2, notes: 'Blunt end' });
-
-    // === 7-cutter and degenerate enzymes ===
-    this._addEnzyme({
-      name: 'BspDI',
-      recognition: 'ATCGAT',
-      topCut: 3,
-      bottomCut: 3,
-      isoschizomers: ['ClaI'],
-      notes: 'Blunt end',
-    });
-    this._addEnzyme({ name: 'CfrI', recognition: 'CCGCGG', topCut: 3, bottomCut: 3, notes: 'Blunt end' });
-    this._addEnzyme({
-      name: 'BstEII',
-      recognition: 'GGTNACC',
-      topCut: 1,
-      bottomCut: 6,
-      isoschizomers: ['BstEII-v2'],
-      notes: 'IUPAC: N=any; 7-bp site',
-    });
-    this._addEnzyme({
-      name: 'BstXI',
-      recognition: 'CCANNNNNTGG',
-      topCut: 4,
-      bottomCut: 7,
-      notes: 'IUPAC: N=any; 11-bp site with 6-bp spacer',
-    });
-    this._addEnzyme({
-      name: 'PflMI',
-      recognition: 'CCANNNNNTGG',
-      topCut: 4,
-      bottomCut: 7,
-      isoschizomers: ['BstXI'],
-      notes: 'IUPAC: N=any',
-    });
-    this._addEnzyme({
-      name: 'EcoNI',
-      recognition: 'CCTNNNAGG',
-      topCut: 4,
-      bottomCut: 5,
-      notes: 'IUPAC: N=any; degenerate 9-bp site',
-    });
-    this._addEnzyme({
-      name: 'XmnI',
-      recognition: 'GAANNNTTC',
-      topCut: 4,
-      bottomCut: 5,
-      notes: 'IUPAC: N=any; 9-bp site',
-    });
-    this._addEnzyme({
-      name: 'Tth111I',
-      recognition: 'GACNNNNNGTC',
-      topCut: 3,
-      bottomCut: 8,
-      notes: 'IUPAC: N=any; 11-bp site',
-    });
-
-    // === 8-cutter rare enzymes (for large fragment generation) ===
-    this._addEnzyme({
-      name: 'NotI',
-      recognition: 'GCGGCCGC',
-      topCut: 2,
-      bottomCut: 6,
-      isoschizomers: ['NotI-HFv2'],
-      notes: "8-cutter; rare cutter; 5' overhang",
-    });
-    this._addEnzyme({
-      name: 'SbfI',
-      recognition: 'CCTGCAGG',
-      topCut: 6,
-      bottomCut: 2,
-      isoschizomers: ['SbfI-HF'],
-      notes: "8-cutter; rare cutter; 3' overhang",
-    });
-    this._addEnzyme({
-      name: 'FseI',
-      recognition: 'GGCCGGCC',
-      topCut: 2,
-      bottomCut: 6,
-      notes: "8-cutter; rare cutter; 5' overhang",
-    });
-    this._addEnzyme({
-      name: 'PacI',
-      recognition: 'TTAATTAA',
-      topCut: 2,
-      bottomCut: 6,
-      notes: "8-cutter; rare cutter; 5' overhang",
-    });
-    this._addEnzyme({
-      name: 'PmeI',
-      recognition: 'GTTTAAAC',
-      topCut: 4,
-      bottomCut: 4,
-      notes: '8-cutter; rare cutter; blunt end',
-    });
-    this._addEnzyme({
-      name: 'SwaI',
-      recognition: 'ATTTAAAT',
-      topCut: 4,
-      bottomCut: 4,
-      isoschizomers: ['SwaI-v2'],
-      notes: '8-cutter; rare cutter; blunt end',
-    });
-    this._addEnzyme({
-      name: 'AscI',
-      recognition: 'GGCGCGCC',
-      topCut: 2,
-      bottomCut: 6,
-      notes: "8-cutter; rare cutter; 5' overhang",
-    });
-    this._addEnzyme({
-      name: 'SfiI',
-      recognition: 'GGCCNNNNNGGCC',
-      topCut: 2,
-      bottomCut: 11,
-      notes: '13-bp site with 5-bp spacer; IUPAC N=any',
-    });
-    this._addEnzyme({
-      name: 'SatI',
-      recognition: 'GCGGCCGC',
-      topCut: 2,
-      bottomCut: 6,
-      isoschizomers: ['NotI'],
-      notes: 'Isoschizomer of NotI',
-    });
-
-    // === Type IIS enzymes ===
-    this._addEnzyme({
-      name: 'EarI',
-      recognition: 'CTCTTC',
-      topCut: 1,
-      bottomCut: 5,
-      isotype: 'typeIIs',
-      notes: 'Type IIS; cuts outside recognition',
-    });
-    this._addEnzyme({
-      name: 'FokI',
-      recognition: 'GGATG',
-      topCut: 5,
-      bottomCut: 9,
-      isotype: 'typeIIs',
-      notes: "Type IIS; cuts 9/13 downstream; 5' overhang",
-    });
-    this._addEnzyme({
-      name: 'HfI',
-      recognition: 'GANTC',
-      topCut: 1,
-      bottomCut: 4,
-      isoschizomers: ['HinfI'],
-      notes: 'IUPAC: N=any',
-    });
-
-    // === NEB High-Fidelity (HF) variants - common aliases ===
-    this._addEnzyme({
-      name: 'EcoRI-HF',
-      recognition: 'GAATTC',
-      topCut: 1,
-      bottomCut: 5,
-      commercial: true,
-      notes: 'High-fidelity variant of EcoRI',
-    });
-    this._addEnzyme({
-      name: 'BamHI-HFv2',
-      recognition: 'GGATCC',
-      topCut: 1,
-      bottomCut: 5,
-      commercial: true,
-      notes: 'High-fidelity variant of BamHI',
-    });
-    this._addEnzyme({
-      name: 'HindIII-HF',
-      recognition: 'AAGCTT',
-      topCut: 1,
-      bottomCut: 5,
-      commercial: true,
-      notes: 'High-fidelity variant of HindIII',
-    });
-    this._addEnzyme({
-      name: 'NheI-HFv2',
-      recognition: 'GCTAGC',
-      topCut: 1,
-      bottomCut: 5,
-      commercial: true,
-      notes: 'High-fidelity variant of NheI',
-    });
-    this._addEnzyme({
-      name: 'XhoI-v2',
-      recognition: 'CTCGAG',
-      topCut: 1,
-      bottomCut: 5,
-      commercial: true,
-      notes: 'Improved version of XhoI',
-    });
-    this._addEnzyme({
-      name: 'SalI-HF',
-      recognition: 'GTCGAC',
-      topCut: 1,
-      bottomCut: 5,
-      commercial: true,
-      notes: 'High-fidelity variant of SalI',
-    });
-    this._addEnzyme({
-      name: 'PvuII-HFv2',
-      recognition: 'CAGCTG',
-      topCut: 3,
-      bottomCut: 3,
-      commercial: true,
-      notes: 'High-fidelity variant of PvuII',
-    });
-    this._addEnzyme({
-      name: 'NotI-HFv2',
-      recognition: 'GCGGCCGC',
-      topCut: 2,
-      bottomCut: 6,
-      commercial: true,
-      notes: 'High-fidelity variant of NotI',
-    });
   }
 
   getIUPACRegex(pattern) {

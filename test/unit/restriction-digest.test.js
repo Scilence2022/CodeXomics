@@ -2,29 +2,27 @@
 /**
  * Restriction Digest Service Tests
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'node:module';
 
+const requireService = createRequire(import.meta.url);
 const SERVICES_DIR = path.join(process.cwd(), 'src/renderer/modules/chat/services');
 
 describe('RestrictionEnzymeDatabase', () => {
   let db;
 
-  beforeAll(async () => {
-    const dbPath = path.join(SERVICES_DIR, 'RestrictionEnzymeDatabase.js');
-    const code = fs.readFileSync(dbPath, 'utf-8');
-    const classOnly = code
-      .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
-      .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
-    const RestrictionEnzymeDatabase = eval(`(function() { ${classOnly}; return RestrictionEnzymeDatabase; })()`);
-    db = new RestrictionEnzymeDatabase();
+  beforeAll(() => {
+    const Database = requireService(path.join(SERVICES_DIR, 'RestrictionEnzymeDatabase.js'));
+    db = new Database();
   });
 
   it('should instantiate and contain enzymes', () => {
     expect(db).toBeDefined();
     const names = db.getNames();
-    expect(names.length).toBeGreaterThanOrEqual(80);
+    expect(names.length).toBeGreaterThanOrEqual(750);
+    expect(new Set(names.map(name => name.toLowerCase())).size).toBe(names.length);
   });
 
   it('should resolve common enzymes', () => {
@@ -52,14 +50,28 @@ describe('RestrictionEnzymeDatabase', () => {
     expect(kpni.overhangType).toBe("3'_overhang");
   });
 
-  it('should resolve isoschizomers', () => {
-    const ssti = db.get('SstI');
-    expect(ssti).not.toBeNull();
-    expect(ssti.name).toBe('SacI');
+  it('keeps exact names and distinguishes different cut geometries at the same site', () => {
+    expect(db.get('ssti').name).toBe('SstI');
+    expect(db.get('SstI').isoschizomers).toContain('SacI');
+    expect(db.get('NheI').name).toBe('NheI');
+    expect(db.get('BmtI').recognitionKey).toBe(db.get('NheI').recognitionKey);
+    expect(db.get('BmtI').cleavageKey).not.toBe(db.get('NheI').cleavageKey);
+    expect(db.get('EcoRI-HFv2').name).toBe('EcoRI-HF');
+    expect(db.get('Tsp509I')).toMatchObject({ name: 'TasI', recognition: 'AATT' });
+  });
 
-    const ecorihf = db.get('EcoRI-HF');
-    expect(ecorihf).not.toBeNull();
-    expect(ecorihf.recognition).toBe('GAATTC');
+  it('normalizes curated and outside-site cuts to the same coordinate system', () => {
+    expect(db.get('FokI')).toMatchObject({ recognition: 'GGATG', topCut: 14, bottomCut: 18, isPalindromic: false });
+    expect(db.get('EarI')).toMatchObject({ topCut: 7, bottomCut: 10, cutsOutsideSite: true });
+    expect(db.get('SfiI')).toMatchObject({ topCut: 8, bottomCut: 5, overhangType: "3'_overhang" });
+    expect(db.get('Nt.BspQI')).toMatchObject({ topCut: 8, bottomCut: null, nicking: true, overhangLength: null });
+  });
+
+  it('provides dated supplier records and source identifiers', () => {
+    expect(db.get('EcoRI').suppliers).toContain('Thermo Fisher Scientific');
+    expect(db.get('EcoRI').suppliers).toContain('New England Biolabs');
+    expect(db.get('EcoRI').rebaseId).toBeGreaterThan(0);
+    expect(db.getAll().some(enzyme => !enzyme.commercial)).toBe(true);
   });
 
   it('should resolve HF variants by direct name', () => {
@@ -279,28 +291,8 @@ describe('GelElectrophoresisRenderer', () => {
 describe('RestrictionDigestService Integration', () => {
   let service;
   let mockApp;
-  let originalWindow;
-
-  beforeAll(async () => {
-    originalWindow = global.window;
-
-    const dbPath = path.join(SERVICES_DIR, 'RestrictionEnzymeDatabase.js');
-    const dbCode = fs.readFileSync(dbPath, 'utf-8');
-    const dbClassOnly = dbCode
-      .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
-      .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
-    const RestrictionEnzymeDatabase = eval(`(function() { ${dbClassOnly}; return RestrictionEnzymeDatabase; })()`);
-
-    // Set global window.RestrictionEnzymeDatabase
-    global.window = global.window || {};
-    global.window.RestrictionEnzymeDatabase = RestrictionEnzymeDatabase;
-
-    const servicePath = path.join(SERVICES_DIR, 'RestrictionDigestService.js');
-    const serviceCode = fs.readFileSync(servicePath, 'utf-8');
-    const serviceClassOnly = serviceCode
-      .replace(/if\s*\(typeof\s+window[^}]*\}\s*/g, '')
-      .replace(/if\s*\(typeof\s+module[^}]*\}\s*/g, '');
-    const RestrictionDigestService = eval(`(function() { ${serviceClassOnly}; return RestrictionDigestService; })()`);
+  beforeAll(() => {
+    const RestrictionDigestService = requireService(path.join(SERVICES_DIR, 'RestrictionDigestService.js'));
 
     mockApp = {
       currentChromosome: 'chr1',
@@ -316,8 +308,37 @@ describe('RestrictionDigestService Integration', () => {
     service = new RestrictionDigestService(mockApp);
   });
 
-  afterAll(() => {
-    global.window = originalWindow;
+  it('uses mirrored strand cuts in site search and virtual digests', async () => {
+    const sequence = 'A'.repeat(24) + 'CATCC' + 'A'.repeat(24);
+    const result = await service.findRestrictionSites({ enzyme: 'FokI', sequence });
+    expect(result.sites).toEqual([{ position: 24, site: 'CATCC', strand: '-', topStrandCut: 11, bottomStrandCut: 15 }]);
+    const digest = await service.virtualDigest({ enzymes: ['FokI'], sequence });
+    expect(digest.totalSites).toBe(1);
+    expect(digest.fragmentDetails[0].end).toBe(11);
+  });
+
+  it('does not create fragments from recognition sites with cuts beyond the region', async () => {
+    const sequence = 'AAGGATG';
+    const result = await service.findRestrictionSites({ enzyme: 'FokI', sequence });
+    expect(result.sitesFound).toBe(1);
+    const digest = await service.virtualDigest({ enzymes: ['FokI'], sequence });
+    expect(digest.totalSites).toBe(0);
+    expect(digest.totalFragments).toBe(1);
+  });
+
+  it('keeps nickases browseable without treating a missing strand cut as zero', async () => {
+    expect(service.listEnzymes({ query: 'Nt.BspQI' }).enzymes[0]).toMatchObject({ nicking: true, bottomCut: null });
+    await expect(service.virtualDigest({ enzymes: ['Nt.BspQI'], sequence: 'GCTCTTC' })).rejects.toThrow(
+      /nicking enzyme/
+    );
+  });
+
+  it('keeps the commercial filter active when searching', () => {
+    const enzyme = service.enzymeDb.getAll().find(entry => !entry.commercial);
+    expect(service.listEnzymes({ query: enzyme.name }).enzymes.map(entry => entry.name)).not.toContain(enzyme.name);
+    expect(
+      service.listEnzymes({ query: enzyme.name, commercialOnly: false }).enzymes.map(entry => entry.name)
+    ).toContain(enzyme.name);
   });
 
   it('should run in chromosome position mode using defaults when no parameters are provided', async () => {
