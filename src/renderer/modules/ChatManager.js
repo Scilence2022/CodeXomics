@@ -4800,8 +4800,9 @@ class ChatManager {
       const chatSection = document.createElement('div');
       chatSection.className = 'toolbar-section chat-toggle-section';
       chatSection.innerHTML = `
-                <button id="toggleChatBtn" class="btn btn-sm toggle-btn">
-                    <i class="fas fa-robot"></i>
+                <button id="toggleChatBtn" class="btn btn-sm toggle-btn" data-tooltip="Show or hide ChatBox"
+                    aria-label="Toggle ChatBox">
+                    <i class="fas fa-robot" aria-hidden="true"></i>
                 </button>
             `;
 

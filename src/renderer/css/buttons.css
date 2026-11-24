@@ -517,9 +517,8 @@
   color: #6c757d;
 }
 
-/* Consistent functional hints for every track-title-bar control. Native
- * `title` attributes remain in the markup as a fallback; this layer makes the
- * hint immediate and visually consistent in Electron and across themes. */
+/* Shared hints for toolbar, track header and ruler controls. */
+.toolbar > .toolbar-section > [data-tooltip]::after,
 .track-btn[data-tooltip]::after,
 .ruler-mode-toggle-btn[data-tooltip]::after {
   content: attr(data-tooltip);
@@ -543,21 +542,38 @@
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transform: translateX(-50%) translateY(-2px);
+  transform: translate(var(--tooltip-offset-x, -50%), -2px);
   transition:
     opacity 0.12s ease,
     transform 0.12s ease,
     visibility 0s linear 0.12s;
 }
 
+.toolbar > .toolbar-section > [data-tooltip]:is(:hover, :focus-visible, :has(> :focus-visible))::after,
 .track-btn[data-tooltip]:hover::after,
 .track-btn[data-tooltip]:focus-visible::after,
 .ruler-mode-toggle-btn[data-tooltip]:hover::after,
 .ruler-mode-toggle-btn[data-tooltip]:focus-visible::after {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(0);
+  transform: translate(var(--tooltip-offset-x, -50%), 0);
   transition-delay: 0.25s;
+}
+
+.toolbar > .toolbar-section > [data-tooltip] {
+  anchor-name: --toolbar-control;
+  anchor-scope: --toolbar-control;
+}
+
+.toolbar > .toolbar-section > [data-tooltip]::after {
+  /* Center on the control while keeping hints inside the window when the toolbar wraps. */
+  --tooltip-offset-x: 0px;
+  position: fixed;
+  position-anchor: --toolbar-control;
+  top: calc(anchor(bottom) + 7px);
+  inset-inline: 8px;
+  justify-self: anchor-center;
+  z-index: 900; /* Below the toolbar dropdowns. */
 }
 
 /* Right-aligned title-bar groups need right-anchored hints so the last buttons

@@ -763,6 +763,8 @@
 }
 
 .toolbar-section #toggleChatBtn {
+  position: relative;
+  top: 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
@@ -770,7 +772,9 @@
 
 .toolbar-section #toggleChatBtn:hover {
   background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-  transform: translateY(-1px);
+  /* Keep the fixed tooltip positioned against the viewport. */
+  transform: none;
+  top: -1px;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 

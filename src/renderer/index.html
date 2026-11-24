@@ -548,8 +548,8 @@
         <!-- Toolbar -->
         <div class="toolbar">
             <div class="toolbar-section">
-                <label class="mac-toggle">
-                    <input type="checkbox" id="toggleSidebar">
+                <label class="mac-toggle" data-tooltip="Show or hide the sidebar">
+                    <input type="checkbox" id="toggleSidebar" aria-label="Show sidebar">
                     <span class="mac-toggle-slider"></span>
                 </label>
             </div>
@@ -561,28 +561,32 @@
             </div>
             <div class="toolbar-section toolbar-navigation-section">
                 <!-- <label>Navigate:</label> -->
-                <button id="goToStartBtn" class="btn btn-sm" title="Jump to start of sequence">
-                    <i class="fas fa-fast-backward"></i>
+                <button id="goToStartBtn" class="btn btn-sm" data-tooltip="Jump to start of sequence"
+                    aria-label="Jump to start of sequence">
+                    <i class="fas fa-fast-backward" aria-hidden="true"></i>
                 </button>
-                <button id="pagePrevBtn" class="btn btn-sm" title="Previous page (one screen left)">
-                    <i class="fas fa-chevron-left"></i>
+                <button id="pagePrevBtn" class="btn btn-sm" data-tooltip="Previous page (one screen left)"
+                    aria-label="Previous page">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
-                <button id="pageNextBtn" class="btn btn-sm" title="Next page (one screen right)">
-                    <i class="fas fa-chevron-right"></i>
+                <button id="pageNextBtn" class="btn btn-sm" data-tooltip="Next page (one screen right)"
+                    aria-label="Next page">
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
                 </button>
-                <button id="goToEndBtn" class="btn btn-sm" title="Jump to end of sequence">
-                    <i class="fas fa-fast-forward"></i>
+                <button id="goToEndBtn" class="btn btn-sm" data-tooltip="Jump to end of sequence"
+                    aria-label="Jump to end of sequence">
+                    <i class="fas fa-fast-forward" aria-hidden="true"></i>
                 </button>
             </div>
             <div class="toolbar-section toolbar-zoom-section">
                 <!-- <label>Zoom:</label> -->
-                <button id="zoomInBtn" class="btn btn-sm" title="Zoom in">
-                    <i class="fas fa-search-plus"></i>
+                <button id="zoomInBtn" class="btn btn-sm" data-tooltip="Zoom in" aria-label="Zoom in">
+                    <i class="fas fa-search-plus" aria-hidden="true"></i>
                 </button>
-                <button id="zoomOutBtn" class="btn btn-sm" title="Zoom out">
-                    <i class="fas fa-search-minus"></i>
+                <button id="zoomOutBtn" class="btn btn-sm" data-tooltip="Zoom out" aria-label="Zoom out">
+                    <i class="fas fa-search-minus" aria-hidden="true"></i>
                 </button>
-                <button id="resetZoomBtn" class="btn btn-sm" title="Reset view to the first 10 kb"
+                <button id="resetZoomBtn" class="btn btn-sm" data-tooltip="Reset view to the first 10 kb"
                     aria-label="Reset view to the first 10 kb">
                     <i class="fas fa-undo" aria-hidden="true"></i>
                 </button>
@@ -590,14 +594,14 @@
 
             <div class="toolbar-section">
                 <button id="toggleGenomeToolbarDisplay" type="button" class="btn genome-toolbar-button"
-                    title="Show only icons in the genome toolbar" aria-label="Show only icons in the genome toolbar"
+                    data-tooltip="Show only toolbar icons" aria-label="Show only toolbar icons"
                     aria-pressed="false">
                     <i class="fas fa-table-cells-large" aria-hidden="true"></i>
                 </button>
             </div>
 
             <div class="toolbar-section">
-                <button id="actionsMenuBtn" class="btn genome-toolbar-button" title="Sequence Editing"
+                <button id="actionsMenuBtn" class="btn genome-toolbar-button" data-tooltip="Open sequence editing tools"
                     aria-label="Sequence Editing">
                     <i class="fas fa-cut" aria-hidden="true"></i>
                     <span>Sequence Editing</span>
@@ -675,7 +679,8 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="toggleTracks" class="btn genome-toolbar-button" title="Tracks" aria-label="Tracks">
+                <button id="toggleTracks" class="btn genome-toolbar-button" data-tooltip="Choose which tracks to display"
+                    aria-label="Tracks">
                     <i class="fas fa-layer-group" aria-hidden="true"></i>
                     <span>Tracks</span>
                 </button>
@@ -718,7 +723,7 @@
 
 
             <div class="toolbar-section">
-                <button id="toggleFeatureFilters" class="btn genome-toolbar-button" title="Filter Features"
+                <button id="toggleFeatureFilters" class="btn genome-toolbar-button" data-tooltip="Filter visible feature types"
                     aria-label="Filter Features">
                     <i class="fas fa-filter" aria-hidden="true"></i>
                     <span>Filter Features</span>
@@ -768,7 +773,7 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="addFeaturesBtn" class="btn genome-toolbar-button" title="Add Features"
+                <button id="addFeaturesBtn" class="btn genome-toolbar-button" data-tooltip="Add an annotation feature"
                     aria-label="Add Features">
                     <i class="fas fa-plus" aria-hidden="true"></i>
                     <span>Add Features</span>
@@ -855,7 +860,7 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="primerTrackBtn" class="btn genome-toolbar-button" title="Primers"
+                <button id="primerTrackBtn" class="btn genome-toolbar-button" data-tooltip="Open primer tools"
                     aria-label="Primers" popovertarget="primersDropdown">
                     <svg class="primer-toolbar-icon" width="16" height="16" viewBox="0 0 20 20"
                         aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -890,14 +895,14 @@
             </div>
 
             <div class="toolbar-section">
-                <button id="bookmarksBtn" class="btn genome-toolbar-button" title="Bookmarks"
+                <button id="bookmarksBtn" class="btn genome-toolbar-button" data-tooltip="Manage bookmarks"
                     aria-label="Bookmarks">
                     <i class="fas fa-bookmark" aria-hidden="true"></i>
                     <span>Bookmarks</span>
                 </button>
             </div>
             <div class="toolbar-section">
-                <button id="highlightsBtn" class="btn genome-toolbar-button" title="Highlights"
+                <button id="highlightsBtn" class="btn genome-toolbar-button" data-tooltip="Manage highlights"
                     aria-label="Highlights">
                     <i class="fas fa-highlighter" aria-hidden="true"></i>
                     <span>Highlights</span>
