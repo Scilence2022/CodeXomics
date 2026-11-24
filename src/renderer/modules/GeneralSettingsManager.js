@@ -1039,7 +1039,7 @@ class GeneralSettingsManager {
     const toggle = document.getElementById('toggleGenomeToolbarDisplay');
     if (toggle) {
       toggle.setAttribute('aria-pressed', String(enabled));
-      toggle.title = enabled ? 'Show icons and labels in the genome toolbar' : 'Show only icons in the genome toolbar';
+      toggle.dataset.tooltip = enabled ? 'Show toolbar icons and labels' : 'Show only toolbar icons';
     }
   }
 
